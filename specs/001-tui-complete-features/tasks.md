@@ -78,7 +78,7 @@
 
 ---
 
-## Phase 3: User Story 7 - Configuration and Keyboard Selection (Priority: P1) 🎯 FOUNDATION
+## Phase 3: User Story 7 - Configuration and Keyboard Selection (Priority: P1) 🎯 FOUNDATION ✅ COMPLETE
 
 **Goal**: Enable QMK path configuration, keyboard selection, and layout variant selection before any editing can occur
 
@@ -88,24 +88,24 @@
 
 ### QMK Path Configuration
 
-- [ ] T029 [P] [US7] Implement QMK path validation (Makefile check, keyboards/ directory check) in src/config.rs
-- [ ] T030 [P] [US7] Implement keyboard scanner that reads keyboards/ directory in src/parser/keyboard_json.rs
-- [ ] T031 [US7] Implement QMK info.json parser in src/parser/keyboard_json.rs extracting keyboard_name, manufacturer, layouts
-- [ ] T032 [US7] Implement layout definition extraction from info.json in src/parser/keyboard_json.rs
-- [ ] T033 [US7] Implement KeyboardGeometry builder from info.json layout array in src/parser/keyboard_json.rs
-- [ ] T034 [US7] Implement VisualLayoutMapping builder from KeyboardGeometry in src/models/visual_layout_mapping.rs
-- [ ] T035 [P] [US7] Write contract tests for parsing real QMK info.json files in tests/contract/qmk_info_json_tests.rs
+- [X] T029 [P] [US7] Implement QMK path validation (Makefile check, keyboards/ directory check) in src/config.rs
+- [X] T030 [P] [US7] Implement keyboard scanner that reads keyboards/ directory in src/parser/keyboard_json.rs
+- [X] T031 [US7] Implement QMK info.json parser in src/parser/keyboard_json.rs extracting keyboard_name, manufacturer, layouts
+- [X] T032 [US7] Implement layout definition extraction from info.json in src/parser/keyboard_json.rs
+- [X] T033 [US7] Implement KeyboardGeometry builder from info.json layout array in src/parser/keyboard_json.rs
+- [X] T034 [US7] Implement VisualLayoutMapping builder from KeyboardGeometry in src/models/visual_layout_mapping.rs
+- [X] T035 [P] [US7] Write contract tests for parsing real QMK info.json files in tests/contract/qmk_info_json_tests.rs
 
 ### Configuration Dialogs
 
-- [ ] T036 [P] [US7] Implement onboarding wizard state in src/tui/onboarding_wizard.rs (current_step, inputs HashMap)
-- [ ] T037 [US7] Implement onboarding wizard rendering with step-by-step prompts in src/tui/onboarding_wizard.rs
-- [ ] T038 [US7] Implement onboarding wizard event handling (path entry, validation, navigation) in src/tui/onboarding_wizard.rs
-- [ ] T039 [P] [US7] Implement path configuration dialog in src/tui/mod.rs for Ctrl+P shortcut
-- [ ] T040 [P] [US7] Implement keyboard picker state and rendering in src/tui/mod.rs with filterable list
-- [ ] T041 [US7] Implement keyboard picker event handling with fuzzy search in src/tui/mod.rs for Ctrl+K shortcut
-- [ ] T042 [P] [US7] Implement layout picker rendering showing available variants from info.json in src/tui/mod.rs
-- [ ] T043 [US7] Implement layout picker event handling for Ctrl+Y shortcut in src/tui/mod.rs
+- [X] T036 [P] [US7] Implement onboarding wizard state in src/tui/onboarding_wizard.rs (current_step, inputs HashMap)
+- [X] T037 [US7] Implement onboarding wizard rendering with step-by-step prompts in src/tui/onboarding_wizard.rs
+- [X] T038 [US7] Implement onboarding wizard event handling (path entry, validation, navigation) in src/tui/onboarding_wizard.rs
+- [X] T039 [P] [US7] Implement path configuration dialog in src/tui/config_dialogs.rs for Ctrl+P shortcut
+- [X] T040 [P] [US7] Implement keyboard picker state and rendering in src/tui/config_dialogs.rs with filterable list
+- [X] T041 [US7] Implement keyboard picker event handling with fuzzy search in src/tui/config_dialogs.rs for Ctrl+K shortcut
+- [X] T042 [P] [US7] Implement layout picker rendering showing available variants from info.json in src/tui/config_dialogs.rs
+- [X] T043 [US7] Implement layout picker event handling for Ctrl+Y shortcut in src/tui/config_dialogs.rs
 
 **Checkpoint**: Configuration system complete - can now load keyboard geometry and proceed with editing features
 
