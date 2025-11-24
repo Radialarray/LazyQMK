@@ -144,9 +144,9 @@
 ### File Operations
 
 - [X] T060 [P] [US4] Implement layout loading from file path in src/main.rs
-- [ ] T061 [P] [US4] Implement save operation (Ctrl+S) with dirty flag clearing in src/tui/mod.rs
-- [ ] T062 [US4] Implement unsaved changes prompt on quit (Ctrl+Q) in src/tui/mod.rs
-- [ ] T063 [US4] Implement dirty flag tracking in AppState with asterisk display in title bar in src/tui/mod.rs
+- [X] T061 [P] [US4] Implement save operation (Ctrl+S) with dirty flag clearing in src/tui/mod.rs
+- [X] T062 [US4] Implement unsaved changes prompt on quit (Ctrl+Q) in src/tui/mod.rs
+- [X] T063 [US4] Implement dirty flag tracking in AppState with asterisk display in title bar in src/tui/mod.rs
 - [ ] T064 [P] [US4] Write integration tests for full save/load cycle in tests/integration/file_io_tests.rs
 
 **Checkpoint**: File persistence complete - can save and load layouts reliably
@@ -161,44 +161,44 @@
 
 ### Terminal UI Foundation
 
-- [ ] T065 [P] [US1] Implement AppState struct in src/tui/mod.rs (layout, source_path, dirty, current_layer, selected_position, active_popup, component states, system resources)
-- [ ] T066 [P] [US1] Implement terminal initialization and cleanup in src/tui/mod.rs with Ratatui and Crossterm
-- [ ] T067 [US1] Implement main event loop with 100ms poll timeout in src/tui/mod.rs
-- [ ] T068 [US1] Implement event routing (main UI vs popup) in src/tui/mod.rs
+- [X] T065 [P] [US1] Implement AppState struct in src/tui/mod.rs (layout, source_path, dirty, current_layer, selected_position, active_popup, component states, system resources)
+- [X] T066 [P] [US1] Implement terminal initialization and cleanup in src/tui/mod.rs with Ratatui and Crossterm
+- [X] T067 [US1] Implement main event loop with 100ms poll timeout in src/tui/mod.rs
+- [X] T068 [US1] Implement event routing (main UI vs popup) in src/tui/mod.rs
 
 ### Keyboard Widget Rendering
 
-- [ ] T069 [P] [US1] Implement keyboard widget struct in src/tui/keyboard.rs
-- [ ] T070 [US1] Implement key rendering with terminal coordinate conversion (keyboard units → terminal chars) in src/tui/keyboard.rs
-- [ ] T071 [US1] Implement key label formatting (keycode abbreviation, color indicators i/k/L/d) in src/tui/keyboard.rs
-- [ ] T072 [US1] Implement selected key highlighting in yellow in src/tui/keyboard.rs
-- [ ] T073 [US1] Implement color resolution display using Layout.resolve_key_color method in src/tui/keyboard.rs
-- [ ] T074 [US1] Implement viewport culling for keys outside terminal bounds in src/tui/keyboard.rs
+- [X] T069 [P] [US1] Implement keyboard widget struct in src/tui/keyboard.rs
+- [X] T070 [US1] Implement key rendering with terminal coordinate conversion (keyboard units → terminal chars) in src/tui/keyboard.rs
+- [X] T071 [US1] Implement key label formatting (keycode abbreviation, color indicators i/k/L/d) in src/tui/keyboard.rs
+- [X] T072 [US1] Implement selected key highlighting in yellow in src/tui/keyboard.rs
+- [X] T073 [US1] Implement color resolution display using Layout.resolve_key_color method in src/tui/keyboard.rs
+- [X] T074 [US1] Implement viewport culling for keys outside terminal bounds in src/tui/keyboard.rs
 
 ### Navigation System
 
-- [ ] T075 [P] [US1] Implement arrow key navigation in src/tui/mod.rs (↑↓←→ move cursor)
-- [ ] T076 [P] [US1] Implement VIM-style navigation (hjkl) in src/tui/mod.rs
-- [ ] T077 [US1] Implement layer switching with Tab/Shift+Tab in src/tui/mod.rs
-- [ ] T078 [US1] Implement key clearing with 'x' or Delete (set to KC_TRNS) in src/tui/mod.rs
-- [ ] T079 [US1] Implement terminal resize handling with reflow in src/tui/mod.rs
+- [X] T075 [P] [US1] Implement arrow key navigation in src/tui/mod.rs (↑↓←→ move cursor)
+- [X] T076 [P] [US1] Implement VIM-style navigation (hjkl) in src/tui/mod.rs
+- [X] T077 [US1] Implement layer switching with Tab/Shift+Tab in src/tui/mod.rs
+- [X] T078 [US1] Implement key clearing with 'x' or Delete (set to KC_TRNS) in src/tui/mod.rs
+- [X] T079 [US1] Implement terminal resize handling with reflow in src/tui/mod.rs
 
 ### Keycode Picker
 
-- [ ] T080 [P] [US1] Implement KeycodePickerState struct in src/tui/keycode_picker.rs (search, selected, active_category)
-- [ ] T081 [US1] Implement keycode picker rendering with categorized list in src/tui/keycode_picker.rs
-- [ ] T082 [US1] Implement fuzzy search with real-time filtering in src/tui/keycode_picker.rs
-- [ ] T083 [US1] Implement category switching with number keys in src/tui/keycode_picker.rs
-- [ ] T084 [US1] Implement keycode selection and assignment to key in src/tui/keycode_picker.rs
-- [ ] T085 [US1] Integrate keycode picker with Enter key event in src/tui/mod.rs
+- [X] T080 [P] [US1] Implement KeycodePickerState struct in src/tui/keycode_picker.rs (search, selected, active_category)
+- [X] T081 [US1] Implement keycode picker rendering with categorized list in src/tui/keycode_picker.rs
+- [X] T082 [US1] Implement fuzzy search with real-time filtering in src/tui/keycode_picker.rs
+- [X] T083 [US1] Implement category switching with number keys in src/tui/keycode_picker.rs
+- [X] T084 [US1] Implement keycode selection and assignment to key in src/tui/keycode_picker.rs
+- [X] T085 [US1] Integrate keycode picker with Enter key event in src/tui/mod.rs
 
 ### Status Bar
 
-- [ ] T086 [P] [US1] Implement status bar widget in src/tui/status_bar.rs showing mode, position, layer
-- [ ] T087 [US1] Implement contextual help messages in status bar in src/tui/status_bar.rs
-- [ ] T088 [US1] Implement error message display in red with actionable guidance in src/tui/status_bar.rs
+- [X] T086 [P] [US1] Implement status bar widget in src/tui/status_bar.rs showing mode, position, layer
+- [X] T087 [US1] Implement contextual help messages in status bar in src/tui/status_bar.rs
+- [X] T088 [US1] Implement error message display in red with actionable guidance in src/tui/status_bar.rs
 
-**Checkpoint**: MVP core editing complete - can visually edit keyboard layouts in terminal
+**Checkpoint**: ✅ MVP core editing complete - can visually edit keyboard layouts in terminal
 
 ---
 

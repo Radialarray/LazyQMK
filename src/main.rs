@@ -45,26 +45,43 @@ fn main() -> Result<()> {
     }
 
     if let Some(path) = cli.layout_path {
-        println!("Loading layout from: {}", path.display());
+        // Load the layout
+        let layout = parser::parse_markdown_layout(&path)?;
         
-        // Load and validate the layout file (T060)
-        match parser::parse_markdown_layout(&path) {
-            Ok(layout) => {
-                println!("✓ Successfully loaded layout: {}", layout.metadata.name);
-                println!("  Description: {}", layout.metadata.description);
-                println!("  Author: {}", layout.metadata.author);
-                println!("  Layers: {}", layout.layers.len());
-                println!("  Categories: {}", layout.categories.len());
-                println!();
-                println!("Full TUI implementation coming in Phase 5");
-            }
-            Err(e) => {
-                eprintln!("✗ Failed to load layout: {}", e);
-                eprintln!();
-                eprintln!("Make sure the file is a valid Markdown layout.");
-                std::process::exit(1);
-            }
-        }
+        // For now, create minimal geometry (will be loaded from QMK in future)
+        let geometry = models::KeyboardGeometry {
+            keyboard_name: "test".to_string(),
+            layout_name: "test".to_string(),
+            matrix_rows: 4,
+            matrix_cols: 2,
+            keys: vec![],
+        };
+        
+        // Create minimal mapping (will be built from geometry in future)
+        let mapping = models::VisualLayoutMapping::new();
+        
+        // Load or create default config
+        let config_result = config::Config::load();
+        let config = config_result.unwrap_or_else(|_| config::Config::default());
+        
+        // Initialize TUI
+        let mut terminal = tui::setup_terminal()?;
+        let mut app_state = tui::AppState::new(
+            layout,
+            Some(path),
+            geometry,
+            mapping,
+            config,
+        )?;
+        
+        // Run main TUI loop
+        let result = tui::run_tui(&mut app_state, &mut terminal);
+        
+        // Restore terminal
+        tui::restore_terminal(terminal)?;
+        
+        // Check for errors
+        result?;
     } else {
         println!("Usage: keyboard_tui [FILE]");
         println!("  or:  keyboard_tui --init");

@@ -1,0 +1,91 @@
+//! Status bar widget for displaying status messages and help
+
+use ratatui::{
+    layout::Rect,
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph},
+    Frame,
+};
+
+use super::AppState;
+
+/// Status bar widget
+pub struct StatusBar;
+
+impl StatusBar {
+    /// Render the status bar with contextual help
+    pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
+        // Determine contextual help message based on active popup or mode
+        let help_message = Self::get_contextual_help(state);
+        
+        let status_text = if let Some(error) = &state.error_message {
+            vec![
+                Line::from(vec![
+                    Span::styled("ERROR: ", Style::default().fg(Color::Red)),
+                    Span::raw(error),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Help: ", Style::default().fg(Color::Yellow)),
+                    Span::raw(help_message),
+                ]),
+            ]
+        } else {
+            vec![
+                Line::from(state.status_message.as_str()),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Help: ", Style::default().fg(Color::Cyan)),
+                    Span::raw(help_message),
+                ]),
+            ]
+        };
+
+        let status = Paragraph::new(status_text)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(" Status "));
+
+        f.render_widget(status, area);
+    }
+    
+    /// Get contextual help message based on current application state
+    fn get_contextual_help(state: &AppState) -> &'static str {
+        use super::PopupType;
+        
+        match &state.active_popup {
+            Some(PopupType::KeycodePicker) => {
+                "↑↓: Navigate | Enter: Select | Esc: Cancel | 1-8: Filter category | Type: Search"
+            }
+            Some(PopupType::ColorPicker) => {
+                "↑↓: Change channel | ←→: Adjust value | Enter: Apply | Esc: Cancel"
+            }
+            Some(PopupType::CategoryPicker) => {
+                "↑↓: Navigate | Enter: Select | Esc: Cancel"
+            }
+            Some(PopupType::CategoryManager) => {
+                "n: New | r: Rename | c: Color | d: Delete | Enter: Select | Esc: Close"
+            }
+            Some(PopupType::TemplateBrowser) => {
+                "↑↓: Navigate | Enter: Load | /: Search | Esc: Cancel"
+            }
+            Some(PopupType::HelpOverlay) => {
+                "↑↓: Scroll | Home/End: Jump | Esc: Close"
+            }
+            Some(PopupType::BuildLog) => {
+                "↑↓: Scroll | Home/End: Jump | Esc: Close"
+            }
+            Some(PopupType::MetadataEditor) => {
+                "Tab: Next field | Enter: Save | Esc: Cancel | Type: Edit"
+            }
+            Some(PopupType::UnsavedChangesPrompt) => {
+                "y: Save and quit | n: Discard | Esc: Cancel"
+            }
+            None => {
+                // Main keyboard editing mode
+                "↑↓←→/hjkl: Navigate | Enter: Edit key | x/Del: Clear | Tab: Layer | Ctrl+S: Save | Ctrl+Q: Quit | ?: Help"
+            }
+        }
+    }
+}
