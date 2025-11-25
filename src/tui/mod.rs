@@ -28,7 +28,7 @@ use crossterm::{
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
@@ -52,7 +52,7 @@ pub use keycode_picker::KeycodePickerState;
 pub use metadata_editor::MetadataEditorState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
-pub use theme::{Theme, ThemeVariant};
+pub use theme::Theme;
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq, Eq)]
