@@ -2,20 +2,20 @@
 
 use ratatui::{
     layout::Rect,
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
-use super::AppState;
+use super::{AppState, Theme};
 
 /// Status bar widget
 pub struct StatusBar;
 
 impl StatusBar {
     /// Render the status bar with contextual help
-    pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
+    pub fn render(f: &mut Frame, area: Rect, state: &AppState, theme: &Theme) {
         // Determine contextual help message based on active popup or mode
         let help_message = Self::get_contextual_help(state);
 
@@ -23,16 +23,16 @@ impl StatusBar {
         let build_status_line = if let Some(build_state) = &state.build_state {
             let status = &build_state.status;
             let color = match status {
-                crate::firmware::BuildStatus::Idle => Color::Gray,
-                crate::firmware::BuildStatus::Validating => Color::Yellow,
-                crate::firmware::BuildStatus::Generating => Color::Yellow,
-                crate::firmware::BuildStatus::Compiling => Color::Yellow,
-                crate::firmware::BuildStatus::Success => Color::Green,
-                crate::firmware::BuildStatus::Failed => Color::Red,
+                crate::firmware::BuildStatus::Idle => theme.inactive,
+                crate::firmware::BuildStatus::Validating => theme.warning,
+                crate::firmware::BuildStatus::Generating => theme.warning,
+                crate::firmware::BuildStatus::Compiling => theme.warning,
+                crate::firmware::BuildStatus::Success => theme.success,
+                crate::firmware::BuildStatus::Failed => theme.error,
             };
 
             Some(Line::from(vec![
-                Span::styled("Build: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Build: ", Style::default().fg(theme.primary)),
                 Span::styled(status.to_string(), Style::default().fg(color)),
             ]))
         } else {
@@ -41,7 +41,7 @@ impl StatusBar {
 
         let mut status_text = if let Some(error) = &state.error_message {
             vec![Line::from(vec![
-                Span::styled("ERROR: ", Style::default().fg(Color::Red)),
+                Span::styled("ERROR: ", Style::default().fg(theme.error)),
                 Span::raw(error),
             ])]
         } else {
@@ -57,7 +57,7 @@ impl StatusBar {
 
         // Add help line
         status_text.push(Line::from(vec![
-            Span::styled("Help: ", Style::default().fg(Color::Cyan)),
+            Span::styled("Help: ", Style::default().fg(theme.primary)),
             Span::raw(help_message),
         ]));
 

@@ -475,7 +475,7 @@ fn render(f: &mut Frame, state: &AppState) {
     render_main_content(f, chunks[1], state);
 
     // Status bar
-    StatusBar::render(f, chunks[2], state);
+    StatusBar::render(f, chunks[2], state, &state.theme);
 
     // Render popup if active
     if let Some(popup_type) = &state.active_popup {
@@ -492,7 +492,7 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     );
 
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(Color::Cyan))
+        .style(Style::default().fg(state.theme.primary))
         .block(Block::default().borders(Borders::ALL));
 
     f.render_widget(title_widget, area);
@@ -530,7 +530,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             render_template_save_dialog(f, state);
         }
         PopupType::UnsavedChangesPrompt => {
-            render_unsaved_prompt(f);
+            render_unsaved_prompt(f, &state.theme);
         }
         PopupType::BuildLog => {
             if let Some(build_state) = &state.build_state {
@@ -538,7 +538,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             }
         }
         PopupType::HelpOverlay => {
-            state.help_overlay_state.render(f, f.size());
+            state.help_overlay_state.render(f, f.size(), &state.theme);
         }
         PopupType::LayoutPicker => {
             config_dialogs::render_layout_picker(
@@ -554,7 +554,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
 }
 
 /// Render unsaved changes prompt
-fn render_unsaved_prompt(f: &mut Frame) {
+fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     let area = centered_rect(60, 30, f.size());
 
     let text = vec![
@@ -570,7 +570,7 @@ fn render_unsaved_prompt(f: &mut Frame) {
         Block::default()
             .title(" Unsaved Changes ")
             .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Yellow)),
+            .style(Style::default().fg(theme.warning)),
     );
 
     f.render_widget(prompt, area);
@@ -597,10 +597,11 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
         .split(area);
 
     // Title
+    let theme = &state.theme;
     let title = Paragraph::new("Save as Template")
         .style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
         .block(Block::default().borders(Borders::ALL));
@@ -608,9 +609,9 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
 
     // Name field
     let name_style = if matches!(dialog_state.active_field, TemplateSaveField::Name) {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::White)
+        Style::default().fg(theme.text)
     };
     let name_text = if matches!(dialog_state.active_field, TemplateSaveField::Name) {
         format!("Name: {}█", dialog_state.name)
@@ -624,9 +625,9 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
 
     // Description field
     let desc_style = if matches!(dialog_state.active_field, TemplateSaveField::Description) {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::White)
+        Style::default().fg(theme.text)
     };
     let desc_text = if matches!(dialog_state.active_field, TemplateSaveField::Description) {
         format!("Description: {}█", dialog_state.description)
@@ -640,9 +641,9 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
 
     // Author field
     let author_style = if matches!(dialog_state.active_field, TemplateSaveField::Author) {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::White)
+        Style::default().fg(theme.text)
     };
     let author_text = if matches!(dialog_state.active_field, TemplateSaveField::Author) {
         format!("Author: {}█", dialog_state.author)
@@ -656,9 +657,9 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
 
     // Tags field
     let tags_style = if matches!(dialog_state.active_field, TemplateSaveField::Tags) {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::White)
+        Style::default().fg(theme.text)
     };
     let tags_text = if matches!(dialog_state.active_field, TemplateSaveField::Tags) {
         format!("Tags (comma-separated): {}█", dialog_state.tags_input)
@@ -676,12 +677,12 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
         Line::from("Tab/Shift+Tab: navigate fields"),
         Line::from("Type: enter text | Backspace: delete"),
     ];
-    let help = Paragraph::new(help_text).style(Style::default().fg(Color::Gray));
+    let help = Paragraph::new(help_text).style(Style::default().fg(theme.text_muted));
     f.render_widget(help, chunks[5]);
 
     // Action buttons
     let actions = Paragraph::new("Enter: save template | Esc: cancel")
-        .style(Style::default().fg(Color::Green))
+        .style(Style::default().fg(theme.success))
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(actions, chunks[6]);
 }
