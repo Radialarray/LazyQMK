@@ -31,7 +31,8 @@ impl Default for KeycodePickerState {
 
 impl KeycodePickerState {
     /// Creates a new keycode picker state
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             search: String::new(),
             selected: 0,

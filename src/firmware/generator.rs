@@ -21,7 +21,8 @@ pub struct FirmwareGenerator<'a> {
 
 impl<'a> FirmwareGenerator<'a> {
     /// Creates a new firmware generator.
-    #[must_use] pub const fn new(
+    #[must_use]
+    pub const fn new(
         layout: &'a Layout,
         geometry: &'a KeyboardGeometry,
         mapping: &'a VisualLayoutMapping,

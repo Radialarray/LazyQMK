@@ -57,15 +57,15 @@ fn run_onboarding_wizard() -> Result<()> {
                         // Build and save configuration
                         let config = wizard_state.build_config()?;
                         config.save()?;
-                        
+
                         // Restore terminal before continuing
                         tui::restore_terminal(terminal)?;
-                        
+
                         println!("Configuration saved successfully!");
                         println!();
                         println!("Generating default layout and launching editor...");
                         println!();
-                        
+
                         // Launch the editor with default layout
                         launch_editor_with_default_layout(&config)?;
                         return Ok(());
@@ -84,47 +84,49 @@ fn run_onboarding_wizard() -> Result<()> {
 /// Creates a default layout from QMK keyboard info and launches the editor
 fn launch_editor_with_default_layout(config: &config::Config) -> Result<()> {
     // Get QMK path from config
-    let qmk_path = config.paths.qmk_firmware.as_ref()
+    let qmk_path = config
+        .paths
+        .qmk_firmware
+        .as_ref()
         .ok_or_else(|| anyhow::anyhow!("QMK firmware path not set in configuration"))?;
-    
+
     // Parse keyboard info.json
-    let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(
-        qmk_path,
-        &config.build.keyboard
-    )?;
-    
+    let keyboard_info =
+        parser::keyboard_json::parse_keyboard_info_json(qmk_path, &config.build.keyboard)?;
+
     // Build geometry from the selected layout
     let geometry = parser::keyboard_json::build_keyboard_geometry(
         &keyboard_info,
         &config.build.keyboard,
-        &config.build.layout
+        &config.build.layout,
     )?;
-    
+
     // Build visual mapping
     let mapping = models::VisualLayoutMapping::build(&geometry);
-    
+
     // Create a default layout with empty keys
     let layout_name = format!("{} Layout", config.build.keyboard);
     let mut layout = models::Layout::new(&layout_name)?;
-    
+
     // Add a default base layer with KC_TRNS for all positions
     let base_layer = create_default_layer(0, "Base", &geometry)?;
     layout.add_layer(base_layer)?;
-    
+
     // Suggest a save path in the config directory
     let layouts_dir = config::Config::config_dir()?.join("layouts");
     std::fs::create_dir_all(&layouts_dir)?;
-    
-    let suggested_filename = format!("{}_{}.md", 
+
+    let suggested_filename = format!(
+        "{}_{}.md",
         config.build.keyboard.replace('/', "_"),
         chrono::Local::now().format("%Y%m%d")
     );
     let suggested_path = layouts_dir.join(suggested_filename);
-    
+
     println!("Opening editor with default layout...");
     println!("Suggested save location: {}", suggested_path.display());
     println!();
-    
+
     // Initialize TUI with the generated layout
     let mut terminal = tui::setup_terminal()?;
     let mut app_state = tui::AppState::new(
@@ -132,34 +134,38 @@ fn launch_editor_with_default_layout(config: &config::Config) -> Result<()> {
         Some(suggested_path),
         geometry,
         mapping,
-        config.clone()
+        config.clone(),
     )?;
-    
+
     // Mark as dirty since it's a new unsaved layout
     app_state.dirty = true;
-    
+
     // Run main TUI loop
     let result = tui::run_tui(&mut app_state, &mut terminal);
-    
+
     // Restore terminal
     tui::restore_terminal(terminal)?;
-    
+
     // Check for errors
     result?;
-    
+
     Ok(())
 }
 
 /// Creates a default layer with KC_TRNS for all key positions
-fn create_default_layer(number: u8, name: &str, geometry: &models::KeyboardGeometry) -> Result<models::Layer> {
+fn create_default_layer(
+    number: u8,
+    name: &str,
+    geometry: &models::KeyboardGeometry,
+) -> Result<models::Layer> {
     use models::layer::{KeyDefinition, Position};
-    
+
     let mut layer = models::Layer::new(
         number,
         name.to_string(),
-        models::RgbColor::new(128, 128, 128) // Default gray color
+        models::RgbColor::new(128, 128, 128), // Default gray color
     )?;
-    
+
     // Add KC_TRNS for each key position in the geometry
     for key_geo in &geometry.keys {
         let (matrix_row, matrix_col) = key_geo.matrix_position;
@@ -167,7 +173,7 @@ fn create_default_layer(number: u8, name: &str, geometry: &models::KeyboardGeome
         let key = KeyDefinition::new(position, "KC_TRNS".to_string());
         layer.add_key(key);
     }
-    
+
     Ok(layer)
 }
 
@@ -206,27 +212,28 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
                         tui::layout_picker::PickerAction::LoadLayout(path) => {
                             println!("Loading layout: {}", path.display());
                             println!();
-                            
+
                             // Load the selected layout
                             let layout = parser::parse_markdown_layout(&path)?;
-                            
+
                             // Parse keyboard info.json to rebuild geometry
-                            let qmk_path = config.paths.qmk_firmware.as_ref()
-                                .ok_or_else(|| anyhow::anyhow!("QMK firmware path not set in configuration"))?;
-                            
+                            let qmk_path = config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+                                anyhow::anyhow!("QMK firmware path not set in configuration")
+                            })?;
+
                             let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(
                                 qmk_path,
-                                &config.build.keyboard
+                                &config.build.keyboard,
                             )?;
-                            
+
                             let geometry = parser::keyboard_json::build_keyboard_geometry(
                                 &keyboard_info,
                                 &config.build.keyboard,
-                                &config.build.layout
+                                &config.build.layout,
                             )?;
-                            
+
                             let mapping = models::VisualLayoutMapping::build(&geometry);
-                            
+
                             // Re-initialize terminal for editor
                             let mut terminal = tui::setup_terminal()?;
                             let mut app_state = tui::AppState::new(
@@ -234,15 +241,15 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
                                 Some(path),
                                 geometry,
                                 mapping,
-                                config.clone()
+                                config.clone(),
                             )?;
-                            
+
                             // Run main TUI loop
                             let result = tui::run_tui(&mut app_state, &mut terminal);
-                            
+
                             // Restore terminal
                             tui::restore_terminal(terminal)?;
-                            
+
                             // Check for errors
                             result?;
                             return Ok(());
@@ -293,7 +300,10 @@ fn main() -> Result<()> {
         // Check if the file has a reasonable extension
         if let Some(ext) = path.extension() {
             if ext != "md" && ext != "markdown" {
-                eprintln!("Warning: Expected a Markdown file (.md), but got: {}", path.display());
+                eprintln!(
+                    "Warning: Expected a Markdown file (.md), but got: {}",
+                    path.display()
+                );
                 eprintln!();
             }
         }
@@ -339,7 +349,7 @@ fn main() -> Result<()> {
                 run_layout_picker(&config)?;
             }
             Err(_) => {
-                // No config exists - suggest running wizard
+                // No config exists or config invalid - suggest running wizard
                 println!("Welcome! It looks like this is your first time running Keyboard TUI.");
                 println!();
                 println!("To get started, you need to configure the application.");

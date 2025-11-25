@@ -188,7 +188,8 @@ impl Layout {
     }
 
     /// Gets a reference to the layer at the given index.
-    #[must_use] pub fn get_layer(&self, index: usize) -> Option<&Layer> {
+    #[must_use]
+    pub fn get_layer(&self, index: usize) -> Option<&Layer> {
         self.layers.get(index)
     }
 
@@ -211,7 +212,8 @@ impl Layout {
     }
 
     /// Gets a category by ID.
-    #[must_use] pub fn get_category(&self, id: &str) -> Option<&Category> {
+    #[must_use]
+    pub fn get_category(&self, id: &str) -> Option<&Category> {
         self.categories.iter().find(|c| c.id == id)
     }
 
@@ -256,7 +258,8 @@ impl Layout {
     /// let color = layout.resolve_key_color(0, &key);
     /// assert_eq!(color, RgbColor::new(255, 0, 0)); // Individual override
     /// ```
-    #[must_use] pub fn resolve_key_color(&self, layer_idx: usize, key: &KeyDefinition) -> RgbColor {
+    #[must_use]
+    pub fn resolve_key_color(&self, layer_idx: usize, key: &KeyDefinition) -> RgbColor {
         // 1. Individual key color override (highest priority)
         if let Some(color) = key.color_override {
             return color;

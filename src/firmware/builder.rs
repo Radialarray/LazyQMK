@@ -55,7 +55,7 @@ pub enum BuildMessage {
         /// Log level (Info, Ok, Error)
         level: LogLevel,
         /// Log message content
-        message: String
+        message: String,
     },
     /// Build completed (success or failure)
     Complete {
@@ -82,7 +82,8 @@ pub enum LogLevel {
 #[allow(dead_code)]
 impl LogLevel {
     /// Returns the terminal color for this log level.
-    #[must_use] pub const fn color(&self) -> ratatui::style::Color {
+    #[must_use]
+    pub const fn color(&self) -> ratatui::style::Color {
         match self {
             Self::Info => ratatui::style::Color::Gray,
             Self::Ok => ratatui::style::Color::Green,
@@ -105,7 +106,8 @@ pub struct BuildState {
 
 impl BuildState {
     /// Creates a new idle build state.
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             status: BuildStatus::Idle,
             receiver: None,
@@ -115,7 +117,8 @@ impl BuildState {
     }
 
     /// Checks if a build is currently running.
-    #[must_use] pub const fn is_building(&self) -> bool {
+    #[must_use]
+    pub const fn is_building(&self) -> bool {
         matches!(
             self.status,
             BuildStatus::Validating | BuildStatus::Generating | BuildStatus::Compiling
@@ -335,9 +338,7 @@ fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Resul
         }
     }
 
-    anyhow::bail!(
-        "Could not find firmware file for {keyboard} {keymap}. Check .build/ directory."
-    )
+    anyhow::bail!("Could not find firmware file for {keyboard} {keymap}. Check .build/ directory.")
 }
 
 #[cfg(test)]

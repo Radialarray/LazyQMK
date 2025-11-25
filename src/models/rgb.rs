@@ -21,7 +21,8 @@ pub struct RgbColor {
 #[allow(dead_code)]
 impl RgbColor {
     /// Creates a new `RgbColor` from individual channel values.
-    #[must_use] pub const fn new(r: u8, g: u8, b: u8) -> Self {
+    #[must_use]
+    pub const fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
     }
 
@@ -49,9 +50,7 @@ impl RgbColor {
         let hex = hex.strip_prefix('#').unwrap_or(hex);
 
         if hex.len() != 6 {
-            anyhow::bail!(
-                "Invalid hex color format '{hex}'. Expected 6 hex digits (RRGGBB)"
-            );
+            anyhow::bail!("Invalid hex color format '{hex}'. Expected 6 hex digits (RRGGBB)");
         }
 
         let r = u8::from_str_radix(&hex[0..2], 16)
@@ -77,13 +76,15 @@ impl RgbColor {
     /// let color = RgbColor::new(0, 128, 255);
     /// assert_eq!(color.to_hex(), "#0080FF");
     /// ```
-    #[must_use] pub fn to_hex(&self) -> String {
+    #[must_use]
+    pub fn to_hex(&self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 
     /// Converts the color to a Ratatui Color for terminal rendering.
     #[cfg(feature = "ratatui")]
-    #[must_use] pub const fn to_ratatui_color(&self) -> ratatui::style::Color {
+    #[must_use]
+    pub const fn to_ratatui_color(&self) -> ratatui::style::Color {
         ratatui::style::Color::Rgb(self.r, self.g, self.b)
     }
 }

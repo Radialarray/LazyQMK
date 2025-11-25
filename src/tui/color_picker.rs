@@ -37,7 +37,8 @@ pub struct ColorPickerState {
 
 impl ColorPickerState {
     /// Create a new color picker with default white color
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             r: 255,
             g: 255,
@@ -47,7 +48,8 @@ impl ColorPickerState {
     }
 
     /// Create a color picker initialized with a specific color
-    #[must_use] pub const fn with_color(color: RgbColor) -> Self {
+    #[must_use]
+    pub const fn with_color(color: RgbColor) -> Self {
         Self {
             r: color.r,
             g: color.g,
@@ -57,7 +59,8 @@ impl ColorPickerState {
     }
 
     /// Get the current color
-    #[must_use] pub const fn get_color(&self) -> RgbColor {
+    #[must_use]
+    pub const fn get_color(&self) -> RgbColor {
         RgbColor::new(self.r, self.g, self.b)
     }
 
@@ -178,11 +181,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     // Hex code display
     let hex = picker_state.get_color().to_hex();
     let hex_display = Paragraph::new(format!("  {hex}"))
-        .style(
-            Style::default()
-                .fg(theme.text)
-                .add_modifier(Modifier::BOLD),
-        )
+        .style(Style::default().fg(theme.text).add_modifier(Modifier::BOLD))
         .block(Block::default().borders(Borders::ALL).title(" Hex Code "));
     f.render_widget(hex_display, chunks[5]);
 

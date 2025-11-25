@@ -39,7 +39,8 @@ pub enum WizardStep {
 
 impl WizardStep {
     /// Gets the next step in the wizard
-    #[must_use] pub const fn next(&self) -> Option<Self> {
+    #[must_use]
+    pub const fn next(&self) -> Option<Self> {
         match self {
             Self::Welcome => Some(Self::QmkPath),
             Self::QmkPath => Some(Self::KeyboardSelection),
@@ -50,7 +51,8 @@ impl WizardStep {
     }
 
     /// Gets the previous step in the wizard
-    #[must_use] pub const fn previous(&self) -> Option<Self> {
+    #[must_use]
+    pub const fn previous(&self) -> Option<Self> {
         match self {
             Self::Welcome => None,
             Self::QmkPath => Some(Self::Welcome),
@@ -61,7 +63,8 @@ impl WizardStep {
     }
 
     /// Gets the step title
-    #[must_use] pub const fn title(&self) -> &'static str {
+    #[must_use]
+    pub const fn title(&self) -> &'static str {
         match self {
             Self::Welcome => "Welcome to Keyboard TUI",
             Self::QmkPath => "QMK Firmware Path",
@@ -99,7 +102,8 @@ pub struct OnboardingWizardState {
 
 impl OnboardingWizardState {
     /// Creates a new onboarding wizard state
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             current_step: WizardStep::Welcome,
             inputs: HashMap::new(),
@@ -382,7 +386,7 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
 
     // Get filtered keyboards
     let filtered_keyboards = state.get_filtered_keyboards();
-    
+
     let keyboards: Vec<ListItem> = filtered_keyboards
         .iter()
         .enumerate()
@@ -482,7 +486,9 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect)
     let instructions = match state.current_step {
         WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
         WizardStep::QmkPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
-        WizardStep::KeyboardSelection => "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back",
+        WizardStep::KeyboardSelection => {
+            "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back"
+        }
         WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
     };

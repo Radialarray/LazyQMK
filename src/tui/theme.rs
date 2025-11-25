@@ -100,10 +100,10 @@ impl Theme {
     pub const fn light() -> Self {
         Self {
             primary: Color::Blue,
-            accent: Color::Rgb(180, 100, 0),   // Dark orange for visibility
-            success: Color::Rgb(0, 128, 0),    // Dark green
+            accent: Color::Rgb(180, 100, 0), // Dark orange for visibility
+            success: Color::Rgb(0, 128, 0),  // Dark green
             error: Color::Red,
-            warning: Color::Rgb(200, 100, 0),  // Orange-brown for warnings
+            warning: Color::Rgb(200, 100, 0), // Orange-brown for warnings
 
             text: Color::Black,
             text_secondary: Color::Rgb(60, 60, 60),

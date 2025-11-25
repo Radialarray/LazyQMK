@@ -31,7 +31,13 @@ pub struct KeyGeometry {
 #[allow(dead_code)]
 impl KeyGeometry {
     /// Creates a new `KeyGeometry` with the given parameters.
-    #[must_use] pub const fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
+    #[must_use]
+    pub const fn new(
+        matrix_position: (u8, u8),
+        led_index: u8,
+        visual_x: f32,
+        visual_y: f32,
+    ) -> Self {
         Self {
             matrix_position,
             led_index,
@@ -44,40 +50,47 @@ impl KeyGeometry {
     }
 
     /// Sets the key width.
-    #[must_use] pub const fn with_width(mut self, width: f32) -> Self {
+    #[must_use]
+    pub const fn with_width(mut self, width: f32) -> Self {
         self.width = width;
         self
     }
 
     /// Sets the key height.
-    #[must_use] pub const fn with_height(mut self, height: f32) -> Self {
+    #[must_use]
+    pub const fn with_height(mut self, height: f32) -> Self {
         self.height = height;
         self
     }
 
     /// Sets the key rotation.
-    #[must_use] pub const fn with_rotation(mut self, rotation: f32) -> Self {
+    #[must_use]
+    pub const fn with_rotation(mut self, rotation: f32) -> Self {
         self.rotation = rotation;
         self
     }
 
     /// Converts visual X position to terminal characters.
-    #[must_use] pub fn terminal_x(&self) -> u16 {
+    #[must_use]
+    pub fn terminal_x(&self) -> u16 {
         (self.visual_x * 7.0) as u16
     }
 
     /// Converts visual Y position to terminal lines.
-    #[must_use] pub fn terminal_y(&self) -> u16 {
+    #[must_use]
+    pub fn terminal_y(&self) -> u16 {
         (self.visual_y * 2.5) as u16
     }
 
     /// Converts key width to terminal characters.
-    #[must_use] pub fn terminal_width(&self) -> u16 {
+    #[must_use]
+    pub fn terminal_width(&self) -> u16 {
         ((self.width * 7.0) as u16).max(3)
     }
 
     /// Converts key height to terminal lines.
-    #[must_use] pub fn terminal_height(&self) -> u16 {
+    #[must_use]
+    pub fn terminal_height(&self) -> u16 {
         ((self.height * 2.5) as u16).max(3)
     }
 }
@@ -128,17 +141,20 @@ impl KeyboardGeometry {
     }
 
     /// Gets the total number of keys.
-    #[must_use] pub const fn key_count(&self) -> usize {
+    #[must_use]
+    pub const fn key_count(&self) -> usize {
         self.keys.len()
     }
 
     /// Gets a key by LED index.
-    #[must_use] pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
+    #[must_use]
+    pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.led_index == led_index)
     }
 
     /// Gets a key by matrix position.
-    #[must_use] pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
+    #[must_use]
+    pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.matrix_position == position)
     }
 }

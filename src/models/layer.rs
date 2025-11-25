@@ -19,7 +19,8 @@ pub struct Position {
 
 impl Position {
     /// Creates a new Position with the given row and column.
-    #[must_use] pub const fn new(row: u8, col: u8) -> Self {
+    #[must_use]
+    pub const fn new(row: u8, col: u8) -> Self {
         Self { row, col }
     }
 }
@@ -64,7 +65,8 @@ impl KeyDefinition {
     }
 
     /// Sets the color override for this key.
-    #[must_use] pub const fn with_color(mut self, color: RgbColor) -> Self {
+    #[must_use]
+    pub const fn with_color(mut self, color: RgbColor) -> Self {
         self.color_override = Some(color);
         self
     }
@@ -82,12 +84,14 @@ impl KeyDefinition {
     }
 
     /// Checks if this key is transparent (passes through to lower layer).
-    #[must_use] pub fn is_transparent(&self) -> bool {
+    #[must_use]
+    pub fn is_transparent(&self) -> bool {
         self.keycode == "KC_TRNS" || self.keycode == "KC_TRANSPARENT"
     }
 
     /// Checks if this key is a no-op (no key at this position).
-    #[must_use] pub fn is_no_op(&self) -> bool {
+    #[must_use]
+    pub fn is_no_op(&self) -> bool {
         self.keycode == "KC_NO"
     }
 }
@@ -166,7 +170,8 @@ impl Layer {
     }
 
     /// Gets a reference to the key at the given position.
-    #[must_use] pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
+    #[must_use]
+    pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
         self.keys.iter().find(|k| k.position == position)
     }
 

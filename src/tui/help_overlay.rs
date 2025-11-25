@@ -24,7 +24,8 @@ pub struct HelpOverlayState {
 
 impl HelpOverlayState {
     /// Creates a new help overlay state.
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         // Calculate total lines using default dark theme for initialization
         // (actual rendering will use the current theme)
         let content = Self::get_help_content(&Theme::default());

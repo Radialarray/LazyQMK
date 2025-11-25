@@ -21,24 +21,24 @@ pub enum ManagerMode {
     /// Creating a new category (entering name)
     CreatingName {
         /// User input for category name
-        input: String
+        input: String,
     },
     /// Creating a new category (selecting color)
     CreatingColor {
         /// Name of category being created
-        name: String
+        name: String,
     },
     /// Renaming a category
     Renaming {
         /// ID of category being renamed
         category_id: String,
         /// User input for new name
-        input: String
+        input: String,
     },
     /// Confirming deletion
     ConfirmingDelete {
         /// ID of category to delete
-        category_id: String
+        category_id: String,
     },
 }
 
@@ -54,7 +54,8 @@ pub struct CategoryManagerState {
 
 impl CategoryManagerState {
     /// Create a new category manager state
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             selected: 0,
             mode: ManagerMode::Browsing,
@@ -114,12 +115,14 @@ impl CategoryManagerState {
 
     /// Check if we're in browsing mode
     #[allow(dead_code)]
-    #[must_use] pub const fn is_browsing(&self) -> bool {
+    #[must_use]
+    pub const fn is_browsing(&self) -> bool {
         matches!(self.mode, ManagerMode::Browsing)
     }
 
     /// Get the current input text (for name entry or renaming)
-    #[must_use] pub fn get_input(&self) -> Option<&str> {
+    #[must_use]
+    pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
             ManagerMode::CreatingName { input } => Some(input),
             ManagerMode::Renaming { input, .. } => Some(input),
@@ -197,7 +200,14 @@ pub fn render_category_manager(
             );
         }
         ManagerMode::Renaming { input, .. } => {
-            render_name_input(f, inner_area, "Rename Category", input, "Enter new name:", theme);
+            render_name_input(
+                f,
+                inner_area,
+                "Rename Category",
+                input,
+                "Enter new name:",
+                theme,
+            );
         }
         ManagerMode::ConfirmingDelete { category_id } => {
             if let Some(category) = categories.iter().find(|c| &c.id == category_id) {
@@ -295,7 +305,14 @@ fn render_category_list(
 }
 
 /// Render name input dialog
-fn render_name_input(f: &mut Frame, area: Rect, title: &str, input: &str, prompt: &str, theme: &Theme) {
+fn render_name_input(
+    f: &mut Frame,
+    area: Rect,
+    title: &str,
+    input: &str,
+    prompt: &str,
+    theme: &Theme,
+) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
@@ -354,7 +371,11 @@ fn render_delete_confirmation(f: &mut Frame, area: Rect, category: &Category, th
     // Warning
     let warning = Paragraph::new("Are you sure you want to delete this category?")
         .alignment(Alignment::Center)
-        .style(Style::default().fg(theme.error).add_modifier(Modifier::BOLD));
+        .style(
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(Modifier::BOLD),
+        );
     f.render_widget(warning, chunks[0]);
 
     // Category info

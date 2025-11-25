@@ -91,7 +91,8 @@ pub struct TemplateSaveDialogState {
 
 impl TemplateSaveDialogState {
     /// Creates a new template save dialog state with pre-filled values from current layout.
-    #[must_use] pub const fn new(layout_name: String) -> Self {
+    #[must_use]
+    pub const fn new(layout_name: String) -> Self {
         Self {
             active_field: TemplateSaveField::Name,
             name: layout_name,
@@ -132,7 +133,8 @@ impl TemplateSaveDialogState {
     }
 
     /// Parse tags from comma-separated input.
-    #[must_use] pub fn parse_tags(&self) -> Vec<String> {
+    #[must_use]
+    pub fn parse_tags(&self) -> Vec<String> {
         self.tags_input
             .split(',')
             .map(|s| s.trim().to_lowercase())
@@ -312,7 +314,8 @@ impl AppState {
     }
 
     /// Get the currently selected key (immutable)
-    #[must_use] pub fn get_selected_key(&self) -> Option<&crate::models::KeyDefinition> {
+    #[must_use]
+    pub fn get_selected_key(&self) -> Option<&crate::models::KeyDefinition> {
         let layer = self.layout.layers.get(self.current_layer)?;
         layer
             .keys
@@ -1281,7 +1284,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         // Layout Picker (Ctrl+Y)
         (KeyCode::Char('y'), KeyModifiers::CONTROL) => {
             // Load available layouts for current keyboard
-            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware { path.clone() } else {
+            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
+                path.clone()
+            } else {
                 state.set_error("QMK firmware path not configured");
                 return Ok(false);
             };
@@ -1417,7 +1422,9 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 /// Handle firmware build in background
 fn handle_firmware_build(state: &mut AppState) -> Result<()> {
     // Check that QMK firmware path is configured
-    let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware { path.clone() } else {
+    let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
+        path.clone()
+    } else {
         state.set_error("QMK firmware path not configured");
         return Ok(());
     };

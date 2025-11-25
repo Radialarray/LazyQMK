@@ -115,7 +115,8 @@ impl KeycodeDb {
     /// assert!(db.is_valid("MO(5)"));
     /// assert!(!db.is_valid("INVALID_KEY"));
     /// ```
-    #[must_use] pub fn is_valid(&self, keycode: &str) -> bool {
+    #[must_use]
+    pub fn is_valid(&self, keycode: &str) -> bool {
         // Check direct lookup first (O(1))
         if self.lookup.contains_key(keycode) {
             return true;
@@ -132,7 +133,8 @@ impl KeycodeDb {
     }
 
     /// Gets a keycode definition by code.
-    #[must_use] pub fn get(&self, keycode: &str) -> Option<&KeycodeDefinition> {
+    #[must_use]
+    pub fn get(&self, keycode: &str) -> Option<&KeycodeDefinition> {
         let idx = self.lookup.get(keycode)?;
         self.keycodes.get(*idx)
     }
@@ -151,7 +153,8 @@ impl KeycodeDb {
     /// let results = db.search("arr");
     /// // Returns KC_LEFT, KC_RIGHT, KC_UP, KC_DOWN (arrow keys)
     /// ```
-    #[must_use] pub fn search(&self, query: &str) -> Vec<&KeycodeDefinition> {
+    #[must_use]
+    pub fn search(&self, query: &str) -> Vec<&KeycodeDefinition> {
         if query.is_empty() {
             return self.keycodes.iter().collect();
         }
@@ -200,7 +203,8 @@ impl KeycodeDb {
     /// let nav_keys = db.search_in_category("", "navigation");
     /// // Returns all navigation keys
     /// ```
-    #[must_use] pub fn search_in_category(&self, query: &str, category_id: &str) -> Vec<&KeycodeDefinition> {
+    #[must_use]
+    pub fn search_in_category(&self, query: &str, category_id: &str) -> Vec<&KeycodeDefinition> {
         self.search(query)
             .into_iter()
             .filter(|k| k.category == category_id)
@@ -208,7 +212,8 @@ impl KeycodeDb {
     }
 
     /// Gets all keycodes in a category.
-    #[must_use] pub fn get_category_keycodes(&self, category_id: &str) -> Vec<&KeycodeDefinition> {
+    #[must_use]
+    pub fn get_category_keycodes(&self, category_id: &str) -> Vec<&KeycodeDefinition> {
         self.keycodes
             .iter()
             .filter(|k| k.category == category_id)
@@ -216,22 +221,26 @@ impl KeycodeDb {
     }
 
     /// Gets all categories.
-    #[must_use] pub fn categories(&self) -> &[KeycodeCategory] {
+    #[must_use]
+    pub fn categories(&self) -> &[KeycodeCategory] {
         &self.categories
     }
 
     /// Gets a category by ID.
-    #[must_use] pub fn get_category(&self, id: &str) -> Option<&KeycodeCategory> {
+    #[must_use]
+    pub fn get_category(&self, id: &str) -> Option<&KeycodeCategory> {
         self.categories.iter().find(|c| c.id == id)
     }
 
     /// Gets the total number of keycodes.
-    #[must_use] pub const fn keycode_count(&self) -> usize {
+    #[must_use]
+    pub const fn keycode_count(&self) -> usize {
         self.keycodes.len()
     }
 
     /// Gets the total number of categories.
-    #[must_use] pub const fn category_count(&self) -> usize {
+    #[must_use]
+    pub const fn category_count(&self) -> usize {
         self.categories.len()
     }
 }

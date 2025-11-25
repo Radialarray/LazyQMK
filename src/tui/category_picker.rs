@@ -20,7 +20,8 @@ pub struct CategoryPickerState {
 
 impl CategoryPickerState {
     /// Create a new category picker starting at first category
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -54,7 +55,8 @@ impl CategoryPickerState {
     }
 
     /// Get the selected category ID (None if "None" is selected)
-    #[must_use] pub fn get_selected_category_id(
+    #[must_use]
+    pub fn get_selected_category_id(
         &self,
         categories: &[crate::models::Category],
     ) -> Option<String> {

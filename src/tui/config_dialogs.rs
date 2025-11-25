@@ -14,8 +14,7 @@ use ratatui::{
 use std::path::PathBuf;
 
 use crate::parser::keyboard_json::{
-    extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
-    LayoutVariant,
+    extract_layout_variants, parse_keyboard_info_json, scan_keyboards, LayoutVariant,
 };
 
 /// Path configuration dialog state
@@ -31,7 +30,8 @@ pub struct PathConfigDialogState {
 #[allow(dead_code)]
 impl PathConfigDialogState {
     /// Creates a new path configuration dialog
-    #[must_use] pub fn new(current_path: Option<&PathBuf>) -> Self {
+    #[must_use]
+    pub fn new(current_path: Option<&PathBuf>) -> Self {
         let input_buffer = current_path
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
@@ -86,7 +86,8 @@ pub struct KeyboardPickerState {
 #[allow(dead_code)]
 impl KeyboardPickerState {
     /// Creates a new keyboard picker
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             keyboards: Vec::new(),
             search_query: String::new(),
@@ -133,7 +134,8 @@ impl KeyboardPickerState {
     }
 
     /// Gets the currently selected keyboard
-    #[must_use] pub fn get_selected(&self) -> Option<String> {
+    #[must_use]
+    pub fn get_selected(&self) -> Option<String> {
         self.filtered_keyboards.get(self.selected_index).cloned()
     }
 
@@ -183,7 +185,8 @@ pub struct LayoutPickerState {
 
 impl LayoutPickerState {
     /// Creates a new layout picker
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             layouts: Vec::new(),
             selected_index: 0,
@@ -207,7 +210,8 @@ impl LayoutPickerState {
     }
 
     /// Gets the currently selected layout name
-    #[must_use] pub fn get_selected(&self) -> Option<String> {
+    #[must_use]
+    pub fn get_selected(&self) -> Option<String> {
         self.layouts
             .get(self.selected_index)
             .map(|v| v.name.clone())
@@ -215,7 +219,8 @@ impl LayoutPickerState {
 
     /// Gets the currently selected layout variant (with key count)
     #[allow(dead_code)]
-    #[must_use] pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
+    #[must_use]
+    pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
         self.layouts.get(self.selected_index)
     }
 
@@ -344,7 +349,12 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState, theme:
 use super::Theme;
 
 /// Renders the layout picker dialog
-pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: &str, theme: &Theme) {
+pub fn render_layout_picker(
+    f: &mut Frame,
+    state: &LayoutPickerState,
+    keyboard: &str,
+    theme: &Theme,
+) {
     let area = centered_rect(70, 50, f.size());
 
     let chunks = Layout::default()

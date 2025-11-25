@@ -27,7 +27,8 @@ pub enum MetadataField {
 
 impl MetadataField {
     /// Get the next field.
-    #[must_use] pub const fn next(self) -> Self {
+    #[must_use]
+    pub const fn next(self) -> Self {
         match self {
             Self::Name => Self::Description,
             Self::Description => Self::Author,
@@ -37,7 +38,8 @@ impl MetadataField {
     }
 
     /// Get the previous field.
-    #[must_use] pub const fn previous(self) -> Self {
+    #[must_use]
+    pub const fn previous(self) -> Self {
         match self {
             Self::Name => Self::Tags,
             Self::Description => Self::Name,
@@ -47,7 +49,8 @@ impl MetadataField {
     }
 
     /// Get the field label.
-    #[must_use] pub const fn label(&self) -> &'static str {
+    #[must_use]
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::Description => "Description",
@@ -57,7 +60,8 @@ impl MetadataField {
     }
 
     /// Get the field help text.
-    #[must_use] pub const fn help_text(&self) -> &'static str {
+    #[must_use]
+    pub const fn help_text(&self) -> &'static str {
         match self {
             Self::Name => "Layout name (max 100 characters)",
             Self::Description => "Long description of the layout",
@@ -84,7 +88,8 @@ pub struct MetadataEditorState {
 
 impl MetadataEditorState {
     /// Create a new metadata editor state from layout metadata.
-    #[must_use] pub fn new(metadata: &LayoutMetadata) -> Self {
+    #[must_use]
+    pub fn new(metadata: &LayoutMetadata) -> Self {
         Self {
             active_field: MetadataField::Name,
             name: metadata.name.clone(),
@@ -115,7 +120,8 @@ impl MetadataEditorState {
     }
 
     /// Parse tags from comma-separated input.
-    #[must_use] pub fn parse_tags(&self) -> Vec<String> {
+    #[must_use]
+    pub fn parse_tags(&self) -> Vec<String> {
         self.tags_input
             .split(',')
             .map(|s| s.trim().to_lowercase())
@@ -263,7 +269,9 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState, theme:
         Span::raw(" save  "),
         Span::styled(
             "Esc",
-            Style::default().fg(theme.error).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" cancel  "),
         Span::styled(
@@ -286,7 +294,14 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState, theme:
 }
 
 /// Render a single field.
-fn render_field(f: &mut Frame, area: Rect, field: MetadataField, value: &str, is_active: bool, theme: &Theme) {
+fn render_field(
+    f: &mut Frame,
+    area: Rect,
+    field: MetadataField,
+    value: &str,
+    is_active: bool,
+    theme: &Theme,
+) {
     let label = field.label();
     let style = if is_active {
         Style::default()

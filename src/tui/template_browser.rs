@@ -42,7 +42,8 @@ pub struct TemplateBrowserState {
 
 impl TemplateBrowserState {
     /// Creates a new template browser state.
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             templates: Vec::new(),
             search: String::new(),
@@ -150,7 +151,8 @@ impl TemplateBrowserState {
     }
 
     /// Gets the currently selected template (if any).
-    #[must_use] pub fn get_selected_template(&self) -> Option<&TemplateInfo> {
+    #[must_use]
+    pub fn get_selected_template(&self) -> Option<&TemplateInfo> {
         let filtered = self.filtered_templates();
         filtered.get(self.selected).copied()
     }

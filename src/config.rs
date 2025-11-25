@@ -9,13 +9,11 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Path configuration for file system locations.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct PathConfig {
     /// QMK firmware directory path (e.g., "/`path/to/qmk_firmware`")
     pub qmk_firmware: Option<PathBuf>,
 }
-
 
 /// Firmware build configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -88,7 +86,8 @@ pub struct Config {
 
 impl Config {
     /// Creates a new Config with default values.
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             paths: PathConfig::default(),
             build: BuildConfig::default(),

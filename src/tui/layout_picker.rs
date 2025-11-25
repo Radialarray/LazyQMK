@@ -40,7 +40,8 @@ pub struct LayoutPickerState {
 
 impl LayoutPickerState {
     /// Creates a new layout picker state.
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             layouts: Vec::new(),
             selected: 0,
@@ -92,11 +93,7 @@ impl LayoutPickerState {
                     }
                 }
                 Err(e) => {
-                    eprintln!(
-                        "Warning: Failed to parse layout {}: {}",
-                        path.display(),
-                        e
-                    );
+                    eprintln!("Warning: Failed to parse layout {}: {}", path.display(), e);
                     // Continue scanning other files
                 }
             }
@@ -121,7 +118,8 @@ impl LayoutPickerState {
     }
 
     /// Gets the selected layout path, or None if "Create New" is selected.
-    #[must_use] pub fn get_selected_layout(&self) -> Option<&LayoutInfo> {
+    #[must_use]
+    pub fn get_selected_layout(&self) -> Option<&LayoutInfo> {
         if self.create_new {
             None
         } else {
@@ -145,9 +143,9 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // Title
-            Constraint::Min(10),    // List
-            Constraint::Length(3),  // Instructions
+            Constraint::Length(3), // Title
+            Constraint::Min(10),   // List
+            Constraint::Length(3), // Instructions
         ])
         .split(size);
 
@@ -173,15 +171,12 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
     } else {
         Style::default().fg(Color::Green)
     };
-    items.push(
-        ListItem::new("+ Create New Layout")
-            .style(create_new_style)
-    );
+    items.push(ListItem::new("+ Create New Layout").style(create_new_style));
 
     // Add saved layouts
     for (i, layout_info) in state.layouts.iter().enumerate() {
         let is_selected = !state.create_new && i == state.selected;
-        
+
         let style = if is_selected {
             Style::default()
                 .fg(Color::Yellow)
@@ -190,16 +185,14 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
             Style::default()
         };
 
-        let modified = layout_info.metadata.modified
+        let modified = layout_info
+            .metadata
+            .modified
             .format("%Y-%m-%d %H:%M")
             .to_string();
-        
-        let text = format!(
-            "{} ({})",
-            layout_info.metadata.name,
-            modified
-        );
-        
+
+        let text = format!("{} ({})", layout_info.metadata.name, modified);
+
         items.push(ListItem::new(text).style(style));
     }
 

@@ -21,7 +21,8 @@ pub struct ValidationReport {
 
 impl ValidationReport {
     /// Creates a new empty validation report.
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             errors: Vec::new(),
             warnings: Vec::new(),
@@ -29,7 +30,8 @@ impl ValidationReport {
     }
 
     /// Returns true if there are no errors (warnings are allowed).
-    #[must_use] pub const fn is_valid(&self) -> bool {
+    #[must_use]
+    pub const fn is_valid(&self) -> bool {
         self.errors.is_empty()
     }
 
@@ -44,7 +46,8 @@ impl ValidationReport {
     }
 
     /// Formats the report as a user-friendly error message.
-    #[must_use] pub fn format_message(&self) -> String {
+    #[must_use]
+    pub fn format_message(&self) -> String {
         let mut message = String::new();
 
         if !self.errors.is_empty() {
@@ -102,13 +105,15 @@ impl ValidationError {
     }
 
     /// Sets the layer context.
-    #[must_use] pub const fn with_layer(mut self, layer: usize) -> Self {
+    #[must_use]
+    pub const fn with_layer(mut self, layer: usize) -> Self {
         self.layer = Some(layer);
         self
     }
 
     /// Sets the position context.
-    #[must_use] pub const fn with_position(mut self, row: u8, col: u8) -> Self {
+    #[must_use]
+    pub const fn with_position(mut self, row: u8, col: u8) -> Self {
         self.row = Some(row);
         self.col = Some(col);
         self
@@ -205,7 +210,8 @@ pub struct FirmwareValidator<'a> {
 
 impl<'a> FirmwareValidator<'a> {
     /// Creates a new firmware validator.
-    #[must_use] pub const fn new(
+    #[must_use]
+    pub const fn new(
         layout: &'a Layout,
         geometry: &'a KeyboardGeometry,
         mapping: &'a VisualLayoutMapping,
@@ -238,20 +244,21 @@ impl<'a> FirmwareValidator<'a> {
                 ValidationErrorKind::DuplicatePosition
             } else if error_msg.contains("at least one layer") {
                 ValidationErrorKind::EmptyLayer
-            } else if error_msg.contains("must have the same number of keys") && error_msg.contains("has 0,") {
+            } else if error_msg.contains("must have the same number of keys")
+                && error_msg.contains("has 0,")
+            {
                 // Empty layer will show as "has 0, expected N"
                 ValidationErrorKind::EmptyLayer
             } else {
                 // Default to MismatchedKeyCount for other structural issues
                 ValidationErrorKind::MismatchedKeyCount
             };
-            
+
             report.add_error(
-                ValidationError::new(
-                    kind,
-                    format!("Layout validation failed: {e}"),
-                )
-                .with_suggestion("Check that all layers have keys and no gaps in layer numbers"),
+                ValidationError::new(kind, format!("Layout validation failed: {e}"))
+                    .with_suggestion(
+                        "Check that all layers have keys and no gaps in layer numbers",
+                    ),
             );
             return Ok(report);
         }
@@ -402,9 +409,7 @@ impl<'a> FirmwareValidator<'a> {
             report.add_error(
                 ValidationError::new(
                     ValidationErrorKind::MissingPosition,
-                    format!(
-                        "Position ({row}, {col}) does not map to any matrix position"
-                    ),
+                    format!("Position ({row}, {col}) does not map to any matrix position"),
                 )
                 .with_layer(layer)
                 .with_position(row, col)

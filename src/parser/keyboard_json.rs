@@ -204,7 +204,8 @@ pub struct LayoutVariant {
 /// # Returns
 ///
 /// Vector of layout names (e.g., ["LAYOUT", "`LAYOUT_split_3x6_3`"])
-#[must_use] pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
+#[must_use]
+pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
     let mut names: Vec<String> = info.layouts.keys().cloned().collect();
     names.sort();
     names
@@ -219,7 +220,8 @@ pub struct LayoutVariant {
 /// # Returns
 ///
 /// Vector of layout variants with names and key counts
-#[must_use] pub fn extract_layout_variants(info: &QmkInfoJson) -> Vec<LayoutVariant> {
+#[must_use]
+pub fn extract_layout_variants(info: &QmkInfoJson) -> Vec<LayoutVariant> {
     let mut variants: Vec<LayoutVariant> = info
         .layouts
         .iter()
@@ -282,9 +284,7 @@ pub fn build_keyboard_geometry(
             max_row = max_row.max(row);
             max_col = max_col.max(col);
         } else {
-            anyhow::bail!(
-                "Key at index {idx} in layout '{layout_name}' has no matrix position"
-            );
+            anyhow::bail!("Key at index {idx} in layout '{layout_name}' has no matrix position");
         }
     }
 

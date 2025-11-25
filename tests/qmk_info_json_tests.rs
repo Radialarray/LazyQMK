@@ -137,9 +137,7 @@ fn test_build_crkbd_visual_mapping() {
             let led_back = mapping.visual_to_led_index(visual_pos.row, visual_pos.col);
             assert_eq!(led_back, Some(0), "Visual -> LED mapping should round-trip");
         } else {
-            panic!(
-                "Matrix -> Visual mapping failed for ({matrix_row}, {matrix_col})"
-            );
+            panic!("Matrix -> Visual mapping failed for ({matrix_row}, {matrix_col})");
         }
     } else {
         panic!("LED -> Matrix mapping failed for LED 0");

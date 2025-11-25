@@ -21,7 +21,8 @@ pub struct BuildLogState {
 
 impl BuildLogState {
     /// Creates a new build log state.
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             scroll_offset: 0,
             visible: false,
@@ -72,7 +73,12 @@ impl Default for BuildLogState {
 use super::Theme;
 
 /// Renders the build log viewer overlay.
-pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &BuildLogState, theme: &Theme) {
+pub fn render_build_log(
+    f: &mut Frame,
+    build_state: &BuildState,
+    log_state: &BuildLogState,
+    theme: &Theme,
+) {
     // Calculate centered area (80% width, 60% height)
     let area = centered_rect(80, 60, f.size());
 
@@ -130,8 +136,11 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
         height: 1,
     };
 
-    let help = Paragraph::new(help_text)
-        .style(Style::default().fg(theme.text_muted).add_modifier(Modifier::DIM));
+    let help = Paragraph::new(help_text).style(
+        Style::default()
+            .fg(theme.text_muted)
+            .add_modifier(Modifier::DIM),
+    );
 
     f.render_widget(help, help_area);
 }
