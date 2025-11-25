@@ -14,12 +14,12 @@ use std::collections::HashMap;
 /// # Building Process
 ///
 /// 1. Iterate through KeyboardGeometry.keys
-/// 2. For each KeyGeometry:
-///    - led_to_matrix[led_index] = matrix_position
-///    - matrix_to_led[matrix_position] = led_index
-///    - Compute visual_position from visual_x/visual_y (quantize to grid)
-///    - matrix_to_visual[matrix_position] = visual_position
-///    - visual_to_matrix[visual_position] = matrix_position
+/// 2. For each `KeyGeometry`:
+///    - `led_to_matrix`[`led_index`] = `matrix_position`
+///    - `matrix_to_led`[`matrix_position`] = `led_index`
+///    - Compute `visual_position` from `visual_x/visual_y` (quantize to grid)
+///    - `matrix_to_visual`[`matrix_position`] = `visual_position`
+///    - `visual_to_matrix`[`visual_position`] = `matrix_position`
 ///
 /// # Special Handling
 ///
@@ -40,8 +40,8 @@ pub struct VisualLayoutMapping {
 
 #[allow(dead_code)]
 impl VisualLayoutMapping {
-    /// Creates a new empty VisualLayoutMapping.
-    pub fn new() -> Self {
+    /// Creates a new empty `VisualLayoutMapping`.
+    #[must_use] pub fn new() -> Self {
         Self {
             led_to_matrix: Vec::new(),
             matrix_to_led: HashMap::new(),
@@ -50,11 +50,11 @@ impl VisualLayoutMapping {
         }
     }
 
-    /// Builds a VisualLayoutMapping from KeyboardGeometry.
+    /// Builds a `VisualLayoutMapping` from `KeyboardGeometry`.
     ///
     /// This computes all coordinate transformations based on the physical
     /// key positions from the QMK info.json layout definition.
-    pub fn build(geometry: &KeyboardGeometry) -> Self {
+    #[must_use] pub fn build(geometry: &KeyboardGeometry) -> Self {
         let mut mapping = Self::new();
 
         // Pre-allocate led_to_matrix vector
@@ -86,35 +86,35 @@ impl VisualLayoutMapping {
     /// Converts LED index to matrix position.
     ///
     /// Used for firmware generation to map LED order to electrical matrix.
-    pub fn led_to_matrix_pos(&self, led: u8) -> Option<(u8, u8)> {
+    #[must_use] pub fn led_to_matrix_pos(&self, led: u8) -> Option<(u8, u8)> {
         self.led_to_matrix.get(led as usize).copied()
     }
 
     /// Converts matrix position to visual position.
     ///
     /// Used for parsing layouts from files where keys are stored by visual position.
-    pub fn matrix_to_visual_pos(&self, row: u8, col: u8) -> Option<Position> {
+    #[must_use] pub fn matrix_to_visual_pos(&self, row: u8, col: u8) -> Option<Position> {
         self.matrix_to_visual.get(&(row, col)).copied()
     }
 
     /// Converts visual position to matrix position.
     ///
     /// Used for saving layouts and when user selects a key in the UI.
-    pub fn visual_to_matrix_pos(&self, row: u8, col: u8) -> Option<(u8, u8)> {
+    #[must_use] pub fn visual_to_matrix_pos(&self, row: u8, col: u8) -> Option<(u8, u8)> {
         self.visual_to_matrix.get(&Position::new(row, col)).copied()
     }
 
     /// Converts visual position to LED index.
     ///
     /// Used for RGB configuration and LED-based features.
-    pub fn visual_to_led_index(&self, row: u8, col: u8) -> Option<u8> {
+    #[must_use] pub fn visual_to_led_index(&self, row: u8, col: u8) -> Option<u8> {
         let visual_pos = Position::new(row, col);
         let matrix_pos = self.visual_to_matrix.get(&visual_pos)?;
         self.matrix_to_led.get(matrix_pos).copied()
     }
 
     /// Gets the total number of keys in the mapping.
-    pub fn key_count(&self) -> usize {
+    #[must_use] pub const fn key_count(&self) -> usize {
         self.led_to_matrix.len()
     }
 }

@@ -1,7 +1,7 @@
 //! Template browser for loading and managing layout templates.
 //!
 //! This module provides UI components for browsing, searching, and loading
-//! reusable layout templates stored in ~/.config/layout_tools/templates/
+//! reusable layout templates stored in ~/.`config/layout_tools/templates`/
 
 use anyhow::{Context, Result};
 use ratatui::{
@@ -42,7 +42,7 @@ pub struct TemplateBrowserState {
 
 impl TemplateBrowserState {
     /// Creates a new template browser state.
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             templates: Vec::new(),
             search: String::new(),
@@ -53,7 +53,7 @@ impl TemplateBrowserState {
 
     /// Scans the templates directory and loads template metadata.
     ///
-    /// Templates are stored in ~/.config/layout_tools/templates/
+    /// Templates are stored in ~/.`config/layout_tools/templates`/
     pub fn scan_templates(&mut self) -> Result<()> {
         self.templates.clear();
 
@@ -150,7 +150,7 @@ impl TemplateBrowserState {
     }
 
     /// Gets the currently selected template (if any).
-    pub fn get_selected_template(&self) -> Option<&TemplateInfo> {
+    #[must_use] pub fn get_selected_template(&self) -> Option<&TemplateInfo> {
         let filtered = self.filtered_templates();
         filtered.get(self.selected).copied()
     }
@@ -170,7 +170,7 @@ impl TemplateBrowserState {
     }
 
     /// Moves selection up in the filtered list.
-    pub fn select_previous(&mut self) {
+    pub const fn select_previous(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
@@ -223,8 +223,8 @@ impl Default for TemplateBrowserState {
 /// Renders the template browser popup.
 pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
     // Center the popup (60% width, 80% height)
-    let popup_width = (area.width as f32 * 0.6) as u16;
-    let popup_height = (area.height as f32 * 0.8) as u16;
+    let popup_width = (f32::from(area.width) * 0.6) as u16;
+    let popup_height = (f32::from(area.height) * 0.8) as u16;
 
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
@@ -395,8 +395,8 @@ mod tests {
         // Add some dummy templates
         for i in 0..5 {
             state.templates.push(TemplateInfo {
-                path: PathBuf::from(format!("test{}.md", i)),
-                metadata: LayoutMetadata::new(format!("Template {}", i)).unwrap(),
+                path: PathBuf::from(format!("test{i}.md")),
+                metadata: LayoutMetadata::new(format!("Template {i}")).unwrap(),
             });
         }
 

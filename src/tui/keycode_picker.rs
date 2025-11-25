@@ -23,9 +23,15 @@ pub struct KeycodePickerState {
     pub active_category: Option<String>,
 }
 
+impl Default for KeycodePickerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KeycodePickerState {
     /// Creates a new keycode picker state
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             search: String::new(),
             selected: 0,
@@ -158,7 +164,7 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
                 if let Some(selected_key) = state.get_selected_key_mut() {
                     selected_key.keycode = keycode.clone();
                     state.mark_dirty();
-                    state.set_status(&format!("Keycode assigned: {}", keycode));
+                    state.set_status(format!("Keycode assigned: {keycode}"));
                 }
             }
 
@@ -174,7 +180,7 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
             if let Some(category) = categories.get(category_idx) {
                 state.keycode_picker_state.active_category = Some(category.id.clone());
                 state.keycode_picker_state.selected = 0;
-                state.set_status(&format!("Filtering by: {}", category.name));
+                state.set_status(format!("Filtering by: {}", category.name));
             }
             Ok(false)
         }

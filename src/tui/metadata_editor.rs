@@ -13,7 +13,7 @@ use ratatui::{
 use crate::models::{Layout as LayoutModel, LayoutMetadata};
 
 /// Field in the metadata editor.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MetadataField {
     /// Layout name field
     Name,
@@ -27,7 +27,7 @@ pub enum MetadataField {
 
 impl MetadataField {
     /// Get the next field.
-    pub fn next(self) -> Self {
+    #[must_use] pub const fn next(self) -> Self {
         match self {
             Self::Name => Self::Description,
             Self::Description => Self::Author,
@@ -37,7 +37,7 @@ impl MetadataField {
     }
 
     /// Get the previous field.
-    pub fn previous(self) -> Self {
+    #[must_use] pub const fn previous(self) -> Self {
         match self {
             Self::Name => Self::Tags,
             Self::Description => Self::Name,
@@ -47,7 +47,7 @@ impl MetadataField {
     }
 
     /// Get the field label.
-    pub fn label(&self) -> &'static str {
+    #[must_use] pub const fn label(&self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::Description => "Description",
@@ -57,7 +57,7 @@ impl MetadataField {
     }
 
     /// Get the field help text.
-    pub fn help_text(&self) -> &'static str {
+    #[must_use] pub const fn help_text(&self) -> &'static str {
         match self {
             Self::Name => "Layout name (max 100 characters)",
             Self::Description => "Long description of the layout",
@@ -84,7 +84,7 @@ pub struct MetadataEditorState {
 
 impl MetadataEditorState {
     /// Create a new metadata editor state from layout metadata.
-    pub fn new(metadata: &LayoutMetadata) -> Self {
+    #[must_use] pub fn new(metadata: &LayoutMetadata) -> Self {
         Self {
             active_field: MetadataField::Name,
             name: metadata.name.clone(),
@@ -95,7 +95,7 @@ impl MetadataEditorState {
     }
 
     /// Get a mutable reference to the active field's value.
-    pub fn get_active_field_mut(&mut self) -> &mut String {
+    pub const fn get_active_field_mut(&mut self) -> &mut String {
         match self.active_field {
             MetadataField::Name => &mut self.name,
             MetadataField::Description => &mut self.description,
@@ -105,17 +105,17 @@ impl MetadataEditorState {
     }
 
     /// Move to the next field.
-    pub fn next_field(&mut self) {
+    pub const fn next_field(&mut self) {
         self.active_field = self.active_field.next();
     }
 
     /// Move to the previous field.
-    pub fn previous_field(&mut self) {
+    pub const fn previous_field(&mut self) {
         self.active_field = self.active_field.previous();
     }
 
     /// Parse tags from comma-separated input.
-    pub fn parse_tags(&self) -> Vec<String> {
+    #[must_use] pub fn parse_tags(&self) -> Vec<String> {
         self.tags_input
             .split(',')
             .map(|s| s.trim().to_lowercase())
@@ -143,8 +143,7 @@ impl MetadataEditorState {
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
             {
                 return Err(format!(
-                    "Tag '{}' must be lowercase with hyphens and alphanumeric characters only",
-                    tag
+                    "Tag '{tag}' must be lowercase with hyphens and alphanumeric characters only"
                 ));
             }
         }
@@ -299,7 +298,7 @@ fn render_field(f: &mut Frame, area: Rect, field: MetadataField, value: &str, is
 
     // Display value with cursor if active
     let display_value = if is_active {
-        format!("{}_", value)
+        format!("{value}_")
     } else {
         value.to_string()
     };
@@ -358,7 +357,7 @@ pub fn handle_metadata_editor_input(
 }
 
 /// Action returned by metadata editor input handler.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MetadataEditorAction {
     /// Continue editing
     Continue,

@@ -4,7 +4,6 @@
 //! initial configuration: QMK path, keyboard selection, and layout variant.
 //!
 //! NOTE: This module is currently unused but preserved for future onboarding features.
-#![allow(dead_code)]
 
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -25,7 +24,6 @@ use crate::parser::keyboard_json::{
 
 /// Onboarding wizard steps
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum WizardStep {
     /// Welcome screen
     Welcome,
@@ -41,7 +39,7 @@ pub enum WizardStep {
 
 impl WizardStep {
     /// Gets the next step in the wizard
-    pub fn next(&self) -> Option<Self> {
+    #[must_use] pub const fn next(&self) -> Option<Self> {
         match self {
             Self::Welcome => Some(Self::QmkPath),
             Self::QmkPath => Some(Self::KeyboardSelection),
@@ -52,7 +50,7 @@ impl WizardStep {
     }
 
     /// Gets the previous step in the wizard
-    pub fn previous(&self) -> Option<Self> {
+    #[must_use] pub const fn previous(&self) -> Option<Self> {
         match self {
             Self::Welcome => None,
             Self::QmkPath => Some(Self::Welcome),
@@ -63,7 +61,7 @@ impl WizardStep {
     }
 
     /// Gets the step title
-    pub fn title(&self) -> &'static str {
+    #[must_use] pub const fn title(&self) -> &'static str {
         match self {
             Self::Welcome => "Welcome to Keyboard TUI",
             Self::QmkPath => "QMK Firmware Path",
@@ -99,7 +97,7 @@ pub struct OnboardingWizardState {
 
 impl OnboardingWizardState {
     /// Creates a new onboarding wizard state
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         Self {
             current_step: WizardStep::Welcome,
             inputs: HashMap::new(),
@@ -160,7 +158,7 @@ impl OnboardingWizardState {
                         self.current_step = WizardStep::KeyboardSelection;
                     }
                     Err(e) => {
-                        self.error_message = Some(format!("Failed to scan keyboards: {}", e));
+                        self.error_message = Some(format!("Failed to scan keyboards: {e}"));
                     }
                 }
             }
@@ -183,7 +181,7 @@ impl OnboardingWizardState {
                         self.current_step = WizardStep::LayoutSelection;
                     }
                     Err(e) => {
-                        self.error_message = Some(format!("Failed to parse keyboard info: {}", e));
+                        self.error_message = Some(format!("Failed to parse keyboard info: {e}"));
                     }
                 }
             }

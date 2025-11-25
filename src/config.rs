@@ -9,24 +9,20 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Path configuration for file system locations.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct PathConfig {
-    /// QMK firmware directory path (e.g., "/path/to/qmk_firmware")
+    /// QMK firmware directory path (e.g., "/`path/to/qmk_firmware`")
     pub qmk_firmware: Option<PathBuf>,
 }
 
-impl Default for PathConfig {
-    fn default() -> Self {
-        Self { qmk_firmware: None }
-    }
-}
 
 /// Firmware build configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildConfig {
     /// Target keyboard (e.g., "crkbd")
     pub keyboard: String,
-    /// Layout variant (e.g., "LAYOUT_split_3x6_3")
+    /// Layout variant (e.g., "`LAYOUT_split_3x6_3`")
     pub layout: String,
     /// Keymap name (e.g., "default")
     pub keymap: String,
@@ -49,7 +45,7 @@ impl Default for BuildConfig {
 }
 
 /// UI preferences configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiConfig {
     /// Color theme (future feature)
     pub theme: String,
@@ -75,12 +71,12 @@ impl Default for UiConfig {
 ///
 /// # Validation
 ///
-/// - qmk_firmware path must exist and contain Makefile, keyboards/ directory
-/// - keyboard must exist in qmk_firmware/keyboards/
+/// - `qmk_firmware` path must exist and contain Makefile, keyboards/ directory
+/// - keyboard must exist in `qmk_firmware/keyboards`/
 /// - layout must exist in keyboard's info.json
-/// - output_format must be "uf2", "hex", or "bin"
-/// - output_dir parent must exist and be writable
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// - `output_format` must be "uf2", "hex", or "bin"
+/// - `output_dir` parent must exist and be writable
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     /// File system paths
     pub paths: PathConfig,
@@ -92,7 +88,7 @@ pub struct Config {
 
 impl Config {
     /// Creates a new Config with default values.
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         Self {
             paths: PathConfig::default(),
             build: BuildConfig::default(),
@@ -132,7 +128,7 @@ impl Config {
             config_path.display()
         ))?;
 
-        let config: Config = toml::from_str(&content).context(format!(
+        let config: Self = toml::from_str(&content).context(format!(
             "Failed to parse config file: {}",
             config_path.display()
         ))?;
@@ -181,8 +177,8 @@ impl Config {
     ///
     /// Checks:
     /// - QMK firmware path exists (if set) and contains required files
-    /// - output_format is valid ("uf2", "hex", or "bin")
-    /// - output_dir parent exists
+    /// - `output_format` is valid ("uf2", "hex", or "bin")
+    /// - `output_dir` parent exists
     pub fn validate(&self) -> Result<()> {
         // Validate QMK firmware path if set
         if let Some(qmk_path) = &self.paths.qmk_firmware {

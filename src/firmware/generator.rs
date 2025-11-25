@@ -21,7 +21,7 @@ pub struct FirmwareGenerator<'a> {
 
 impl<'a> FirmwareGenerator<'a> {
     /// Creates a new firmware generator.
-    pub fn new(
+    #[must_use] pub const fn new(
         layout: &'a Layout,
         geometry: &'a KeyboardGeometry,
         mapping: &'a VisualLayoutMapping,
@@ -65,15 +65,13 @@ impl<'a> FirmwareGenerator<'a> {
             "// Layout Variant: {}\n",
             self.config.build.layout
         ));
-        code.push_str("\n");
+        code.push('\n');
 
         // Includes
         code.push_str("#include QMK_KEYBOARD_H\n\n");
 
         // Keymap definition
-        code.push_str(&format!(
-            "const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {{\n"
-        ));
+        code.push_str("const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {\n");
 
         // Generate each layer
         for (layer_idx, layer) in self.layout.layers.iter().enumerate() {
@@ -107,11 +105,11 @@ impl<'a> FirmwareGenerator<'a> {
                 code.push_str(&keys_str);
             }
 
-            code.push_str(")");
+            code.push(')');
             if layer_idx < self.layout.layers.len() - 1 {
                 code.push_str(",\n");
             } else {
-                code.push_str("\n");
+                code.push('\n');
             }
         }
 
@@ -275,7 +273,7 @@ impl<'a> FirmwareGenerator<'a> {
     /// Gets the keymap output directory.
     ///
     /// Creates directory structure if it doesn't exist:
-    /// {qmk_firmware}/keyboards/{keyboard}/keymaps/{keymap}/
+    /// {`qmk_firmware}/keyboards/{keyboard}/keymaps/{keymap`}/
     fn get_keymap_directory(&self) -> Result<std::path::PathBuf> {
         let qmk_path = self
             .config

@@ -162,8 +162,7 @@ fn validate_metadata(metadata: &LayoutMetadata) -> Result<()> {
     for tag in &metadata.tags {
         if !tag_regex.is_match(tag) {
             anyhow::bail!(
-                "Invalid tag '{}'. Tags must be lowercase with hyphens and alphanumeric characters only",
-                tag
+                "Invalid tag '{tag}'. Tags must be lowercase with hyphens and alphanumeric characters only"
             );
         }
     }
@@ -213,7 +212,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     let layer_regex = Regex::new(r"^##\s+Layer\s+(\d+):\s+(.+)$").unwrap();
     let captures = layer_regex
         .captures(header_line)
-        .ok_or_else(|| anyhow::anyhow!("Invalid layer header format: {}", header_line))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid layer header format: {header_line}"))?;
 
     let layer_number: u8 = captures[1]
         .parse()
@@ -256,7 +255,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
         }
 
         // Table starts - break out of properties loop
-        if line.starts_with("|") {
+        if line.starts_with('|') {
             break;
         }
 
@@ -264,7 +263,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     }
 
     let color = layer_color.ok_or_else(|| {
-        anyhow::anyhow!("Layer {} missing required **Color** property", layer_number)
+        anyhow::anyhow!("Layer {layer_number} missing required **Color** property")
     })?;
 
     // Create layer
@@ -286,7 +285,7 @@ fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Re
     let mut row = 0;
 
     // Skip table header row
-    if line_num < lines.len() && lines[line_num].starts_with("|") {
+    if line_num < lines.len() && lines[line_num].starts_with('|') {
         line_num += 1;
     }
 
@@ -305,7 +304,7 @@ fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Re
         }
 
         // Parse table row
-        if line.starts_with("|") {
+        if line.starts_with('|') {
             parse_table_row(line, row, layer).with_context(|| {
                 format!("Error parsing table row {} at line {}", row, line_num + 1)
             })?;
@@ -323,7 +322,7 @@ fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
     // Split by pipes and trim
     let cells: Vec<&str> = line
         .split('|')
-        .map(|s| s.trim())
+        .map(str::trim)
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -335,7 +334,7 @@ fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
 
         // Parse keycode syntax
         let key = parse_keycode_syntax(cell, row, col as u8)
-            .with_context(|| format!("Error parsing cell at row {}, col {}: {}", row, col, cell))?;
+            .with_context(|| format!("Error parsing cell at row {row}, col {col}: {cell}"))?;
 
         layer.add_key(key);
     }
@@ -357,7 +356,7 @@ fn parse_keycode_syntax(cell: &str, row: u8, col: u8) -> Result<KeyDefinition> {
 
     let captures = keycode_regex
         .captures(cell)
-        .ok_or_else(|| anyhow::anyhow!("Invalid keycode syntax: {}", cell))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid keycode syntax: {cell}"))?;
 
     let keycode = captures[1].to_string();
     let color_override = captures
