@@ -75,6 +75,7 @@ impl Default for CategoryPickerState {
 
 /// Render the category picker dialog
 pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
+    let theme = &state.theme;
     let area = centered_rect(60, 60, f.size());
 
     // Build list items with color previews
@@ -90,7 +91,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
                 Span::raw("  "),
                 Span::raw(&cat.name),
                 Span::raw(" ("),
-                Span::styled(&cat.id, Style::default().fg(Color::Gray)),
+                Span::styled(&cat.id, Style::default().fg(theme.text_muted)),
                 Span::raw(")"),
             ]);
             ListItem::new(line)
@@ -103,7 +104,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
         Span::styled(
             "[ None ]",
             Style::default()
-                .fg(Color::Gray)
+                .fg(theme.text_muted)
                 .add_modifier(Modifier::ITALIC),
         ),
     ])));
@@ -113,11 +114,11 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
             Block::default()
                 .title(" Select Category ")
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Cyan)),
+                .border_style(Style::default().fg(theme.primary)),
         )
         .highlight_style(
             Style::default()
-                .bg(Color::DarkGray)
+                .bg(theme.surface)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("► ");

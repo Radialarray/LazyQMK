@@ -521,6 +521,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 f.size(),
                 &state.category_manager_state,
                 &state.layout.categories,
+                &state.theme,
             );
         }
         PopupType::TemplateBrowser => {

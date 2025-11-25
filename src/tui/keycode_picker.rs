@@ -4,7 +4,7 @@ use anyhow::Result;
 use crossterm::event::{self, KeyCode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame,
@@ -49,6 +49,7 @@ impl KeycodePickerState {
 
 /// Render the keycode picker popup
 pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
+    let theme = &state.theme;
     let area = centered_rect(60, 70, f.size());
 
     let chunks = Layout::default()
@@ -112,7 +113,7 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
         )
         .highlight_style(
             Style::default()
-                .bg(Color::DarkGray)
+                .bg(theme.surface)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");

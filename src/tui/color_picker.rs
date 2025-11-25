@@ -106,6 +106,7 @@ impl Default for ColorPickerState {
 
 /// Render the color picker dialog
 pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
+    let theme = &state.theme;
     let area = centered_rect(60, 50, f.size());
 
     // Split into sections
@@ -128,7 +129,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     // Title
     let title = Paragraph::new("RGB Color Picker").style(
         Style::default()
-            .fg(Color::Cyan)
+            .fg(theme.primary)
             .add_modifier(Modifier::BOLD),
     );
     f.render_widget(title, chunks[0]);
@@ -141,6 +142,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         picker_state.r,
         Color::Red,
         picker_state.active_channel == RgbChannel::Red,
+        theme.text_muted,
     );
 
     // Green channel slider
@@ -151,6 +153,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         picker_state.g,
         Color::Green,
         picker_state.active_channel == RgbChannel::Green,
+        theme.text_muted,
     );
 
     // Blue channel slider
@@ -161,6 +164,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         picker_state.b,
         Color::Blue,
         picker_state.active_channel == RgbChannel::Blue,
+        theme.text_muted,
     );
 
     // Color preview
@@ -176,7 +180,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     let hex_display = Paragraph::new(format!("  {hex}"))
         .style(
             Style::default()
-                .fg(Color::White)
+                .fg(theme.text)
                 .add_modifier(Modifier::BOLD),
         )
         .block(Block::default().borders(Borders::ALL).title(" Hex Code "));
@@ -200,7 +204,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     // Border around everything
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.primary));
     f.render_widget(block, area);
 }
 
@@ -212,6 +216,7 @@ fn render_channel_slider(
     value: u8,
     color: Color,
     is_active: bool,
+    inactive_color: Color,
 ) {
     let percentage = (f64::from(value) / 255.0 * 100.0) as u16;
     let label_text = format!("{label}: {value:3}");
@@ -219,7 +224,7 @@ fn render_channel_slider(
     let style = if is_active {
         Style::default().fg(color).add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Gray)
+        Style::default().fg(inactive_color)
     };
 
     let gauge = Gauge::default()
