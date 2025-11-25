@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout as RatatuiLayout},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
@@ -135,7 +135,7 @@ impl Default for LayoutPickerState {
 }
 
 /// Renders the layout picker dialog.
-pub fn render(f: &mut Frame, state: &LayoutPickerState) {
+pub fn render(f: &mut Frame, state: &LayoutPickerState, theme: &crate::tui::theme::Theme) {
     let size = f.size();
 
     // Create centered dialog
@@ -153,7 +153,7 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
     let title = Paragraph::new("Select a Layout")
         .style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(Alignment::Center)
@@ -166,10 +166,10 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
     // Add "Create New" option first
     let create_new_style = if state.create_new {
         Style::default()
-            .fg(Color::Yellow)
+            .fg(theme.accent)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Green)
+        Style::default().fg(theme.success)
     };
     items.push(ListItem::new("+ Create New Layout").style(create_new_style));
 
@@ -179,7 +179,7 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
 
         let style = if is_selected {
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -206,7 +206,7 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
         .block(Block::default().borders(Borders::ALL).title(list_title))
         .highlight_style(
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         );
 
@@ -215,7 +215,7 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState) {
     // Render instructions
     let instructions = "↑↓: Navigate  |  Enter: Select  |  Esc: Cancel";
     let paragraph = Paragraph::new(instructions)
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(paragraph, vertical_chunks[2]);

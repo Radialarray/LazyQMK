@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -223,7 +223,7 @@ impl Default for TemplateBrowserState {
 }
 
 /// Renders the template browser popup.
-pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
+pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect, theme: &crate::tui::theme::Theme) {
     // Center the popup (60% width, 80% height)
     let popup_width = (f32::from(area.width) * 0.6) as u16;
     let popup_height = (f32::from(area.height) * 0.8) as u16;
@@ -248,11 +248,11 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
     // Render title
     let title_style = if state.search_active {
         Style::default()
-            .fg(Color::Yellow)
+            .fg(theme.accent)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default()
-            .fg(Color::Cyan)
+            .fg(theme.primary)
             .add_modifier(Modifier::BOLD)
     };
 
@@ -268,9 +268,9 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
     };
 
     let search_style = if state.search_active {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::Gray)
+        Style::default().fg(theme.text_muted)
     };
 
     let search = Paragraph::new(search_text)
@@ -295,11 +295,11 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
 
             let style = if i == state.selected {
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Cyan)
+                    .fg(theme.background)
+                    .bg(theme.primary)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.text)
             };
 
             ListItem::new(Line::from(Span::styled(content, style)))
@@ -314,30 +314,30 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
     let details_content = if let Some(template) = state.get_selected_template() {
         vec![
             Line::from(vec![
-                Span::styled("Name: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Name: ", Style::default().fg(theme.primary)),
                 Span::raw(&template.metadata.name),
             ]),
             Line::from(vec![
-                Span::styled("Author: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Author: ", Style::default().fg(theme.primary)),
                 Span::raw(&template.metadata.author),
             ]),
             Line::from(vec![
-                Span::styled("Description: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Description: ", Style::default().fg(theme.primary)),
                 Span::raw(&template.metadata.description),
             ]),
             Line::from(vec![
-                Span::styled("Tags: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Tags: ", Style::default().fg(theme.primary)),
                 Span::raw(template.metadata.tags.join(", ")),
             ]),
             Line::from(vec![
-                Span::styled("Created: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Created: ", Style::default().fg(theme.primary)),
                 Span::raw(template.metadata.created.format("%Y-%m-%d").to_string()),
             ]),
         ]
     } else if filtered.is_empty() {
         vec![Line::from(Span::styled(
             "No templates found. Create one with Shift+T",
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.warning),
         ))]
     } else {
         vec![Line::from(Span::raw("No template selected"))]
@@ -355,7 +355,7 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect) {
     };
 
     let help = Paragraph::new(help_text)
-        .style(Style::default().fg(Color::Gray))
+        .style(Style::default().fg(theme.text_muted))
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(help, chunks[4]);
 }

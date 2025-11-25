@@ -52,7 +52,7 @@ pub use keycode_picker::KeycodePickerState;
 pub use metadata_editor::MetadataEditorState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
-pub use theme::Theme;
+pub use theme::{Theme, ThemeVariant};
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -528,7 +528,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             );
         }
         PopupType::TemplateBrowser => {
-            template_browser::render(f, &state.template_browser_state, f.size());
+            template_browser::render(f, &state.template_browser_state, f.size(), &state.theme);
         }
         PopupType::TemplateSaveDialog => {
             render_template_save_dialog(f, state);
@@ -1368,6 +1368,28 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             state.metadata_editor_state = MetadataEditorState::new(&state.layout.metadata);
             state.active_popup = Some(PopupType::MetadataEditor);
             state.set_status("Edit metadata - Tab to navigate, Enter to save");
+            Ok(false)
+        }
+
+        // Theme Toggle (F12)
+        (KeyCode::F(12), _) => {
+            // Toggle between dark and light themes
+            let new_theme_name = if state.theme.variant() == ThemeVariant::Dark {
+                "light"
+            } else {
+                "dark"
+            };
+            
+            state.theme = Theme::from_name(new_theme_name);
+            state.config.ui.theme = new_theme_name.to_string();
+            
+            // Save config to persist theme preference
+            if let Err(e) = state.config.save() {
+                state.set_error(format!("Theme changed to {} but failed to save: {}", new_theme_name, e));
+            } else {
+                state.set_status(format!("Theme changed to {}", new_theme_name));
+            }
+            
             Ok(false)
         }
 

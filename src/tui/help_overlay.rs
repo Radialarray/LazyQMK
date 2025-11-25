@@ -303,6 +303,11 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::raw("  "),
+                Span::styled("F12", Style::default().fg(theme.success)),
+                Span::raw("                  Toggle dark/light theme"),
+            ]),
+            Line::from(vec![
+                Span::raw("  "),
                 Span::styled("Escape", Style::default().fg(theme.success)),
                 Span::raw("               Close current dialog/popup"),
             ]),
@@ -560,9 +565,9 @@ impl HelpOverlayState {
                     .title(" Help - Keyboard Shortcuts ")
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(theme.primary))
-                    .style(Style::default().bg(theme.background)),
+                    .border_style(Style::default().fg(theme.primary)),
             )
+            .style(Style::default().fg(theme.text))
             .wrap(Wrap { trim: false })
             .scroll((self.scroll_offset as u16, 0));
 
