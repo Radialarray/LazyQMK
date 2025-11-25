@@ -40,11 +40,12 @@ fn run_onboarding_wizard() -> Result<()> {
     // Initialize terminal
     let mut terminal = tui::setup_terminal()?;
     let mut wizard_state = tui::onboarding_wizard::OnboardingWizardState::new();
+    let theme = tui::Theme::dark(); // Use dark theme for wizard
 
     // Run wizard loop
     loop {
         terminal.draw(|f| {
-            tui::onboarding_wizard::render(f, &wizard_state);
+            tui::onboarding_wizard::render(f, &wizard_state, &theme);
         })?;
 
         // Poll for events with timeout
@@ -185,6 +186,7 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
     // Initialize terminal
     let mut terminal = tui::setup_terminal()?;
     let mut picker_state = tui::layout_picker::LayoutPickerState::new();
+    let theme = tui::Theme::from_name(&config.ui.theme);
 
     // Scan for saved layouts
     picker_state.scan_layouts()?;
@@ -192,7 +194,7 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
     // Run picker loop
     loop {
         terminal.draw(|f| {
-            tui::layout_picker::render(f, &picker_state);
+            tui::layout_picker::render(f, &picker_state, &theme);
         })?;
 
         // Poll for events with timeout

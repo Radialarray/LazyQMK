@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -281,7 +281,7 @@ impl Default for OnboardingWizardState {
 }
 
 /// Renders the onboarding wizard
-pub fn render(f: &mut Frame, state: &OnboardingWizardState) {
+pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::theme::Theme) {
     let size = f.size();
 
     // Create centered layout
@@ -300,7 +300,7 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState) {
     let title = Paragraph::new(state.current_step.title())
         .style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(Alignment::Center)
@@ -310,19 +310,19 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState) {
     // Render content based on current step
     match state.current_step {
         WizardStep::Welcome => render_welcome(f, vertical_chunks[1]),
-        WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1]),
-        WizardStep::KeyboardSelection => render_keyboard_selection(f, state, vertical_chunks[1]),
-        WizardStep::LayoutSelection => render_layout_selection(f, state, vertical_chunks[1]),
-        WizardStep::Confirmation => render_confirmation(f, state, vertical_chunks[1]),
+        WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1], theme),
+        WizardStep::KeyboardSelection => render_keyboard_selection(f, state, vertical_chunks[1], theme),
+        WizardStep::LayoutSelection => render_layout_selection(f, state, vertical_chunks[1], theme),
+        WizardStep::Confirmation => render_confirmation(f, state, vertical_chunks[1], theme),
     }
 
     // Render instructions
-    render_instructions(f, state, vertical_chunks[2]);
+    render_instructions(f, state, vertical_chunks[2], theme);
 
     // Render error message if any
     if let Some(error) = &state.error_message {
         let error_widget = Paragraph::new(error.as_str())
-            .style(Style::default().fg(Color::Red))
+            .style(Style::default().fg(theme.error))
             .alignment(Alignment::Center);
         f.render_widget(error_widget, vertical_chunks[3]);
     }
@@ -348,14 +348,14 @@ fn render_welcome(f: &mut Frame, area: Rect) {
     f.render_widget(paragraph, area);
 }
 
-fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
     let text = vec![
         Line::from(""),
         Line::from("Enter the path to your QMK firmware directory:"),
         Line::from(""),
         Line::from(Span::styled(
             format!("> {}_", state.input_buffer),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.accent),
         )),
         Line::from(""),
         Line::from("Example: /home/user/qmk_firmware"),
@@ -368,7 +368,7 @@ fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rec
     f.render_widget(paragraph, area);
 }
 
-fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
     // Split area into filter input and list
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -380,7 +380,7 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
 
     // Render filter input
     let filter_input = Paragraph::new(format!("Filter: {}_", state.keyboard_filter))
-        .style(Style::default().fg(Color::Yellow))
+        .style(Style::default().fg(theme.accent))
         .block(Block::default().borders(Borders::ALL).title("Search"));
     f.render_widget(filter_input, chunks[0]);
 
@@ -393,7 +393,7 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         .map(|(i, kb)| {
             let style = if i == state.keyboard_selected_index {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -410,14 +410,14 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         )))
         .highlight_style(
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         );
 
     f.render_widget(list, chunks[1]);
 }
 
-fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
     let layouts: Vec<ListItem> = state
         .available_layouts
         .iter()
@@ -425,7 +425,7 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
         .map(|(i, layout)| {
             let style = if i == state.layout_selected_index {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -443,14 +443,14 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
         )))
         .highlight_style(
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         );
 
     f.render_widget(list, area);
 }
 
-fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
     let default_value = "<not set>".to_string();
     let qmk_path = state.inputs.get("qmk_path").unwrap_or(&default_value);
     let keyboard = state.inputs.get("keyboard").unwrap_or(&default_value);
@@ -461,15 +461,15 @@ fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect)
         Line::from("Please confirm your configuration:"),
         Line::from(""),
         Line::from(vec![
-            Span::styled("QMK Path:  ", Style::default().fg(Color::Cyan)),
+            Span::styled("QMK Path:  ", Style::default().fg(theme.primary)),
             Span::raw(qmk_path),
         ]),
         Line::from(vec![
-            Span::styled("Keyboard:  ", Style::default().fg(Color::Cyan)),
+            Span::styled("Keyboard:  ", Style::default().fg(theme.primary)),
             Span::raw(keyboard),
         ]),
         Line::from(vec![
-            Span::styled("Layout:    ", Style::default().fg(Color::Cyan)),
+            Span::styled("Layout:    ", Style::default().fg(theme.primary)),
             Span::raw(layout),
         ]),
         Line::from(""),
@@ -482,7 +482,7 @@ fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect)
     f.render_widget(paragraph, area);
 }
 
-fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
     let instructions = match state.current_step {
         WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
         WizardStep::QmkPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
@@ -494,7 +494,7 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect)
     };
 
     let paragraph = Paragraph::new(instructions)
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(paragraph, area);
