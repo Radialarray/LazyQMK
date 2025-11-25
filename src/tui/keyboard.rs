@@ -1,9 +1,8 @@
 //! Keyboard widget for rendering the visual keyboard layout
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, Cell, Row, Table},
     Frame,
 };
@@ -78,7 +77,7 @@ impl KeyboardWidget {
                 };
 
                 // Format: "ABC i" (3 chars keycode + space + indicator)
-                grid[grid_row][grid_col] = format!(" {:<3}{}", display, color_indicator);
+                grid[grid_row][grid_col] = format!(" {display:<3}{color_indicator}");
             }
         }
 

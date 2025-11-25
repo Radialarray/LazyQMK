@@ -8,6 +8,6 @@ pub mod generator;
 pub mod validator;
 
 // Re-export firmware types
-pub use builder::{BuildMessage, BuildState, BuildStatus};
+pub use builder::{BuildState, BuildStatus};
 pub use generator::FirmwareGenerator;
-pub use validator::{FirmwareValidator, ValidationReport};
+pub use validator::FirmwareValidator;

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Coordinate Conversion (to terminal)
 ///
-/// - Terminal X = visual_x * 7 characters per keyboard unit
-/// - Terminal Y = visual_y * 2.5 lines per keyboard unit
+/// - Terminal X = `visual_x` * 7 characters per keyboard unit
+/// - Terminal Y = `visual_y` * 2.5 lines per keyboard unit
 /// - Width chars = width * 7 (minimum 3)
 /// - Height lines = height * 2.5 (minimum 3)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -28,9 +28,10 @@ pub struct KeyGeometry {
     pub rotation: f32,
 }
 
+#[allow(dead_code)]
 impl KeyGeometry {
-    /// Creates a new KeyGeometry with the given parameters.
-    pub fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
+    /// Creates a new `KeyGeometry` with the given parameters.
+    #[must_use] pub const fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
         Self {
             matrix_position,
             led_index,
@@ -43,40 +44,40 @@ impl KeyGeometry {
     }
 
     /// Sets the key width.
-    pub fn with_width(mut self, width: f32) -> Self {
+    #[must_use] pub const fn with_width(mut self, width: f32) -> Self {
         self.width = width;
         self
     }
 
     /// Sets the key height.
-    pub fn with_height(mut self, height: f32) -> Self {
+    #[must_use] pub const fn with_height(mut self, height: f32) -> Self {
         self.height = height;
         self
     }
 
     /// Sets the key rotation.
-    pub fn with_rotation(mut self, rotation: f32) -> Self {
+    #[must_use] pub const fn with_rotation(mut self, rotation: f32) -> Self {
         self.rotation = rotation;
         self
     }
 
     /// Converts visual X position to terminal characters.
-    pub fn terminal_x(&self) -> u16 {
+    #[must_use] pub fn terminal_x(&self) -> u16 {
         (self.visual_x * 7.0) as u16
     }
 
     /// Converts visual Y position to terminal lines.
-    pub fn terminal_y(&self) -> u16 {
+    #[must_use] pub fn terminal_y(&self) -> u16 {
         (self.visual_y * 2.5) as u16
     }
 
     /// Converts key width to terminal characters.
-    pub fn terminal_width(&self) -> u16 {
+    #[must_use] pub fn terminal_width(&self) -> u16 {
         ((self.width * 7.0) as u16).max(3)
     }
 
     /// Converts key height to terminal lines.
-    pub fn terminal_height(&self) -> u16 {
+    #[must_use] pub fn terminal_height(&self) -> u16 {
         ((self.height * 2.5) as u16).max(3)
     }
 }
@@ -85,15 +86,15 @@ impl KeyGeometry {
 ///
 /// # Validation
 ///
-/// - keyboard_name must match QMK directory structure
-/// - layout_name must exist in keyboard's info.json layouts section
+/// - `keyboard_name` must match QMK directory structure
+/// - `layout_name` must exist in keyboard's info.json layouts section
 /// - matrix dimensions must match info.json
 /// - keys vec size determines supported key count
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KeyboardGeometry {
     /// QMK keyboard identifier (e.g., "crkbd")
     pub keyboard_name: String,
-    /// Specific layout variant (e.g., "LAYOUT_split_3x6_3")
+    /// Specific layout variant (e.g., "`LAYOUT_split_3x6_3`")
     pub layout_name: String,
     /// Electrical matrix row count (e.g., 8 for split Corne)
     pub matrix_rows: u8,
@@ -103,8 +104,9 @@ pub struct KeyboardGeometry {
     pub keys: Vec<KeyGeometry>,
 }
 
+#[allow(dead_code)]
 impl KeyboardGeometry {
-    /// Creates a new KeyboardGeometry.
+    /// Creates a new `KeyboardGeometry`.
     pub fn new(
         keyboard_name: impl Into<String>,
         layout_name: impl Into<String>,
@@ -126,17 +128,17 @@ impl KeyboardGeometry {
     }
 
     /// Gets the total number of keys.
-    pub fn key_count(&self) -> usize {
+    #[must_use] pub const fn key_count(&self) -> usize {
         self.keys.len()
     }
 
     /// Gets a key by LED index.
-    pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
+    #[must_use] pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.led_index == led_index)
     }
 
     /// Gets a key by matrix position.
-    pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
+    #[must_use] pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.matrix_position == position)
     }
 }

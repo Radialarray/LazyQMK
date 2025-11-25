@@ -11,6 +11,7 @@ use std::thread;
 
 /// Build status tracking.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum BuildStatus {
     /// Build not started
     Idle,
@@ -29,12 +30,12 @@ pub enum BuildStatus {
 impl std::fmt::Display for BuildStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BuildStatus::Idle => write!(f, "Idle"),
-            BuildStatus::Validating => write!(f, "Validating..."),
-            BuildStatus::Generating => write!(f, "Generating..."),
-            BuildStatus::Compiling => write!(f, "Compiling..."),
-            BuildStatus::Success => write!(f, "✓ Success"),
-            BuildStatus::Failed => write!(f, "✗ Failed"),
+            Self::Idle => write!(f, "Idle"),
+            Self::Validating => write!(f, "Validating..."),
+            Self::Generating => write!(f, "Generating..."),
+            Self::Compiling => write!(f, "Compiling..."),
+            Self::Success => write!(f, "✓ Success"),
+            Self::Failed => write!(f, "✗ Failed"),
         }
     }
 }
@@ -44,15 +45,25 @@ impl std::fmt::Display for BuildStatus {
 pub enum BuildMessage {
     /// Build progress update
     Progress {
+        /// Current build status
         status: BuildStatus,
+        /// Progress message
         message: String,
     },
     /// Build log output
-    Log { level: LogLevel, message: String },
+    Log {
+        /// Log level (Info, Ok, Error)
+        level: LogLevel,
+        /// Log message content
+        message: String
+    },
     /// Build completed (success or failure)
     Complete {
+        /// Whether the build succeeded
         success: bool,
+        /// Path to generated firmware file
         firmware_path: Option<PathBuf>,
+        /// Error message if build failed
         error: Option<String>,
     },
 }
@@ -60,18 +71,22 @@ pub enum BuildMessage {
 /// Log level for build output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
+    /// Informational message
     Info,
+    /// Success message
     Ok,
+    /// Error message
     Error,
 }
 
+#[allow(dead_code)]
 impl LogLevel {
     /// Returns the terminal color for this log level.
-    pub fn color(&self) -> ratatui::style::Color {
+    #[must_use] pub const fn color(&self) -> ratatui::style::Color {
         match self {
-            LogLevel::Info => ratatui::style::Color::Gray,
-            LogLevel::Ok => ratatui::style::Color::Green,
-            LogLevel::Error => ratatui::style::Color::Red,
+            Self::Info => ratatui::style::Color::Gray,
+            Self::Ok => ratatui::style::Color::Green,
+            Self::Error => ratatui::style::Color::Red,
         }
     }
 }
@@ -90,7 +105,7 @@ pub struct BuildState {
 
 impl BuildState {
     /// Creates a new idle build state.
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             status: BuildStatus::Idle,
             receiver: None,
@@ -100,7 +115,7 @@ impl BuildState {
     }
 
     /// Checks if a build is currently running.
-    pub fn is_building(&self) -> bool {
+    #[must_use] pub const fn is_building(&self) -> bool {
         matches!(
             self.status,
             BuildStatus::Validating | BuildStatus::Generating | BuildStatus::Compiling
@@ -136,7 +151,7 @@ impl BuildState {
                 self.status = status.clone();
                 self.last_message = message.clone();
                 self.log_lines
-                    .push((LogLevel::Info, format!("[{}] {}", status, message)));
+                    .push((LogLevel::Info, format!("[{status}] {message}")));
             }
             BuildMessage::Log { level, message } => {
                 self.log_lines.push((level, message));
@@ -193,7 +208,7 @@ impl BuildState {
                 let _ = sender.send(BuildMessage::Complete {
                     success: false,
                     firmware_path: None,
-                    error: Some(format!("Build failed: {}", e)),
+                    error: Some(format!("Build failed: {e}")),
                 });
             }
         });
@@ -219,19 +234,19 @@ fn run_build(
     sender
         .send(BuildMessage::Progress {
             status: BuildStatus::Compiling,
-            message: format!("Compiling {} keymap for {}...", keymap, keyboard),
+            message: format!("Compiling {keymap} keymap for {keyboard}..."),
         })
         .context("Failed to send progress message")?;
 
     sender
         .send(BuildMessage::Log {
             level: LogLevel::Info,
-            message: format!("Running: make {}:{}", keyboard, keymap),
+            message: format!("Running: make {keyboard}:{keymap}"),
         })
         .ok();
 
     // Build make command
-    let make_target = format!("{}:{}", keyboard, keymap);
+    let make_target = format!("{keyboard}:{keymap}");
 
     let mut cmd = Command::new("make");
     cmd.arg(&make_target)
@@ -312,7 +327,7 @@ fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Resul
     let extensions = ["uf2", "hex", "bin"];
 
     for ext in &extensions {
-        let firmware_name = format!("{}_{}.{}", keyboard_clean, keymap, ext);
+        let firmware_name = format!("{keyboard_clean}_{keymap}.{ext}");
         let firmware_path = qmk_path.join(".build").join(&firmware_name);
 
         if firmware_path.exists() {
@@ -321,9 +336,7 @@ fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Resul
     }
 
     anyhow::bail!(
-        "Could not find firmware file for {} {}. Check .build/ directory.",
-        keyboard,
-        keymap
+        "Could not find firmware file for {keyboard} {keymap}. Check .build/ directory."
     )
 }
 

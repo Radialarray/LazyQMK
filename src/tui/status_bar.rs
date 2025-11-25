@@ -68,7 +68,7 @@ impl StatusBar {
     }
 
     /// Get contextual help message based on current application state
-    fn get_contextual_help(state: &AppState) -> &'static str {
+    const fn get_contextual_help(state: &AppState) -> &'static str {
         use super::PopupType;
 
         match &state.active_popup {

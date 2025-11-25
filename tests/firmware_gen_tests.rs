@@ -84,9 +84,9 @@ fn create_test_geometry() -> KeyboardGeometry {
         for col in 0..3 {
             let key_geo = KeyGeometry {
                 matrix_position: (row, col),
-                led_index: (row * 3 + col) as u8,
-                visual_x: col as f32 * 2.0,
-                visual_y: row as f32 * 2.0,
+                led_index: (row * 3 + col),
+                visual_x: f32::from(col) * 2.0,
+                visual_y: f32::from(row) * 2.0,
                 width: 1.0,
                 height: 1.0,
                 rotation: 0.0,
@@ -115,7 +115,7 @@ fn create_test_mapping() -> VisualLayoutMapping {
         for col in 0..3 {
             let pos = Position { row, col };
             let matrix_pos = (row, col);
-            let led_idx = (row * 3 + col) as u8;
+            let led_idx = (row * 3 + col);
 
             // led_to_matrix is a Vec indexed by LED index
             led_to_matrix.push(matrix_pos);

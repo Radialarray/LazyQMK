@@ -21,7 +21,7 @@ pub struct ValidationReport {
 
 impl ValidationReport {
     /// Creates a new empty validation report.
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             errors: Vec::new(),
             warnings: Vec::new(),
@@ -29,7 +29,7 @@ impl ValidationReport {
     }
 
     /// Returns true if there are no errors (warnings are allowed).
-    pub fn is_valid(&self) -> bool {
+    #[must_use] pub const fn is_valid(&self) -> bool {
         self.errors.is_empty()
     }
 
@@ -44,7 +44,7 @@ impl ValidationReport {
     }
 
     /// Formats the report as a user-friendly error message.
-    pub fn format_message(&self) -> String {
+    #[must_use] pub fn format_message(&self) -> String {
         let mut message = String::new();
 
         if !self.errors.is_empty() {
@@ -74,11 +74,17 @@ impl Default for ValidationReport {
 /// Validation error with context.
 #[derive(Debug, Clone)]
 pub struct ValidationError {
+    /// Type of validation error
     pub kind: ValidationErrorKind,
+    /// Layer index where error occurred
     pub layer: Option<usize>,
+    /// Row in matrix where error occurred
     pub row: Option<u8>,
+    /// Column in matrix where error occurred
     pub col: Option<u8>,
+    /// Human-readable error message
     pub message: String,
+    /// Optional suggestion for fixing the error
     pub suggestion: Option<String>,
 }
 
@@ -96,13 +102,13 @@ impl ValidationError {
     }
 
     /// Sets the layer context.
-    pub fn with_layer(mut self, layer: usize) -> Self {
+    #[must_use] pub const fn with_layer(mut self, layer: usize) -> Self {
         self.layer = Some(layer);
         self
     }
 
     /// Sets the position context.
-    pub fn with_position(mut self, row: u8, col: u8) -> Self {
+    #[must_use] pub const fn with_position(mut self, row: u8, col: u8) -> Self {
         self.row = Some(row);
         self.col = Some(col);
         self
@@ -130,7 +136,7 @@ impl std::fmt::Display for ValidationError {
         }
 
         if let Some(suggestion) = &self.suggestion {
-            write!(f, "\n    → {}", suggestion)?;
+            write!(f, "\n    → {suggestion}")?;
         }
 
         Ok(())
@@ -140,23 +146,29 @@ impl std::fmt::Display for ValidationError {
 /// Types of validation errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidationErrorKind {
+    /// Keycode not recognized by QMK
     InvalidKeycode,
+    /// Key definition missing matrix position
     MissingPosition,
+    /// Multiple keys assigned to same matrix position
     DuplicatePosition,
+    /// Matrix position exceeds keyboard geometry bounds
     MatrixOutOfBounds,
+    /// Layer contains no key definitions
     EmptyLayer,
+    /// Number of keys doesn't match keyboard geometry
     MismatchedKeyCount,
 }
 
 impl std::fmt::Display for ValidationErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValidationErrorKind::InvalidKeycode => write!(f, "Invalid Keycode"),
-            ValidationErrorKind::MissingPosition => write!(f, "Missing Position"),
-            ValidationErrorKind::DuplicatePosition => write!(f, "Duplicate Position"),
-            ValidationErrorKind::MatrixOutOfBounds => write!(f, "Matrix Out of Bounds"),
-            ValidationErrorKind::EmptyLayer => write!(f, "Empty Layer"),
-            ValidationErrorKind::MismatchedKeyCount => write!(f, "Mismatched Key Count"),
+            Self::InvalidKeycode => write!(f, "Invalid Keycode"),
+            Self::MissingPosition => write!(f, "Missing Position"),
+            Self::DuplicatePosition => write!(f, "Duplicate Position"),
+            Self::MatrixOutOfBounds => write!(f, "Matrix Out of Bounds"),
+            Self::EmptyLayer => write!(f, "Empty Layer"),
+            Self::MismatchedKeyCount => write!(f, "Mismatched Key Count"),
         }
     }
 }
@@ -164,10 +176,12 @@ impl std::fmt::Display for ValidationErrorKind {
 /// Validation warning (non-blocking).
 #[derive(Debug, Clone)]
 pub struct ValidationWarning {
+    /// Warning message
     pub message: String,
 }
 
 impl ValidationWarning {
+    /// Creates a new validation warning
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -191,7 +205,7 @@ pub struct FirmwareValidator<'a> {
 
 impl<'a> FirmwareValidator<'a> {
     /// Creates a new firmware validator.
-    pub fn new(
+    #[must_use] pub const fn new(
         layout: &'a Layout,
         geometry: &'a KeyboardGeometry,
         mapping: &'a VisualLayoutMapping,
@@ -218,10 +232,24 @@ impl<'a> FirmwareValidator<'a> {
 
         // Validate layout structure first
         if let Err(e) = self.layout.validate() {
+            let error_msg = e.to_string();
+            // Determine error kind based on the error message
+            let kind = if error_msg.contains("Duplicate position") {
+                ValidationErrorKind::DuplicatePosition
+            } else if error_msg.contains("at least one layer") {
+                ValidationErrorKind::EmptyLayer
+            } else if error_msg.contains("must have the same number of keys") && error_msg.contains("has 0,") {
+                // Empty layer will show as "has 0, expected N"
+                ValidationErrorKind::EmptyLayer
+            } else {
+                // Default to MismatchedKeyCount for other structural issues
+                ValidationErrorKind::MismatchedKeyCount
+            };
+            
             report.add_error(
                 ValidationError::new(
-                    ValidationErrorKind::EmptyLayer,
-                    format!("Layout validation failed: {}", e),
+                    kind,
+                    format!("Layout validation failed: {e}"),
                 )
                 .with_suggestion("Check that all layers have keys and no gaps in layer numbers"),
             );
@@ -319,21 +347,21 @@ impl<'a> FirmwareValidator<'a> {
         if !self.keycode_db.is_valid(keycode) {
             // Try to find similar keycodes for suggestion
             let suggestions = self.keycode_db.search(keycode);
-            let suggestion_text = if !suggestions.is_empty() {
+            let suggestion_text = if suggestions.is_empty() {
+                "Check the keycode database for valid codes".to_string()
+            } else {
                 let similar: Vec<&str> = suggestions
                     .iter()
                     .take(3)
                     .map(|k| k.code.as_str())
                     .collect();
                 format!("Did you mean one of: {}", similar.join(", "))
-            } else {
-                "Check the keycode database for valid codes".to_string()
             };
 
             report.add_error(
                 ValidationError::new(
                     ValidationErrorKind::InvalidKeycode,
-                    format!("Invalid keycode '{}'", keycode),
+                    format!("Invalid keycode '{keycode}'"),
                 )
                 .with_layer(layer)
                 .with_position(row, col)
@@ -375,8 +403,7 @@ impl<'a> FirmwareValidator<'a> {
                 ValidationError::new(
                     ValidationErrorKind::MissingPosition,
                     format!(
-                        "Position ({}, {}) does not map to any matrix position",
-                        row, col
+                        "Position ({row}, {col}) does not map to any matrix position"
                     ),
                 )
                 .with_layer(layer)
@@ -401,8 +428,7 @@ impl<'a> FirmwareValidator<'a> {
 
         if actual_positions < expected_positions {
             report.add_warning(ValidationWarning::new(format!(
-                "Only {} of {} positions are defined in the layout. Some keys may be missing.",
-                actual_positions, expected_positions
+                "Only {actual_positions} of {expected_positions} positions are defined in the layout. Some keys may be missing."
             )));
         }
     }

@@ -45,7 +45,7 @@ fn test_parse_crkbd_info_json() {
     );
 
     let layouts = extract_layout_names(&info);
-    println!("Available layouts for crkbd: {:?}", layouts);
+    println!("Available layouts for crkbd: {layouts:?}");
 
     // crkbd typically has LAYOUT or LAYOUT_split_3x6_3
     assert!(!layouts.is_empty(), "crkbd should have layout definitions");
@@ -138,8 +138,7 @@ fn test_build_crkbd_visual_mapping() {
             assert_eq!(led_back, Some(0), "Visual -> LED mapping should round-trip");
         } else {
             panic!(
-                "Matrix -> Visual mapping failed for ({}, {})",
-                matrix_row, matrix_col
+                "Matrix -> Visual mapping failed for ({matrix_row}, {matrix_col})"
             );
         }
     } else {
@@ -180,11 +179,10 @@ fn test_parse_multiple_keyboards() {
         let info = result.unwrap();
         let layouts = extract_layout_names(&info);
 
-        println!("Keyboard '{}' has layouts: {:?}", keyboard, layouts);
+        println!("Keyboard '{keyboard}' has layouts: {layouts:?}");
         assert!(
             !layouts.is_empty(),
-            "Keyboard '{}' should have at least one layout",
-            keyboard
+            "Keyboard '{keyboard}' should have at least one layout"
         );
 
         // Try building geometry for first layout

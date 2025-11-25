@@ -12,7 +12,7 @@ use ratatui::{
 /// State for the category picker dialog
 #[derive(Debug, Clone)]
 pub struct CategoryPickerState {
-    /// Index of selected category (usize::MAX means "None" option)
+    /// Index of selected category (`usize::MAX` means "None" option)
     pub selected: usize,
     /// List state for Ratatui list widget
     pub list_state: ListState,
@@ -20,7 +20,7 @@ pub struct CategoryPickerState {
 
 impl CategoryPickerState {
     /// Create a new category picker starting at first category
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -54,7 +54,7 @@ impl CategoryPickerState {
     }
 
     /// Get the selected category ID (None if "None" is selected)
-    pub fn get_selected_category_id(
+    #[must_use] pub fn get_selected_category_id(
         &self,
         categories: &[crate::models::Category],
     ) -> Option<String> {
@@ -170,7 +170,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                         state.mark_dirty();
 
                         if let Some(id) = category_id {
-                            state.set_status(format!("Assigned key category '{}'", id));
+                            state.set_status(format!("Assigned key category '{id}'"));
                         } else {
                             state.set_status("Removed key category");
                         }
@@ -182,7 +182,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                         state.mark_dirty();
 
                         if let Some(id) = category_id {
-                            state.set_status(format!("Assigned layer category '{}'", id));
+                            state.set_status(format!("Assigned layer category '{id}'"));
                         } else {
                             state.set_status("Removed layer category");
                         }

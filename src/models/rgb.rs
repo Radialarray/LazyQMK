@@ -18,13 +18,14 @@ pub struct RgbColor {
     pub b: u8,
 }
 
+#[allow(dead_code)]
 impl RgbColor {
-    /// Creates a new RgbColor from individual channel values.
-    pub fn new(r: u8, g: u8, b: u8) -> Self {
+    /// Creates a new `RgbColor` from individual channel values.
+    #[must_use] pub const fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
     }
 
-    /// Parses an RgbColor from a hex string.
+    /// Parses an `RgbColor` from a hex string.
     ///
     /// Supports formats: "#RRGGBB", "RRGGBB", "#rrggbb", "rrggbb"
     ///
@@ -49,17 +50,16 @@ impl RgbColor {
 
         if hex.len() != 6 {
             anyhow::bail!(
-                "Invalid hex color format '{}'. Expected 6 hex digits (RRGGBB)",
-                hex
+                "Invalid hex color format '{hex}'. Expected 6 hex digits (RRGGBB)"
             );
         }
 
         let r = u8::from_str_radix(&hex[0..2], 16)
-            .context(format!("Invalid red channel in hex color '{}'", hex))?;
+            .context(format!("Invalid red channel in hex color '{hex}'"))?;
         let g = u8::from_str_radix(&hex[2..4], 16)
-            .context(format!("Invalid green channel in hex color '{}'", hex))?;
+            .context(format!("Invalid green channel in hex color '{hex}'"))?;
         let b = u8::from_str_radix(&hex[4..6], 16)
-            .context(format!("Invalid blue channel in hex color '{}'", hex))?;
+            .context(format!("Invalid blue channel in hex color '{hex}'"))?;
 
         Ok(Self::new(r, g, b))
     }
@@ -77,13 +77,13 @@ impl RgbColor {
     /// let color = RgbColor::new(0, 128, 255);
     /// assert_eq!(color.to_hex(), "#0080FF");
     /// ```
-    pub fn to_hex(&self) -> String {
+    #[must_use] pub fn to_hex(&self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 
     /// Converts the color to a Ratatui Color for terminal rendering.
     #[cfg(feature = "ratatui")]
-    pub fn to_ratatui_color(&self) -> ratatui::style::Color {
+    #[must_use] pub const fn to_ratatui_color(&self) -> ratatui::style::Color {
         ratatui::style::Color::Rgb(self.r, self.g, self.b)
     }
 }

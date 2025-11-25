@@ -64,7 +64,7 @@ pub struct MatrixPins {
     pub cols: Option<Vec<String>>,
 }
 
-fn default_key_size() -> f32 {
+const fn default_key_size() -> f32 {
     1.0
 }
 
@@ -77,6 +77,7 @@ fn default_key_size() -> f32 {
 /// # Returns
 ///
 /// A vector of keyboard names (relative paths from keyboards/ directory)
+#[allow(dead_code)]
 pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
     let keyboards_dir = qmk_path.join("keyboards");
 
@@ -97,6 +98,7 @@ pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
 }
 
 /// Recursively scans keyboard directories looking for info.json files.
+#[allow(dead_code)]
 fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String>) -> Result<()> {
     let entries =
         fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;
@@ -123,7 +125,7 @@ fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String
                 let keyboard_name = if prefix.is_empty() {
                     name_str.to_string()
                 } else {
-                    format!("{}/{}", prefix, name_str)
+                    format!("{prefix}/{name_str}")
                 };
                 keyboards.push(keyboard_name);
             }
@@ -132,7 +134,7 @@ fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String
             let new_prefix = if prefix.is_empty() {
                 name_str.to_string()
             } else {
-                format!("{}/{}", prefix, name_str)
+                format!("{prefix}/{name_str}")
             };
             scan_keyboards_recursive(&path, &new_prefix, keyboards)?;
         }
@@ -185,9 +187,9 @@ pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkIn
 }
 
 /// Layout variant information including name and key count.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LayoutVariant {
-    /// Layout name (e.g., "LAYOUT_split_3x6_3")
+    /// Layout name (e.g., "`LAYOUT_split_3x6_3`")
     pub name: String,
     /// Number of keys in this layout
     pub key_count: usize,
@@ -201,8 +203,8 @@ pub struct LayoutVariant {
 ///
 /// # Returns
 ///
-/// Vector of layout names (e.g., ["LAYOUT", "LAYOUT_split_3x6_3"])
-pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
+/// Vector of layout names (e.g., ["LAYOUT", "`LAYOUT_split_3x6_3`"])
+#[must_use] pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
     let mut names: Vec<String> = info.layouts.keys().cloned().collect();
     names.sort();
     names
@@ -217,7 +219,7 @@ pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
 /// # Returns
 ///
 /// Vector of layout variants with names and key counts
-pub fn extract_layout_variants(info: &QmkInfoJson) -> Vec<LayoutVariant> {
+#[must_use] pub fn extract_layout_variants(info: &QmkInfoJson) -> Vec<LayoutVariant> {
     let mut variants: Vec<LayoutVariant> = info
         .layouts
         .iter()
@@ -253,7 +255,7 @@ pub fn extract_layout_definition<'a>(
     ))
 }
 
-/// Builds KeyboardGeometry from QMK info.json layout definition.
+/// Builds `KeyboardGeometry` from QMK info.json layout definition.
 ///
 /// # Arguments
 ///
@@ -263,7 +265,7 @@ pub fn extract_layout_definition<'a>(
 ///
 /// # Returns
 ///
-/// KeyboardGeometry with physical key positions and matrix mappings
+/// `KeyboardGeometry` with physical key positions and matrix mappings
 pub fn build_keyboard_geometry(
     info: &QmkInfoJson,
     keyboard_name: &str,
@@ -281,9 +283,7 @@ pub fn build_keyboard_geometry(
             max_col = max_col.max(col);
         } else {
             anyhow::bail!(
-                "Key at index {} in layout '{}' has no matrix position",
-                idx,
-                layout_name
+                "Key at index {idx} in layout '{layout_name}' has no matrix position"
             );
         }
     }

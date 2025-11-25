@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This represents the visual position of a key as it appears in
 /// Markdown tables and the UI. Position is converted to matrix
-/// coordinates via VisualLayoutMapping.
+/// coordinates via `VisualLayoutMapping`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct Position {
     /// Visual row (0-based, typically 0-3 for most keyboards)
@@ -19,7 +19,7 @@ pub struct Position {
 
 impl Position {
     /// Creates a new Position with the given row and column.
-    pub fn new(row: u8, col: u8) -> Self {
+    #[must_use] pub const fn new(row: u8, col: u8) -> Self {
         Self { row, col }
     }
 }
@@ -29,15 +29,15 @@ impl Position {
 /// # Validation
 ///
 /// - Position must be within keyboard geometry bounds
-/// - Keycode must exist in KeycodeDatabase
-/// - Keycode "KC_TRNS" (transparent) is always valid
+/// - Keycode must exist in `KeycodeDatabase`
+/// - Keycode "`KC_TRNS`" (transparent) is always valid
 /// - Category ID must exist in parent Layout.categories if Some
 /// - Position must be unique within parent Layer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyDefinition {
     /// Visual position (row, col) in the grid
     pub position: Position,
-    /// QMK keycode (e.g., "KC_A", "KC_TRNS", "MO(1)")
+    /// QMK keycode (e.g., "`KC_A`", "`KC_TRNS`", "MO(1)")
     pub keycode: String,
     /// Optional display label (currently unused, future feature)
     pub label: Option<String>,
@@ -49,8 +49,9 @@ pub struct KeyDefinition {
     pub combo_participant: bool,
 }
 
+#[allow(dead_code)]
 impl KeyDefinition {
-    /// Creates a new KeyDefinition with the given position and keycode.
+    /// Creates a new `KeyDefinition` with the given position and keycode.
     pub fn new(position: Position, keycode: impl Into<String>) -> Self {
         Self {
             position,
@@ -63,7 +64,7 @@ impl KeyDefinition {
     }
 
     /// Sets the color override for this key.
-    pub fn with_color(mut self, color: RgbColor) -> Self {
+    #[must_use] pub const fn with_color(mut self, color: RgbColor) -> Self {
         self.color_override = Some(color);
         self
     }
@@ -81,12 +82,12 @@ impl KeyDefinition {
     }
 
     /// Checks if this key is transparent (passes through to lower layer).
-    pub fn is_transparent(&self) -> bool {
+    #[must_use] pub fn is_transparent(&self) -> bool {
         self.keycode == "KC_TRNS" || self.keycode == "KC_TRANSPARENT"
     }
 
     /// Checks if this key is a no-op (no key at this position).
-    pub fn is_no_op(&self) -> bool {
+    #[must_use] pub fn is_no_op(&self) -> bool {
         self.keycode == "KC_NO"
     }
 }
@@ -100,7 +101,7 @@ impl KeyDefinition {
 /// - Keys vec size must match keyboard layout
 /// - All positions must be present (no gaps in coordinate space)
 /// - Category ID must exist in parent Layout.categories if Some
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Layer {
     /// Layer number (0-based, max 255)
     pub number: u8,
@@ -114,6 +115,7 @@ pub struct Layer {
     pub keys: Vec<KeyDefinition>,
 }
 
+#[allow(dead_code)]
 impl Layer {
     /// Creates a new Layer with the given number and name.
     ///
@@ -164,7 +166,7 @@ impl Layer {
     }
 
     /// Gets a reference to the key at the given position.
-    pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
+    #[must_use] pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
         self.keys.iter().find(|k| k.position == position)
     }
 
@@ -179,7 +181,7 @@ impl Layer {
     }
 
     /// Sets the default color for this layer.
-    pub fn set_default_color(&mut self, color: RgbColor) {
+    pub const fn set_default_color(&mut self, color: RgbColor) {
         self.default_color = color;
     }
 
@@ -263,7 +265,7 @@ mod tests {
         assert!(Layer::new(0, "Base", color).is_ok());
         assert!(Layer::new(0, "A", color).is_ok());
         assert!(Layer::new(0, "", color).is_err());
-        assert!(Layer::new(0, &"a".repeat(51), color).is_err());
+        assert!(Layer::new(0, "a".repeat(51), color).is_err());
     }
 
     #[test]

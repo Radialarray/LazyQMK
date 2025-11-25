@@ -21,7 +21,7 @@ pub struct BuildLogState {
 
 impl BuildLogState {
     /// Creates a new build log state.
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             scroll_offset: 0,
             visible: false,
@@ -29,31 +29,32 @@ impl BuildLogState {
     }
 
     /// Toggles visibility of the build log viewer.
-    pub fn toggle(&mut self) {
+    #[allow(dead_code)]
+    pub const fn toggle(&mut self) {
         self.visible = !self.visible;
     }
 
     /// Scrolls the log view up by one line.
-    pub fn scroll_up(&mut self) {
+    pub const fn scroll_up(&mut self) {
         if self.scroll_offset > 0 {
             self.scroll_offset -= 1;
         }
     }
 
     /// Scrolls the log view down by one line.
-    pub fn scroll_down(&mut self, max_lines: usize, visible_lines: usize) {
+    pub const fn scroll_down(&mut self, max_lines: usize, visible_lines: usize) {
         if max_lines > visible_lines && self.scroll_offset < max_lines - visible_lines {
             self.scroll_offset += 1;
         }
     }
 
     /// Jumps to the top of the log.
-    pub fn scroll_to_top(&mut self) {
+    pub const fn scroll_to_top(&mut self) {
         self.scroll_offset = 0;
     }
 
     /// Jumps to the bottom of the log.
-    pub fn scroll_to_bottom(&mut self, max_lines: usize, visible_lines: usize) {
+    pub const fn scroll_to_bottom(&mut self, max_lines: usize, visible_lines: usize) {
         if max_lines > visible_lines {
             self.scroll_offset = max_lines - visible_lines;
         } else {

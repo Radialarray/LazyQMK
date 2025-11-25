@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// - created must be <= modified
 /// - tags must be lowercase, hyphen/alphanumeric only
 /// - version must match supported versions (currently "1.0")
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LayoutMetadata {
     /// Layout name (e.g., "My Corne Layout")
     pub name: String,
@@ -36,6 +36,7 @@ pub struct LayoutMetadata {
     pub version: String,
 }
 
+#[allow(dead_code)]
 impl LayoutMetadata {
     /// Creates new metadata with default values.
     pub fn new(name: impl Into<String>) -> Result<Self> {
@@ -113,8 +114,7 @@ impl LayoutMetadata {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
         {
             anyhow::bail!(
-                "Tag '{}' must be lowercase with hyphens and alphanumeric characters only",
-                tag
+                "Tag '{tag}' must be lowercase with hyphens and alphanumeric characters only"
             );
         }
 
@@ -140,11 +140,11 @@ impl Default for LayoutMetadata {
 /// # Color Resolution
 ///
 /// The Layout provides a four-level color priority system:
-/// 1. KeyDefinition.color_override (highest)
-/// 2. KeyDefinition.category_id → Category.color
-/// 3. Layer.category_id → Category.color
-/// 4. Layer.default_color (lowest/fallback)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// 1. `KeyDefinition.color_override` (highest)
+/// 2. `KeyDefinition.category_id` → Category.color
+/// 3. `Layer.category_id` → Category.color
+/// 4. `Layer.default_color` (lowest/fallback)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Layout {
     /// File metadata
     pub metadata: LayoutMetadata,
@@ -154,6 +154,7 @@ pub struct Layout {
     pub categories: Vec<Category>,
 }
 
+#[allow(dead_code)]
 impl Layout {
     /// Creates a new Layout with default metadata.
     pub fn new(name: impl Into<String>) -> Result<Self> {
@@ -187,7 +188,7 @@ impl Layout {
     }
 
     /// Gets a reference to the layer at the given index.
-    pub fn get_layer(&self, index: usize) -> Option<&Layer> {
+    #[must_use] pub fn get_layer(&self, index: usize) -> Option<&Layer> {
         self.layers.get(index)
     }
 
@@ -210,7 +211,7 @@ impl Layout {
     }
 
     /// Gets a category by ID.
-    pub fn get_category(&self, id: &str) -> Option<&Category> {
+    #[must_use] pub fn get_category(&self, id: &str) -> Option<&Category> {
         self.categories.iter().find(|c| c.id == id)
     }
 
@@ -233,10 +234,10 @@ impl Layout {
     /// Resolves the color for a key using the four-level priority system.
     ///
     /// Priority (highest to lowest):
-    /// 1. KeyDefinition.color_override
-    /// 2. KeyDefinition.category_id → Category.color
-    /// 3. Layer.category_id → Category.color
-    /// 4. Layer.default_color (fallback)
+    /// 1. `KeyDefinition.color_override`
+    /// 2. `KeyDefinition.category_id` → Category.color
+    /// 3. `Layer.category_id` → Category.color
+    /// 4. `Layer.default_color` (fallback)
     ///
     /// # Examples
     ///
@@ -255,7 +256,7 @@ impl Layout {
     /// let color = layout.resolve_key_color(0, &key);
     /// assert_eq!(color, RgbColor::new(255, 0, 0)); // Individual override
     /// ```
-    pub fn resolve_key_color(&self, layer_idx: usize, key: &KeyDefinition) -> RgbColor {
+    #[must_use] pub fn resolve_key_color(&self, layer_idx: usize, key: &KeyDefinition) -> RgbColor {
         // 1. Individual key color override (highest priority)
         if let Some(color) = key.color_override {
             return color;
@@ -387,7 +388,7 @@ mod tests {
     fn test_layout_metadata_validate_name() {
         assert!(LayoutMetadata::new("Valid Name").is_ok());
         assert!(LayoutMetadata::new("").is_err());
-        assert!(LayoutMetadata::new(&"a".repeat(101)).is_err());
+        assert!(LayoutMetadata::new("a".repeat(101)).is_err());
     }
 
     #[test]

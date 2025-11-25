@@ -54,7 +54,7 @@ fn generate_frontmatter(layout: &Layout) -> Result<String> {
     let yaml =
         serde_yaml::to_string(&layout.metadata).context("Failed to serialize metadata to YAML")?;
 
-    Ok(format!("---\n{}---\n", yaml))
+    Ok(format!("---\n{yaml}---\n"))
 }
 
 /// Generates a layer section with header, properties, and table.
@@ -69,7 +69,7 @@ fn generate_layer(layer: &crate::models::Layer) -> Result<String> {
 
     // Optional layer category
     if let Some(cat_id) = &layer.category_id {
-        output.push_str(&format!("**Category**: {}\n", cat_id));
+        output.push_str(&format!("**Category**: {cat_id}\n"));
     }
 
     output.push('\n');
@@ -102,14 +102,14 @@ fn generate_table(layer: &crate::models::Layer) -> Result<String> {
 
     let num_cols = (max_col + 1) as usize;
     let mut row_nums: Vec<_> = rows.keys().copied().collect();
-    row_nums.sort();
+    row_nums.sort_unstable();
 
     let mut output = String::new();
 
     // Generate header row
     output.push('|');
     for col in 0..num_cols {
-        output.push_str(&format!(" C{} |", col));
+        output.push_str(&format!(" C{col} |"));
     }
     output.push('\n');
 
@@ -164,7 +164,7 @@ fn serialize_keycode_syntax(key: &crate::models::KeyDefinition) -> String {
 
     // Add category if present
     if let Some(cat_id) = &key.category_id {
-        result.push_str(&format!("@{}", cat_id));
+        result.push_str(&format!("@{cat_id}"));
     }
 
     result
@@ -271,7 +271,7 @@ mod tests {
         let layout = create_test_layout();
         let frontmatter = generate_frontmatter(&layout).unwrap();
 
-        println!("Generated frontmatter:\n{}", frontmatter);
+        println!("Generated frontmatter:\n{frontmatter}");
 
         assert!(frontmatter.starts_with("---\n"));
         assert!(frontmatter.ends_with("---\n"));
@@ -349,7 +349,7 @@ mod tests {
         // Generate markdown
         let markdown = generate_markdown(&layout).unwrap();
 
-        println!("Generated markdown:\n{}", markdown);
+        println!("Generated markdown:\n{markdown}");
 
         // Parse it back
         let parsed_layout = parse_markdown_layout_str(&markdown).unwrap();

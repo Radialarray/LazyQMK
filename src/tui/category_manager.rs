@@ -14,18 +14,32 @@ use ratatui::{
 use crate::models::Category;
 
 /// Manager mode - determines what operation is being performed
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManagerMode {
     /// Browsing categories (default mode)
     Browsing,
     /// Creating a new category (entering name)
-    CreatingName { input: String },
+    CreatingName {
+        /// User input for category name
+        input: String
+    },
     /// Creating a new category (selecting color)
-    CreatingColor { name: String },
+    CreatingColor {
+        /// Name of category being created
+        name: String
+    },
     /// Renaming a category
-    Renaming { category_id: String, input: String },
+    Renaming {
+        /// ID of category being renamed
+        category_id: String,
+        /// User input for new name
+        input: String
+    },
     /// Confirming deletion
-    ConfirmingDelete { category_id: String },
+    ConfirmingDelete {
+        /// ID of category to delete
+        category_id: String
+    },
 }
 
 /// State for the category manager dialog
@@ -40,7 +54,7 @@ pub struct CategoryManagerState {
 
 impl CategoryManagerState {
     /// Create a new category manager state
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             selected: 0,
             mode: ManagerMode::Browsing,
@@ -54,7 +68,7 @@ impl CategoryManagerState {
     }
 
     /// Move selection up
-    pub fn select_previous(&mut self, category_count: usize) {
+    pub const fn select_previous(&mut self, category_count: usize) {
         if category_count > 0 {
             if self.selected > 0 {
                 self.selected -= 1;
@@ -65,7 +79,7 @@ impl CategoryManagerState {
     }
 
     /// Move selection down
-    pub fn select_next(&mut self, category_count: usize) {
+    pub const fn select_next(&mut self, category_count: usize) {
         if category_count > 0 {
             self.selected = (self.selected + 1) % category_count;
         }
@@ -99,12 +113,13 @@ impl CategoryManagerState {
     }
 
     /// Check if we're in browsing mode
-    pub fn is_browsing(&self) -> bool {
+    #[allow(dead_code)]
+    #[must_use] pub const fn is_browsing(&self) -> bool {
         matches!(self.mode, ManagerMode::Browsing)
     }
 
     /// Get the current input text (for name entry or renaming)
-    pub fn get_input(&self) -> Option<&str> {
+    #[must_use] pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
             ManagerMode::CreatingName { input } => Some(input),
             ManagerMode::Renaming { input, .. } => Some(input),
@@ -113,7 +128,7 @@ impl CategoryManagerState {
     }
 
     /// Get mutable reference to current input text
-    pub fn get_input_mut(&mut self) -> Option<&mut String> {
+    pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
             ManagerMode::CreatingName { input } => Some(input),
             ManagerMode::Renaming { input, .. } => Some(input),
@@ -221,7 +236,7 @@ fn render_category_list(
                 Style::default().fg(Color::White)
             };
 
-            let color_box = format!("█████ ",);
+            let color_box = "█████ ".to_string();
             let content = Line::from(vec![
                 Span::styled(
                     color_box,

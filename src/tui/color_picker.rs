@@ -14,8 +14,11 @@ use crate::models::RgbColor;
 /// RGB channel being edited
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RgbChannel {
+    /// Red color channel
     Red,
+    /// Green color channel
     Green,
+    /// Blue color channel
     Blue,
 }
 
@@ -34,7 +37,7 @@ pub struct ColorPickerState {
 
 impl ColorPickerState {
     /// Create a new color picker with default white color
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             r: 255,
             g: 255,
@@ -44,7 +47,7 @@ impl ColorPickerState {
     }
 
     /// Create a color picker initialized with a specific color
-    pub fn with_color(color: RgbColor) -> Self {
+    #[must_use] pub const fn with_color(color: RgbColor) -> Self {
         Self {
             r: color.r,
             g: color.g,
@@ -54,12 +57,12 @@ impl ColorPickerState {
     }
 
     /// Get the current color
-    pub fn get_color(&self) -> RgbColor {
+    #[must_use] pub const fn get_color(&self) -> RgbColor {
         RgbColor::new(self.r, self.g, self.b)
     }
 
     /// Switch to next channel (Red -> Green -> Blue -> Red)
-    pub fn next_channel(&mut self) {
+    pub const fn next_channel(&mut self) {
         self.active_channel = match self.active_channel {
             RgbChannel::Red => RgbChannel::Green,
             RgbChannel::Green => RgbChannel::Blue,
@@ -68,7 +71,7 @@ impl ColorPickerState {
     }
 
     /// Switch to previous channel (Red -> Blue -> Green -> Red)
-    pub fn previous_channel(&mut self) {
+    pub const fn previous_channel(&mut self) {
         self.active_channel = match self.active_channel {
             RgbChannel::Red => RgbChannel::Blue,
             RgbChannel::Green => RgbChannel::Red,
@@ -77,7 +80,7 @@ impl ColorPickerState {
     }
 
     /// Increase the active channel value
-    pub fn increase_value(&mut self, amount: u8) {
+    pub const fn increase_value(&mut self, amount: u8) {
         match self.active_channel {
             RgbChannel::Red => self.r = self.r.saturating_add(amount),
             RgbChannel::Green => self.g = self.g.saturating_add(amount),
@@ -86,7 +89,7 @@ impl ColorPickerState {
     }
 
     /// Decrease the active channel value
-    pub fn decrease_value(&mut self, amount: u8) {
+    pub const fn decrease_value(&mut self, amount: u8) {
         match self.active_channel {
             RgbChannel::Red => self.r = self.r.saturating_sub(amount),
             RgbChannel::Green => self.g = self.g.saturating_sub(amount),
@@ -170,7 +173,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
 
     // Hex code display
     let hex = picker_state.get_color().to_hex();
-    let hex_display = Paragraph::new(format!("  {}", hex))
+    let hex_display = Paragraph::new(format!("  {hex}"))
         .style(
             Style::default()
                 .fg(Color::White)
@@ -210,8 +213,8 @@ fn render_channel_slider(
     color: Color,
     is_active: bool,
 ) {
-    let percentage = (value as f64 / 255.0 * 100.0) as u16;
-    let label_text = format!("{}: {:3}", label, value);
+    let percentage = (f64::from(value) / 255.0 * 100.0) as u16;
+    let label_text = format!("{label}: {value:3}");
 
     let style = if is_active {
         Style::default().fg(color).add_modifier(Modifier::BOLD)
@@ -275,7 +278,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                                 state.layout.categories.push(category);
                                 state.mark_dirty();
                                 state.category_manager_state.cancel();
-                                state.set_status(format!("Created category '{}'", name));
+                                state.set_status(format!("Created category '{name}'"));
                             } else {
                                 state.set_error("Failed to create category");
                             }
@@ -290,7 +293,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                                 let name = category.name.clone();
                                 category.set_color(color);
                                 state.mark_dirty();
-                                state.set_status(format!("Updated color for '{}'", name));
+                                state.set_status(format!("Updated color for '{name}'"));
                             }
 
                             state.active_popup = Some(super::PopupType::CategoryManager);

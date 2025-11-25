@@ -1,0 +1,1114 @@
+   Compiling keyboard_tui v0.1.0 (/Users/user/dev/keyboard_tui)
+warning: unexpected `cfg` condition value: `ratatui`
+  --> src/models/rgb.rs:85:11
+   |
+85 |     #[cfg(feature = "ratatui")]
+   |           ^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `ratatui` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unused imports: `Line` and `Span`
+  --> src/tui/config_dialogs.rs:11:12
+   |
+11 |     text::{Line, Span},
+   |            ^^^^  ^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `extract_layout_names`
+  --> src/tui/config_dialogs.rs:18:5
+   |
+18 |     extract_layout_names, extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Direction`, `Layout`, `Line`, and `Span`
+ --> src/tui/keyboard.rs:4:26
+  |
+4 |     layout::{Constraint, Direction, Layout, Rect},
+  |                          ^^^^^^^^^  ^^^^^^
+5 |     style::{Color, Style},
+6 |     text::{Line, Span},
+  |            ^^^^  ^^^^
+
+warning: unused import: `Wrap`
+  --> src/tui/onboarding_wizard.rs:12:58
+   |
+12 |     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+   |                                                          ^^^^
+
+warning: unused import: `Span`
+  --> src/tui/mod.rs:29:18
+   |
+29 |     text::{Line, Span},
+   |                  ^^^^
+
+warning: unreachable pattern
+   --> src/tui/mod.rs:500:9
+    |
+500 |         _ => {
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> src/tui/mod.rs:500:9
+    |
+456 |         PopupType::KeycodePicker => {
+    |         ------------------------ matches some of the same values
+...
+459 |         PopupType::ColorPicker => {
+    |         ---------------------- matches some of the same values
+...
+462 |         PopupType::CategoryPicker => {
+    |         ------------------------- matches some of the same values
+...
+465 |         PopupType::CategoryManager => {
+    |         -------------------------- matches some of the same values
+...
+500 |         _ => {
+    |         ^ ...and 7 other patterns collectively make this unreachable
+    = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: unreachable pattern
+    --> src/tui/mod.rs:1288:9
+     |
+1111 |         (KeyCode::Char('l'), _) => {
+     |         ----------------------- matches all the relevant values
+...
+1288 |         (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unused variable: `name`
+    --> src/tui/mod.rs:1605:38
+     |
+1605 |         ManagerMode::CreatingColor { name } => {
+     |                                      ^^^^ help: try ignoring the field: `name: _`
+     |
+     = note: `#[warn(unused_variables)]` on by default
+
+warning: enum `ParseState` is never used
+  --> src/parser/layout.rs:14:6
+   |
+14 | enum ParseState {
+   |      ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:47:9
+   |
+47 |         status: BuildStatus,
+   |         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: requested on the command line with `-W missing-docs`
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:48:9
+   |
+48 |         message: String,
+   |         ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:51:11
+   |
+51 |     Log { level: LogLevel, message: String },
+   |           ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:51:28
+   |
+51 |     Log { level: LogLevel, message: String },
+   |                            ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:54:9
+   |
+54 |         success: bool,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:55:9
+   |
+55 |         firmware_path: Option<PathBuf>,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/builder.rs:56:9
+   |
+56 |         error: Option<String>,
+   |         ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> src/firmware/builder.rs:63:5
+   |
+63 |     Info,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> src/firmware/builder.rs:64:5
+   |
+64 |     Ok,
+   |     ^^
+
+warning: missing documentation for a variant
+  --> src/firmware/builder.rs:65:5
+   |
+65 |     Error,
+   |     ^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:77:5
+   |
+77 |     pub kind: ValidationErrorKind,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:78:5
+   |
+78 |     pub layer: Option<usize>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:79:5
+   |
+79 |     pub row: Option<u8>,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:80:5
+   |
+80 |     pub col: Option<u8>,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:81:5
+   |
+81 |     pub message: String,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/firmware/validator.rs:82:5
+   |
+82 |     pub suggestion: Option<String>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:143:5
+    |
+143 |     InvalidKeycode,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:144:5
+    |
+144 |     MissingPosition,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:145:5
+    |
+145 |     DuplicatePosition,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:146:5
+    |
+146 |     MatrixOutOfBounds,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:147:5
+    |
+147 |     EmptyLayer,
+    |     ^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/firmware/validator.rs:148:5
+    |
+148 |     MismatchedKeyCount,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/firmware/validator.rs:167:5
+    |
+167 |     pub message: String,
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+   --> src/firmware/validator.rs:171:5
+    |
+171 |     pub fn new(message: impl Into<String>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:151:5
+    |
+151 |     Name,
+    |     ^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:152:5
+    |
+152 |     Description,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:153:5
+    |
+153 |     Author,
+    |     ^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:154:5
+    |
+154 |     Tags,
+    |     ^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:160:5
+    |
+160 |     KeycodePicker,
+    |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:161:5
+    |
+161 |     ColorPicker,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:162:5
+    |
+162 |     CategoryPicker,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:163:5
+    |
+163 |     CategoryManager,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:164:5
+    |
+164 |     TemplateBrowser,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:165:5
+    |
+165 |     TemplateSaveDialog,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:166:5
+    |
+166 |     HelpOverlay,
+    |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:167:5
+    |
+167 |     BuildLog,
+    |     ^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:168:5
+    |
+168 |     MetadataEditor,
+    |     ^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:169:5
+    |
+169 |     UnsavedChangesPrompt,
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> src/tui/mod.rs:170:5
+    |
+170 |     LayoutPicker,
+    |     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:179:5
+    |
+179 |     pub layout: Layout,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:180:5
+    |
+180 |     pub source_path: Option<PathBuf>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:181:5
+    |
+181 |     pub dirty: bool,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:184:5
+    |
+184 |     pub current_layer: usize,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:185:5
+    |
+185 |     pub selected_position: Position,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:186:5
+    |
+186 |     pub active_popup: Option<PopupType>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:187:5
+    |
+187 |     pub status_message: String,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:188:5
+    |
+188 |     pub error_message: Option<String>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:191:5
+    |
+191 |     pub keycode_picker_state: KeycodePickerState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:192:5
+    |
+192 |     pub color_picker_state: ColorPickerState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:193:5
+    |
+193 |     pub color_picker_context: Option<ColorPickerContext>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:194:5
+    |
+194 |     pub category_picker_state: CategoryPickerState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:195:5
+    |
+195 |     pub category_picker_context: Option<CategoryPickerContext>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:196:5
+    |
+196 |     pub category_manager_state: CategoryManagerState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:197:5
+    |
+197 |     pub build_log_state: build_log::BuildLogState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:198:5
+    |
+198 |     pub template_browser_state: TemplateBrowserState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:199:5
+    |
+199 |     pub template_save_dialog_state: TemplateSaveDialogState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:200:5
+    |
+200 |     pub metadata_editor_state: MetadataEditorState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:201:5
+    |
+201 |     pub help_overlay_state: HelpOverlayState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:202:5
+    |
+202 |     pub layout_picker_state: config_dialogs::LayoutPickerState,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:205:5
+    |
+205 |     pub keycode_db: KeycodeDb,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:206:5
+    |
+206 |     pub geometry: KeyboardGeometry,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:207:5
+    |
+207 |     pub mapping: VisualLayoutMapping,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:208:5
+    |
+208 |     pub config: Config,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:211:5
+    |
+211 |     pub build_state: Option<BuildState>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/tui/mod.rs:214:5
+    |
+214 |     pub should_quit: bool,
+    |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/category_manager.rs:22:20
+   |
+22 |     CreatingName { input: String },
+   |                    ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/category_manager.rs:24:21
+   |
+24 |     CreatingColor { name: String },
+   |                     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/category_manager.rs:26:16
+   |
+26 |     Renaming { category_id: String, input: String },
+   |                ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/category_manager.rs:26:37
+   |
+26 |     Renaming { category_id: String, input: String },
+   |                                     ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/category_manager.rs:28:24
+   |
+28 |     ConfirmingDelete { category_id: String },
+   |                        ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/color_picker.rs:17:5
+   |
+17 |     Red,
+   |     ^^^
+
+warning: missing documentation for a variant
+  --> src/tui/color_picker.rs:18:5
+   |
+18 |     Green,
+   |     ^^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/color_picker.rs:19:5
+   |
+19 |     Blue,
+   |     ^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/keycode_picker.rs:18:5
+   |
+18 |     pub search: String,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/keycode_picker.rs:19:5
+   |
+19 |     pub selected: usize,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/tui/keycode_picker.rs:20:5
+   |
+20 |     pub active_category: Option<String>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for an associated function
+  --> src/tui/keycode_picker.rs:24:5
+   |
+24 |     pub fn new() -> Self {
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/metadata_editor.rs:18:5
+   |
+18 |     Name,
+   |     ^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/metadata_editor.rs:19:5
+   |
+19 |     Description,
+   |     ^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/metadata_editor.rs:20:5
+   |
+20 |     Author,
+   |     ^^^^^^
+
+warning: missing documentation for a variant
+  --> src/tui/metadata_editor.rs:21:5
+   |
+21 |     Tags,
+   |     ^^^^
+
+warning: `keyboard_tui` (lib) generated 91 warnings (run `cargo fix --lib -p keyboard_tui` to apply 5 suggestions)
+warning: unused import: `BuildMessage`
+  --> src/firmware/mod.rs:11:19
+   |
+11 | pub use builder::{BuildMessage, BuildState, BuildStatus};
+   |                   ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `ValidationReport`
+  --> src/firmware/mod.rs:13:40
+   |
+13 | pub use validator::{FirmwareValidator, ValidationReport};
+   |                                        ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `build_keyboard_geometry`, `extract_layout_definition`, `extract_layout_names`, `parse_keyboard_info_json`, and `scan_keyboards`
+  --> src/parser/mod.rs:12:5
+   |
+12 |     build_keyboard_geometry, extract_layout_definition, extract_layout_names,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+13 |     parse_keyboard_info_json, scan_keyboards,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused import: `parse_markdown_layout_str`
+  --> src/parser/mod.rs:15:41
+   |
+15 | pub use layout::{parse_markdown_layout, parse_markdown_layout_str};
+   |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `generate_markdown`
+  --> src/parser/mod.rs:16:24
+   |
+16 | pub use template_gen::{generate_markdown, save_markdown_layout};
+   |                        ^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Line` and `Span`
+  --> src/tui/config_dialogs.rs:11:12
+   |
+11 |     text::{Line, Span},
+   |            ^^^^  ^^^^
+
+warning: unused import: `RgbChannel`
+  --> src/tui/mod.rs:45:42
+   |
+45 | pub use color_picker::{ColorPickerState, RgbChannel};
+   |                                          ^^^^^^^^^^
+
+warning: unused imports: `KeyboardPickerState`, `LayoutPickerState`, and `PathConfigDialogState`
+  --> src/tui/mod.rs:46:26
+   |
+46 | pub use config_dialogs::{KeyboardPickerState, LayoutPickerState, PathConfigDialogState};
+   |                          ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `onboarding_wizard::OnboardingWizardState`
+  --> src/tui/mod.rs:51:9
+   |
+51 | pub use onboarding_wizard::OnboardingWizardState;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: methods `save`, `set_qmk_firmware_path`, `set_keyboard`, `set_layout`, and `set_output_format` are never used
+   --> src/config.rs:148:12
+    |
+93  | impl Config {
+    | ----------- methods in this implementation
+...
+148 |     pub fn save(&self) -> Result<()> {
+    |            ^^^^
+...
+222 |     pub fn set_qmk_firmware_path(&mut self, path: PathBuf) -> Result<()> {
+    |            ^^^^^^^^^^^^^^^^^^^^^
+...
+229 |     pub fn set_keyboard(&mut self, keyboard: String) {
+    |            ^^^^^^^^^^^^
+...
+234 |     pub fn set_layout(&mut self, layout: String) {
+    |            ^^^^^^^^^^
+...
+239 |     pub fn set_output_format(&mut self, format: String) -> Result<()> {
+    |            ^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: variants `Validating` and `Generating` are never constructed
+  --> src/firmware/builder.rs:18:5
+   |
+14 | pub enum BuildStatus {
+   |          ----------- variants in this enum
+...
+18 |     Validating,
+   |     ^^^^^^^^^^
+19 |     /// Generating firmware files
+20 |     Generating,
+   |     ^^^^^^^^^^
+   |
+   = note: `BuildStatus` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: method `color` is never used
+  --> src/firmware/builder.rs:70:12
+   |
+68 | impl LogLevel {
+   | ------------- method in this implementation
+69 |     /// Returns the terminal color for this log level.
+70 |     pub fn color(&self) -> ratatui::style::Color {
+   |            ^^^^^
+
+warning: methods `get`, `get_category_keycodes`, `keycode_count`, and `category_count` are never used
+   --> src/keycode_db/mod.rs:134:12
+    |
+67  | impl KeycodeDb {
+    | -------------- methods in this implementation
+...
+134 |     pub fn get(&self, keycode: &str) -> Option<&KeycodeDefinition> {
+    |            ^^^
+...
+210 |     pub fn get_category_keycodes(&self, category_id: &str) -> Vec<&KeycodeDefinition> {
+    |            ^^^^^^^^^^^^^^^^^^^^^
+...
+228 |     pub fn keycode_count(&self) -> usize {
+    |            ^^^^^^^^^^^^^
+...
+233 |     pub fn category_count(&self) -> usize {
+    |            ^^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+  --> src/models/keyboard_geometry.rs:33:12
+   |
+31 | impl KeyGeometry {
+   | ---------------- associated items in this implementation
+32 |     /// Creates a new KeyGeometry with the given parameters.
+33 |     pub fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
+   |            ^^^
+...
+46 |     pub fn with_width(mut self, width: f32) -> Self {
+   |            ^^^^^^^^^^
+...
+52 |     pub fn with_height(mut self, height: f32) -> Self {
+   |            ^^^^^^^^^^^
+...
+58 |     pub fn with_rotation(mut self, rotation: f32) -> Self {
+   |            ^^^^^^^^^^^^^
+...
+64 |     pub fn terminal_x(&self) -> u16 {
+   |            ^^^^^^^^^^
+...
+69 |     pub fn terminal_y(&self) -> u16 {
+   |            ^^^^^^^^^^
+...
+74 |     pub fn terminal_width(&self) -> u16 {
+   |            ^^^^^^^^^^^^^^
+...
+79 |     pub fn terminal_height(&self) -> u16 {
+   |            ^^^^^^^^^^^^^^^
+
+warning: associated items `new`, `add_key`, `key_count`, and `get_key_by_matrix` are never used
+   --> src/models/keyboard_geometry.rs:108:12
+    |
+106 | impl KeyboardGeometry {
+    | --------------------- associated items in this implementation
+107 |     /// Creates a new KeyboardGeometry.
+108 |     pub fn new(
+    |            ^^^
+...
+124 |     pub fn add_key(&mut self, key: KeyGeometry) {
+    |            ^^^^^^^
+...
+129 |     pub fn key_count(&self) -> usize {
+    |            ^^^^^^^^^
+...
+139 |     pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: methods `with_label`, `is_transparent`, and `is_no_op` are never used
+  --> src/models/layer.rs:78:12
+   |
+52 | impl KeyDefinition {
+   | ------------------ methods in this implementation
+...
+78 |     pub fn with_label(mut self, label: impl Into<String>) -> Self {
+   |            ^^^^^^^^^^
+...
+84 |     pub fn is_transparent(&self) -> bool {
+   |            ^^^^^^^^^^^^^^
+...
+89 |     pub fn is_no_op(&self) -> bool {
+   |            ^^^^^^^^
+
+warning: methods `get_key`, `get_key_mut`, `set_category`, `set_default_color`, and `set_name` are never used
+   --> src/models/layer.rs:167:12
+    |
+117 | impl Layer {
+    | ---------- methods in this implementation
+...
+167 |     pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
+    |            ^^^^^^^
+...
+172 |     pub fn get_key_mut(&mut self, position: Position) -> Option<&mut KeyDefinition> {
+    |            ^^^^^^^^^^^
+...
+177 |     pub fn set_category(&mut self, category_id: Option<String>) {
+    |            ^^^^^^^^^^^^
+...
+182 |     pub fn set_default_color(&mut self, color: RgbColor) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+187 |     pub fn set_name(&mut self, name: impl Into<String>) -> Result<()> {
+    |            ^^^^^^^^
+
+warning: associated items `set_description`, `set_author`, `add_tag`, and `validate_tag` are never used
+   --> src/models/layout.rs:81:12
+    |
+39  | impl LayoutMetadata {
+    | ------------------- associated items in this implementation
+...
+81  |     pub fn set_description(&mut self, description: impl Into<String>) {
+    |            ^^^^^^^^^^^^^^^
+...
+87  |     pub fn set_author(&mut self, author: impl Into<String>) {
+    |            ^^^^^^^^^^
+...
+93  |     pub fn add_tag(&mut self, tag: impl Into<String>) -> Result<()> {
+    |            ^^^^^^^
+...
+106 |     fn validate_tag(tag: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^
+
+warning: associated items `new`, `get_layer_mut`, `get_category_mut`, and `remove_category` are never used
+   --> src/models/layout.rs:159:12
+    |
+157 | impl Layout {
+    | ----------- associated items in this implementation
+158 |     /// Creates a new Layout with default metadata.
+159 |     pub fn new(name: impl Into<String>) -> Result<Self> {
+    |            ^^^
+...
+195 |     pub fn get_layer_mut(&mut self, index: usize) -> Option<&mut Layer> {
+    |            ^^^^^^^^^^^^^
+...
+218 |     pub fn get_category_mut(&mut self, id: &str) -> Option<&mut Category> {
+    |            ^^^^^^^^^^^^^^^^
+...
+224 |     pub fn remove_category(&mut self, id: &str) -> Option<Category> {
+    |            ^^^^^^^^^^^^^^^
+
+warning: methods `led_to_matrix_pos` and `matrix_to_visual_pos` are never used
+  --> src/models/visual_layout_mapping.rs:88:12
+   |
+41 | impl VisualLayoutMapping {
+   | ------------------------ methods in this implementation
+...
+88 |     pub fn led_to_matrix_pos(&self, led: u8) -> Option<(u8, u8)> {
+   |            ^^^^^^^^^^^^^^^^^
+...
+95 |     pub fn matrix_to_visual_pos(&self, row: u8, col: u8) -> Option<Position> {
+   |            ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `scan_keyboards` is never used
+  --> src/parser/keyboard_json.rs:80:8
+   |
+80 | pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
+   |        ^^^^^^^^^^^^^^
+
+warning: function `scan_keyboards_recursive` is never used
+   --> src/parser/keyboard_json.rs:100:4
+    |
+100 | fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String>) -> Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `ParseState` is never used
+  --> src/parser/layout.rs:14:6
+   |
+14 | enum ParseState {
+   |      ^^^^^^^^^^
+
+warning: method `toggle` is never used
+  --> src/tui/build_log.rs:32:12
+   |
+22 | impl BuildLogState {
+   | ------------------ method in this implementation
+...
+32 |     pub fn toggle(&mut self) {
+   |            ^^^^^^
+
+warning: method `is_browsing` is never used
+   --> src/tui/category_manager.rs:102:12
+    |
+41  | impl CategoryManagerState {
+    | ------------------------- method in this implementation
+...
+102 |     pub fn is_browsing(&self) -> bool {
+    |            ^^^^^^^^^^^
+
+warning: struct `PathConfigDialogState` is never constructed
+  --> src/tui/config_dialogs.rs:24:12
+   |
+24 | pub struct PathConfigDialogState {
+   |            ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `PathConfigDialogState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: associated items `new` and `validate` are never used
+  --> src/tui/config_dialogs.rs:33:12
+   |
+31 | impl PathConfigDialogState {
+   | -------------------------- associated items in this implementation
+32 |     /// Creates a new path configuration dialog
+33 |     pub fn new(current_path: Option<&PathBuf>) -> Self {
+   |            ^^^
+...
+45 |     pub fn validate(&mut self) -> Result<PathBuf, String> {
+   |            ^^^^^^^^
+
+warning: fields `keyboards`, `search_query`, `filtered_keyboards`, `selected_index`, `scroll_offset`, and `error_message` are never read
+  --> src/tui/config_dialogs.rs:71:9
+   |
+69 | pub struct KeyboardPickerState {
+   |            ------------------- fields in this struct
+70 |     /// Available keyboards
+71 |     pub keyboards: Vec<String>,
+   |         ^^^^^^^^^
+72 |     /// Search/filter text
+73 |     pub search_query: String,
+   |         ^^^^^^^^^^^^
+74 |     /// Filtered keyboards matching search
+75 |     pub filtered_keyboards: Vec<String>,
+   |         ^^^^^^^^^^^^^^^^^^
+76 |     /// Selected index in filtered list
+77 |     pub selected_index: usize,
+   |         ^^^^^^^^^^^^^^
+78 |     /// Scroll offset for viewport
+79 |     pub scroll_offset: usize,
+   |         ^^^^^^^^^^^^^
+80 |     /// Error message
+81 |     pub error_message: Option<String>,
+   |         ^^^^^^^^^^^^^
+   |
+   = note: `KeyboardPickerState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `load_keyboards`, `update_filter`, `get_selected`, `move_up`, `move_down`, and `update_scroll` are never used
+   --> src/tui/config_dialogs.rs:98:12
+    |
+84  | impl KeyboardPickerState {
+    | ------------------------ methods in this implementation
+...
+98  |     pub fn load_keyboards(&mut self, qmk_path: &PathBuf) -> Result<()> {
+    |            ^^^^^^^^^^^^^^
+...
+113 |     pub fn update_filter(&mut self) {
+    |            ^^^^^^^^^^^^^
+...
+133 |     pub fn get_selected(&self) -> Option<String> {
+    |            ^^^^^^^^^^^^
+...
+138 |     pub fn move_up(&mut self) {
+    |            ^^^^^^^
+...
+146 |     pub fn move_down(&mut self) {
+    |            ^^^^^^^^^
+...
+154 |     fn update_scroll(&mut self) {
+    |        ^^^^^^^^^^^^^
+
+warning: method `get_selected_variant` is never used
+   --> src/tui/config_dialogs.rs:214:12
+    |
+181 | impl LayoutPickerState {
+    | ---------------------- method in this implementation
+...
+214 |     pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
+    |            ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `render_path_dialog` is never used
+   --> src/tui/config_dialogs.rs:240:8
+    |
+240 | pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `render_keyboard_picker` is never used
+   --> src/tui/config_dialogs.rs:287:8
+    |
+287 | pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `handle_path_dialog_input` is never used
+   --> src/tui/config_dialogs.rs:385:8
+    |
+385 | pub fn handle_path_dialog_input(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `handle_keyboard_picker_input` is never used
+   --> src/tui/config_dialogs.rs:413:8
+    |
+413 | pub fn handle_keyboard_picker_input(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variants `QmkPath`, `KeyboardSelection`, `LayoutSelection`, and `Confirmation` are never constructed
+  --> src/tui/onboarding_wizard.rs:29:5
+   |
+25 | pub enum WizardStep {
+   |          ---------- variants in this enum
+...
+29 |     QmkPath,
+   |     ^^^^^^^
+30 |     /// Select keyboard from scanned list
+31 |     KeyboardSelection,
+   |     ^^^^^^^^^^^^^^^^^
+32 |     /// Select layout variant
+33 |     LayoutSelection,
+   |     ^^^^^^^^^^^^^^^
+34 |     /// Confirmation and save
+35 |     Confirmation,
+   |     ^^^^^^^^^^^^
+   |
+   = note: `WizardStep` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `next`, `previous`, and `title` are never used
+  --> src/tui/onboarding_wizard.rs:40:12
+   |
+38 | impl WizardStep {
+   | --------------- methods in this implementation
+39 |     /// Gets the next step in the wizard
+40 |     pub fn next(&self) -> Option<Self> {
+   |            ^^^^
+...
+51 |     pub fn previous(&self) -> Option<Self> {
+   |            ^^^^^^^^
+...
+62 |     pub fn title(&self) -> &'static str {
+   |            ^^^^^
+
+warning: multiple fields are never read
+  --> src/tui/onboarding_wizard.rs:77:9
+   |
+75 | pub struct OnboardingWizardState {
+   |            --------------------- fields in this struct
+76 |     /// Current wizard step
+77 |     pub current_step: WizardStep,
+   |         ^^^^^^^^^^^^
+78 |     /// User inputs collected so far
+79 |     pub inputs: HashMap<String, String>,
+   |         ^^^^^^
+80 |     /// Current text input buffer
+81 |     pub input_buffer: String,
+   |         ^^^^^^^^^^^^
+82 |     /// List of available keyboards (populated after QMK path is set)
+83 |     pub available_keyboards: Vec<String>,
+   |         ^^^^^^^^^^^^^^^^^^^
+84 |     /// Selected keyboard index in list
+85 |     pub keyboard_selected_index: usize,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+86 |     /// List of available layouts (populated after keyboard is selected)
+87 |     pub available_layouts: Vec<String>,
+   |         ^^^^^^^^^^^^^^^^^
+88 |     /// Selected layout index in list
+89 |     pub layout_selected_index: usize,
+   |         ^^^^^^^^^^^^^^^^^^^^^
+90 |     /// Error message to display
+91 |     pub error_message: Option<String>,
+   |         ^^^^^^^^^^^^^
+92 |     /// Whether the wizard is complete
+93 |     pub is_complete: bool,
+   |         ^^^^^^^^^^^
+   |
+   = note: `OnboardingWizardState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `next_step`, `previous_step`, and `build_config` are never used
+   --> src/tui/onboarding_wizard.rs:113:12
+    |
+96  | impl OnboardingWizardState {
+    | -------------------------- methods in this implementation
+...
+113 |     pub fn next_step(&mut self) -> Result<()> {
+    |            ^^^^^^^^^
+...
+207 |     pub fn previous_step(&mut self) {
+    |            ^^^^^^^^^^^^^
+...
+223 |     pub fn build_config(&self) -> Result<Config> {
+    |            ^^^^^^^^^^^^
+
+warning: function `render` is never used
+   --> src/tui/onboarding_wizard.rs:251:8
+    |
+251 | pub fn render(f: &mut Frame, state: &OnboardingWizardState) {
+    |        ^^^^^^
+
+warning: function `render_welcome` is never used
+   --> src/tui/onboarding_wizard.rs:298:4
+    |
+298 | fn render_welcome(f: &mut Frame, area: Rect) {
+    |    ^^^^^^^^^^^^^^
+
+warning: function `render_qmk_path_input` is never used
+   --> src/tui/onboarding_wizard.rs:318:4
+    |
+318 | fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `render_keyboard_selection` is never used
+   --> src/tui/onboarding_wizard.rs:338:4
+    |
+338 | fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `render_layout_selection` is never used
+   --> src/tui/onboarding_wizard.rs:369:4
+    |
+369 | fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `render_confirmation` is never used
+   --> src/tui/onboarding_wizard.rs:402:4
+    |
+402 | fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `render_instructions` is never used
+   --> src/tui/onboarding_wizard.rs:434:4
+    |
+434 | fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `handle_input` is never used
+   --> src/tui/onboarding_wizard.rs:451:8
+    |
+451 | pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<bool> {
+    |        ^^^^^^^^^^^^
+
+warning: `keyboard_tui` (bin "keyboard_tui") generated 54 warnings (8 duplicates) (run `cargo fix --bin "keyboard_tui"` to apply 9 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.72s

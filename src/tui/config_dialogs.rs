@@ -8,19 +8,19 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 use std::path::PathBuf;
 
 use crate::parser::keyboard_json::{
-    extract_layout_names, extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
+    extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
     LayoutVariant,
 };
 
 /// Path configuration dialog state
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PathConfigDialogState {
     /// Current input buffer
     pub input_buffer: String,
@@ -28,9 +28,10 @@ pub struct PathConfigDialogState {
     pub error_message: Option<String>,
 }
 
+#[allow(dead_code)]
 impl PathConfigDialogState {
     /// Creates a new path configuration dialog
-    pub fn new(current_path: Option<&PathBuf>) -> Self {
+    #[must_use] pub fn new(current_path: Option<&PathBuf>) -> Self {
         let input_buffer = current_path
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
@@ -66,6 +67,7 @@ impl PathConfigDialogState {
 
 /// Keyboard picker dialog state
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct KeyboardPickerState {
     /// Available keyboards
     pub keyboards: Vec<String>,
@@ -81,9 +83,10 @@ pub struct KeyboardPickerState {
     pub error_message: Option<String>,
 }
 
+#[allow(dead_code)]
 impl KeyboardPickerState {
     /// Creates a new keyboard picker
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             keyboards: Vec::new(),
             search_query: String::new(),
@@ -103,7 +106,7 @@ impl KeyboardPickerState {
                 Ok(())
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to scan keyboards: {}", e));
+                self.error_message = Some(format!("Failed to scan keyboards: {e}"));
                 Err(e)
             }
         }
@@ -130,12 +133,12 @@ impl KeyboardPickerState {
     }
 
     /// Gets the currently selected keyboard
-    pub fn get_selected(&self) -> Option<String> {
+    #[must_use] pub fn get_selected(&self) -> Option<String> {
         self.filtered_keyboards.get(self.selected_index).cloned()
     }
 
     /// Moves selection up
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
             self.update_scroll();
@@ -143,7 +146,7 @@ impl KeyboardPickerState {
     }
 
     /// Moves selection down
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected_index < self.filtered_keyboards.len().saturating_sub(1) {
             self.selected_index += 1;
             self.update_scroll();
@@ -151,7 +154,7 @@ impl KeyboardPickerState {
     }
 
     /// Updates scroll offset to keep selection visible
-    fn update_scroll(&mut self) {
+    const fn update_scroll(&mut self) {
         let viewport_height = 15; // Approximate visible items
         if self.selected_index < self.scroll_offset {
             self.scroll_offset = self.selected_index;
@@ -180,7 +183,7 @@ pub struct LayoutPickerState {
 
 impl LayoutPickerState {
     /// Creates a new layout picker
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             layouts: Vec::new(),
             selected_index: 0,
@@ -197,33 +200,34 @@ impl LayoutPickerState {
                 Ok(())
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to load layouts: {}", e));
+                self.error_message = Some(format!("Failed to load layouts: {e}"));
                 Err(e)
             }
         }
     }
 
     /// Gets the currently selected layout name
-    pub fn get_selected(&self) -> Option<String> {
+    #[must_use] pub fn get_selected(&self) -> Option<String> {
         self.layouts
             .get(self.selected_index)
             .map(|v| v.name.clone())
     }
 
     /// Gets the currently selected layout variant (with key count)
-    pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
+    #[allow(dead_code)]
+    #[must_use] pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
         self.layouts.get(self.selected_index)
     }
 
     /// Moves selection up
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
         }
     }
 
     /// Moves selection down
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected_index < self.layouts.len().saturating_sub(1) {
             self.selected_index += 1;
         }
@@ -237,6 +241,7 @@ impl Default for LayoutPickerState {
 }
 
 /// Renders the path configuration dialog
+#[allow(dead_code)]
 pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
     let area = centered_rect(60, 40, f.size());
 
@@ -284,6 +289,7 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
 }
 
 /// Renders the keyboard picker dialog
+#[allow(dead_code)]
 pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
     let area = centered_rect(70, 80, f.size());
 
@@ -370,7 +376,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(format!("Layouts for {}", keyboard)),
+            .title(format!("Layouts for {keyboard}")),
     );
     f.render_widget(list, chunks[0]);
 
@@ -382,6 +388,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
 }
 
 /// Handles input for path configuration dialog
+#[allow(dead_code)]
 pub fn handle_path_dialog_input(
     state: &mut PathConfigDialogState,
     key: KeyEvent,
@@ -410,6 +417,7 @@ pub fn handle_path_dialog_input(
 }
 
 /// Handles input for keyboard picker
+#[allow(dead_code)]
 pub fn handle_keyboard_picker_input(
     state: &mut KeyboardPickerState,
     key: KeyEvent,
