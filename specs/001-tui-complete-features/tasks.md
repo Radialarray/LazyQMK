@@ -301,7 +301,7 @@
 
 ---
 
-## Phase 9: User Story 5 - Template System (Priority: P2)
+## Phase 9: User Story 5 - Template System (Priority: P2) ✅ COMPLETE
 
 **Goal**: Enable saving, browsing, and loading reusable layout templates
 
@@ -309,23 +309,23 @@
 
 ### Template Storage
 
-- [ ] T132 [P] [US5] Implement template save dialog state in src/tui/mod.rs (metadata prompts)
-- [ ] T133 [US5] Implement template save dialog rendering (name, description, author, tags) in src/tui/mod.rs
-- [ ] T134 [US5] Implement template save dialog event handling (Shift+T) in src/tui/mod.rs
-- [ ] T135 [US5] Implement template directory creation (~/.config/layout_tools/templates/) in src/parser/template_gen.rs
-- [ ] T136 [US5] Implement template file generation with is_template=true in frontmatter in src/parser/template_gen.rs
+- [X] T132 [P] [US5] Implement template save dialog state in src/tui/mod.rs (metadata prompts)
+- [X] T133 [US5] Implement template save dialog rendering (name, description, author, tags) in src/tui/mod.rs
+- [X] T134 [US5] Implement template save dialog event handling (Shift+T) in src/tui/mod.rs
+- [X] T135 [US5] Implement template directory creation (~/.config/layout_tools/templates/) in src/parser/template_gen.rs
+- [X] T136 [US5] Implement template file generation with is_template=true in frontmatter in src/parser/template_gen.rs
 
 ### Template Browser
 
-- [ ] T137 [P] [US5] Implement TemplateBrowserState struct in src/tui/template_browser.rs (templates Vec, search, selected)
-- [ ] T138 [US5] Implement template scanning from directory in src/tui/template_browser.rs
-- [ ] T139 [US5] Implement template browser rendering with metadata display in src/tui/template_browser.rs
-- [ ] T140 [US5] Implement template search/filter by name and tags in src/tui/template_browser.rs
-- [ ] T141 [US5] Implement template selection and loading into session in src/tui/template_browser.rs
-- [ ] T142 [US5] Implement template browser opening with 't' key in src/tui/mod.rs
-- [ ] T143 [US5] Implement unsaved changes warning before loading template in src/tui/template_browser.rs
+- [X] T137 [P] [US5] Implement TemplateBrowserState struct in src/tui/template_browser.rs (templates Vec, search, selected)
+- [X] T138 [US5] Implement template scanning from directory in src/tui/template_browser.rs
+- [X] T139 [US5] Implement template browser rendering with metadata display in src/tui/template_browser.rs
+- [X] T140 [US5] Implement template search/filter by name and tags in src/tui/template_browser.rs
+- [X] T141 [US5] Implement template selection and loading into session in src/tui/template_browser.rs
+- [X] T142 [US5] Implement template browser opening with 't' key in src/tui/mod.rs
+- [X] T143 [US5] Implement unsaved changes warning before loading template in src/tui/template_browser.rs
 
-**Checkpoint**: Template system complete - templates can be saved, browsed, and loaded
+**Checkpoint**: ✅ Template system complete - templates can be saved, browsed, and loaded
 
 ---
 

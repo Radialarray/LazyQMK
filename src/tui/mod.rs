@@ -4,14 +4,15 @@
 //! and all UI widgets using Ratatui.
 
 pub mod build_log;
-pub mod config_dialogs;
-pub mod onboarding_wizard;
-pub mod keyboard;
-pub mod status_bar;
-pub mod keycode_picker;
-pub mod color_picker;
-pub mod category_picker;
 pub mod category_manager;
+pub mod category_picker;
+pub mod color_picker;
+pub mod config_dialogs;
+pub mod keyboard;
+pub mod keycode_picker;
+pub mod onboarding_wizard;
+pub mod status_bar;
+pub mod template_browser;
 
 use anyhow::{Context, Result};
 use crossterm::{
@@ -37,16 +38,15 @@ use crate::keycode_db::KeycodeDb;
 use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 
 // Re-export TUI components
-pub use config_dialogs::{
-    KeyboardPickerState, LayoutPickerState, PathConfigDialogState,
-};
+pub use category_manager::CategoryManagerState;
+pub use category_picker::CategoryPickerState;
+pub use color_picker::{ColorPickerState, RgbChannel};
+pub use config_dialogs::{KeyboardPickerState, LayoutPickerState, PathConfigDialogState};
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use onboarding_wizard::OnboardingWizardState;
 pub use status_bar::StatusBar;
-pub use color_picker::{ColorPickerState, RgbChannel};
-pub use category_picker::CategoryPickerState;
-pub use category_manager::CategoryManagerState;
+pub use template_browser::TemplateBrowserState;
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +68,88 @@ pub enum CategoryPickerContext {
     Layer,
 }
 
+/// State for the template save dialog.
+#[derive(Debug, Clone)]
+pub struct TemplateSaveDialogState {
+    /// Current input field
+    pub active_field: TemplateSaveField,
+    /// Template name
+    pub name: String,
+    /// Template description
+    pub description: String,
+    /// Template author
+    pub author: String,
+    /// Template tags (comma-separated input)
+    pub tags_input: String,
+}
+
+impl TemplateSaveDialogState {
+    /// Creates a new template save dialog state with pre-filled values from current layout.
+    pub fn new(layout_name: String) -> Self {
+        Self {
+            active_field: TemplateSaveField::Name,
+            name: layout_name,
+            description: String::new(),
+            author: String::new(),
+            tags_input: String::new(),
+        }
+    }
+
+    /// Get the active field's input string (mutable).
+    pub fn get_active_field_mut(&mut self) -> &mut String {
+        match self.active_field {
+            TemplateSaveField::Name => &mut self.name,
+            TemplateSaveField::Description => &mut self.description,
+            TemplateSaveField::Author => &mut self.author,
+            TemplateSaveField::Tags => &mut self.tags_input,
+        }
+    }
+
+    /// Move to the next field.
+    pub fn next_field(&mut self) {
+        self.active_field = match self.active_field {
+            TemplateSaveField::Name => TemplateSaveField::Description,
+            TemplateSaveField::Description => TemplateSaveField::Author,
+            TemplateSaveField::Author => TemplateSaveField::Tags,
+            TemplateSaveField::Tags => TemplateSaveField::Name,
+        };
+    }
+
+    /// Move to the previous field.
+    pub fn previous_field(&mut self) {
+        self.active_field = match self.active_field {
+            TemplateSaveField::Name => TemplateSaveField::Tags,
+            TemplateSaveField::Description => TemplateSaveField::Name,
+            TemplateSaveField::Author => TemplateSaveField::Description,
+            TemplateSaveField::Tags => TemplateSaveField::Author,
+        };
+    }
+
+    /// Parse tags from comma-separated input.
+    pub fn parse_tags(&self) -> Vec<String> {
+        self.tags_input
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+}
+
+impl Default for TemplateSaveDialogState {
+    fn default() -> Self {
+        Self::new("Untitled Template".to_string())
+    }
+}
+
+/// Fields in the template save dialog.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TemplateSaveField {
+    Name,
+    Description,
+    Author,
+    Tags,
+}
+
 /// Popup types that can be displayed over the main UI
 #[derive(Debug, Clone, PartialEq)]
 pub enum PopupType {
@@ -76,6 +158,7 @@ pub enum PopupType {
     CategoryPicker,
     CategoryManager,
     TemplateBrowser,
+    TemplateSaveDialog,
     HelpOverlay,
     BuildLog,
     MetadataEditor,
@@ -83,7 +166,7 @@ pub enum PopupType {
 }
 
 /// Application state - single source of truth
-/// 
+///
 /// All UI components read from this state immutably.
 /// Only event handlers modify state explicitly.
 pub struct AppState {
@@ -107,6 +190,8 @@ pub struct AppState {
     pub category_picker_context: Option<CategoryPickerContext>,
     pub category_manager_state: CategoryManagerState,
     pub build_log_state: build_log::BuildLogState,
+    pub template_browser_state: TemplateBrowserState,
+    pub template_save_dialog_state: TemplateSaveDialogState,
 
     // System resources
     pub keycode_db: KeycodeDb,
@@ -130,8 +215,7 @@ impl AppState {
         mapping: VisualLayoutMapping,
         config: Config,
     ) -> Result<Self> {
-        let keycode_db = KeycodeDb::load()
-            .context("Failed to load keycode database")?;
+        let keycode_db = KeycodeDb::load().context("Failed to load keycode database")?;
 
         Ok(Self {
             layout,
@@ -149,6 +233,8 @@ impl AppState {
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
             build_log_state: build_log::BuildLogState::new(),
+            template_browser_state: TemplateBrowserState::new(),
+            template_save_dialog_state: TemplateSaveDialogState::default(),
             keycode_db,
             geometry,
             mapping,
@@ -161,14 +247,18 @@ impl AppState {
     /// Get the currently selected key (mutable)
     pub fn get_selected_key_mut(&mut self) -> Option<&mut crate::models::KeyDefinition> {
         let layer = self.layout.layers.get_mut(self.current_layer)?;
-        layer.keys.iter_mut()
+        layer
+            .keys
+            .iter_mut()
             .find(|k| k.position == self.selected_position)
     }
 
     /// Get the currently selected key (immutable)
     pub fn get_selected_key(&self) -> Option<&crate::models::KeyDefinition> {
         let layer = self.layout.layers.get(self.current_layer)?;
-        layer.keys.iter()
+        layer
+            .keys
+            .iter()
             .find(|k| k.position == self.selected_position)
     }
 
@@ -224,7 +314,10 @@ pub fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) ->
 }
 
 /// Main event loop
-pub fn run_tui(state: &mut AppState, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+pub fn run_tui(
+    state: &mut AppState,
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+) -> Result<()> {
     loop {
         // Render current state
         terminal.draw(|f| render(f, state))?;
@@ -261,9 +354,9 @@ fn render(f: &mut Frame, state: &AppState) {
     let chunks = RatatuiLayout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),      // Title bar
-            Constraint::Min(10),         // Main content
-            Constraint::Length(3),       // Status bar
+            Constraint::Length(3), // Title bar
+            Constraint::Min(10),   // Main content
+            Constraint::Length(3), // Status bar
         ])
         .split(f.size());
 
@@ -287,9 +380,7 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     let dirty_indicator = if state.dirty { " *" } else { "" };
     let title = format!(
         " {} - Layer {} {}",
-        state.layout.metadata.name,
-        state.current_layer,
-        dirty_indicator
+        state.layout.metadata.name, state.current_layer, dirty_indicator
     );
 
     let title_widget = Paragraph::new(title)
@@ -324,6 +415,12 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 &state.layout.categories,
             );
         }
+        PopupType::TemplateBrowser => {
+            template_browser::render(f, &state.template_browser_state, f.size());
+        }
+        PopupType::TemplateSaveDialog => {
+            render_template_save_dialog(f, state);
+        }
         PopupType::UnsavedChangesPrompt => {
             render_unsaved_prompt(f);
         }
@@ -341,7 +438,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
 /// Render unsaved changes prompt
 fn render_unsaved_prompt(f: &mut Frame) {
     let area = centered_rect(60, 30, f.size());
-    
+
     let text = vec![
         Line::from(""),
         Line::from("You have unsaved changes."),
@@ -351,13 +448,124 @@ fn render_unsaved_prompt(f: &mut Frame) {
         Line::from("  [Esc] Cancel"),
     ];
 
-    let prompt = Paragraph::new(text)
-        .block(Block::default()
+    let prompt = Paragraph::new(text).block(
+        Block::default()
             .title(" Unsaved Changes ")
             .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Yellow)));
+            .style(Style::default().fg(Color::Yellow)),
+    );
 
     f.render_widget(prompt, area);
+}
+
+/// Render template save dialog
+fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
+    let area = centered_rect(70, 60, f.size());
+
+    let dialog_state = &state.template_save_dialog_state;
+
+    // Split into fields
+    let chunks = RatatuiLayout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Length(3), // Name field
+            Constraint::Length(3), // Description field
+            Constraint::Length(3), // Author field
+            Constraint::Length(3), // Tags field
+            Constraint::Min(2),    // Help text
+            Constraint::Length(2), // Action buttons
+        ])
+        .split(area);
+
+    // Title
+    let title = Paragraph::new("Save as Template")
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
+    // Name field
+    let name_style = if matches!(dialog_state.active_field, TemplateSaveField::Name) {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+    let name_text = if matches!(dialog_state.active_field, TemplateSaveField::Name) {
+        format!("Name: {}█", dialog_state.name)
+    } else {
+        format!("Name: {}", dialog_state.name)
+    };
+    let name = Paragraph::new(name_text)
+        .style(name_style)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(name, chunks[1]);
+
+    // Description field
+    let desc_style = if matches!(dialog_state.active_field, TemplateSaveField::Description) {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+    let desc_text = if matches!(dialog_state.active_field, TemplateSaveField::Description) {
+        format!("Description: {}█", dialog_state.description)
+    } else {
+        format!("Description: {}", dialog_state.description)
+    };
+    let description = Paragraph::new(desc_text)
+        .style(desc_style)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(description, chunks[2]);
+
+    // Author field
+    let author_style = if matches!(dialog_state.active_field, TemplateSaveField::Author) {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+    let author_text = if matches!(dialog_state.active_field, TemplateSaveField::Author) {
+        format!("Author: {}█", dialog_state.author)
+    } else {
+        format!("Author: {}", dialog_state.author)
+    };
+    let author = Paragraph::new(author_text)
+        .style(author_style)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(author, chunks[3]);
+
+    // Tags field
+    let tags_style = if matches!(dialog_state.active_field, TemplateSaveField::Tags) {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+    let tags_text = if matches!(dialog_state.active_field, TemplateSaveField::Tags) {
+        format!("Tags (comma-separated): {}█", dialog_state.tags_input)
+    } else {
+        format!("Tags (comma-separated): {}", dialog_state.tags_input)
+    };
+    let tags = Paragraph::new(tags_text)
+        .style(tags_style)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(tags, chunks[4]);
+
+    // Help text
+    let help_text = vec![
+        Line::from(""),
+        Line::from("Tab/Shift+Tab: navigate fields"),
+        Line::from("Type: enter text | Backspace: delete"),
+    ];
+    let help = Paragraph::new(help_text).style(Style::default().fg(Color::Gray));
+    f.render_widget(help, chunks[5]);
+
+    // Action buttons
+    let actions = Paragraph::new("Enter: save template | Esc: cancel")
+        .style(Style::default().fg(Color::Green))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(actions, chunks[6]);
 }
 
 /// Helper to create a centered rectangle
@@ -397,24 +605,14 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
     let popup_type = state.active_popup.clone();
 
     match popup_type {
-        Some(PopupType::KeycodePicker) => {
-            keycode_picker::handle_input(state, key)
-        }
-        Some(PopupType::ColorPicker) => {
-            color_picker::handle_input(state, key)
-        }
-        Some(PopupType::CategoryPicker) => {
-            category_picker::handle_input(state, key)
-        }
-        Some(PopupType::CategoryManager) => {
-            handle_category_manager_input(state, key)
-        }
-        Some(PopupType::UnsavedChangesPrompt) => {
-            handle_unsaved_prompt_input(state, key)
-        }
-        Some(PopupType::BuildLog) => {
-            handle_build_log_input(state, key)
-        }
+        Some(PopupType::KeycodePicker) => keycode_picker::handle_input(state, key),
+        Some(PopupType::ColorPicker) => color_picker::handle_input(state, key),
+        Some(PopupType::CategoryPicker) => category_picker::handle_input(state, key),
+        Some(PopupType::CategoryManager) => handle_category_manager_input(state, key),
+        Some(PopupType::TemplateBrowser) => handle_template_browser_input(state, key),
+        Some(PopupType::TemplateSaveDialog) => handle_template_save_dialog_input(state, key),
+        Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
+        Some(PopupType::BuildLog) => handle_build_log_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {
@@ -483,6 +681,175 @@ fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Re
             // Cancel
             state.active_popup = None;
             state.set_status("Cancelled");
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
+}
+
+/// Handle input for template browser
+fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    let browser_state = &mut state.template_browser_state;
+
+    if browser_state.search_active {
+        // Search mode
+        match key.code {
+            KeyCode::Char(c) => {
+                browser_state.search_push(c);
+                Ok(false)
+            }
+            KeyCode::Backspace => {
+                browser_state.search_pop();
+                Ok(false)
+            }
+            KeyCode::Esc => {
+                browser_state.toggle_search();
+                state.set_status("Search mode exited");
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Load selected template
+                match browser_state.load_selected_template() {
+                    Ok(layout) => {
+                        state.layout = layout;
+                        state.source_path = None; // New layout from template
+                        state.mark_dirty(); // Mark as dirty since it's unsaved
+                        state.active_popup = None;
+                        state.set_status("Template loaded");
+                        Ok(false)
+                    }
+                    Err(e) => {
+                        state.set_error(format!("Failed to load template: {}", e));
+                        Ok(false)
+                    }
+                }
+            }
+            _ => Ok(false),
+        }
+    } else {
+        // Navigation mode
+        match key.code {
+            KeyCode::Up => {
+                browser_state.select_previous();
+                Ok(false)
+            }
+            KeyCode::Down => {
+                browser_state.select_next();
+                Ok(false)
+            }
+            KeyCode::Char('/') => {
+                browser_state.toggle_search();
+                state.set_status("Search mode - type to filter templates");
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Load selected template
+                match browser_state.load_selected_template() {
+                    Ok(layout) => {
+                        state.layout = layout;
+                        state.source_path = None; // New layout from template
+                        state.mark_dirty(); // Mark as dirty since it's unsaved
+                        state.active_popup = None;
+                        state.set_status("Template loaded");
+                        Ok(false)
+                    }
+                    Err(e) => {
+                        state.set_error(format!("Failed to load template: {}", e));
+                        Ok(false)
+                    }
+                }
+            }
+            KeyCode::Esc | KeyCode::Char('q') => {
+                state.active_popup = None;
+                state.set_status("Template browser closed");
+                Ok(false)
+            }
+            _ => Ok(false),
+        }
+    }
+}
+
+/// Handle input for template save dialog
+fn handle_template_save_dialog_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    match key.code {
+        KeyCode::Char(c) => {
+            // Add character to active field
+            state
+                .template_save_dialog_state
+                .get_active_field_mut()
+                .push(c);
+            Ok(false)
+        }
+        KeyCode::Backspace => {
+            // Remove character from active field
+            state
+                .template_save_dialog_state
+                .get_active_field_mut()
+                .pop();
+            Ok(false)
+        }
+        KeyCode::Tab => {
+            // Move to next field
+            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                state.template_save_dialog_state.previous_field();
+            } else {
+                state.template_save_dialog_state.next_field();
+            }
+            Ok(false)
+        }
+        KeyCode::Enter => {
+            // Save template
+            let dialog_state = &state.template_save_dialog_state;
+
+            // Validate name is not empty
+            if dialog_state.name.trim().is_empty() {
+                state.set_error("Template name cannot be empty");
+                return Ok(false);
+            }
+
+            // Create template directory if it doesn't exist
+            let templates_dir = template_browser::TemplateBrowserState::templates_dir()?;
+            std::fs::create_dir_all(&templates_dir).context(format!(
+                "Failed to create templates directory: {}",
+                templates_dir.display()
+            ))?;
+
+            // Update layout metadata for template
+            let mut template_layout = state.layout.clone();
+            template_layout.metadata.name = dialog_state.name.clone();
+            template_layout.metadata.description = dialog_state.description.clone();
+            template_layout.metadata.author = dialog_state.author.clone();
+            template_layout.metadata.tags = dialog_state.parse_tags();
+            template_layout.metadata.is_template = true;
+            template_layout.metadata.touch();
+
+            // Generate filename from name (sanitize)
+            let filename = dialog_state
+                .name
+                .to_lowercase()
+                .replace(" ", "-")
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '-')
+                .collect::<String>();
+            let template_path = templates_dir.join(format!("{}.md", filename));
+
+            // Save template
+            match crate::parser::save_markdown_layout(&template_layout, &template_path) {
+                Ok(_) => {
+                    state.active_popup = None;
+                    state.set_status(format!("Template saved: {}", template_path.display()));
+                    Ok(false)
+                }
+                Err(e) => {
+                    state.set_error(format!("Failed to save template: {}", e));
+                    Ok(false)
+                }
+            }
+        }
+        KeyCode::Esc => {
+            // Cancel
+            state.active_popup = None;
+            state.set_status("Template save cancelled");
             Ok(false)
         }
         _ => Ok(false),
@@ -619,7 +986,8 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 state.color_picker_state = ColorPickerState::with_color(current_color);
                 state.color_picker_context = Some(ColorPickerContext::IndividualKey);
                 state.active_popup = Some(PopupType::ColorPicker);
-                state.set_status("Adjust color with arrows, Tab to switch channels, Enter to apply");
+                state
+                    .set_status("Adjust color with arrows, Tab to switch channels, Enter to apply");
             } else {
                 state.set_error("No key selected");
             }
@@ -668,6 +1036,45 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
+        // Save as template (Shift+T)
+        (KeyCode::Char('T'), KeyModifiers::SHIFT) => {
+            // Initialize template save dialog with current layout name
+            state.template_save_dialog_state =
+                TemplateSaveDialogState::new(state.layout.metadata.name.clone());
+            state.active_popup = Some(PopupType::TemplateSaveDialog);
+            state.set_status("Save as template - Enter field values");
+            Ok(false)
+        }
+
+        // Browse templates (t key)
+        (KeyCode::Char('t'), _) => {
+            // Check for unsaved changes before loading template
+            if state.dirty {
+                // Show warning first
+                state.set_status(
+                    "You have unsaved changes. Press 't' again to open template browser anyway.",
+                );
+                // Mark that we want to open template browser
+                // For now, open directly - T143 will add proper warning
+                state.template_browser_state = TemplateBrowserState::new();
+                if let Err(e) = state.template_browser_state.scan_templates() {
+                    state.set_error(format!("Failed to scan templates: {}", e));
+                    return Ok(false);
+                }
+                state.active_popup = Some(PopupType::TemplateBrowser);
+                state.set_status("Select a template - Enter to load");
+            } else {
+                state.template_browser_state = TemplateBrowserState::new();
+                if let Err(e) = state.template_browser_state.scan_templates() {
+                    state.set_error(format!("Failed to scan templates: {}", e));
+                    return Ok(false);
+                }
+                state.active_popup = Some(PopupType::TemplateBrowser);
+                state.set_status("Select a template - Enter to load");
+            }
+            Ok(false)
+        }
+
         // Generate firmware (Ctrl+G)
         (KeyCode::Char('g'), KeyModifiers::CONTROL) => {
             handle_firmware_generation(state)?;
@@ -713,7 +1120,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 
     // Step 1: Validate layout
     state.set_status("Validating layout...");
-    
+
     let validator = FirmwareValidator::new(
         &state.layout,
         &state.geometry,
@@ -721,36 +1128,33 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
         &state.keycode_db,
     );
     let report = validator.validate()?;
-    
+
     if !report.is_valid() {
         // Show validation errors
         let error_msg = report.format_message();
         state.set_error(format!("Validation failed:\n{}", error_msg));
         return Ok(());
     }
-    
+
     // Step 2: Generate firmware files
     state.set_status("Generating firmware files...");
-    
+
     let generator = FirmwareGenerator::new(
         &state.layout,
         &state.geometry,
         &state.mapping,
         &state.config,
     );
-    
+
     match generator.generate() {
         Ok((keymap_path, vial_path)) => {
-            state.set_status(format!(
-                "✓ Generated: {} and {}",
-                keymap_path, vial_path
-            ));
+            state.set_status(format!("✓ Generated: {} and {}", keymap_path, vial_path));
         }
         Err(e) => {
             state.set_error(format!("Generation failed: {}", e));
         }
     }
-    
+
     Ok(())
 }
 
@@ -764,29 +1168,29 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
             return Ok(());
         }
     };
-    
+
     // Initialize build state if needed
     if state.build_state.is_none() {
         state.build_state = Some(BuildState::new());
     }
-    
+
     let build_state = state.build_state.as_mut().unwrap();
-    
+
     // Check if build already in progress
     if build_state.is_building() {
         state.set_error("Build already in progress");
         return Ok(());
     }
-    
+
     // Start the build
     build_state.start_build(
         qmk_path,
         state.config.build.keyboard.clone(),
         state.config.build.keymap.clone(),
     )?;
-    
+
     state.set_status("Build started - check status with Ctrl+L");
-    
+
     Ok(())
 }
 
@@ -803,11 +1207,15 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     Ok(false)
                 }
                 KeyCode::Up => {
-                    state.category_manager_state.select_previous(state.layout.categories.len());
+                    state
+                        .category_manager_state
+                        .select_previous(state.layout.categories.len());
                     Ok(false)
                 }
                 KeyCode::Down => {
-                    state.category_manager_state.select_next(state.layout.categories.len());
+                    state
+                        .category_manager_state
+                        .select_next(state.layout.categories.len());
                     Ok(false)
                 }
                 KeyCode::Char('n') => {
@@ -863,7 +1271,10 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                         if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
                             layer.category_id = Some(category_id);
                             state.mark_dirty();
-                            state.set_status(format!("Layer {} assigned to category '{}'", state.current_layer, category_name));
+                            state.set_status(format!(
+                                "Layer {} assigned to category '{}'",
+                                state.current_layer, category_name
+                            ));
                         }
                     } else {
                         state.set_error("No category selected");
@@ -885,20 +1296,21 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     // Process the input
                     if let Some(input) = state.category_manager_state.get_input() {
                         let input = input.to_string();
-                        
+
                         match &state.category_manager_state.mode {
                             ManagerMode::CreatingName { .. } => {
                                 // Generate ID from name (T107)
                                 let id = input.to_lowercase().replace(' ', "-");
-                                
+
                                 // Check if ID already exists
                                 if state.layout.categories.iter().any(|c| c.id == id) {
                                     state.set_error("Category with this ID already exists");
                                     return Ok(false);
                                 }
-                                
+
                                 // Move to color selection (T108)
-                                state.category_manager_state.mode = ManagerMode::CreatingColor { name: input };
+                                state.category_manager_state.mode =
+                                    ManagerMode::CreatingColor { name: input };
                                 state.color_picker_state = ColorPickerState::new();
                                 state.color_picker_context = Some(ColorPickerContext::Category);
                                 state.active_popup = Some(PopupType::ColorPicker);
@@ -906,8 +1318,12 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             }
                             ManagerMode::Renaming { category_id, .. } => {
                                 // Update category name (T109)
-                                if let Some(category) = state.layout.categories.iter_mut()
-                                    .find(|c| &c.id == category_id) {
+                                if let Some(category) = state
+                                    .layout
+                                    .categories
+                                    .iter_mut()
+                                    .find(|c| &c.id == category_id)
+                                {
                                     if let Err(e) = category.set_name(&input) {
                                         state.set_error(format!("Invalid name: {}", e));
                                         return Ok(false);
@@ -942,10 +1358,10 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 KeyCode::Char('y') | KeyCode::Char('Y') => {
                     // Delete category (T111, T112)
                     let category_id = category_id.clone();
-                    
+
                     // Remove category
                     state.layout.categories.retain(|c| c.id != category_id);
-                    
+
                     // Clean up references in keys (T112)
                     for layer in &mut state.layout.layers {
                         if layer.category_id.as_ref() == Some(&category_id) {
@@ -957,16 +1373,17 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             }
                         }
                     }
-                    
+
                     state.mark_dirty();
                     state.category_manager_state.cancel();
-                    
+
                     // Adjust selection if needed
-                    if state.category_manager_state.selected >= state.layout.categories.len() 
-                        && state.category_manager_state.selected > 0 {
+                    if state.category_manager_state.selected >= state.layout.categories.len()
+                        && state.category_manager_state.selected > 0
+                    {
                         state.category_manager_state.selected -= 1;
                     }
-                    
+
                     state.set_status("Category deleted");
                     Ok(false)
                 }
