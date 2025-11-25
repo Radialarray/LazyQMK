@@ -1596,7 +1596,7 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 _ => Ok(false),
             }
         }
-        ManagerMode::CreatingColor { name } => {
+        ManagerMode::CreatingColor { name: _ } => {
             // Color picker is handled by the color picker handler
             // We just need to handle the completion
             // This will be managed by returning from the color picker
