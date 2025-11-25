@@ -17,6 +17,7 @@ pub mod metadata_editor;
 pub mod onboarding_wizard;
 pub mod status_bar;
 pub mod template_browser;
+pub mod theme;
 
 use anyhow::{Context, Result};
 use crossterm::{
@@ -51,6 +52,7 @@ pub use keycode_picker::KeycodePickerState;
 pub use metadata_editor::MetadataEditorState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
+pub use theme::{Theme, ThemeVariant};
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -199,6 +201,8 @@ pub struct AppState {
     pub dirty: bool,
 
     // UI state
+    /// Current UI theme
+    pub theme: Theme,
     /// Currently displayed layer index
     pub current_layer: usize,
     /// Currently selected key position
@@ -265,11 +269,13 @@ impl AppState {
         config: Config,
     ) -> Result<Self> {
         let keycode_db = KeycodeDb::load().context("Failed to load keycode database")?;
+        let theme = Theme::from_name(&config.ui.theme);
 
         Ok(Self {
             layout,
             source_path,
             dirty: false,
+            theme,
             current_layer: 0,
             selected_position: Position { row: 0, col: 0 },
             active_popup: None,
@@ -322,6 +328,12 @@ impl AppState {
     /// Clear dirty flag (after save)
     pub const fn mark_clean(&mut self) {
         self.dirty = false;
+    }
+
+    /// Returns a reference to the current theme
+    #[must_use]
+    pub const fn theme(&self) -> &Theme {
+        &self.theme
     }
 
     /// Rebuild keyboard geometry and visual layout mapping for a new layout variant.

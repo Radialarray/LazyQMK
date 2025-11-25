@@ -47,7 +47,7 @@ impl Default for BuildConfig {
 /// UI preferences configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiConfig {
-    /// Color theme (future feature)
+    /// Color theme ("dark" or "light")
     pub theme: String,
     /// Display help on startup
     pub show_help_on_startup: bool,
@@ -56,7 +56,7 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            theme: "default".to_string(),
+            theme: "dark".to_string(),
             show_help_on_startup: true,
         }
     }
@@ -178,6 +178,7 @@ impl Config {
     /// Checks:
     /// - QMK firmware path exists (if set) and contains required files
     /// - `output_format` is valid ("uf2", "hex", or "bin")
+    /// - `theme` is valid ("dark" or "light")
     /// - `output_dir` parent exists
     pub fn validate(&self) -> Result<()> {
         // Validate QMK firmware path if set
@@ -209,6 +210,15 @@ impl Config {
             _ => anyhow::bail!(
                 "Invalid output format '{}'. Must be 'uf2', 'hex', or 'bin'",
                 self.build.output_format
+            ),
+        }
+
+        // Validate theme
+        match self.ui.theme.to_lowercase().as_str() {
+            "dark" | "light" => {}
+            _ => anyhow::bail!(
+                "Invalid theme '{}'. Must be 'dark' or 'light'",
+                self.ui.theme
             ),
         }
 
@@ -264,7 +274,7 @@ mod tests {
         assert_eq!(config.build.layout, "LAYOUT_split_3x6_3");
         assert_eq!(config.build.keymap, "default");
         assert_eq!(config.build.output_format, "uf2");
-        assert_eq!(config.ui.theme, "default");
+        assert_eq!(config.ui.theme, "dark");
         assert!(config.ui.show_help_on_startup);
     }
 
@@ -350,5 +360,27 @@ mod tests {
         assert_eq!(config.build.output_format, "hex");
 
         assert!(config.set_output_format("invalid".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_config_validate_theme() {
+        let mut config = Config::new();
+        assert!(config.validate().is_ok());
+
+        config.ui.theme = "invalid".to_string();
+        assert!(config.validate().is_err());
+
+        config.ui.theme = "dark".to_string();
+        assert!(config.validate().is_ok());
+
+        config.ui.theme = "light".to_string();
+        assert!(config.validate().is_ok());
+
+        // Case insensitive
+        config.ui.theme = "DARK".to_string();
+        assert!(config.validate().is_ok());
+
+        config.ui.theme = "Light".to_string();
+        assert!(config.validate().is_ok());
     }
 }
