@@ -77,7 +77,7 @@ impl KeyboardWidget {
                 };
 
                 // Format: "ABC i" (3 chars keycode + space + indicator)
-                grid[grid_row][grid_col] = format!(" {:<3}{}", display, color_indicator);
+                grid[grid_row][grid_col] = format!(" {display:<3}{color_indicator}");
             }
         }
 

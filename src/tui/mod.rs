@@ -52,7 +52,7 @@ pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
 
 /// Color picker context - what are we setting the color for?
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ColorPickerContext {
     /// Setting color for individual key
     IndividualKey,
@@ -63,7 +63,7 @@ pub enum ColorPickerContext {
 }
 
 /// Category picker context - what are we setting the category for?
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CategoryPickerContext {
     /// Setting category for individual key
     IndividualKey,
@@ -88,7 +88,7 @@ pub struct TemplateSaveDialogState {
 
 impl TemplateSaveDialogState {
     /// Creates a new template save dialog state with pre-filled values from current layout.
-    pub fn new(layout_name: String) -> Self {
+    #[must_use] pub const fn new(layout_name: String) -> Self {
         Self {
             active_field: TemplateSaveField::Name,
             name: layout_name,
@@ -99,7 +99,7 @@ impl TemplateSaveDialogState {
     }
 
     /// Get the active field's input string (mutable).
-    pub fn get_active_field_mut(&mut self) -> &mut String {
+    pub const fn get_active_field_mut(&mut self) -> &mut String {
         match self.active_field {
             TemplateSaveField::Name => &mut self.name,
             TemplateSaveField::Description => &mut self.description,
@@ -109,7 +109,7 @@ impl TemplateSaveDialogState {
     }
 
     /// Move to the next field.
-    pub fn next_field(&mut self) {
+    pub const fn next_field(&mut self) {
         self.active_field = match self.active_field {
             TemplateSaveField::Name => TemplateSaveField::Description,
             TemplateSaveField::Description => TemplateSaveField::Author,
@@ -119,7 +119,7 @@ impl TemplateSaveDialogState {
     }
 
     /// Move to the previous field.
-    pub fn previous_field(&mut self) {
+    pub const fn previous_field(&mut self) {
         self.active_field = match self.active_field {
             TemplateSaveField::Name => TemplateSaveField::Tags,
             TemplateSaveField::Description => TemplateSaveField::Name,
@@ -129,7 +129,7 @@ impl TemplateSaveDialogState {
     }
 
     /// Parse tags from comma-separated input.
-    pub fn parse_tags(&self) -> Vec<String> {
+    #[must_use] pub fn parse_tags(&self) -> Vec<String> {
         self.tags_input
             .split(',')
             .map(|s| s.trim().to_lowercase())
@@ -145,7 +145,7 @@ impl Default for TemplateSaveDialogState {
 }
 
 /// Fields in the template save dialog.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemplateSaveField {
     /// Template name field
     Name,
@@ -158,7 +158,7 @@ pub enum TemplateSaveField {
 }
 
 /// Popup types that can be displayed over the main UI
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PopupType {
     /// Keycode picker popup
     KeycodePicker,
@@ -255,7 +255,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Create a new AppState with the given layout and resources
+    /// Create a new `AppState` with the given layout and resources
     pub fn new(
         layout: Layout,
         source_path: Option<PathBuf>,
@@ -305,7 +305,7 @@ impl AppState {
     }
 
     /// Get the currently selected key (immutable)
-    pub fn get_selected_key(&self) -> Option<&crate::models::KeyDefinition> {
+    #[must_use] pub fn get_selected_key(&self) -> Option<&crate::models::KeyDefinition> {
         let layer = self.layout.layers.get(self.current_layer)?;
         layer
             .keys
@@ -314,12 +314,12 @@ impl AppState {
     }
 
     /// Mark layout as dirty (unsaved changes)
-    pub fn mark_dirty(&mut self) {
+    pub const fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 
     /// Clear dirty flag (after save)
-    pub fn mark_clean(&mut self) {
+    pub const fn mark_clean(&mut self) {
         self.dirty = false;
     }
 
@@ -327,7 +327,7 @@ impl AppState {
     ///
     /// # Arguments
     ///
-    /// * `layout_name` - Name of the layout variant (e.g., "LAYOUT_split_3x6_3")
+    /// * `layout_name` - Name of the layout variant (e.g., "`LAYOUT_split_3x6_3`")
     ///
     /// # Returns
     ///
@@ -828,7 +828,7 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
                     state.set_status("Metadata updated");
                 }
                 Err(err) => {
-                    state.set_error(format!("Validation failed: {}", err));
+                    state.set_error(format!("Validation failed: {err}"));
                 }
             }
             Ok(false)
@@ -858,11 +858,11 @@ fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Res
         match state.rebuild_geometry(&selected) {
             Ok(()) => {
                 state.active_popup = None;
-                state.set_status(format!("Switched to layout: {}", selected));
+                state.set_status(format!("Switched to layout: {selected}"));
                 state.mark_dirty(); // Config change requires save
             }
             Err(e) => {
-                state.set_error(format!("Failed to switch layout: {}", e));
+                state.set_error(format!("Failed to switch layout: {e}"));
             }
         }
     }
@@ -872,7 +872,7 @@ fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Res
 /// Handle input for unsaved changes prompt
 fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
-        KeyCode::Char('s') | KeyCode::Char('S') => {
+        KeyCode::Char('s' | 'S') => {
             // Save and quit
             if let Some(path) = &state.source_path.clone() {
                 crate::parser::save_markdown_layout(&state.layout, path)?;
@@ -882,7 +882,7 @@ fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Re
             state.should_quit = true;
             Ok(true)
         }
-        KeyCode::Char('q') | KeyCode::Char('Q') => {
+        KeyCode::Char('q' | 'Q') => {
             // Quit without saving
             state.should_quit = true;
             Ok(true)
@@ -929,7 +929,7 @@ fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> 
                         Ok(false)
                     }
                     Err(e) => {
-                        state.set_error(format!("Failed to load template: {}", e));
+                        state.set_error(format!("Failed to load template: {e}"));
                         Ok(false)
                     }
                 }
@@ -964,7 +964,7 @@ fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> 
                         Ok(false)
                     }
                     Err(e) => {
-                        state.set_error(format!("Failed to load template: {}", e));
+                        state.set_error(format!("Failed to load template: {e}"));
                         Ok(false)
                     }
                 }
@@ -1037,21 +1037,21 @@ fn handle_template_save_dialog_input(state: &mut AppState, key: event::KeyEvent)
             let filename = dialog_state
                 .name
                 .to_lowercase()
-                .replace(" ", "-")
+                .replace(' ', "-")
                 .chars()
                 .filter(|c| c.is_alphanumeric() || *c == '-')
                 .collect::<String>();
-            let template_path = templates_dir.join(format!("{}.md", filename));
+            let template_path = templates_dir.join(format!("{filename}.md"));
 
             // Save template
             match crate::parser::save_markdown_layout(&template_layout, &template_path) {
-                Ok(_) => {
+                Ok(()) => {
                     state.active_popup = None;
                     state.set_status(format!("Template saved: {}", template_path.display()));
                     Ok(false)
                 }
                 Err(e) => {
-                    state.set_error(format!("Failed to save template: {}", e));
+                    state.set_error(format!("Failed to save template: {e}"));
                     Ok(false)
                 }
             }
@@ -1188,7 +1188,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         }
 
         // Clear key
-        (KeyCode::Char('x'), _) | (KeyCode::Delete, _) => {
+        (KeyCode::Char('x') | KeyCode::Delete, _) => {
             if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = "KC_TRNS".to_string();
                 state.mark_dirty();
@@ -1265,19 +1265,16 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         // Layout Picker (Ctrl+Y)
         (KeyCode::Char('y'), KeyModifiers::CONTROL) => {
             // Load available layouts for current keyboard
-            let qmk_path = match &state.config.paths.qmk_firmware {
-                Some(path) => path.clone(),
-                None => {
-                    state.set_error("QMK firmware path not configured");
-                    return Ok(false);
-                }
+            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware { path.clone() } else {
+                state.set_error("QMK firmware path not configured");
+                return Ok(false);
             };
 
             if let Err(e) = state
                 .layout_picker_state
                 .load_layouts(&qmk_path, &state.config.build.keyboard)
             {
-                state.set_error(format!("Failed to load layouts: {}", e));
+                state.set_error(format!("Failed to load layouts: {e}"));
                 return Ok(false);
             }
 
@@ -1308,7 +1305,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 // For now, open directly - T143 will add proper warning
                 state.template_browser_state = TemplateBrowserState::new();
                 if let Err(e) = state.template_browser_state.scan_templates() {
-                    state.set_error(format!("Failed to scan templates: {}", e));
+                    state.set_error(format!("Failed to scan templates: {e}"));
                     return Ok(false);
                 }
                 state.active_popup = Some(PopupType::TemplateBrowser);
@@ -1316,7 +1313,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             } else {
                 state.template_browser_state = TemplateBrowserState::new();
                 if let Err(e) = state.template_browser_state.scan_templates() {
-                    state.set_error(format!("Failed to scan templates: {}", e));
+                    state.set_error(format!("Failed to scan templates: {e}"));
                     return Ok(false);
                 }
                 state.active_popup = Some(PopupType::TemplateBrowser);
@@ -1375,7 +1372,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
     if !report.is_valid() {
         // Show validation errors
         let error_msg = report.format_message();
-        state.set_error(format!("Validation failed:\n{}", error_msg));
+        state.set_error(format!("Validation failed:\n{error_msg}"));
         return Ok(());
     }
 
@@ -1391,10 +1388,10 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 
     match generator.generate() {
         Ok((keymap_path, vial_path)) => {
-            state.set_status(format!("✓ Generated: {} and {}", keymap_path, vial_path));
+            state.set_status(format!("✓ Generated: {keymap_path} and {vial_path}"));
         }
         Err(e) => {
-            state.set_error(format!("Generation failed: {}", e));
+            state.set_error(format!("Generation failed: {e}"));
         }
     }
 
@@ -1404,12 +1401,9 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 /// Handle firmware build in background
 fn handle_firmware_build(state: &mut AppState) -> Result<()> {
     // Check that QMK firmware path is configured
-    let qmk_path = match &state.config.paths.qmk_firmware {
-        Some(path) => path.clone(),
-        None => {
-            state.set_error("QMK firmware path not configured");
-            return Ok(());
-        }
+    let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware { path.clone() } else {
+        state.set_error("QMK firmware path not configured");
+        return Ok(());
     };
 
     // Initialize build state if needed
@@ -1568,12 +1562,12 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                     .find(|c| &c.id == category_id)
                                 {
                                     if let Err(e) = category.set_name(&input) {
-                                        state.set_error(format!("Invalid name: {}", e));
+                                        state.set_error(format!("Invalid name: {e}"));
                                         return Ok(false);
                                     }
                                     state.mark_dirty();
                                     state.category_manager_state.cancel();
-                                    state.set_status(format!("Category renamed to '{}'", input));
+                                    state.set_status(format!("Category renamed to '{input}'"));
                                 }
                             }
                             _ => {}
@@ -1598,7 +1592,7 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
         }
         ManagerMode::ConfirmingDelete { category_id } => {
             match key.code {
-                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                KeyCode::Char('y' | 'Y') => {
                     // Delete category (T111, T112)
                     let category_id = category_id.clone();
 
@@ -1630,7 +1624,7 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     state.set_status("Category deleted");
                     Ok(false)
                 }
-                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                KeyCode::Char('n' | 'N' | '\x1b') => {
                     state.category_manager_state.cancel();
                     state.set_status("Deletion cancelled");
                     Ok(false)

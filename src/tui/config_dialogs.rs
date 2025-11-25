@@ -31,7 +31,7 @@ pub struct PathConfigDialogState {
 #[allow(dead_code)]
 impl PathConfigDialogState {
     /// Creates a new path configuration dialog
-    pub fn new(current_path: Option<&PathBuf>) -> Self {
+    #[must_use] pub fn new(current_path: Option<&PathBuf>) -> Self {
         let input_buffer = current_path
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
@@ -86,7 +86,7 @@ pub struct KeyboardPickerState {
 #[allow(dead_code)]
 impl KeyboardPickerState {
     /// Creates a new keyboard picker
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             keyboards: Vec::new(),
             search_query: String::new(),
@@ -106,7 +106,7 @@ impl KeyboardPickerState {
                 Ok(())
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to scan keyboards: {}", e));
+                self.error_message = Some(format!("Failed to scan keyboards: {e}"));
                 Err(e)
             }
         }
@@ -133,12 +133,12 @@ impl KeyboardPickerState {
     }
 
     /// Gets the currently selected keyboard
-    pub fn get_selected(&self) -> Option<String> {
+    #[must_use] pub fn get_selected(&self) -> Option<String> {
         self.filtered_keyboards.get(self.selected_index).cloned()
     }
 
     /// Moves selection up
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
             self.update_scroll();
@@ -146,7 +146,7 @@ impl KeyboardPickerState {
     }
 
     /// Moves selection down
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected_index < self.filtered_keyboards.len().saturating_sub(1) {
             self.selected_index += 1;
             self.update_scroll();
@@ -154,7 +154,7 @@ impl KeyboardPickerState {
     }
 
     /// Updates scroll offset to keep selection visible
-    fn update_scroll(&mut self) {
+    const fn update_scroll(&mut self) {
         let viewport_height = 15; // Approximate visible items
         if self.selected_index < self.scroll_offset {
             self.scroll_offset = self.selected_index;
@@ -183,7 +183,7 @@ pub struct LayoutPickerState {
 
 impl LayoutPickerState {
     /// Creates a new layout picker
-    pub fn new() -> Self {
+    #[must_use] pub const fn new() -> Self {
         Self {
             layouts: Vec::new(),
             selected_index: 0,
@@ -200,14 +200,14 @@ impl LayoutPickerState {
                 Ok(())
             }
             Err(e) => {
-                self.error_message = Some(format!("Failed to load layouts: {}", e));
+                self.error_message = Some(format!("Failed to load layouts: {e}"));
                 Err(e)
             }
         }
     }
 
     /// Gets the currently selected layout name
-    pub fn get_selected(&self) -> Option<String> {
+    #[must_use] pub fn get_selected(&self) -> Option<String> {
         self.layouts
             .get(self.selected_index)
             .map(|v| v.name.clone())
@@ -215,19 +215,19 @@ impl LayoutPickerState {
 
     /// Gets the currently selected layout variant (with key count)
     #[allow(dead_code)]
-    pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
+    #[must_use] pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
         self.layouts.get(self.selected_index)
     }
 
     /// Moves selection up
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
         }
     }
 
     /// Moves selection down
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.selected_index < self.layouts.len().saturating_sub(1) {
             self.selected_index += 1;
         }
@@ -376,7 +376,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(format!("Layouts for {}", keyboard)),
+            .title(format!("Layouts for {keyboard}")),
     );
     f.render_widget(list, chunks[0]);
 

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// - ID must be unique within a Layout
 /// - ID format: kebab-case (lowercase, hyphens only, no spaces)
 /// - Name must be non-empty, max 50 characters
-/// - Color must be valid RGB (enforced by RgbColor type)
+/// - Color must be valid RGB (enforced by `RgbColor` type)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Category {
     /// Unique identifier in kebab-case (e.g., "navigation", "symbols")
@@ -66,13 +66,12 @@ impl Category {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
         {
             anyhow::bail!(
-                "Category ID '{}' must be kebab-case (lowercase, hyphens, and digits only)",
-                id
+                "Category ID '{id}' must be kebab-case (lowercase, hyphens, and digits only)"
             );
         }
 
         if id.starts_with('-') || id.ends_with('-') {
-            anyhow::bail!("Category ID '{}' cannot start or end with a hyphen", id);
+            anyhow::bail!("Category ID '{id}' cannot start or end with a hyphen");
         }
 
         Ok(())
@@ -96,7 +95,7 @@ impl Category {
     }
 
     /// Updates the category color.
-    pub fn set_color(&mut self, color: RgbColor) {
+    pub const fn set_color(&mut self, color: RgbColor) {
         self.color = color;
     }
 
@@ -170,6 +169,6 @@ mod tests {
         assert_eq!(category.name, "New Name");
 
         assert!(category.set_name("").is_err());
-        assert!(category.set_name(&"a".repeat(51)).is_err());
+        assert!(category.set_name("a".repeat(51)).is_err());
     }
 }

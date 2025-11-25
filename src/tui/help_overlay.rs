@@ -22,7 +22,7 @@ pub struct HelpOverlayState {
 
 impl HelpOverlayState {
     /// Creates a new help overlay state.
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         let content = Self::get_help_content();
         let total_lines = content.len();
         Self {
@@ -32,24 +32,24 @@ impl HelpOverlayState {
     }
 
     /// Scroll up by one line.
-    pub fn scroll_up(&mut self) {
+    pub const fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(1);
     }
 
     /// Scroll down by one line.
-    pub fn scroll_down(&mut self) {
+    pub const fn scroll_down(&mut self) {
         if self.scroll_offset + 1 < self.total_lines {
             self.scroll_offset += 1;
         }
     }
 
     /// Scroll to the top.
-    pub fn scroll_to_top(&mut self) {
+    pub const fn scroll_to_top(&mut self) {
         self.scroll_offset = 0;
     }
 
     /// Scroll to the bottom.
-    pub fn scroll_to_bottom(&mut self) {
+    pub const fn scroll_to_bottom(&mut self) {
         self.scroll_offset = self.total_lines.saturating_sub(1);
     }
 
@@ -60,7 +60,7 @@ impl HelpOverlayState {
     }
 
     /// Scroll up by a page (approximation based on visible height).
-    pub fn page_up(&mut self, visible_height: usize) {
+    pub const fn page_up(&mut self, visible_height: usize) {
         self.scroll_offset = self.scroll_offset.saturating_sub(visible_height);
     }
 
@@ -74,7 +74,7 @@ impl HelpOverlayState {
     /// - Configuration (US7)
     /// - Templates (US5)
     /// - System (general)
-    pub fn get_help_content() -> Vec<Line<'static>> {
+    #[must_use] pub fn get_help_content() -> Vec<Line<'static>> {
         vec![
             // Header
             Line::from(vec![
