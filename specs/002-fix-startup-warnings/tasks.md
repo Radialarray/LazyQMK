@@ -64,13 +64,13 @@
 
 ### Implementation for User Story 5
 
-- [ ] T012 [US5] Investigate duplicate `KeyCode::Char('l')` pattern in src/tui/mod.rs (lines 1111 and 1288) using git history
-- [ ] T013 [US5] Remove unreachable wildcard `_` pattern in PopupType match in src/tui/mod.rs:500
-- [ ] T014 [US5] Fix or remove duplicate `KeyCode::Char('l')` pattern in src/tui/mod.rs:1288 based on investigation
-- [ ] T015 [US5] Verify pattern fixes with `cargo check` - confirm no unreachable pattern warnings
-- [ ] T016 [US5] Manual testing: Test all 11 popup types to ensure all branches work correctly
-- [ ] T017 [US5] Manual testing: Test 'l' and CTRL+'l' key combinations to verify expected behavior
-- [ ] T018 [US5] Run full test suite: `cargo test`
+- [X] T012 [US5] Investigate duplicate `KeyCode::Char('l')` pattern in src/tui/mod.rs (lines 1111 and 1288) using git history
+- [X] T013 [US5] Remove unreachable wildcard `_` pattern in PopupType match in src/tui/mod.rs:500
+- [X] T014 [US5] Fix or remove duplicate `KeyCode::Char('l')` pattern in src/tui/mod.rs:1288 based on investigation
+- [X] T015 [US5] Verify pattern fixes with `cargo check` - confirm no unreachable pattern warnings
+- [X] T016 [US5] Manual testing: Test all 11 popup types to ensure all branches work correctly
+- [X] T017 [US5] Manual testing: Test 'l' and CTRL+'l' key combinations to verify expected behavior
+- [X] T018 [US5] Run full test suite: `cargo test`
 
 **Checkpoint**: All pattern matching is logically correct - no unreachable patterns
 

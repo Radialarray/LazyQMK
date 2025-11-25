@@ -495,9 +495,6 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::MetadataEditor => {
             metadata_editor::render_metadata_editor(f, &state.metadata_editor_state);
         }
-        _ => {
-            // Other popups not implemented yet
-        }
     }
 }
 
@@ -1106,6 +1103,22 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
+        // Toggle build log (Ctrl+L) - must come before general 'l' pattern
+        (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
+            if state.build_state.is_some() {
+                if state.build_log_state.visible {
+                    state.active_popup = None;
+                    state.build_log_state.visible = false;
+                } else {
+                    state.active_popup = Some(PopupType::BuildLog);
+                    state.build_log_state.visible = true;
+                }
+                state.set_status("Build log toggled");
+            } else {
+                state.set_error("No build active");
+            }
+            Ok(false)
+        }
         (KeyCode::Char('l'), _) => {
             if state.selected_position.col < 13 {
                 state.selected_position.col += 1;
@@ -1279,23 +1292,6 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         // Build firmware (Ctrl+B)
         (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
             handle_firmware_build(state)?;
-            Ok(false)
-        }
-
-        // Toggle build log (Ctrl+L)
-        (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
-            if state.build_state.is_some() {
-                if state.build_log_state.visible {
-                    state.active_popup = None;
-                    state.build_log_state.visible = false;
-                } else {
-                    state.active_popup = Some(PopupType::BuildLog);
-                    state.build_log_state.visible = true;
-                }
-                state.set_status("Build log toggled");
-            } else {
-                state.set_error("No build active");
-            }
             Ok(false)
         }
 
