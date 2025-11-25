@@ -32,7 +32,7 @@ struct Cli {
     qmk_path: Option<PathBuf>,
 }
 
-/// Runs the onboarding wizard and saves the configuration
+/// Runs the onboarding wizard, saves config, and launches the editor
 fn run_onboarding_wizard() -> Result<()> {
     use crossterm::event::{self, Event};
     use std::time::Duration;
@@ -58,17 +58,16 @@ fn run_onboarding_wizard() -> Result<()> {
                         let config = wizard_state.build_config()?;
                         config.save()?;
                         
-                        // Restore terminal before showing success message
+                        // Restore terminal before continuing
                         tui::restore_terminal(terminal)?;
                         
                         println!("Configuration saved successfully!");
                         println!();
-                        println!("Configuration file: {:?}", config::Config::config_file_path()?);
+                        println!("Generating default layout and launching editor...");
                         println!();
-                        println!("You can now:");
-                        println!("  • Create a new layout: keyboard_tui my_layout.md");
-                        println!("  • Load an existing layout: keyboard_tui path/to/layout.md");
-                        println!();
+                        
+                        // Launch the editor with default layout
+                        launch_editor_with_default_layout(&config)?;
                         return Ok(());
                     } else {
                         // User cancelled
@@ -80,6 +79,96 @@ fn run_onboarding_wizard() -> Result<()> {
             }
         }
     }
+}
+
+/// Creates a default layout from QMK keyboard info and launches the editor
+fn launch_editor_with_default_layout(config: &config::Config) -> Result<()> {
+    // Get QMK path from config
+    let qmk_path = config.paths.qmk_firmware.as_ref()
+        .ok_or_else(|| anyhow::anyhow!("QMK firmware path not set in configuration"))?;
+    
+    // Parse keyboard info.json
+    let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(
+        qmk_path,
+        &config.build.keyboard
+    )?;
+    
+    // Build geometry from the selected layout
+    let geometry = parser::keyboard_json::build_keyboard_geometry(
+        &keyboard_info,
+        &config.build.keyboard,
+        &config.build.layout
+    )?;
+    
+    // Build visual mapping
+    let mapping = models::VisualLayoutMapping::build(&geometry);
+    
+    // Create a default layout with empty keys
+    let layout_name = format!("{} Layout", config.build.keyboard);
+    let mut layout = models::Layout::new(&layout_name)?;
+    
+    // Add a default base layer with KC_TRNS for all positions
+    let base_layer = create_default_layer(0, "Base", &geometry)?;
+    layout.add_layer(base_layer)?;
+    
+    // Suggest a save path in the config directory
+    let layouts_dir = config::Config::config_dir()?.join("layouts");
+    std::fs::create_dir_all(&layouts_dir)?;
+    
+    let suggested_filename = format!("{}_{}.md", 
+        config.build.keyboard.replace('/', "_"),
+        chrono::Local::now().format("%Y%m%d")
+    );
+    let suggested_path = layouts_dir.join(suggested_filename);
+    
+    println!("Opening editor with default layout...");
+    println!("Suggested save location: {}", suggested_path.display());
+    println!();
+    
+    // Initialize TUI with the generated layout
+    let mut terminal = tui::setup_terminal()?;
+    let mut app_state = tui::AppState::new(
+        layout,
+        Some(suggested_path),
+        geometry,
+        mapping,
+        config.clone()
+    )?;
+    
+    // Mark as dirty since it's a new unsaved layout
+    app_state.dirty = true;
+    
+    // Run main TUI loop
+    let result = tui::run_tui(&mut app_state, &mut terminal);
+    
+    // Restore terminal
+    tui::restore_terminal(terminal)?;
+    
+    // Check for errors
+    result?;
+    
+    Ok(())
+}
+
+/// Creates a default layer with KC_TRNS for all key positions
+fn create_default_layer(number: u8, name: &str, geometry: &models::KeyboardGeometry) -> Result<models::Layer> {
+    use models::layer::{KeyDefinition, Position};
+    
+    let mut layer = models::Layer::new(
+        number,
+        name.to_string(),
+        models::RgbColor::new(128, 128, 128) // Default gray color
+    )?;
+    
+    // Add KC_TRNS for each key position in the geometry
+    for key_geo in &geometry.keys {
+        let (matrix_row, matrix_col) = key_geo.matrix_position;
+        let position = Position::new(matrix_row, matrix_col);
+        let key = KeyDefinition::new(position, "KC_TRNS".to_string());
+        layer.add_key(key);
+    }
+    
+    Ok(layer)
 }
 
 fn main() -> Result<()> {
@@ -156,21 +245,12 @@ fn main() -> Result<()> {
     } else {
         // No file argument provided - check if config exists
         match config::Config::load() {
-            Ok(_config) => {
-                // Config exists, show helpful usage message
+            Ok(config) => {
+                // Config exists - launch editor with default layout
                 println!("No layout file specified.");
+                println!("Generating default layout from configured keyboard...");
                 println!();
-                println!("Usage: keyboard_tui [FILE]");
-                println!();
-                println!("Examples:");
-                println!("  keyboard_tui my_layout.md         # Load a layout file");
-                println!("  keyboard_tui test_layout.md       # Try the example file");
-                println!();
-                println!("To reconfigure the application, run:");
-                println!("  keyboard_tui --init");
-                println!();
-                println!("For more options, run:");
-                println!("  keyboard_tui --help");
+                launch_editor_with_default_layout(&config)?;
             }
             Err(_) => {
                 // No config exists - suggest running wizard
