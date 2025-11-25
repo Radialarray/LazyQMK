@@ -15,7 +15,9 @@ use ratatui::{
 use std::path::PathBuf;
 
 use crate::config::Config;
-use crate::parser::keyboard_json::{extract_layout_names, parse_keyboard_info_json, scan_keyboards};
+use crate::parser::keyboard_json::{
+    extract_layout_names, parse_keyboard_info_json, scan_keyboards,
+};
 
 /// Path configuration dialog state
 #[derive(Debug, Clone)]
@@ -244,7 +246,11 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
 
     // Title
     let title = Paragraph::new("Configure QMK Firmware Path")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, chunks[0]);
@@ -308,15 +314,11 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
         })
         .collect();
 
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(format!(
-                "Keyboards ({}/{})",
-                state.filtered_keyboards.len(),
-                state.keyboards.len()
-            )),
-    );
+    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(format!(
+        "Keyboards ({}/{})",
+        state.filtered_keyboards.len(),
+        state.keyboards.len()
+    )));
     f.render_widget(list, chunks[1]);
 
     // Instructions

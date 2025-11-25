@@ -23,7 +23,7 @@ impl CategoryPickerState {
     pub fn new() -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
-        
+
         Self {
             selected: 0,
             list_state,
@@ -54,7 +54,10 @@ impl CategoryPickerState {
     }
 
     /// Get the selected category ID (None if "None" is selected)
-    pub fn get_selected_category_id(&self, categories: &[crate::models::Category]) -> Option<String> {
+    pub fn get_selected_category_id(
+        &self,
+        categories: &[crate::models::Category],
+    ) -> Option<String> {
         if self.selected < categories.len() {
             Some(categories[self.selected].id.clone())
         } else {
@@ -73,44 +76,58 @@ impl Default for CategoryPickerState {
 /// Render the category picker dialog
 pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
     let area = centered_rect(60, 60, f.size());
-    
+
     // Build list items with color previews
-    let mut items: Vec<ListItem> = state.layout.categories.iter().map(|cat| {
-        let color = Color::Rgb(cat.color.r, cat.color.g, cat.color.b);
-        let line = Line::from(vec![
-            Span::raw("  "),
-            Span::styled("███", Style::default().fg(color)),
-            Span::raw("  "),
-            Span::raw(&cat.name),
-            Span::raw(" ("),
-            Span::styled(&cat.id, Style::default().fg(Color::Gray)),
-            Span::raw(")"),
-        ]);
-        ListItem::new(line)
-    }).collect();
-    
+    let mut items: Vec<ListItem> = state
+        .layout
+        .categories
+        .iter()
+        .map(|cat| {
+            let color = Color::Rgb(cat.color.r, cat.color.g, cat.color.b);
+            let line = Line::from(vec![
+                Span::raw("  "),
+                Span::styled("███", Style::default().fg(color)),
+                Span::raw("  "),
+                Span::raw(&cat.name),
+                Span::raw(" ("),
+                Span::styled(&cat.id, Style::default().fg(Color::Gray)),
+                Span::raw(")"),
+            ]);
+            ListItem::new(line)
+        })
+        .collect();
+
     // Add "None" option at the end
     items.push(ListItem::new(Line::from(vec![
         Span::raw("  "),
-        Span::styled("[ None ]", Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC)),
+        Span::styled(
+            "[ None ]",
+            Style::default()
+                .fg(Color::Gray)
+                .add_modifier(Modifier::ITALIC),
+        ),
     ])));
-    
+
     let list = List::new(items)
-        .block(Block::default()
-            .title(" Select Category ")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan)))
-        .highlight_style(Style::default()
-            .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD))
+        .block(
+            Block::default()
+                .title(" Select Category ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan)),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol("► ");
-    
+
     // Clone the list_state for rendering
     let mut list_state = state.category_picker_state.list_state.clone();
-    
+
     // Render the list with state
     f.render_stateful_widget(list, area, &mut list_state);
-    
+
     // Instructions at the bottom
     let instructions_area = Rect {
         x: area.x + 2,
@@ -118,7 +135,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
         width: area.width - 4,
         height: 1,
     };
-    
+
     let instructions = Paragraph::new(Line::from(vec![
         Span::styled("↑↓", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(" Navigate  "),
@@ -142,14 +159,16 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
         }
         KeyCode::Enter => {
             // Apply category based on context
-            let category_id = state.category_picker_state.get_selected_category_id(&state.layout.categories);
-            
+            let category_id = state
+                .category_picker_state
+                .get_selected_category_id(&state.layout.categories);
+
             match state.category_picker_context {
                 Some(super::CategoryPickerContext::IndividualKey) => {
                     if let Some(key) = state.get_selected_key_mut() {
                         key.category_id = category_id.clone();
                         state.mark_dirty();
-                        
+
                         if let Some(id) = category_id {
                             state.set_status(format!("Assigned key category '{}'", id));
                         } else {
@@ -161,7 +180,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                     if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
                         layer.category_id = category_id.clone();
                         state.mark_dirty();
-                        
+
                         if let Some(id) = category_id {
                             state.set_status(format!("Assigned layer category '{}'", id));
                         } else {
@@ -173,17 +192,21 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                     state.set_error("No category context set");
                 }
             }
-            
+
             state.active_popup = None;
             state.category_picker_context = None;
             Ok(false)
         }
         KeyCode::Up => {
-            state.category_picker_state.previous(state.layout.categories.len());
+            state
+                .category_picker_state
+                .previous(state.layout.categories.len());
             Ok(false)
         }
         KeyCode::Down => {
-            state.category_picker_state.next(state.layout.categories.len());
+            state
+                .category_picker_state
+                .next(state.layout.categories.len());
             Ok(false)
         }
         _ => Ok(false),

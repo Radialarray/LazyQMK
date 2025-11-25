@@ -75,23 +75,23 @@ pub fn parse_markdown_layout(path: &Path) -> Result<Layout> {
 /// Parses a Markdown layout from a string.
 pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
     let lines: Vec<&str> = content.lines().collect();
-    
+
     // Parse frontmatter
     let (metadata, content_start) = parse_frontmatter(&lines)?;
-    
+
     // Create layout
     let mut layout = Layout {
         metadata,
         layers: Vec::new(),
         categories: Vec::new(),
     };
-    
+
     // Parse content (layers and categories)
     parse_content(&lines[content_start..], &mut layout)?;
-    
+
     // Validate the parsed layout
     layout.validate()?;
-    
+
     Ok(layout)
 }
 
@@ -102,7 +102,7 @@ fn parse_frontmatter(lines: &[&str]) -> Result<(LayoutMetadata, usize)> {
     // Find frontmatter boundaries
     let mut start_idx = None;
     let mut end_idx = None;
-    
+
     for (idx, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
         if trimmed == "---" {
@@ -114,20 +114,21 @@ fn parse_frontmatter(lines: &[&str]) -> Result<(LayoutMetadata, usize)> {
             }
         }
     }
-    
-    let start = start_idx.ok_or_else(|| anyhow::anyhow!("Missing frontmatter start marker (---)"))?;
+
+    let start =
+        start_idx.ok_or_else(|| anyhow::anyhow!("Missing frontmatter start marker (---)"))?;
     let end = end_idx.ok_or_else(|| anyhow::anyhow!("Missing frontmatter end marker (---)"))?;
-    
+
     // Extract YAML content (between the --- markers)
     let yaml_content = lines[start + 1..end].join("\n");
-    
+
     // Parse YAML
-    let metadata: LayoutMetadata = serde_yaml::from_str(&yaml_content)
-        .context("Failed to parse YAML frontmatter")?;
-    
+    let metadata: LayoutMetadata =
+        serde_yaml::from_str(&yaml_content).context("Failed to parse YAML frontmatter")?;
+
     // Validate metadata
     validate_metadata(&metadata)?;
-    
+
     Ok((metadata, end + 1))
 }
 
@@ -136,27 +137,25 @@ fn validate_metadata(metadata: &LayoutMetadata) -> Result<()> {
     if metadata.name.is_empty() {
         anyhow::bail!("Layout name cannot be empty");
     }
-    
+
     if metadata.name.len() > 100 {
         anyhow::bail!(
             "Layout name exceeds maximum length of 100 characters (got {})",
             metadata.name.len()
         );
     }
-    
+
     if metadata.modified < metadata.created {
-        anyhow::bail!(
-            "Modified timestamp cannot be before created timestamp"
-        );
+        anyhow::bail!("Modified timestamp cannot be before created timestamp");
     }
-    
+
     if metadata.version != "1.0" {
         anyhow::bail!(
             "Unsupported schema version '{}'. Only version '1.0' is supported.",
             metadata.version
         );
     }
-    
+
     // Validate tags
     let tag_regex = Regex::new(r"^[a-z0-9-]+$").unwrap();
     for tag in &metadata.tags {
@@ -167,40 +166,40 @@ fn validate_metadata(metadata: &LayoutMetadata) -> Result<()> {
             );
         }
     }
-    
+
     Ok(())
 }
 
 /// Parses the content section (layers and categories).
 fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
     let mut line_num = 0;
-    
+
     while line_num < lines.len() {
         let line = lines[line_num].trim();
-        
+
         // Skip empty lines and main title
         if line.is_empty() || line.starts_with("# ") {
             line_num += 1;
             continue;
         }
-        
+
         // Check for layer header (## Layer N: Name)
         if line.starts_with("## Layer ") {
             line_num = parse_layer(lines, line_num, layout)
                 .with_context(|| format!("Error parsing layer at line {}", line_num + 1))?;
             continue;
         }
-        
+
         // Check for categories section (## Categories)
         if line == "## Categories" {
             line_num = parse_categories(lines, line_num, layout)
                 .with_context(|| format!("Error parsing categories at line {}", line_num + 1))?;
             continue;
         }
-        
+
         line_num += 1;
     }
-    
+
     Ok(())
 }
 
@@ -208,46 +207,41 @@ fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
 fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     let mut line_num = start_line;
     let header_line = lines[line_num];
-    
+
     // Parse layer header: ## Layer N: Name
     let layer_regex = Regex::new(r"^##\s+Layer\s+(\d+):\s+(.+)$").unwrap();
     let captures = layer_regex
         .captures(header_line)
         .ok_or_else(|| anyhow::anyhow!("Invalid layer header format: {}", header_line))?;
-    
+
     let layer_number: u8 = captures[1]
         .parse()
         .context("Failed to parse layer number")?;
     let layer_name = captures[2].trim().to_string();
-    
+
     line_num += 1;
-    
+
     // Parse layer properties (Color and optional Category)
     let mut layer_color = None;
     let mut layer_category = None;
-    
+
     while line_num < lines.len() {
         let line = lines[line_num].trim();
-        
+
         if line.is_empty() {
             line_num += 1;
             continue;
         }
-        
+
         // Parse color: **Color**: #RRGGBB
         if line.starts_with("**Color**:") {
-            let color_str = line
-                .strip_prefix("**Color**:")
-                .unwrap()
-                .trim();
-            layer_color = Some(
-                RgbColor::from_hex(color_str)
-                    .context("Failed to parse layer color")?
-            );
+            let color_str = line.strip_prefix("**Color**:").unwrap().trim();
+            layer_color =
+                Some(RgbColor::from_hex(color_str).context("Failed to parse layer color")?);
             line_num += 1;
             continue;
         }
-        
+
         // Parse optional category: **Category**: category-id
         if line.starts_with("**Category**:") {
             let category_id = line
@@ -259,28 +253,29 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
             line_num += 1;
             continue;
         }
-        
+
         // Table starts - break out of properties loop
         if line.starts_with("|") {
             break;
         }
-        
+
         line_num += 1;
     }
-    
-    let color = layer_color
-        .ok_or_else(|| anyhow::anyhow!("Layer {} missing required **Color** property", layer_number))?;
-    
+
+    let color = layer_color.ok_or_else(|| {
+        anyhow::anyhow!("Layer {} missing required **Color** property", layer_number)
+    })?;
+
     // Create layer
     let mut layer = Layer::new(layer_number, layer_name, color)?;
     layer.category_id = layer_category;
-    
+
     // Parse table
     line_num = parse_layer_table(lines, line_num, &mut layer)?;
-    
+
     // Add layer to layout
     layout.add_layer(layer)?;
-    
+
     Ok(line_num)
 }
 
@@ -288,36 +283,37 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
 fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Result<usize> {
     let mut line_num = start_line;
     let mut row = 0;
-    
+
     // Skip table header row
     if line_num < lines.len() && lines[line_num].starts_with("|") {
         line_num += 1;
     }
-    
+
     // Skip separator row (|---|---|)
     if line_num < lines.len() && lines[line_num].contains("---") {
         line_num += 1;
     }
-    
+
     // Parse data rows
     while line_num < lines.len() {
         let line = lines[line_num].trim();
-        
+
         // Stop at empty line or next section
         if line.is_empty() || line.starts_with("##") || line.starts_with("---") {
             break;
         }
-        
+
         // Parse table row
         if line.starts_with("|") {
-            parse_table_row(line, row, layer)
-                .with_context(|| format!("Error parsing table row {} at line {}", row, line_num + 1))?;
+            parse_table_row(line, row, layer).with_context(|| {
+                format!("Error parsing table row {} at line {}", row, line_num + 1)
+            })?;
             row += 1;
         }
-        
+
         line_num += 1;
     }
-    
+
     Ok(line_num)
 }
 
@@ -329,20 +325,20 @@ fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
-    
+
     for (col, cell) in cells.iter().enumerate() {
         // Skip empty cells
         if cell.is_empty() {
             continue;
         }
-        
+
         // Parse keycode syntax
         let key = parse_keycode_syntax(cell, row, col as u8)
             .with_context(|| format!("Error parsing cell at row {}, col {}: {}", row, col, cell))?;
-        
+
         layer.add_key(key);
     }
-    
+
     Ok(())
 }
 
@@ -354,67 +350,70 @@ fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
 /// - `KC_X@category-id` - with category
 /// - `KC_X{#RRGGBB}@category-id` - with both
 fn parse_keycode_syntax(cell: &str, row: u8, col: u8) -> Result<KeyDefinition> {
-    let keycode_regex = Regex::new(r"^([A-Z_0-9()]+)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$").unwrap();
-    
+    let keycode_regex =
+        Regex::new(r"^([A-Z_0-9()]+)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$")
+            .unwrap();
+
     let captures = keycode_regex
         .captures(cell)
         .ok_or_else(|| anyhow::anyhow!("Invalid keycode syntax: {}", cell))?;
-    
+
     let keycode = captures[1].to_string();
     let color_override = captures
         .get(2)
         .map(|m| RgbColor::from_hex(m.as_str()))
         .transpose()?;
     let category_id = captures.get(3).map(|m| m.as_str().to_string());
-    
+
     let position = Position::new(row, col);
     let mut key = KeyDefinition::new(position, keycode);
-    
+
     if let Some(color) = color_override {
         key = key.with_color(color);
     }
-    
+
     if let Some(cat_id) = category_id {
         key = key.with_category(&cat_id);
     }
-    
+
     Ok(key)
 }
 
 /// Parses the categories section.
 fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     let mut line_num = start_line + 1; // Skip "## Categories" header
-    
-    let category_regex = Regex::new(r"^-\s+([a-z][a-z0-9-]*):\s+(.+?)\s+\(#([0-9A-Fa-f]{6})\)$").unwrap();
-    
+
+    let category_regex =
+        Regex::new(r"^-\s+([a-z][a-z0-9-]*):\s+(.+?)\s+\(#([0-9A-Fa-f]{6})\)$").unwrap();
+
     while line_num < lines.len() {
         let line = lines[line_num].trim();
-        
+
         // Skip empty lines
         if line.is_empty() {
             line_num += 1;
             continue;
         }
-        
+
         // Stop at next section
         if line.starts_with("##") {
             break;
         }
-        
+
         // Parse category line: - id: Name (#RRGGBB)
         if let Some(captures) = category_regex.captures(line) {
             let id = captures[1].to_string();
             let name = captures[2].to_string();
             let color_hex = format!("#{}", &captures[3]);
             let color = RgbColor::from_hex(&color_hex)?;
-            
+
             let category = Category::new(&id, &name, color)?;
             layout.add_category(category)?;
         }
-        
+
         line_num += 1;
     }
-    
+
     Ok(line_num)
 }
 

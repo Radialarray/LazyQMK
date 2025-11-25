@@ -433,8 +433,7 @@ mod tests {
     #[test]
     fn test_layout_add_category() {
         let mut layout = Layout::new("Test").unwrap();
-        let category =
-            Category::new("navigation", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        let category = Category::new("navigation", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
 
         assert!(layout.add_category(category).is_ok());
         assert_eq!(layout.categories.len(), 1);
@@ -445,8 +444,7 @@ mod tests {
         let mut layout = Layout::new("Test").unwrap();
         let category1 =
             Category::new("navigation", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
-        let category2 =
-            Category::new("navigation", "Nav Keys", RgbColor::new(255, 0, 0)).unwrap();
+        let category2 = Category::new("navigation", "Nav Keys", RgbColor::new(255, 0, 0)).unwrap();
 
         assert!(layout.add_category(category1).is_ok());
         assert!(layout.add_category(category2).is_err()); // Duplicate ID
@@ -458,8 +456,8 @@ mod tests {
         let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
 
         // Test 1: Individual override (highest priority)
-        let key_with_override = KeyDefinition::new(Position::new(0, 0), "KC_A")
-            .with_color(RgbColor::new(255, 0, 0));
+        let key_with_override =
+            KeyDefinition::new(Position::new(0, 0), "KC_A").with_color(RgbColor::new(255, 0, 0));
         layer.add_key(key_with_override.clone());
 
         layout.add_layer(layer).unwrap();
@@ -468,20 +466,25 @@ mod tests {
         assert_eq!(color, RgbColor::new(255, 0, 0));
 
         // Test 2: Key category (second priority)
-        let category =
-            Category::new("navigation", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        let category = Category::new("navigation", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
         layout.add_category(category).unwrap();
 
-        let key_with_category = KeyDefinition::new(Position::new(0, 1), "KC_B")
-            .with_category("navigation");
-        layout.get_layer_mut(0).unwrap().add_key(key_with_category.clone());
+        let key_with_category =
+            KeyDefinition::new(Position::new(0, 1), "KC_B").with_category("navigation");
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .add_key(key_with_category.clone());
 
         let color = layout.resolve_key_color(0, &key_with_category);
         assert_eq!(color, RgbColor::new(0, 255, 0));
 
         // Test 3: Layer default (fallback)
         let key_default = KeyDefinition::new(Position::new(0, 2), "KC_C");
-        layout.get_layer_mut(0).unwrap().add_key(key_default.clone());
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .add_key(key_default.clone());
 
         let color = layout.resolve_key_color(0, &key_default);
         assert_eq!(color, RgbColor::new(255, 255, 255));
@@ -490,7 +493,7 @@ mod tests {
     #[test]
     fn test_layout_validate() {
         let mut layout = Layout::new("Test").unwrap();
-        
+
         // Empty layout should fail
         assert!(layout.validate().is_err());
 

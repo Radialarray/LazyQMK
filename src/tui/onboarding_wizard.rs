@@ -16,7 +16,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::config::Config;
-use crate::parser::keyboard_json::{extract_layout_names, parse_keyboard_info_json, scan_keyboards};
+use crate::parser::keyboard_json::{
+    extract_layout_names, parse_keyboard_info_json, scan_keyboards,
+};
 
 /// Onboarding wizard steps
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,22 +126,26 @@ impl OnboardingWizardState {
 
                 let qmk_path = PathBuf::from(&self.input_buffer);
                 if !qmk_path.exists() {
-                    self.error_message = Some(format!("Path does not exist: {}", qmk_path.display()));
+                    self.error_message =
+                        Some(format!("Path does not exist: {}", qmk_path.display()));
                     return Ok(());
                 }
 
                 // Validate it's a QMK firmware directory
                 if !qmk_path.join("Makefile").exists() {
-                    self.error_message = Some("Not a QMK firmware directory: Makefile not found".to_string());
+                    self.error_message =
+                        Some("Not a QMK firmware directory: Makefile not found".to_string());
                     return Ok(());
                 }
 
                 if !qmk_path.join("keyboards").is_dir() {
-                    self.error_message = Some("Not a QMK firmware directory: keyboards/ not found".to_string());
+                    self.error_message =
+                        Some("Not a QMK firmware directory: keyboards/ not found".to_string());
                     return Ok(());
                 }
 
-                self.inputs.insert("qmk_path".to_string(), self.input_buffer.clone());
+                self.inputs
+                    .insert("qmk_path".to_string(), self.input_buffer.clone());
                 self.input_buffer.clear();
 
                 // Scan keyboards
@@ -218,7 +224,8 @@ impl OnboardingWizardState {
         let mut config = Config::new();
 
         if let Some(qmk_path) = self.inputs.get("qmk_path") {
-            config.set_qmk_firmware_path(PathBuf::from(qmk_path))
+            config
+                .set_qmk_firmware_path(PathBuf::from(qmk_path))
                 .context("Failed to set QMK path")?;
         }
 
@@ -249,16 +256,20 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // Title
-            Constraint::Min(10),    // Content
-            Constraint::Length(3),  // Instructions
-            Constraint::Length(2),  // Error message
+            Constraint::Length(3), // Title
+            Constraint::Min(10),   // Content
+            Constraint::Length(3), // Instructions
+            Constraint::Length(2), // Error message
         ])
         .split(size);
 
     // Render title
     let title = Paragraph::new(state.current_step.title())
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, vertical_chunks[0]);
@@ -331,7 +342,9 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         .enumerate()
         .map(|(i, kb)| {
             let style = if i == state.keyboard_selected_index {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -340,12 +353,15 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         .collect();
 
     let list = List::new(keyboards)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!("Available Keyboards ({} total)", state.available_keyboards.len())),
-        )
-        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+        .block(Block::default().borders(Borders::ALL).title(format!(
+            "Available Keyboards ({} total)",
+            state.available_keyboards.len()
+        )))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        );
 
     f.render_widget(list, area);
 }
@@ -357,7 +373,9 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
         .enumerate()
         .map(|(i, layout)| {
             let style = if i == state.layout_selected_index {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -367,12 +385,16 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
 
     let keyboard = state.inputs.get("keyboard").unwrap();
     let list = List::new(layouts)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!("Layouts for {} ({} available)", keyboard, state.available_layouts.len())),
-        )
-        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+        .block(Block::default().borders(Borders::ALL).title(format!(
+            "Layouts for {} ({} available)",
+            keyboard,
+            state.available_layouts.len()
+        )))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        );
 
     f.render_widget(list, area);
 }
@@ -457,7 +479,8 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
                 }
             }
             KeyCode::Down => {
-                if state.keyboard_selected_index < state.available_keyboards.len().saturating_sub(1) {
+                if state.keyboard_selected_index < state.available_keyboards.len().saturating_sub(1)
+                {
                     state.keyboard_selected_index += 1;
                 }
             }

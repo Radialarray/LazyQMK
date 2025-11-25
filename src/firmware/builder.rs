@@ -48,10 +48,7 @@ pub enum BuildMessage {
         message: String,
     },
     /// Build log output
-    Log {
-        level: LogLevel,
-        message: String,
-    },
+    Log { level: LogLevel, message: String },
     /// Build completed (success or failure)
     Complete {
         success: bool,
@@ -138,7 +135,8 @@ impl BuildState {
             BuildMessage::Progress { status, message } => {
                 self.status = status.clone();
                 self.last_message = message.clone();
-                self.log_lines.push((LogLevel::Info, format!("[{}] {}", status, message)));
+                self.log_lines
+                    .push((LogLevel::Info, format!("[{}] {}", status, message)));
             }
             BuildMessage::Log { level, message } => {
                 self.log_lines.push((level, message));
@@ -156,7 +154,8 @@ impl BuildState {
 
                 if let Some(path) = firmware_path {
                     self.last_message = format!("Firmware written to {}", path.display());
-                    self.log_lines.push((LogLevel::Ok, self.last_message.clone()));
+                    self.log_lines
+                        .push((LogLevel::Ok, self.last_message.clone()));
                 }
 
                 if let Some(err) = error {
@@ -241,9 +240,7 @@ fn run_build(
         .stderr(Stdio::piped());
 
     // Execute command
-    let output = cmd
-        .output()
-        .context("Failed to execute make command")?;
+    let output = cmd.output().context("Failed to execute make command")?;
 
     // Parse output
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -307,11 +304,7 @@ fn run_build(
 /// Finds the compiled firmware file.
 ///
 /// QMK typically outputs to .build/{keyboard}_{keymap}.{ext}
-fn find_firmware_file(
-    qmk_path: &PathBuf,
-    keyboard: &str,
-    keymap: &str,
-) -> Result<PathBuf> {
+fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Result<PathBuf> {
     // Clean keyboard path (replace / with _)
     let keyboard_clean = keyboard.replace('/', "_");
 

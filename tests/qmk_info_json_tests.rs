@@ -4,16 +4,15 @@
 //! from the vial-qmk-keebart submodule. They ensure compatibility with actual
 //! keyboard definitions used in the QMK ecosystem.
 
+use keyboard_tui::models::visual_layout_mapping::VisualLayoutMapping;
 use keyboard_tui::parser::keyboard_json::{
     build_keyboard_geometry, extract_layout_names, parse_keyboard_info_json,
 };
-use keyboard_tui::models::visual_layout_mapping::VisualLayoutMapping;
 use std::path::PathBuf;
 
 /// Gets the QMK firmware path from the submodule.
 fn get_qmk_path() -> PathBuf {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR not set");
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     PathBuf::from(manifest_dir).join("vial-qmk-keebart")
 }
 
@@ -47,12 +46,9 @@ fn test_parse_crkbd_info_json() {
 
     let layouts = extract_layout_names(&info);
     println!("Available layouts for crkbd: {:?}", layouts);
-    
+
     // crkbd typically has LAYOUT or LAYOUT_split_3x6_3
-    assert!(
-        !layouts.is_empty(),
-        "crkbd should have layout definitions"
-    );
+    assert!(!layouts.is_empty(), "crkbd should have layout definitions");
 }
 
 #[test]
@@ -63,7 +59,8 @@ fn test_build_crkbd_geometry() {
     }
 
     let qmk_path = get_qmk_path();
-    let info = parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
+    let info =
+        parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
 
     let layouts = extract_layout_names(&info);
     assert!(!layouts.is_empty(), "crkbd should have layouts");
@@ -82,7 +79,7 @@ fn test_build_crkbd_geometry() {
     let geometry = geometry_result.unwrap();
     assert_eq!(geometry.keyboard_name, "crkbd");
     assert_eq!(&geometry.layout_name, layout_name);
-    
+
     // crkbd is a split keyboard with 42 keys (3x6 + 3 thumb keys per half)
     // The exact count depends on the layout variant
     assert!(
@@ -108,12 +105,13 @@ fn test_build_crkbd_visual_mapping() {
     }
 
     let qmk_path = get_qmk_path();
-    let info = parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
+    let info =
+        parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
     let layouts = extract_layout_names(&info);
     let layout_name = &layouts[0];
 
-    let geometry = build_keyboard_geometry(&info, "crkbd", layout_name)
-        .expect("Failed to build geometry");
+    let geometry =
+        build_keyboard_geometry(&info, "crkbd", layout_name).expect("Failed to build geometry");
 
     let mapping = VisualLayoutMapping::build(&geometry);
 
@@ -137,13 +135,12 @@ fn test_build_crkbd_visual_mapping() {
 
             // Visual -> LED
             let led_back = mapping.visual_to_led_index(visual_pos.row, visual_pos.col);
-            assert_eq!(
-                led_back,
-                Some(0),
-                "Visual -> LED mapping should round-trip"
-            );
+            assert_eq!(led_back, Some(0), "Visual -> LED mapping should round-trip");
         } else {
-            panic!("Matrix -> Visual mapping failed for ({}, {})", matrix_row, matrix_col);
+            panic!(
+                "Matrix -> Visual mapping failed for ({}, {})",
+                matrix_row, matrix_col
+            );
         }
     } else {
         panic!("LED -> Matrix mapping failed for LED 0");
@@ -164,23 +161,31 @@ fn test_parse_multiple_keyboards() {
     }
 
     let qmk_path = get_qmk_path();
-    
+
     // Test a few common keyboards
     let keyboards = vec!["crkbd", "ferris/sweep"];
 
     for keyboard in keyboards {
         let result = parse_keyboard_info_json(&qmk_path, keyboard);
-        
+
         if result.is_err() {
-            eprintln!("Warning: Could not parse keyboard '{}': {:?}", keyboard, result.err());
+            eprintln!(
+                "Warning: Could not parse keyboard '{}': {:?}",
+                keyboard,
+                result.err()
+            );
             continue;
         }
 
         let info = result.unwrap();
         let layouts = extract_layout_names(&info);
-        
+
         println!("Keyboard '{}' has layouts: {:?}", keyboard, layouts);
-        assert!(!layouts.is_empty(), "Keyboard '{}' should have at least one layout", keyboard);
+        assert!(
+            !layouts.is_empty(),
+            "Keyboard '{}' should have at least one layout",
+            keyboard
+        );
 
         // Try building geometry for first layout
         if let Some(layout_name) = layouts.first() {
@@ -222,12 +227,12 @@ fn test_scan_keyboards_finds_crkbd() {
     );
 
     println!("Found {} keyboards in QMK firmware", keyboards.len());
-    println!("First 10 keyboards: {:?}", &keyboards[..10.min(keyboards.len())]);
+    println!(
+        "First 10 keyboards: {:?}",
+        &keyboards[..10.min(keyboards.len())]
+    );
 
     // crkbd should be in the list
     let has_crkbd = keyboards.iter().any(|k| k.contains("crkbd"));
-    assert!(
-        has_crkbd,
-        "crkbd should be found in keyboard scan"
-    );
+    assert!(has_crkbd, "crkbd should be found in keyboard scan");
 }

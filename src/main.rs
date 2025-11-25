@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     if let Some(path) = cli.layout_path {
         // Load the layout
         let layout = parser::parse_markdown_layout(&path)?;
-        
+
         // For now, create minimal geometry (will be loaded from QMK in future)
         let geometry = models::KeyboardGeometry {
             keyboard_name: "test".to_string(),
@@ -56,30 +56,24 @@ fn main() -> Result<()> {
             matrix_cols: 2,
             keys: vec![],
         };
-        
+
         // Create minimal mapping (will be built from geometry in future)
         let mapping = models::VisualLayoutMapping::new();
-        
+
         // Load or create default config
         let config_result = config::Config::load();
         let config = config_result.unwrap_or_else(|_| config::Config::default());
-        
+
         // Initialize TUI
         let mut terminal = tui::setup_terminal()?;
-        let mut app_state = tui::AppState::new(
-            layout,
-            Some(path),
-            geometry,
-            mapping,
-            config,
-        )?;
-        
+        let mut app_state = tui::AppState::new(layout, Some(path), geometry, mapping, config)?;
+
         // Run main TUI loop
         let result = tui::run_tui(&mut app_state, &mut terminal);
-        
+
         // Restore terminal
         tui::restore_terminal(terminal)?;
-        
+
         // Check for errors
         result?;
     } else {

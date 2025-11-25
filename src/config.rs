@@ -17,9 +17,7 @@ pub struct PathConfig {
 
 impl Default for PathConfig {
     fn default() -> Self {
-        Self {
-            qmk_firmware: None,
-        }
+        Self { qmk_firmware: None }
     }
 }
 
@@ -129,11 +127,15 @@ impl Config {
             return Ok(Self::new());
         }
 
-        let content = fs::read_to_string(&config_path)
-            .context(format!("Failed to read config file: {}", config_path.display()))?;
+        let content = fs::read_to_string(&config_path).context(format!(
+            "Failed to read config file: {}",
+            config_path.display()
+        ))?;
 
-        let config: Config = toml::from_str(&content)
-            .context(format!("Failed to parse config file: {}", config_path.display()))?;
+        let config: Config = toml::from_str(&content).context(format!(
+            "Failed to parse config file: {}",
+            config_path.display()
+        ))?;
 
         config.validate()?;
 
@@ -148,23 +150,28 @@ impl Config {
 
         // Ensure config directory exists
         let config_dir = Self::config_dir()?;
-        fs::create_dir_all(&config_dir)
-            .context(format!("Failed to create config directory: {}", config_dir.display()))?;
+        fs::create_dir_all(&config_dir).context(format!(
+            "Failed to create config directory: {}",
+            config_dir.display()
+        ))?;
 
         // Serialize to TOML
-        let content = toml::to_string_pretty(self)
-            .context("Failed to serialize configuration")?;
+        let content = toml::to_string_pretty(self).context("Failed to serialize configuration")?;
 
         let config_path = Self::config_file_path()?;
         let temp_path = config_path.with_extension("toml.tmp");
 
         // Write to temp file
-        fs::write(&temp_path, content)
-            .context(format!("Failed to write temp config file: {}", temp_path.display()))?;
+        fs::write(&temp_path, content).context(format!(
+            "Failed to write temp config file: {}",
+            temp_path.display()
+        ))?;
 
         // Atomic rename
-        fs::rename(&temp_path, &config_path)
-            .context(format!("Failed to rename temp config file to: {}", config_path.display()))?;
+        fs::rename(&temp_path, &config_path).context(format!(
+            "Failed to rename temp config file to: {}",
+            config_path.display()
+        ))?;
 
         Ok(())
     }

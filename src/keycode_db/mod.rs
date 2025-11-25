@@ -68,8 +68,8 @@ impl KeycodeDb {
     /// Loads the keycode database from the embedded JSON file.
     pub fn load() -> Result<Self> {
         let json_data = include_str!("keycodes.json");
-        let db: KeycodeDatabase = serde_json::from_str(json_data)
-            .context("Failed to parse embedded keycodes.json")?;
+        let db: KeycodeDatabase =
+            serde_json::from_str(json_data).context("Failed to parse embedded keycodes.json")?;
 
         let mut lookup = HashMap::new();
         let mut patterns = Vec::new();
@@ -324,7 +324,9 @@ mod tests {
         let results = db.search("arr");
         // Should match arrow keys (KC_LEFT, KC_RIGHT, KC_UP, KC_DOWN)
         assert!(!results.is_empty());
-        assert!(results.iter().any(|k| k.name.to_lowercase().contains("arrow")));
+        assert!(results
+            .iter()
+            .any(|k| k.name.to_lowercase().contains("arrow")));
     }
 
     #[test]

@@ -157,8 +157,7 @@ mod tests {
 
     #[test]
     fn test_set_color() {
-        let mut category =
-            Category::new("test", "Test", RgbColor::new(255, 0, 0)).unwrap();
+        let mut category = Category::new("test", "Test", RgbColor::new(255, 0, 0)).unwrap();
         let new_color = RgbColor::new(0, 255, 0);
         category.set_color(new_color);
         assert_eq!(category.color, new_color);
@@ -166,8 +165,7 @@ mod tests {
 
     #[test]
     fn test_set_name() {
-        let mut category =
-            Category::new("test", "Test", RgbColor::new(255, 0, 0)).unwrap();
+        let mut category = Category::new("test", "Test", RgbColor::new(255, 0, 0)).unwrap();
         category.set_name("New Name").unwrap();
         assert_eq!(category.name, "New Name");
 

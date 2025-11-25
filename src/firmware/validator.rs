@@ -374,7 +374,10 @@ impl<'a> FirmwareValidator<'a> {
             report.add_error(
                 ValidationError::new(
                     ValidationErrorKind::MissingPosition,
-                    format!("Position ({}, {}) does not map to any matrix position", row, col),
+                    format!(
+                        "Position ({}, {}) does not map to any matrix position",
+                        row, col
+                    ),
                 )
                 .with_layer(layer)
                 .with_position(row, col)

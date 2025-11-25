@@ -170,7 +170,13 @@ pub fn render_category_manager(
             render_category_list(f, inner_area, state, categories);
         }
         ManagerMode::CreatingName { input } => {
-            render_name_input(f, inner_area, "Create Category", input, "Enter category name:");
+            render_name_input(
+                f,
+                inner_area,
+                "Create Category",
+                input,
+                "Enter category name:",
+            );
         }
         ManagerMode::Renaming { input, .. } => {
             render_name_input(f, inner_area, "Rename Category", input, "Enter new name:");
@@ -198,8 +204,8 @@ fn render_category_list(
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            Constraint::Min(5),      // Category list
-            Constraint::Length(5),   // Help text
+            Constraint::Min(5),    // Category list
+            Constraint::Length(5), // Help text
         ])
         .split(area);
 
@@ -216,16 +222,17 @@ fn render_category_list(
                 Style::default().fg(Color::White)
             };
 
-            let color_box = format!(
-                "█████ ",
-            );
+            let color_box = format!("█████ ",);
             let content = Line::from(vec![
                 Span::styled(
                     color_box,
                     Style::default().fg(Color::Rgb(cat.color.r, cat.color.g, cat.color.b)),
                 ),
                 Span::styled(&cat.name, style),
-                Span::styled(format!(" ({})", cat.id), Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!(" ({})", cat.id),
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]);
 
             ListItem::new(content)
@@ -233,11 +240,7 @@ fn render_category_list(
         .collect();
 
     let list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Categories"),
-        )
+        .block(Block::default().borders(Borders::ALL).title("Categories"))
         .highlight_style(Style::default().bg(Color::DarkGray));
 
     f.render_widget(list, chunks[0]);
@@ -273,20 +276,14 @@ fn render_category_list(
 }
 
 /// Render name input dialog
-fn render_name_input(
-    f: &mut Frame,
-    area: Rect,
-    title: &str,
-    input: &str,
-    prompt: &str,
-) {
+fn render_name_input(f: &mut Frame, area: Rect, title: &str, input: &str, prompt: &str) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            Constraint::Length(3),   // Prompt
-            Constraint::Length(3),   // Input
-            Constraint::Min(1),      // Spacer
-            Constraint::Length(3),   // Help
+            Constraint::Length(3), // Prompt
+            Constraint::Length(3), // Input
+            Constraint::Min(1),    // Spacer
+            Constraint::Length(3), // Help
         ])
         .split(area);
 
@@ -301,22 +298,20 @@ fn render_name_input(
         .borders(Borders::ALL)
         .title(title)
         .style(Style::default().fg(Color::Cyan));
-    
+
     let input_text = Paragraph::new(input)
         .block(input_block)
         .style(Style::default().fg(Color::White));
-    
+
     f.render_widget(input_text, chunks[1]);
 
     // Help text
-    let help = vec![
-        Line::from(vec![
-            Span::styled("Enter", Style::default().fg(Color::Cyan)),
-            Span::raw(": Confirm  "),
-            Span::styled("Esc", Style::default().fg(Color::Cyan)),
-            Span::raw(": Cancel"),
-        ]),
-    ];
+    let help = vec![Line::from(vec![
+        Span::styled("Enter", Style::default().fg(Color::Cyan)),
+        Span::raw(": Confirm  "),
+        Span::styled("Esc", Style::default().fg(Color::Cyan)),
+        Span::raw(": Cancel"),
+    ])];
 
     let help_widget = Paragraph::new(help)
         .alignment(Alignment::Center)
@@ -326,18 +321,14 @@ fn render_name_input(
 }
 
 /// Render delete confirmation dialog
-fn render_delete_confirmation(
-    f: &mut Frame,
-    area: Rect,
-    category: &Category,
-) {
+fn render_delete_confirmation(f: &mut Frame, area: Rect, category: &Category) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            Constraint::Length(3),   // Warning
-            Constraint::Length(3),   // Category info
-            Constraint::Min(1),      // Spacer
-            Constraint::Length(3),   // Help
+            Constraint::Length(3), // Warning
+            Constraint::Length(3), // Category info
+            Constraint::Min(1),    // Spacer
+            Constraint::Length(3), // Help
         ])
         .split(area);
 
@@ -351,7 +342,10 @@ fn render_delete_confirmation(
     let info = Line::from(vec![
         Span::raw("Category: "),
         Span::styled(&category.name, Style::default().fg(Color::Yellow)),
-        Span::styled(format!(" ({})", category.id), Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!(" ({})", category.id),
+            Style::default().fg(Color::DarkGray),
+        ),
     ]);
 
     let info_widget = Paragraph::new(info)
@@ -360,14 +354,12 @@ fn render_delete_confirmation(
     f.render_widget(info_widget, chunks[1]);
 
     // Help
-    let help = vec![
-        Line::from(vec![
-            Span::styled("y", Style::default().fg(Color::Cyan)),
-            Span::raw(": Yes, delete  "),
-            Span::styled("n/Esc", Style::default().fg(Color::Cyan)),
-            Span::raw(": No, cancel"),
-        ]),
-    ];
+    let help = vec![Line::from(vec![
+        Span::styled("y", Style::default().fg(Color::Cyan)),
+        Span::raw(": Yes, delete  "),
+        Span::styled("n/Esc", Style::default().fg(Color::Cyan)),
+        Span::raw(": No, cancel"),
+    ])];
 
     let help_widget = Paragraph::new(help)
         .alignment(Alignment::Center)
@@ -377,23 +369,25 @@ fn render_delete_confirmation(
 }
 
 /// Render color picker prompt
-fn render_color_picker_prompt(
-    f: &mut Frame,
-    area: Rect,
-    name: &str,
-) {
+fn render_color_picker_prompt(f: &mut Frame, area: Rect, name: &str) {
     let text = vec![
         Line::from(""),
         Line::from(vec![
             Span::raw("Creating category: "),
-            Span::styled(name, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                name,
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
         Line::from("Choose a color for this category..."),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("(Color picker will open)", Style::default().fg(Color::DarkGray)),
-        ]),
+        Line::from(vec![Span::styled(
+            "(Color picker will open)",
+            Style::default().fg(Color::DarkGray),
+        )]),
     ];
 
     let paragraph = Paragraph::new(text)

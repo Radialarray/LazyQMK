@@ -57,12 +57,7 @@ impl VisualLayoutMapping {
         let mut mapping = Self::new();
 
         // Pre-allocate led_to_matrix vector
-        let max_led = geometry
-            .keys
-            .iter()
-            .map(|k| k.led_index)
-            .max()
-            .unwrap_or(0) as usize;
+        let max_led = geometry.keys.iter().map(|k| k.led_index).max().unwrap_or(0) as usize;
         mapping.led_to_matrix.resize(max_led + 1, (0, 0));
 
         for key in &geometry.keys {
@@ -105,9 +100,7 @@ impl VisualLayoutMapping {
     ///
     /// Used for saving layouts and when user selects a key in the UI.
     pub fn visual_to_matrix_pos(&self, row: u8, col: u8) -> Option<(u8, u8)> {
-        self.visual_to_matrix
-            .get(&Position::new(row, col))
-            .copied()
+        self.visual_to_matrix.get(&Position::new(row, col)).copied()
     }
 
     /// Converts visual position to LED index.

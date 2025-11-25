@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::models::{KeyboardGeometry, KeyGeometry};
+use crate::models::{KeyGeometry, KeyboardGeometry};
 
 /// QMK info.json structure (simplified for our needs)
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -79,7 +79,7 @@ fn default_key_size() -> f32 {
 /// A vector of keyboard names (relative paths from keyboards/ directory)
 pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
     let keyboards_dir = qmk_path.join("keyboards");
-    
+
     if !keyboards_dir.exists() {
         anyhow::bail!(
             "QMK keyboards directory not found: {}",
@@ -89,17 +89,17 @@ pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
 
     let mut keyboards = Vec::new();
     scan_keyboards_recursive(&keyboards_dir, "", &mut keyboards)?;
-    
+
     // Sort alphabetically for consistent ordering
     keyboards.sort();
-    
+
     Ok(keyboards)
 }
 
 /// Recursively scans keyboard directories looking for info.json files.
 fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String>) -> Result<()> {
-    let entries = fs::read_dir(dir)
-        .context(format!("Failed to read directory: {}", dir.display()))?;
+    let entries =
+        fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;
 
     for entry in entries {
         let entry = entry?;
@@ -108,10 +108,11 @@ fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String
         let name_str = name.to_string_lossy();
 
         // Skip hidden directories and common non-keyboard directories
-        if name_str.starts_with('.') 
-            || name_str == "keymaps" 
-            || name_str == "lib" 
-            || name_str == "common" {
+        if name_str.starts_with('.')
+            || name_str == "keymaps"
+            || name_str == "lib"
+            || name_str == "common"
+        {
             continue;
         }
 
@@ -170,10 +171,7 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 ///
 /// Parsed QMK info.json structure
 pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkInfoJson> {
-    let info_json_path = qmk_path
-        .join("keyboards")
-        .join(keyboard)
-        .join("info.json");
+    let info_json_path = qmk_path.join("keyboards").join(keyboard).join("info.json");
 
     if !info_json_path.exists() {
         anyhow::bail!(
@@ -215,13 +213,11 @@ pub fn extract_layout_definition<'a>(
     info: &'a QmkInfoJson,
     layout_name: &str,
 ) -> Result<&'a LayoutDefinition> {
-    info.layouts
-        .get(layout_name)
-        .context(format!(
-            "Layout '{}' not found in info.json. Available layouts: {:?}",
-            layout_name,
-            extract_layout_names(info)
-        ))
+    info.layouts.get(layout_name).context(format!(
+        "Layout '{}' not found in info.json. Available layouts: {:?}",
+        layout_name,
+        extract_layout_names(info)
+    ))
 }
 
 /// Builds KeyboardGeometry from QMK info.json layout definition.
@@ -266,7 +262,7 @@ pub fn build_keyboard_geometry(
     let mut keys = Vec::new();
     for (led_index, key_pos) in layout_def.layout.iter().enumerate() {
         let matrix_position = key_pos.matrix.unwrap(); // Already validated above
-        
+
         let key_geometry = KeyGeometry {
             matrix_position: (matrix_position[0], matrix_position[1]),
             led_index: led_index as u8,
@@ -318,7 +314,8 @@ mod tests {
                     ]
                 }
             }
-        }"#.to_string()
+        }"#
+        .to_string()
     }
 
     #[test]
@@ -342,7 +339,7 @@ mod tests {
 
         let info = parse_info_json(&info_path).unwrap();
         let names = extract_layout_names(&info);
-        
+
         assert_eq!(names.len(), 2);
         assert!(names.contains(&"LAYOUT".to_string()));
         assert!(names.contains(&"LAYOUT_split".to_string()));
@@ -355,7 +352,7 @@ mod tests {
         fs::write(&info_path, create_test_info_json()).unwrap();
 
         let info = parse_info_json(&info_path).unwrap();
-        
+
         let layout = extract_layout_definition(&info, "LAYOUT").unwrap();
         assert_eq!(layout.layout.len(), 6);
 

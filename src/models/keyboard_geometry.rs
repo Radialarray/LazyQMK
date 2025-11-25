@@ -30,12 +30,7 @@ pub struct KeyGeometry {
 
 impl KeyGeometry {
     /// Creates a new KeyGeometry with the given parameters.
-    pub fn new(
-        matrix_position: (u8, u8),
-        led_index: u8,
-        visual_x: f32,
-        visual_y: f32,
-    ) -> Self {
+    pub fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
         Self {
             matrix_position,
             led_index,
@@ -178,9 +173,9 @@ mod tests {
     fn test_key_geometry_terminal_conversion() {
         let key = KeyGeometry::new((0, 0), 0, 2.0, 1.0);
         assert_eq!(key.terminal_x(), 14); // 2.0 * 7
-        assert_eq!(key.terminal_y(), 2);  // 1.0 * 2.5 = 2.5 -> 2
+        assert_eq!(key.terminal_y(), 2); // 1.0 * 2.5 = 2.5 -> 2
 
-        assert_eq!(key.terminal_width(), 7);  // 1.0 * 7
+        assert_eq!(key.terminal_width(), 7); // 1.0 * 7
         assert_eq!(key.terminal_height(), 3); // 1.0 * 2.5 = 2.5 -> 3 (min 3)
     }
 

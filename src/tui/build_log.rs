@@ -76,14 +76,14 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
     // Get log lines
     let log_lines = &build_state.log_lines;
     let total_lines = log_lines.len();
-    
+
     // Calculate visible area height (subtract borders and title)
     let visible_lines = (area.height.saturating_sub(2)) as usize;
-    
+
     // Apply scroll offset
     let start_idx = log_state.scroll_offset.min(total_lines.saturating_sub(1));
     let end_idx = (start_idx + visible_lines).min(total_lines);
-    
+
     // Create list items with colored text based on log level
     let items: Vec<ListItem> = log_lines[start_idx..end_idx]
         .iter()
@@ -93,7 +93,7 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
                 crate::firmware::builder::LogLevel::Ok => Color::Green,
                 crate::firmware::builder::LogLevel::Error => Color::Red,
             };
-            
+
             ListItem::new(Line::from(Span::styled(
                 message.clone(),
                 Style::default().fg(color),
@@ -109,13 +109,12 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
         total_lines
     );
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Cyan)),
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan)),
+    );
 
     f.render_widget(list, area);
 
@@ -127,17 +126,17 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
         width: area.width.saturating_sub(4),
         height: 1,
     };
-    
+
     let help = Paragraph::new(help_text)
         .style(Style::default().fg(Color::Gray).add_modifier(Modifier::DIM));
-    
+
     f.render_widget(help, help_area);
 }
 
 /// Helper to create a centered rectangle.
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     use ratatui::layout::{Constraint, Direction, Layout};
-    
+
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

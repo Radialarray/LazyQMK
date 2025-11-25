@@ -28,7 +28,7 @@ impl KeycodePickerState {
             active_category: None,
         }
     }
-    
+
     /// Reset to initial state
     pub fn reset(&mut self) {
         self.search.clear();
@@ -44,23 +44,24 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Search box
-            Constraint::Length(3),  // Category info
-            Constraint::Min(10),     // Keycode list
-            Constraint::Length(3),   // Help text
+            Constraint::Length(3), // Search box
+            Constraint::Length(3), // Category info
+            Constraint::Min(10),   // Keycode list
+            Constraint::Length(3), // Help text
         ])
         .split(area);
 
     // Search box
     let search_text = vec![Line::from(vec![
         Span::raw("Search: "),
-        Span::styled(&state.keycode_picker_state.search, 
-            Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &state.keycode_picker_state.search,
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
     ])];
-    let search = Paragraph::new(search_text)
-        .block(Block::default().borders(Borders::ALL));
+    let search = Paragraph::new(search_text).block(Block::default().borders(Borders::ALL));
     f.render_widget(search, chunks[0]);
-    
+
     // Category info
     let category_text = if let Some(cat_id) = &state.keycode_picker_state.active_category {
         if let Some(cat) = state.keycode_db.get_category(cat_id) {
@@ -71,42 +72,57 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     } else {
         "All Categories (press 1-8 to filter)".to_string()
     };
-    let category = Paragraph::new(category_text)
-        .block(Block::default().borders(Borders::ALL));
+    let category = Paragraph::new(category_text).block(Block::default().borders(Borders::ALL));
     f.render_widget(category, chunks[1]);
 
     // Get filtered keycodes based on search and category
     let keycodes = if let Some(cat_id) = &state.keycode_picker_state.active_category {
-        state.keycode_db.search_in_category(&state.keycode_picker_state.search, cat_id)
+        state
+            .keycode_db
+            .search_in_category(&state.keycode_picker_state.search, cat_id)
     } else {
         state.keycode_db.search(&state.keycode_picker_state.search)
     };
-    
+
     // Build list items
-    let list_items: Vec<ListItem> = keycodes.iter().map(|keycode| {
-        let display = format!("{} - {}", keycode.code, keycode.name);
-        ListItem::new(display)
-    }).collect();
-    
+    let list_items: Vec<ListItem> = keycodes
+        .iter()
+        .map(|keycode| {
+            let display = format!("{} - {}", keycode.code, keycode.name);
+            ListItem::new(display)
+        })
+        .collect();
+
     // Create list widget with stateful selection
     let list = List::new(list_items)
-        .block(Block::default()
-            .title(format!(" Keycodes ({}) ", keycodes.len()))
-            .borders(Borders::ALL))
-        .highlight_style(Style::default()
-            .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD))
+        .block(
+            Block::default()
+                .title(format!(" Keycodes ({}) ", keycodes.len()))
+                .borders(Borders::ALL),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol(">> ");
 
     // Create list state for highlighting
     let mut list_state = ListState::default();
-    list_state.select(Some(state.keycode_picker_state.selected.min(keycodes.len().saturating_sub(1))));
-    
+    list_state.select(Some(
+        state
+            .keycode_picker_state
+            .selected
+            .min(keycodes.len().saturating_sub(1)),
+    ));
+
     f.render_stateful_widget(list, chunks[2], &mut list_state);
 
     // Help text
-    let help = Paragraph::new("↑↓: Navigate | Enter: Select | Esc: Cancel | 1-8: Filter by category | Type to search")
-        .block(Block::default().borders(Borders::ALL));
+    let help = Paragraph::new(
+        "↑↓: Navigate | Enter: Select | Esc: Cancel | 1-8: Filter by category | Type to search",
+    )
+    .block(Block::default().borders(Borders::ALL));
     f.render_widget(help, chunks[3]);
 }
 
@@ -122,14 +138,17 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
         KeyCode::Enter => {
             // Get filtered keycodes and clone the selected one to avoid borrow checker issues
             let keycodes = if let Some(cat_id) = &state.keycode_picker_state.active_category {
-                state.keycode_db.search_in_category(&state.keycode_picker_state.search, cat_id)
+                state
+                    .keycode_db
+                    .search_in_category(&state.keycode_picker_state.search, cat_id)
             } else {
                 state.keycode_db.search(&state.keycode_picker_state.search)
             };
-            
-            let selected_keycode_opt = keycodes.get(state.keycode_picker_state.selected)
+
+            let selected_keycode_opt = keycodes
+                .get(state.keycode_picker_state.selected)
                 .map(|kc| kc.code.clone());
-            
+
             // Select current keycode and close
             if let Some(keycode) = selected_keycode_opt {
                 if let Some(selected_key) = state.get_selected_key_mut() {
@@ -138,7 +157,7 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
                     state.set_status(&format!("Keycode assigned: {}", keycode));
                 }
             }
-            
+
             state.active_popup = None;
             state.keycode_picker_state.reset();
             Ok(false)
@@ -147,7 +166,7 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
             // Category switching with number keys 1-8
             let category_idx = c.to_digit(10).unwrap() as usize - 1;
             let categories = state.keycode_db.categories();
-            
+
             if let Some(category) = categories.get(category_idx) {
                 state.keycode_picker_state.active_category = Some(category.id.clone());
                 state.keycode_picker_state.selected = 0;
@@ -177,11 +196,13 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
         KeyCode::Down => {
             // Navigate down in list
             let keycodes = if let Some(cat_id) = &state.keycode_picker_state.active_category {
-                state.keycode_db.search_in_category(&state.keycode_picker_state.search, cat_id)
+                state
+                    .keycode_db
+                    .search_in_category(&state.keycode_picker_state.search, cat_id)
             } else {
                 state.keycode_db.search(&state.keycode_picker_state.search)
             };
-            
+
             if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
                 state.keycode_picker_state.selected += 1;
             }

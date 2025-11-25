@@ -104,29 +104,32 @@ impl Default for ColorPickerState {
 /// Render the color picker dialog
 pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     let area = centered_rect(60, 50, f.size());
-    
+
     // Split into sections
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // Title
-            Constraint::Length(3),  // Red slider
-            Constraint::Length(3),  // Green slider
-            Constraint::Length(3),  // Blue slider
-            Constraint::Length(4),  // Color preview
-            Constraint::Length(3),  // Hex display
-            Constraint::Length(3),  // Instructions
+            Constraint::Length(3), // Title
+            Constraint::Length(3), // Red slider
+            Constraint::Length(3), // Green slider
+            Constraint::Length(3), // Blue slider
+            Constraint::Length(4), // Color preview
+            Constraint::Length(3), // Hex display
+            Constraint::Length(3), // Instructions
         ])
         .split(area);
-    
+
     let picker_state = &state.color_picker_state;
-    
+
     // Title
-    let title = Paragraph::new("RGB Color Picker")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+    let title = Paragraph::new("RGB Color Picker").style(
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    );
     f.render_widget(title, chunks[0]);
-    
+
     // Red channel slider
     render_channel_slider(
         f,
@@ -136,7 +139,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         Color::Red,
         picker_state.active_channel == RgbChannel::Red,
     );
-    
+
     // Green channel slider
     render_channel_slider(
         f,
@@ -146,7 +149,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         Color::Green,
         picker_state.active_channel == RgbChannel::Green,
     );
-    
+
     // Blue channel slider
     render_channel_slider(
         f,
@@ -156,7 +159,7 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         Color::Blue,
         picker_state.active_channel == RgbChannel::Blue,
     );
-    
+
     // Color preview
     let preview_color = Color::Rgb(picker_state.r, picker_state.g, picker_state.b);
     let preview = Block::default()
@@ -164,31 +167,33 @@ pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
         .borders(Borders::ALL)
         .style(Style::default().bg(preview_color));
     f.render_widget(preview, chunks[4]);
-    
+
     // Hex code display
     let hex = picker_state.get_color().to_hex();
     let hex_display = Paragraph::new(format!("  {}", hex))
-        .style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(Block::default().borders(Borders::ALL).title(" Hex Code "));
     f.render_widget(hex_display, chunks[5]);
-    
+
     // Instructions
-    let instructions = vec![
-        Line::from(vec![
-            Span::raw("  "),
-            Span::styled("↑↓", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw(" Adjust  "),
-            Span::styled("Tab", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw(" Next Channel  "),
-            Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw(" Apply  "),
-            Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw(" Cancel"),
-        ]),
-    ];
+    let instructions = vec![Line::from(vec![
+        Span::raw("  "),
+        Span::styled("↑↓", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(" Adjust  "),
+        Span::styled("Tab", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(" Next Channel  "),
+        Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(" Apply  "),
+        Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(" Cancel"),
+    ])];
     let instructions_widget = Paragraph::new(instructions);
     f.render_widget(instructions_widget, chunks[6]);
-    
+
     // Border around everything
     let block = Block::default()
         .borders(Borders::ALL)
@@ -207,19 +212,19 @@ fn render_channel_slider(
 ) {
     let percentage = (value as f64 / 255.0 * 100.0) as u16;
     let label_text = format!("{}: {:3}", label, value);
-    
+
     let style = if is_active {
         Style::default().fg(color).add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::Gray)
     };
-    
+
     let gauge = Gauge::default()
         .block(Block::default().borders(Borders::NONE))
         .gauge_style(style)
         .label(label_text)
         .percent(percentage);
-    
+
     f.render_widget(gauge, area);
 }
 
@@ -236,7 +241,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
         KeyCode::Enter => {
             // Apply color based on context
             let color = state.color_picker_state.get_color();
-            
+
             match state.color_picker_context {
                 Some(super::ColorPickerContext::IndividualKey) => {
                     if let Some(key) = state.get_selected_key_mut() {
@@ -259,13 +264,13 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                 Some(super::ColorPickerContext::Category) => {
                     // Handle category color completion
                     use super::category_manager::ManagerMode;
-                    
+
                     match &state.category_manager_state.mode {
                         ManagerMode::CreatingColor { name } => {
                             // Create new category (T108)
                             let name = name.clone();
                             let id = name.to_lowercase().replace(' ', "-");
-                            
+
                             if let Ok(category) = crate::models::Category::new(&id, &name, color) {
                                 state.layout.categories.push(category);
                                 state.mark_dirty();
@@ -274,7 +279,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                             } else {
                                 state.set_error("Failed to create category");
                             }
-                            
+
                             state.active_popup = Some(super::PopupType::CategoryManager);
                             state.color_picker_context = None;
                         }
@@ -287,7 +292,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                                 state.mark_dirty();
                                 state.set_status(format!("Updated color for '{}'", name));
                             }
-                            
+
                             state.active_popup = Some(super::PopupType::CategoryManager);
                             state.color_picker_context = None;
                         }
@@ -304,7 +309,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                     state.color_picker_context = None;
                 }
             }
-            
+
             Ok(false)
         }
         KeyCode::Up => {
