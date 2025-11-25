@@ -26,7 +26,7 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::Line,
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
@@ -42,13 +42,11 @@ use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 // Re-export TUI components
 pub use category_manager::CategoryManagerState;
 pub use category_picker::CategoryPickerState;
-pub use color_picker::{ColorPickerState, RgbChannel};
-pub use config_dialogs::{KeyboardPickerState, LayoutPickerState, PathConfigDialogState};
+pub use color_picker::ColorPickerState;
 pub use help_overlay::HelpOverlayState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use metadata_editor::MetadataEditorState;
-pub use onboarding_wizard::OnboardingWizardState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
 
