@@ -32,13 +32,26 @@ pub struct BuildConfig {
 
 impl Default for BuildConfig {
     fn default() -> Self {
+        // Use config directory for build output by default
+        let output_dir = Self::default_output_dir().unwrap_or_else(|_| PathBuf::from(".build"));
+        
         Self {
             keyboard: "crkbd".to_string(),
             layout: "LAYOUT_split_3x6_3".to_string(),
             keymap: "default".to_string(),
             output_format: "uf2".to_string(),
-            output_dir: PathBuf::from(".build"),
+            output_dir,
         }
+    }
+}
+
+impl BuildConfig {
+    /// Gets the default output directory path.
+    ///
+    /// - Unix/Linux/macOS: `~/.config/KeyboardConfigurator/builds/`
+    /// - Windows: `%APPDATA%\KeyboardConfigurator\builds\`
+    fn default_output_dir() -> Result<PathBuf> {
+        Ok(Config::config_dir()?.join("builds"))
     }
 }
 

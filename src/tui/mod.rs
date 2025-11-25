@@ -1449,8 +1449,8 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
     );
 
     match generator.generate() {
-        Ok((keymap_path, vial_path)) => {
-            state.set_status(format!("✓ Generated: {keymap_path} and {vial_path}"));
+        Ok((keymap_path, vial_path, config_path)) => {
+            state.set_status(format!("✓ Generated: {keymap_path}, {vial_path}, {config_path}"));
         }
         Err(e) => {
             state.set_error(format!("Generation failed: {e}"));
