@@ -83,6 +83,8 @@ pub struct OnboardingWizardState {
     pub input_buffer: String,
     /// List of available keyboards (populated after QMK path is set)
     pub available_keyboards: Vec<String>,
+    /// Filter text for keyboard search
+    pub keyboard_filter: String,
     /// Selected keyboard index in list
     pub keyboard_selected_index: usize,
     /// List of available layouts (populated after keyboard is selected)
@@ -103,11 +105,26 @@ impl OnboardingWizardState {
             inputs: HashMap::new(),
             input_buffer: String::new(),
             available_keyboards: Vec::new(),
+            keyboard_filter: String::new(),
             keyboard_selected_index: 0,
             available_layouts: Vec::new(),
             layout_selected_index: 0,
             error_message: None,
             is_complete: false,
+        }
+    }
+
+    /// Gets the filtered list of keyboards based on current filter
+    fn get_filtered_keyboards(&self) -> Vec<String> {
+        if self.keyboard_filter.is_empty() {
+            self.available_keyboards.clone()
+        } else {
+            let filter_lower = self.keyboard_filter.to_lowercase();
+            self.available_keyboards
+                .iter()
+                .filter(|kb| kb.to_lowercase().contains(&filter_lower))
+                .cloned()
+                .collect()
         }
     }
 
@@ -164,13 +181,17 @@ impl OnboardingWizardState {
             }
             WizardStep::KeyboardSelection => {
                 // Save selected keyboard
-                if self.available_keyboards.is_empty() {
-                    self.error_message = Some("No keyboards available".to_string());
+                let filtered_keyboards = self.get_filtered_keyboards();
+                if filtered_keyboards.is_empty() {
+                    self.error_message = Some("No keyboards match filter".to_string());
                     return Ok(());
                 }
 
-                let keyboard = self.available_keyboards[self.keyboard_selected_index].clone();
+                let keyboard = filtered_keyboards[self.keyboard_selected_index].clone();
                 self.inputs.insert("keyboard".to_string(), keyboard.clone());
+
+                // Clear the filter for next time
+                self.keyboard_filter.clear();
 
                 // Parse keyboard info.json to get layouts
                 let qmk_path = PathBuf::from(self.inputs.get("qmk_path").unwrap());
@@ -217,6 +238,12 @@ impl OnboardingWizardState {
                 if let Some(qmk_path) = self.inputs.get("qmk_path") {
                     self.input_buffer = qmk_path.clone();
                 }
+            }
+
+            // Clear keyboard filter when returning to keyboard selection
+            if self.current_step == WizardStep::KeyboardSelection {
+                self.keyboard_filter.clear();
+                self.keyboard_selected_index = 0;
             }
         }
     }
@@ -338,8 +365,25 @@ fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rec
 }
 
 fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
-    let keyboards: Vec<ListItem> = state
-        .available_keyboards
+    // Split area into filter input and list
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Filter input
+            Constraint::Min(5),    // Keyboard list
+        ])
+        .split(area);
+
+    // Render filter input
+    let filter_input = Paragraph::new(format!("Filter: {}_", state.keyboard_filter))
+        .style(Style::default().fg(Color::Yellow))
+        .block(Block::default().borders(Borders::ALL).title("Search"));
+    f.render_widget(filter_input, chunks[0]);
+
+    // Get filtered keyboards
+    let filtered_keyboards = state.get_filtered_keyboards();
+    
+    let keyboards: Vec<ListItem> = filtered_keyboards
         .iter()
         .enumerate()
         .map(|(i, kb)| {
@@ -356,7 +400,8 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
 
     let list = List::new(keyboards)
         .block(Block::default().borders(Borders::ALL).title(format!(
-            "Available Keyboards ({} total)",
+            "Available Keyboards ({} of {} total)",
+            filtered_keyboards.len(),
             state.available_keyboards.len()
         )))
         .highlight_style(
@@ -365,7 +410,7 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
                 .add_modifier(Modifier::BOLD),
         );
 
-    f.render_widget(list, area);
+    f.render_widget(list, chunks[1]);
 }
 
 fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect) {
@@ -437,7 +482,7 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect)
     let instructions = match state.current_step {
         WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
         WizardStep::QmkPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
-        WizardStep::KeyboardSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
+        WizardStep::KeyboardSelection => "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back",
         WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
     };
@@ -481,16 +526,34 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
                 }
             }
             KeyCode::Down => {
-                if state.keyboard_selected_index < state.available_keyboards.len().saturating_sub(1)
-                {
+                let filtered_count = state.get_filtered_keyboards().len();
+                if state.keyboard_selected_index < filtered_count.saturating_sub(1) {
                     state.keyboard_selected_index += 1;
                 }
             }
             KeyCode::Enter => {
                 state.next_step()?;
             }
+            KeyCode::Char(c) => {
+                // Add character to filter
+                state.keyboard_filter.push(c);
+                // Reset selection to first item when filter changes
+                state.keyboard_selected_index = 0;
+            }
+            KeyCode::Backspace => {
+                // Remove character from filter
+                state.keyboard_filter.pop();
+                // Reset selection to first item when filter changes
+                state.keyboard_selected_index = 0;
+            }
             KeyCode::Esc => {
-                state.previous_step();
+                // If filter is active, clear it; otherwise go back
+                if !state.keyboard_filter.is_empty() {
+                    state.keyboard_filter.clear();
+                    state.keyboard_selected_index = 0;
+                } else {
+                    state.previous_step();
+                }
             }
             _ => {}
         },

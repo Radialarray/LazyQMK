@@ -11,6 +11,7 @@ pub mod config_dialogs;
 pub mod help_overlay;
 pub mod keyboard;
 pub mod keycode_picker;
+pub mod layout_picker;
 pub mod metadata_editor;
 #[allow(dead_code)]
 pub mod onboarding_wizard;
