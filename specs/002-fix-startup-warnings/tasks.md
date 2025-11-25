@@ -47,10 +47,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Add `[features]` section to Cargo.toml with `default = ["ratatui"]` and `ratatui = ["dep:ratatui"]`
-- [ ] T009 [US2] Verify feature flag fix with `cargo check` - confirm no unexpected_cfgs warnings
-- [ ] T010 [US2] Test build with feature enabled: `cargo build --features ratatui`
-- [ ] T011 [US2] Validate all tests pass: `cargo test`
+- [X] T008 [US2] Add `[features]` section to Cargo.toml with `default = ["ratatui"]` and `ratatui = ["dep:ratatui"]`
+- [X] T009 [US2] Verify feature flag fix with `cargo check` - confirm no unexpected_cfgs warnings
+- [X] T010 [US2] Test build with feature enabled: `cargo build --features ratatui`
+- [X] T011 [US2] Validate all tests pass: `cargo test`
 
 **Checkpoint**: Feature flags correctly configured - no cfg warnings remain
 
