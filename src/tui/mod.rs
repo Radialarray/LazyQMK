@@ -549,7 +549,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             );
         }
         PopupType::MetadataEditor => {
-            metadata_editor::render_metadata_editor(f, &state.metadata_editor_state);
+            metadata_editor::render_metadata_editor(f, &state.metadata_editor_state, &state.theme);
         }
     }
 }

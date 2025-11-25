@@ -4,7 +4,7 @@ use chrono::Utc;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
@@ -179,8 +179,10 @@ impl Default for MetadataEditorState {
     }
 }
 
+use super::Theme;
+
 /// Render the metadata editor dialog.
-pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
+pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState, theme: &Theme) {
     let area = centered_rect(70, 60, f.size());
 
     // Clear the background
@@ -190,7 +192,7 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
     let block = Block::default()
         .title(" Edit Metadata ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.primary));
 
     let inner_area = block.inner(area);
     f.render_widget(block, area);
@@ -216,6 +218,7 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
         MetadataField::Name,
         &state.name,
         state.active_field == MetadataField::Name,
+        theme,
     );
     render_field(
         f,
@@ -223,6 +226,7 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
         MetadataField::Description,
         &state.description,
         state.active_field == MetadataField::Description,
+        theme,
     );
     render_field(
         f,
@@ -230,6 +234,7 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
         MetadataField::Author,
         &state.author,
         state.active_field == MetadataField::Author,
+        theme,
     );
     render_field(
         f,
@@ -237,12 +242,13 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
         MetadataField::Tags,
         &state.tags_input,
         state.active_field == MetadataField::Tags,
+        theme,
     );
 
     // Render help text for active field
     let help_text = state.active_field.help_text();
     let help_paragraph = Paragraph::new(help_text)
-        .style(Style::default().fg(Color::Gray))
+        .style(Style::default().fg(theme.text_muted))
         .wrap(Wrap { trim: true });
     f.render_widget(help_paragraph, chunks[4]);
 
@@ -251,26 +257,26 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
         Span::styled(
             "Enter",
             Style::default()
-                .fg(Color::Green)
+                .fg(theme.success)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" save  "),
         Span::styled(
             "Esc",
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.error).add_modifier(Modifier::BOLD),
         ),
         Span::raw(" cancel  "),
         Span::styled(
             "Tab",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" next field  "),
         Span::styled(
             "Shift+Tab",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" prev field"),
@@ -280,20 +286,20 @@ pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState) {
 }
 
 /// Render a single field.
-fn render_field(f: &mut Frame, area: Rect, field: MetadataField, value: &str, is_active: bool) {
+fn render_field(f: &mut Frame, area: Rect, field: MetadataField, value: &str, is_active: bool, theme: &Theme) {
     let label = field.label();
     let style = if is_active {
         Style::default()
-            .fg(Color::Yellow)
+            .fg(theme.accent)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::White)
+        Style::default().fg(theme.text)
     };
 
     let border_style = if is_active {
-        Style::default().fg(Color::Yellow)
+        Style::default().fg(theme.accent)
     } else {
-        Style::default().fg(Color::Gray)
+        Style::default().fg(theme.text_muted)
     };
 
     // Display value with cursor if active
