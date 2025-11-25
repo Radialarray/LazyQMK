@@ -171,6 +171,93 @@ fn create_default_layer(number: u8, name: &str, geometry: &models::KeyboardGeome
     Ok(layer)
 }
 
+/// Runs the layout picker to choose between creating new or loading existing layouts
+fn run_layout_picker(config: &config::Config) -> Result<()> {
+    use crossterm::event::{self, Event};
+    use std::time::Duration;
+
+    // Initialize terminal
+    let mut terminal = tui::setup_terminal()?;
+    let mut picker_state = tui::layout_picker::LayoutPickerState::new();
+
+    // Scan for saved layouts
+    picker_state.scan_layouts()?;
+
+    // Run picker loop
+    loop {
+        terminal.draw(|f| {
+            tui::layout_picker::render(f, &picker_state);
+        })?;
+
+        // Poll for events with timeout
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                if let Some(action) = tui::layout_picker::handle_input(&mut picker_state, key)? {
+                    // Restore terminal before proceeding
+                    tui::restore_terminal(terminal)?;
+
+                    match action {
+                        tui::layout_picker::PickerAction::CreateNew => {
+                            println!("Creating new layout...");
+                            println!();
+                            launch_editor_with_default_layout(config)?;
+                            return Ok(());
+                        }
+                        tui::layout_picker::PickerAction::LoadLayout(path) => {
+                            println!("Loading layout: {}", path.display());
+                            println!();
+                            
+                            // Load the selected layout
+                            let layout = parser::parse_markdown_layout(&path)?;
+                            
+                            // Parse keyboard info.json to rebuild geometry
+                            let qmk_path = config.paths.qmk_firmware.as_ref()
+                                .ok_or_else(|| anyhow::anyhow!("QMK firmware path not set in configuration"))?;
+                            
+                            let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(
+                                qmk_path,
+                                &config.build.keyboard
+                            )?;
+                            
+                            let geometry = parser::keyboard_json::build_keyboard_geometry(
+                                &keyboard_info,
+                                &config.build.keyboard,
+                                &config.build.layout
+                            )?;
+                            
+                            let mapping = models::VisualLayoutMapping::build(&geometry);
+                            
+                            // Re-initialize terminal for editor
+                            let mut terminal = tui::setup_terminal()?;
+                            let mut app_state = tui::AppState::new(
+                                layout,
+                                Some(path),
+                                geometry,
+                                mapping,
+                                config.clone()
+                            )?;
+                            
+                            // Run main TUI loop
+                            let result = tui::run_tui(&mut app_state, &mut terminal);
+                            
+                            // Restore terminal
+                            tui::restore_terminal(terminal)?;
+                            
+                            // Check for errors
+                            result?;
+                            return Ok(());
+                        }
+                        tui::layout_picker::PickerAction::Cancel => {
+                            println!("Layout selection cancelled.");
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -246,11 +333,10 @@ fn main() -> Result<()> {
         // No file argument provided - check if config exists
         match config::Config::load() {
             Ok(config) => {
-                // Config exists - launch editor with default layout
+                // Config exists - show layout picker
                 println!("No layout file specified.");
-                println!("Generating default layout from configured keyboard...");
                 println!();
-                launch_editor_with_default_layout(&config)?;
+                run_layout_picker(&config)?;
             }
             Err(_) => {
                 // No config exists - suggest running wizard
