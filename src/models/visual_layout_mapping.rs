@@ -38,6 +38,7 @@ pub struct VisualLayoutMapping {
     pub visual_to_matrix: HashMap<Position, (u8, u8)>,
 }
 
+#[allow(dead_code)]
 impl VisualLayoutMapping {
     /// Creates a new empty VisualLayoutMapping.
     pub fn new() -> Self {

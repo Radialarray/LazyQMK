@@ -29,6 +29,7 @@ impl BuildLogState {
     }
 
     /// Toggles visibility of the build log viewer.
+    #[allow(dead_code)]
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
     }

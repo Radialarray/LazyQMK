@@ -145,6 +145,7 @@ impl Config {
     /// Saves configuration to the config file using atomic write.
     ///
     /// Uses temp file + rename pattern for atomic writes.
+    #[allow(dead_code)]
     pub fn save(&self) -> Result<()> {
         self.validate()?;
 
@@ -219,6 +220,7 @@ impl Config {
     }
 
     /// Sets the QMK firmware path with validation.
+    #[allow(dead_code)]
     pub fn set_qmk_firmware_path(&mut self, path: PathBuf) -> Result<()> {
         self.paths.qmk_firmware = Some(path);
         self.validate()?;
@@ -226,16 +228,19 @@ impl Config {
     }
 
     /// Sets the keyboard name.
+    #[allow(dead_code)]
     pub fn set_keyboard(&mut self, keyboard: String) {
         self.build.keyboard = keyboard;
     }
 
     /// Sets the layout variant.
+    #[allow(dead_code)]
     pub fn set_layout(&mut self, layout: String) {
         self.build.layout = layout;
     }
 
     /// Sets the output format.
+    #[allow(dead_code)]
     pub fn set_output_format(&mut self, format: String) -> Result<()> {
         self.build.output_format = format;
         self.validate()?;

@@ -12,6 +12,7 @@ pub mod help_overlay;
 pub mod keyboard;
 pub mod keycode_picker;
 pub mod metadata_editor;
+#[allow(dead_code)]
 pub mod onboarding_wizard;
 pub mod status_bar;
 pub mod template_browser;

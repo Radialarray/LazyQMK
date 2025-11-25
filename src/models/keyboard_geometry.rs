@@ -28,6 +28,7 @@ pub struct KeyGeometry {
     pub rotation: f32,
 }
 
+#[allow(dead_code)]
 impl KeyGeometry {
     /// Creates a new KeyGeometry with the given parameters.
     pub fn new(matrix_position: (u8, u8), led_index: u8, visual_x: f32, visual_y: f32) -> Self {
@@ -103,6 +104,7 @@ pub struct KeyboardGeometry {
     pub keys: Vec<KeyGeometry>,
 }
 
+#[allow(dead_code)]
 impl KeyboardGeometry {
     /// Creates a new KeyboardGeometry.
     pub fn new(

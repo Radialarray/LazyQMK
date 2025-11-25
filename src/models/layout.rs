@@ -36,6 +36,7 @@ pub struct LayoutMetadata {
     pub version: String,
 }
 
+#[allow(dead_code)]
 impl LayoutMetadata {
     /// Creates new metadata with default values.
     pub fn new(name: impl Into<String>) -> Result<Self> {
@@ -154,6 +155,7 @@ pub struct Layout {
     pub categories: Vec<Category>,
 }
 
+#[allow(dead_code)]
 impl Layout {
     /// Creates a new Layout with default metadata.
     pub fn new(name: impl Into<String>) -> Result<Self> {

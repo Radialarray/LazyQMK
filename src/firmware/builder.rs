@@ -11,6 +11,7 @@ use std::thread;
 
 /// Build status tracking.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum BuildStatus {
     /// Build not started
     Idle,
@@ -65,6 +66,7 @@ pub enum LogLevel {
     Error,
 }
 
+#[allow(dead_code)]
 impl LogLevel {
     /// Returns the terminal color for this log level.
     pub fn color(&self) -> ratatui::style::Color {

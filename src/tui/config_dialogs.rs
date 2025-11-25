@@ -20,6 +20,7 @@ use crate::parser::keyboard_json::{
 
 /// Path configuration dialog state
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PathConfigDialogState {
     /// Current input buffer
     pub input_buffer: String,
@@ -65,6 +66,7 @@ impl PathConfigDialogState {
 
 /// Keyboard picker dialog state
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct KeyboardPickerState {
     /// Available keyboards
     pub keyboards: Vec<String>,
@@ -210,6 +212,7 @@ impl LayoutPickerState {
     }
 
     /// Gets the currently selected layout variant (with key count)
+    #[allow(dead_code)]
     pub fn get_selected_variant(&self) -> Option<&LayoutVariant> {
         self.layouts.get(self.selected_index)
     }
@@ -236,6 +239,7 @@ impl Default for LayoutPickerState {
 }
 
 /// Renders the path configuration dialog
+#[allow(dead_code)]
 pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
     let area = centered_rect(60, 40, f.size());
 
@@ -283,6 +287,7 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
 }
 
 /// Renders the keyboard picker dialog
+#[allow(dead_code)]
 pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
     let area = centered_rect(70, 80, f.size());
 
@@ -381,6 +386,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
 }
 
 /// Handles input for path configuration dialog
+#[allow(dead_code)]
 pub fn handle_path_dialog_input(
     state: &mut PathConfigDialogState,
     key: KeyEvent,
@@ -409,6 +415,7 @@ pub fn handle_path_dialog_input(
 }
 
 /// Handles input for keyboard picker
+#[allow(dead_code)]
 pub fn handle_keyboard_picker_input(
     state: &mut KeyboardPickerState,
     key: KeyEvent,

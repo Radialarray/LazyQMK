@@ -77,6 +77,7 @@ fn default_key_size() -> f32 {
 /// # Returns
 ///
 /// A vector of keyboard names (relative paths from keyboards/ directory)
+#[allow(dead_code)]
 pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
     let keyboards_dir = qmk_path.join("keyboards");
 
@@ -97,6 +98,7 @@ pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
 }
 
 /// Recursively scans keyboard directories looking for info.json files.
+#[allow(dead_code)]
 fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String>) -> Result<()> {
     let entries =
         fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;

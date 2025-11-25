@@ -64,6 +64,7 @@ pub struct KeycodeDb {
     patterns: Vec<(String, Regex)>,
 }
 
+#[allow(dead_code)]
 impl KeycodeDb {
     /// Loads the keycode database from the embedded JSON file.
     pub fn load() -> Result<Self> {

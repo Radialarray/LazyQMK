@@ -49,6 +49,7 @@ pub struct KeyDefinition {
     pub combo_participant: bool,
 }
 
+#[allow(dead_code)]
 impl KeyDefinition {
     /// Creates a new KeyDefinition with the given position and keycode.
     pub fn new(position: Position, keycode: impl Into<String>) -> Self {
@@ -114,6 +115,7 @@ pub struct Layer {
     pub keys: Vec<KeyDefinition>,
 }
 
+#[allow(dead_code)]
 impl Layer {
     /// Creates a new Layer with the given number and name.
     ///

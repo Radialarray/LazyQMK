@@ -99,6 +99,7 @@ impl CategoryManagerState {
     }
 
     /// Check if we're in browsing mode
+    #[allow(dead_code)]
     pub fn is_browsing(&self) -> bool {
         matches!(self.mode, ManagerMode::Browsing)
     }

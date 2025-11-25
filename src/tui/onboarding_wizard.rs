@@ -2,6 +2,9 @@
 //!
 //! This module implements a step-by-step wizard to guide users through
 //! initial configuration: QMK path, keyboard selection, and layout variant.
+//!
+//! NOTE: This module is currently unused but preserved for future onboarding features.
+#![allow(dead_code)]
 
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -22,6 +25,7 @@ use crate::parser::keyboard_json::{
 
 /// Onboarding wizard steps
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum WizardStep {
     /// Welcome screen
     Welcome,

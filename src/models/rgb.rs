@@ -18,6 +18,7 @@ pub struct RgbColor {
     pub b: u8,
 }
 
+#[allow(dead_code)]
 impl RgbColor {
     /// Creates a new RgbColor from individual channel values.
     pub fn new(r: u8, g: u8, b: u8) -> Self {

@@ -11,6 +11,7 @@ use std::path::Path;
 
 /// Parsing state machine states.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 enum ParseState {
     /// Reading YAML frontmatter (between --- markers)
     InFrontmatter,
