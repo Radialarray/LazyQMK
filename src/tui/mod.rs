@@ -11,6 +11,7 @@ pub mod config_dialogs;
 pub mod help_overlay;
 pub mod keyboard;
 pub mod keycode_picker;
+pub mod metadata_editor;
 pub mod onboarding_wizard;
 pub mod status_bar;
 pub mod template_browser;
@@ -46,6 +47,7 @@ pub use config_dialogs::{KeyboardPickerState, LayoutPickerState, PathConfigDialo
 pub use help_overlay::HelpOverlayState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
+pub use metadata_editor::MetadataEditorState;
 pub use onboarding_wizard::OnboardingWizardState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
@@ -194,6 +196,7 @@ pub struct AppState {
     pub build_log_state: build_log::BuildLogState,
     pub template_browser_state: TemplateBrowserState,
     pub template_save_dialog_state: TemplateSaveDialogState,
+    pub metadata_editor_state: MetadataEditorState,
     pub help_overlay_state: HelpOverlayState,
 
     // System resources
@@ -238,6 +241,7 @@ impl AppState {
             build_log_state: build_log::BuildLogState::new(),
             template_browser_state: TemplateBrowserState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
+            metadata_editor_state: MetadataEditorState::default(),
             help_overlay_state: HelpOverlayState::new(),
             keycode_db,
             geometry,
@@ -436,6 +440,9 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::HelpOverlay => {
             state.help_overlay_state.render(f, f.size());
         }
+        PopupType::MetadataEditor => {
+            metadata_editor::render_metadata_editor(f, &state.metadata_editor_state);
+        }
         _ => {
             // Other popups not implemented yet
         }
@@ -621,6 +628,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
         Some(PopupType::BuildLog) => handle_build_log_input(state, key),
         Some(PopupType::HelpOverlay) => handle_help_overlay_input(state, key),
+        Some(PopupType::MetadataEditor) => handle_metadata_editor_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {
@@ -707,6 +715,34 @@ fn handle_help_overlay_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             Ok(false)
         }
         _ => Ok(false),
+    }
+}
+
+/// Handle input for metadata editor
+fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    let action = metadata_editor::handle_metadata_editor_input(&mut state.metadata_editor_state, key);
+    
+    match action {
+        metadata_editor::MetadataEditorAction::Confirm => {
+            // Validate and apply changes
+            match state.metadata_editor_state.apply_to_layout(&mut state.layout) {
+                Ok(()) => {
+                    state.mark_dirty();
+                    state.active_popup = None;
+                    state.set_status("Metadata updated");
+                }
+                Err(err) => {
+                    state.set_error(format!("Validation failed: {}", err));
+                }
+            }
+            Ok(false)
+        }
+        metadata_editor::MetadataEditorAction::Cancel => {
+            state.active_popup = None;
+            state.set_status("Metadata editing cancelled");
+            Ok(false)
+        }
+        metadata_editor::MetadataEditorAction::Continue => Ok(false),
     }
 }
 
@@ -1160,6 +1196,14 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             state.help_overlay_state = HelpOverlayState::new();
             state.active_popup = Some(PopupType::HelpOverlay);
             state.set_status("Use arrow keys to scroll, '?' or Escape to close");
+            Ok(false)
+        }
+
+        // Metadata Editor (Ctrl+E)
+        (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
+            state.metadata_editor_state = MetadataEditorState::new(&state.layout.metadata);
+            state.active_popup = Some(PopupType::MetadataEditor);
+            state.set_status("Edit metadata - Tab to navigate, Enter to save");
             Ok(false)
         }
 

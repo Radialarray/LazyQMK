@@ -357,7 +357,7 @@
 
 ---
 
-## Phase 11: User Story 9 - Metadata Management (Priority: P3)
+## Phase 11: User Story 9 - Metadata Management (Priority: P3) ✅ COMPLETE
 
 **Goal**: Enable editing layout metadata through dedicated dialog
 
@@ -365,16 +365,16 @@
 
 ### Metadata Editor
 
-- [ ] T156 [P] [US9] Implement MetadataEditorState struct in src/tui/metadata_editor.rs (active_field, values HashMap)
-- [ ] T157 [US9] Implement metadata editor rendering as form with fields in src/tui/metadata_editor.rs
-- [ ] T158 [US9] Implement field navigation with Tab in src/tui/metadata_editor.rs
-- [ ] T159 [US9] Implement text input with Backspace in src/tui/metadata_editor.rs
-- [ ] T160 [US9] Implement comma-separated tag input parsing in src/tui/metadata_editor.rs
-- [ ] T161 [US9] Implement metadata confirmation updating Layout.metadata with modified timestamp in src/tui/metadata_editor.rs
-- [ ] T162 [US9] Implement metadata editor opening with Ctrl+E in src/tui/mod.rs
-- [ ] T163 [US9] Implement metadata editor cancellation with Escape in src/tui/metadata_editor.rs
+- [X] T156 [P] [US9] Implement MetadataEditorState struct in src/tui/metadata_editor.rs (active_field, values HashMap)
+- [X] T157 [US9] Implement metadata editor rendering as form with fields in src/tui/metadata_editor.rs
+- [X] T158 [US9] Implement field navigation with Tab in src/tui/metadata_editor.rs
+- [X] T159 [US9] Implement text input with Backspace in src/tui/metadata_editor.rs
+- [X] T160 [US9] Implement comma-separated tag input parsing in src/tui/metadata_editor.rs
+- [X] T161 [US9] Implement metadata confirmation updating Layout.metadata with modified timestamp in src/tui/metadata_editor.rs
+- [X] T162 [US9] Implement metadata editor opening with Ctrl+E in src/tui/mod.rs
+- [X] T163 [US9] Implement metadata editor cancellation with Escape in src/tui/metadata_editor.rs
 
-**Checkpoint**: Metadata management complete - layout metadata can be edited through UI
+**Checkpoint**: ✅ Metadata management complete - layout metadata can be edited through UI
 
 ---
 
