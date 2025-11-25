@@ -61,11 +61,31 @@ enum ParseState {
 /// # Errors
 ///
 /// Returns errors for:
+/// - File not found
 /// - Invalid YAML frontmatter
 /// - Malformed layer headers
 /// - Invalid table structure
 /// - Invalid keycodes or color syntax
 pub fn parse_markdown_layout(path: &Path) -> Result<Layout> {
+    // Check if file exists first to provide better error message
+    if !path.exists() {
+        anyhow::bail!(
+            "Layout file not found: {}\n\n\
+            Please check the file path and try again.\n\
+            If you need help getting started, run: keyboard_tui --init",
+            path.display()
+        );
+    }
+
+    // Check if it's a file (not a directory)
+    if !path.is_file() {
+        anyhow::bail!(
+            "Path is not a file: {}\n\n\
+            Please provide a path to a Markdown (.md) file.",
+            path.display()
+        );
+    }
+
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read layout file: {}", path.display()))?;
 
