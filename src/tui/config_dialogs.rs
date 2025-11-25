@@ -8,14 +8,13 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 use std::path::PathBuf;
 
 use crate::parser::keyboard_json::{
-    extract_layout_names, extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
+    extract_layout_variants, parse_keyboard_info_json, scan_keyboards,
     LayoutVariant,
 };
 

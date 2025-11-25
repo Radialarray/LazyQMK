@@ -8,9 +8,5 @@ pub mod layout;
 pub mod template_gen;
 
 // Re-export commonly used functions
-pub use keyboard_json::{
-    build_keyboard_geometry, extract_layout_definition, extract_layout_names,
-    parse_keyboard_info_json, scan_keyboards,
-};
-pub use layout::{parse_markdown_layout, parse_markdown_layout_str};
-pub use template_gen::{generate_markdown, save_markdown_layout};
+pub use layout::parse_markdown_layout;
+pub use template_gen::save_markdown_layout;

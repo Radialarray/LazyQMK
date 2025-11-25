@@ -1,9 +1,8 @@
 //! Keyboard widget for rendering the visual keyboard layout
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, Cell, Row, Table},
     Frame,
 };
