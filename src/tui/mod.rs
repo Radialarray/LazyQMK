@@ -8,6 +8,8 @@ pub mod onboarding_wizard;
 pub mod keyboard;
 pub mod status_bar;
 pub mod keycode_picker;
+pub mod color_picker;
+pub mod category_picker;
 
 use anyhow::{Context, Result};
 use crossterm::{
@@ -39,6 +41,26 @@ pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use onboarding_wizard::OnboardingWizardState;
 pub use status_bar::StatusBar;
+pub use color_picker::{ColorPickerState, RgbChannel};
+pub use category_picker::CategoryPickerState;
+
+/// Color picker context - what are we setting the color for?
+#[derive(Debug, Clone, PartialEq)]
+pub enum ColorPickerContext {
+    /// Setting color for individual key
+    IndividualKey,
+    /// Setting layer default color
+    LayerDefault,
+}
+
+/// Category picker context - what are we setting the category for?
+#[derive(Debug, Clone, PartialEq)]
+pub enum CategoryPickerContext {
+    /// Setting category for individual key
+    IndividualKey,
+    /// Setting category for entire layer
+    Layer,
+}
 
 /// Popup types that can be displayed over the main UI
 #[derive(Debug, Clone, PartialEq)]
@@ -73,6 +95,10 @@ pub struct AppState {
 
     // Component states
     pub keycode_picker_state: KeycodePickerState,
+    pub color_picker_state: ColorPickerState,
+    pub color_picker_context: Option<ColorPickerContext>,
+    pub category_picker_state: CategoryPickerState,
+    pub category_picker_context: Option<CategoryPickerContext>,
 
     // System resources
     pub keycode_db: KeycodeDb,
@@ -106,6 +132,10 @@ impl AppState {
             status_message: "Press ? for help".to_string(),
             error_message: None,
             keycode_picker_state: KeycodePickerState::new(),
+            color_picker_state: ColorPickerState::new(),
+            color_picker_context: None,
+            category_picker_state: CategoryPickerState::new(),
+            category_picker_context: None,
             keycode_db,
             geometry,
             mapping,
@@ -259,6 +289,12 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::KeycodePicker => {
             keycode_picker::render_keycode_picker(f, state);
         }
+        PopupType::ColorPicker => {
+            color_picker::render_color_picker(f, state);
+        }
+        PopupType::CategoryPicker => {
+            category_picker::render_category_picker(f, state);
+        }
         PopupType::UnsavedChangesPrompt => {
             render_unsaved_prompt(f);
         }
@@ -329,6 +365,12 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
     match popup_type {
         Some(PopupType::KeycodePicker) => {
             keycode_picker::handle_input(state, key)
+        }
+        Some(PopupType::ColorPicker) => {
+            color_picker::handle_input(state, key)
+        }
+        Some(PopupType::CategoryPicker) => {
+            category_picker::handle_input(state, key)
         }
         Some(PopupType::UnsavedChangesPrompt) => {
             handle_unsaved_prompt_input(state, key)
@@ -491,6 +533,55 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Enter, _) => {
             state.active_popup = Some(PopupType::KeycodePicker);
             state.keycode_picker_state = KeycodePickerState::new();
+            Ok(false)
+        }
+
+        // Color picker for individual key (Shift+C)
+        (KeyCode::Char('C'), KeyModifiers::SHIFT) => {
+            if let Some(key) = state.get_selected_key() {
+                // Initialize color picker with current key color
+                let current_color = state.layout.resolve_key_color(state.current_layer, key);
+                state.color_picker_state = ColorPickerState::with_color(current_color);
+                state.color_picker_context = Some(ColorPickerContext::IndividualKey);
+                state.active_popup = Some(PopupType::ColorPicker);
+                state.set_status("Adjust color with arrows, Tab to switch channels, Enter to apply");
+            } else {
+                state.set_error("No key selected");
+            }
+            Ok(false)
+        }
+
+        // Color picker for layer default color (c key)
+        (KeyCode::Char('c'), _) => {
+            if let Some(layer) = state.layout.layers.get(state.current_layer) {
+                // Initialize color picker with current layer default color
+                state.color_picker_state = ColorPickerState::with_color(layer.default_color);
+                state.color_picker_context = Some(ColorPickerContext::LayerDefault);
+                state.active_popup = Some(PopupType::ColorPicker);
+                state.set_status("Setting layer default color - Enter to apply");
+            }
+            Ok(false)
+        }
+
+        // Category picker for individual key (Shift+K)
+        (KeyCode::Char('K'), KeyModifiers::SHIFT) => {
+            if state.get_selected_key().is_some() {
+                state.category_picker_state = CategoryPickerState::new();
+                state.category_picker_context = Some(CategoryPickerContext::IndividualKey);
+                state.active_popup = Some(PopupType::CategoryPicker);
+                state.set_status("Select category for key - Enter to apply");
+            } else {
+                state.set_error("No key selected");
+            }
+            Ok(false)
+        }
+
+        // Category picker for layer (Shift+L)
+        (KeyCode::Char('L'), KeyModifiers::SHIFT) => {
+            state.category_picker_state = CategoryPickerState::new();
+            state.category_picker_context = Some(CategoryPickerContext::Layer);
+            state.active_popup = Some(PopupType::CategoryPicker);
+            state.set_status("Select category for layer - Enter to apply");
             Ok(false)
         }
 
