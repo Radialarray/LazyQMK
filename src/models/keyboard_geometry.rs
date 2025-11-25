@@ -157,6 +157,14 @@ impl KeyboardGeometry {
     pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.matrix_position == position)
     }
+
+    /// Checks if the keyboard has RGB matrix LEDs.
+    /// 
+    /// Returns true if there are any keys defined (RGB LED count matches key count).
+    #[must_use]
+    pub const fn has_rgb_matrix(&self) -> bool {
+        !self.keys.is_empty()
+    }
 }
 
 #[cfg(test)]
