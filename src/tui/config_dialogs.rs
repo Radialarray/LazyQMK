@@ -7,7 +7,7 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
@@ -242,7 +242,7 @@ impl Default for LayoutPickerState {
 
 /// Renders the path configuration dialog
 #[allow(dead_code)]
-pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
+pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState, theme: &Theme) {
     let area = centered_rect(60, 40, f.size());
 
     let chunks = Layout::default()
@@ -260,7 +260,7 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
     let title = Paragraph::new("Configure QMK Firmware Path")
         .style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(Alignment::Center)
@@ -269,20 +269,20 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
 
     // Input field
     let input = Paragraph::new(format!("> {}_", state.input_buffer))
-        .style(Style::default().fg(Color::Yellow))
+        .style(Style::default().fg(theme.accent))
         .block(Block::default().borders(Borders::ALL).title("Path"));
     f.render_widget(input, chunks[1]);
 
     // Help text
     let help = Paragraph::new("Enter: Save | Esc: Cancel | Backspace: Delete")
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[2]);
 
     // Error message
     if let Some(error) = &state.error_message {
         let error_widget = Paragraph::new(error.as_str())
-            .style(Style::default().fg(Color::Red))
+            .style(Style::default().fg(theme.error))
             .alignment(Alignment::Center);
         f.render_widget(error_widget, chunks[3]);
     }
@@ -290,7 +290,7 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState) {
 
 /// Renders the keyboard picker dialog
 #[allow(dead_code)]
-pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
+pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState, theme: &Theme) {
     let area = centered_rect(70, 80, f.size());
 
     let chunks = Layout::default()
@@ -305,7 +305,7 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
 
     // Search box
     let search = Paragraph::new(format!("Search: {}_", state.search_query))
-        .style(Style::default().fg(Color::Yellow))
+        .style(Style::default().fg(theme.accent))
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(search, chunks[0]);
 
@@ -318,7 +318,7 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
         .map(|(i, kb)| {
             let style = if i == state.selected_index {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -336,13 +336,15 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState) {
 
     // Instructions
     let instructions = Paragraph::new("↑↓: Navigate | Enter: Select | Type: Filter | Esc: Cancel")
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center);
     f.render_widget(instructions, chunks[2]);
 }
 
+use super::Theme;
+
 /// Renders the layout picker dialog
-pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: &str) {
+pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: &str, theme: &Theme) {
     let area = centered_rect(70, 50, f.size());
 
     let chunks = Layout::default()
@@ -362,7 +364,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
         .map(|(i, variant)| {
             let style = if i == state.selected_index {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -382,7 +384,7 @@ pub fn render_layout_picker(f: &mut Frame, state: &LayoutPickerState, keyboard: 
 
     // Instructions
     let instructions = Paragraph::new("↑↓: Navigate | Enter: Select | Esc: Cancel")
-        .style(Style::default().fg(Color::DarkGray))
+        .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center);
     f.render_widget(instructions, chunks[1]);
 }

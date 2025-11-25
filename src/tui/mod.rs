@@ -535,7 +535,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         }
         PopupType::BuildLog => {
             if let Some(build_state) = &state.build_state {
-                build_log::render_build_log(f, build_state, &state.build_log_state);
+                build_log::render_build_log(f, build_state, &state.build_log_state, &state.theme);
             }
         }
         PopupType::HelpOverlay => {
@@ -546,6 +546,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 f,
                 &state.layout_picker_state,
                 &state.config.build.keyboard,
+                &state.theme,
             );
         }
         PopupType::MetadataEditor => {

@@ -15,6 +15,7 @@ pub struct KeyboardWidget;
 impl KeyboardWidget {
     /// Render the keyboard widget
     pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
+        let theme = &state.theme;
         // Get current layer
         let layer = if let Some(layer) = state.layout.layers.get(state.current_layer) {
             layer
@@ -109,11 +110,11 @@ impl KeyboardWidget {
                         });
 
                     let style = if is_selected {
-                        Style::default().fg(Color::Black).bg(Color::Yellow)
+                        Style::default().fg(theme.background).bg(theme.accent)
                     } else if let Some(color) = key_color {
                         Style::default().fg(color)
                     } else {
-                        Style::default().fg(Color::White)
+                        Style::default().fg(theme.text)
                     };
 
                     Cell::from(text.as_str()).style(style)

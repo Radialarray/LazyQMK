@@ -1,8 +1,8 @@
 //! Build log viewer widget for displaying compilation progress and logs.
 
 use ratatui::{
-    layout::Rect,
-    style::{Color, Modifier, Style},
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -69,8 +69,10 @@ impl Default for BuildLogState {
     }
 }
 
+use super::Theme;
+
 /// Renders the build log viewer overlay.
-pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &BuildLogState) {
+pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &BuildLogState, theme: &Theme) {
     // Calculate centered area (80% width, 60% height)
     let area = centered_rect(80, 60, f.size());
 
@@ -90,9 +92,9 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
         .iter()
         .map(|(level, message)| {
             let color = match level {
-                crate::firmware::builder::LogLevel::Info => Color::White,
-                crate::firmware::builder::LogLevel::Ok => Color::Green,
-                crate::firmware::builder::LogLevel::Error => Color::Red,
+                crate::firmware::builder::LogLevel::Info => theme.text,
+                crate::firmware::builder::LogLevel::Ok => theme.success,
+                crate::firmware::builder::LogLevel::Error => theme.error,
             };
 
             ListItem::new(Line::from(Span::styled(
@@ -114,7 +116,7 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
         Block::default()
             .title(title)
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan)),
+            .border_style(Style::default().fg(theme.primary)),
     );
 
     f.render_widget(list, area);
@@ -129,7 +131,7 @@ pub fn render_build_log(f: &mut Frame, build_state: &BuildState, log_state: &Bui
     };
 
     let help = Paragraph::new(help_text)
-        .style(Style::default().fg(Color::Gray).add_modifier(Modifier::DIM));
+        .style(Style::default().fg(theme.text_muted).add_modifier(Modifier::DIM));
 
     f.render_widget(help, help_area);
 }
