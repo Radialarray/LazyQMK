@@ -1,7 +1,7 @@
 //! Template browser for loading and managing layout templates.
 //!
 //! This module provides UI components for browsing, searching, and loading
-//! reusable layout templates stored in ~/.`config/layout_tools/templates`/
+//! reusable layout templates stored in ~/.`config/KeyboardConfigurator/templates`/
 
 use anyhow::{Context, Result};
 use ratatui::{
@@ -54,7 +54,7 @@ impl TemplateBrowserState {
 
     /// Scans the templates directory and loads template metadata.
     ///
-    /// Templates are stored in ~/.`config/layout_tools/templates`/
+    /// Templates are stored in ~/.`config/KeyboardConfigurator/templates`/
     pub fn scan_templates(&mut self) -> Result<()> {
         self.templates.clear();
 
@@ -118,8 +118,8 @@ impl TemplateBrowserState {
 
     /// Gets the platform-specific templates directory path.
     ///
-    /// - Unix/Linux/macOS: `~/.config/layout_tools/templates/`
-    /// - Windows: `%APPDATA%\layout_tools\templates\`
+    /// - Unix/Linux/macOS: `~/.config/KeyboardConfigurator/templates/`
+    /// - Windows: `%APPDATA%\KeyboardConfigurator\templates\`
     pub fn templates_dir() -> Result<PathBuf> {
         Ok(Config::config_dir()?.join("templates"))
     }

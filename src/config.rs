@@ -64,8 +64,8 @@ impl Default for UiConfig {
 ///
 /// # File Location
 ///
-/// - Unix/Linux/macOS: `~/.config/layout_tools/config.toml`
-/// - Windows: `%APPDATA%\layout_tools\config.toml`
+/// - Unix/Linux/macOS: `~/.config/KeyboardConfigurator/config.toml`
+/// - Windows: `%APPDATA%\KeyboardConfigurator\config.toml`
 ///
 /// # Validation
 ///
@@ -97,12 +97,12 @@ impl Config {
 
     /// Gets the platform-specific config directory path.
     ///
-    /// - Unix/Linux/macOS: `~/.config/layout_tools/`
-    /// - Windows: `%APPDATA%\layout_tools\`
+    /// - Unix/Linux/macOS: `~/.config/KeyboardConfigurator/`
+    /// - Windows: `%APPDATA%\KeyboardConfigurator\`
     pub fn config_dir() -> Result<PathBuf> {
         let config_dir = dirs::config_dir()
             .context("Failed to determine config directory")?
-            .join("layout_tools");
+            .join("KeyboardConfigurator");
 
         Ok(config_dir)
     }
