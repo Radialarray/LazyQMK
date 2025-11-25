@@ -1462,6 +1462,9 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 
 /// Handle firmware build in background
 fn handle_firmware_build(state: &mut AppState) -> Result<()> {
+    // Generate firmware files first (keymap.c, vial.json, config.h)
+    handle_firmware_generation(state)?;
+    
     // Check that QMK firmware path is configured
     let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
         path.clone()
