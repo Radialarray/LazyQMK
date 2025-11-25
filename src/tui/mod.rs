@@ -760,6 +760,25 @@ fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<
             state.set_status("Build log closed");
             Ok(false)
         }
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            // Copy build log to clipboard
+            if let Some(build_state) = &state.build_state {
+                let log_text = build_state
+                    .log_lines
+                    .iter()
+                    .map(|(_, message)| message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                
+                match arboard::Clipboard::new().and_then(|mut clipboard| clipboard.set_text(log_text)) {
+                    Ok(()) => state.set_status("Build log copied to clipboard"),
+                    Err(e) => state.set_error(&format!("Failed to copy to clipboard: {}", e)),
+                }
+            } else {
+                state.set_error("No build log available");
+            }
+            Ok(false)
+        }
         KeyCode::Up => {
             state.build_log_state.scroll_up();
             Ok(false)

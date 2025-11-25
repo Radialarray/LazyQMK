@@ -477,6 +477,11 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+C", Style::default().fg(theme.success)),
+                Span::styled("               Copy entire log to clipboard", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Escape", Style::default().fg(theme.success)),
                 Span::styled("               Close build log", Style::default().fg(theme.text)),
             ]),

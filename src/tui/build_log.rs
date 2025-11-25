@@ -128,7 +128,7 @@ pub fn render_build_log(
     f.render_widget(list, area);
 
     // Render help text at bottom
-    let help_text = "↑↓: Scroll | Home/End: Jump | Esc/Ctrl+L: Close";
+    let help_text = "↑↓: Scroll | Home/End: Jump | Ctrl+C: Copy | Esc/Ctrl+L: Close";
     let help_area = Rect {
         x: area.x + 2,
         y: area.y + area.height - 1,
