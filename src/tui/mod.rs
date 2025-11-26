@@ -1531,25 +1531,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
         return Ok(());
     }
 
-    // Step 2: Parse keyboard info to get encoder count
-    state.set_status("Parsing keyboard configuration...");
-    
-    let encoder_count = if let Some(qmk_path) = &state.config.paths.qmk_firmware {
-        use crate::parser::keyboard_json::{count_encoders, parse_keyboard_info_json};
-        
-        match parse_keyboard_info_json(qmk_path, &state.config.build.keyboard) {
-            Ok(info) => count_encoders(&info),
-            Err(e) => {
-                // Log warning but continue with 0 encoders
-                state.set_status(format!("Warning: Could not parse encoder config: {e}"));
-                0
-            }
-        }
-    } else {
-        0
-    };
-
-    // Step 3: Generate firmware files
+    // Step 2: Generate firmware files
     state.set_status("Generating firmware files...");
 
     let generator = FirmwareGenerator::new(
@@ -1557,7 +1539,6 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
         &state.geometry,
         &state.mapping,
         &state.config,
-        encoder_count,
     );
 
     match generator.generate() {

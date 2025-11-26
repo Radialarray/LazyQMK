@@ -127,6 +127,43 @@ impl<'a> FirmwareGenerator<'a> {
 
         code.push_str("};\n");
 
+        // Add conditional encoder_map (only when ENCODER_MAP_ENABLE is defined)
+        code.push('\n');
+        code.push_str(&self.generate_conditional_encoder_map()?);
+
+        Ok(code)
+    }
+
+    /// Generates a conditional encoder_map wrapped in #ifdef ENCODER_MAP_ENABLE.
+    ///
+    /// This allows the keymap to work both with and without encoders enabled.
+    /// When ENCODER_MAP_ENABLE is defined in rules.mk, this encoder_map will be included.
+    fn generate_conditional_encoder_map(&self) -> Result<String> {
+        let mut code = String::new();
+
+        code.push_str("#ifdef ENCODER_MAP_ENABLE\n");
+        code.push_str("const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {\n");
+
+        // Generate encoder bindings for each layer
+        // We use RGB controls as sensible defaults that work on most keyboards
+        for (layer_idx, _layer) in self.layout.layers.iter().enumerate() {
+            code.push_str(&format!("    [{}] = {{\n", layer_idx));
+            code.push_str("        ENCODER_CCW_CW(RGB_MOD, RGB_RMOD),\n");
+            code.push_str("        ENCODER_CCW_CW(RGB_HUI, RGB_HUD),\n");
+            code.push_str("        ENCODER_CCW_CW(RGB_VAI, RGB_VAD),\n");
+            code.push_str("        ENCODER_CCW_CW(RGB_SAI, RGB_SAD),\n");
+            code.push_str("    }");
+            
+            if layer_idx < self.layout.layers.len() - 1 {
+                code.push_str(",\n");
+            } else {
+                code.push_str(",\n");
+            }
+        }
+
+        code.push_str("};\n");
+        code.push_str("#endif\n");
+
         Ok(code)
     }
 
