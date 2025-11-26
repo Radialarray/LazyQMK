@@ -18,7 +18,7 @@ pub struct PathConfig {
 /// Firmware build configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildConfig {
-    /// Target keyboard (e.g., "crkbd" or "keebart/corne_choc_pro/standard")
+    /// Target keyboard (e.g., "crkbd" or "`keebart/corne_choc_pro/standard`")
     pub keyboard: String,
     /// Layout variant (e.g., "`LAYOUT_split_3x6_3`")
     pub layout: String,
@@ -64,25 +64,28 @@ impl BuildConfig {
     /// # Arguments
     ///
     /// * `qmk_path` - Path to QMK firmware directory
-    /// * `base_keyboard` - Base keyboard path without variant (e.g., "keebart/corne_choc_pro")
+    /// * `base_keyboard` - Base keyboard path without variant (e.g., "`keebart/corne_choc_pro`")
     /// * `layout_key_count` - Number of keys in the selected layout
     ///
     /// # Returns
     ///
-    /// Returns the full keyboard path with variant if applicable (e.g., "keebart/corne_choc_pro/standard"),
+    /// Returns the full keyboard path with variant if applicable (e.g., "`keebart/corne_choc_pro/standard`"),
     /// or the base keyboard path if no variant is needed.
     pub fn determine_keyboard_variant(
         &self,
-        qmk_path: &PathBuf,
+        qmk_path: &std::path::Path,
         base_keyboard: &str,
         layout_key_count: usize,
     ) -> Result<String> {
         let keyboard_dir = qmk_path.join("keyboards").join(base_keyboard);
 
-        // Check if keyboard has variant subdirectories with keyboard.json files
+        // Check if keyboard has variant subdirectories with keyboard.json or info.json files
         let has_variants = ["standard", "mini", "normal", "full", "compact"]
             .iter()
-            .any(|variant| keyboard_dir.join(variant).join("keyboard.json").exists());
+            .any(|variant| {
+                let variant_dir = keyboard_dir.join(variant);
+                variant_dir.join("keyboard.json").exists() || variant_dir.join("info.json").exists()
+            });
 
         if !has_variants {
             // No variants, return base keyboard path
@@ -470,5 +473,154 @@ mod tests {
 
         config.ui.theme = "Light".to_string();
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_no_variants() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("crkbd");
+
+        // Create keyboard directory with keyboard.json at root (no variants)
+        fs::create_dir_all(&keyboard_dir).unwrap();
+        fs::write(keyboard_dir.join("keyboard.json"), "{}").unwrap();
+
+        let build_config = BuildConfig::default();
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "crkbd", 42)
+            .unwrap();
+
+        assert_eq!(result, "crkbd");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_with_standard_variant() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("keebart/corne_choc_pro");
+        let standard_dir = keyboard_dir.join("standard");
+
+        // Create variant directory structure
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(standard_dir.join("keyboard.json"), "{}").unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x6_3".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42)
+            .unwrap();
+
+        assert_eq!(result, "keebart/corne_choc_pro/standard");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_with_mini_variant() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("keebart/corne_choc_pro");
+        let mini_dir = keyboard_dir.join("mini");
+
+        // Create variant directory structure
+        fs::create_dir_all(&mini_dir).unwrap();
+        fs::write(mini_dir.join("keyboard.json"), "{}").unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x5_3".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 36)
+            .unwrap();
+
+        assert_eq!(result, "keebart/corne_choc_pro/mini");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_ex2_layout_standard() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("keebart/corne_choc_pro");
+        let standard_dir = keyboard_dir.join("standard");
+
+        // Create variant directory structure
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(standard_dir.join("keyboard.json"), "{}").unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x6_3_ex2".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 44)
+            .unwrap();
+
+        assert_eq!(result, "keebart/corne_choc_pro/standard");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_ex2_layout_mini() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("keebart/corne_choc_pro");
+        let mini_dir = keyboard_dir.join("mini");
+
+        // Create variant directory structure
+        fs::create_dir_all(&mini_dir).unwrap();
+        fs::write(mini_dir.join("keyboard.json"), "{}").unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x5_3_ex2".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 38)
+            .unwrap();
+
+        assert_eq!(result, "keebart/corne_choc_pro/mini");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_missing_variant_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("keebart/corne_choc_pro");
+
+        // Create base keyboard directory but no variant subdirectories
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x6_3".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42);
+
+        // Should return the base keyboard path when no variants are detected
+        assert_eq!(result.unwrap(), "keebart/corne_choc_pro");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_with_info_json() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("test_keyboard");
+        let standard_dir = keyboard_dir.join("standard");
+
+        // Create variant directory with info.json instead of keyboard.json
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(standard_dir.join("info.json"), "{}").unwrap();
+
+        let mut build_config = BuildConfig::default();
+        build_config.layout = "LAYOUT_split_3x6_3".to_string();
+
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "test_keyboard", 42)
+            .unwrap();
+
+        assert_eq!(result, "test_keyboard/standard");
     }
 }
