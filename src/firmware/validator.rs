@@ -439,8 +439,67 @@ impl<'a> FirmwareValidator<'a> {
     }
 }
 
+/// Checks for deprecated VIAL configuration options in keyboard files.
+///
+/// Modern QMK (2024+) rejects old VIAL configuration methods:
+/// - `VIAL_ENABLE = yes` in rules.mk (replaced by `-e VIAL_KEYBOARD_UID` in build command)
+/// - `VIAL_KEYBOARD_UID` in config.h (should be in keyboard.json instead)
+///
+/// # Arguments
+///
+/// * `qmk_path` - Path to QMK firmware directory
+/// * `keyboard` - Keyboard path (e.g., "keebart/corne_choc_pro/standard")
+///
+/// # Returns
+///
+/// Returns a vector of warning messages for any deprecated options found.
+pub fn check_deprecated_options(
+    qmk_path: &std::path::Path,
+    keyboard: &str,
+) -> Vec<String> {
+    use std::fs;
+
+    let mut warnings = Vec::new();
+    let keyboard_dir = qmk_path.join("keyboards").join(keyboard);
+
+    // Check rules.mk for VIAL_ENABLE
+    let rules_mk = keyboard_dir.join("rules.mk");
+    if rules_mk.exists() {
+        if let Ok(content) = fs::read_to_string(&rules_mk) {
+            if content.contains("VIAL_ENABLE") {
+                warnings.push(format!(
+                    "Deprecated: {} contains 'VIAL_ENABLE'. \
+                    Modern QMK rejects this option. \
+                    Remove it and use: make {}:{{keymap}} -e VIAL_KEYBOARD_UID={{uuid}}",
+                    rules_mk.display(),
+                    keyboard
+                ));
+            }
+        }
+    }
+
+    // Check config.h for VIAL_KEYBOARD_UID
+    let config_h = keyboard_dir.join("config.h");
+    if config_h.exists() {
+        if let Ok(content) = fs::read_to_string(&config_h) {
+            if content.contains("VIAL_KEYBOARD_UID") {
+                warnings.push(format!(
+                    "Deprecated: {} contains 'VIAL_KEYBOARD_UID'. \
+                    Modern QMK rejects this option. \
+                    Move the UID to keyboard.json under 'vial' section.",
+                    config_h.display()
+                ));
+            }
+        }
+    }
+
+    warnings
+}
+
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempfile::TempDir;
     use super::*;
     use crate::models::keyboard_geometry::KeyGeometry;
     use crate::models::layer::{KeyDefinition, Layer, Position};
@@ -539,5 +598,91 @@ mod tests {
         assert!(message.contains("1 warnings"));
         assert!(message.contains("Test error"));
         assert!(message.contains("Test warning"));
+    }
+
+    #[test]
+    fn test_check_deprecated_options_clean() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        // Create clean files
+        fs::write(keyboard_dir.join("rules.mk"), "# Clean rules.mk\n").unwrap();
+        fs::write(keyboard_dir.join("config.h"), "// Clean config.h\n").unwrap();
+
+        let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn test_check_deprecated_options_vial_enable() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        // Create rules.mk with VIAL_ENABLE
+        fs::write(
+            keyboard_dir.join("rules.mk"),
+            "VIAL_ENABLE = yes\nOTHER_OPTION = no\n",
+        )
+        .unwrap();
+
+        let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("VIAL_ENABLE"));
+        assert!(warnings[0].contains("Deprecated"));
+    }
+
+    #[test]
+    fn test_check_deprecated_options_vial_keyboard_uid() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        // Create config.h with VIAL_KEYBOARD_UID
+        fs::write(
+            keyboard_dir.join("config.h"),
+            "#define VIAL_KEYBOARD_UID {0x12, 0x34}\n",
+        )
+        .unwrap();
+
+        let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("VIAL_KEYBOARD_UID"));
+        assert!(warnings[0].contains("Deprecated"));
+    }
+
+    #[test]
+    fn test_check_deprecated_options_both() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        // Create both files with deprecated options
+        fs::write(keyboard_dir.join("rules.mk"), "VIAL_ENABLE = yes\n").unwrap();
+        fs::write(
+            keyboard_dir.join("config.h"),
+            "#define VIAL_KEYBOARD_UID {0x12, 0x34}\n",
+        )
+        .unwrap();
+
+        let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
+        assert_eq!(warnings.len(), 2);
+    }
+
+    #[test]
+    fn test_check_deprecated_options_no_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
+        fs::create_dir_all(&keyboard_dir).unwrap();
+
+        // Don't create any files
+        let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
+        assert!(warnings.is_empty());
     }
 }

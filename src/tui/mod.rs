@@ -1579,10 +1579,24 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
         return Ok(());
     }
 
+    // Determine correct keyboard variant path for building
+    // This ensures we target the specific variant (e.g. "keebart/corne_choc_pro/standard")
+    // so that QMK loads the correct configuration (including RGB settings)
+    let base_keyboard = AppState::extract_base_keyboard(&state.config.build.keyboard);
+    let key_count = state.geometry.keys.len();
+    
+    let build_keyboard = state.config.build
+        .determine_keyboard_variant(&qmk_path, &base_keyboard, key_count)
+        .unwrap_or_else(|e| {
+            // Log warning but fall back to configured keyboard path
+            eprintln!("Warning: Could not determine variant: {}", e);
+            state.config.build.keyboard.clone()
+        });
+
     // Start the build
     build_state.start_build(
         qmk_path,
-        state.config.build.keyboard.clone(),
+        build_keyboard,
         state.config.build.keymap.clone(),
     )?;
 
@@ -1798,5 +1812,65 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
             // This will be managed by returning from the color picker
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_base_keyboard_no_variant() {
+        let result = AppState::extract_base_keyboard("crkbd");
+        assert_eq!(result, "crkbd");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_with_manufacturer() {
+        let result = AppState::extract_base_keyboard("keebart/corne_choc_pro");
+        assert_eq!(result, "keebart/corne_choc_pro");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_standard_variant() {
+        let result = AppState::extract_base_keyboard("keebart/corne_choc_pro/standard");
+        assert_eq!(result, "keebart/corne_choc_pro");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_mini_variant() {
+        let result = AppState::extract_base_keyboard("keebart/corne_choc_pro/mini");
+        assert_eq!(result, "keebart/corne_choc_pro");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_normal_variant() {
+        let result = AppState::extract_base_keyboard("manufacturer/keyboard/normal");
+        assert_eq!(result, "manufacturer/keyboard");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_full_variant() {
+        let result = AppState::extract_base_keyboard("manufacturer/keyboard/full");
+        assert_eq!(result, "manufacturer/keyboard");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_compact_variant() {
+        let result = AppState::extract_base_keyboard("manufacturer/keyboard/compact");
+        assert_eq!(result, "manufacturer/keyboard");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_non_variant_subdirectory() {
+        // "rev2" is not a variant subdirectory, so it should be kept
+        let result = AppState::extract_base_keyboard("manufacturer/keyboard/rev2");
+        assert_eq!(result, "manufacturer/keyboard/rev2");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_deep_path_with_variant() {
+        let result = AppState::extract_base_keyboard("a/b/c/standard");
+        assert_eq!(result, "a/b/c");
     }
 }
