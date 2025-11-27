@@ -261,6 +261,11 @@ impl HelpOverlayState {
                 Span::styled("Ctrl+R", Style::default().fg(theme.success)),
                 Span::styled("               Toggle lighting mode (QMK default / layout static)", Style::default().fg(theme.text)),
             ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+H", Style::default().fg(theme.success)),
+                Span::styled("          Open layer manager (add/rename/delete/reorder)", Style::default().fg(theme.text)),
+            ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
