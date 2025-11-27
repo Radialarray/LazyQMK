@@ -6,7 +6,10 @@
 
 use keyboard_tui::models::visual_layout_mapping::VisualLayoutMapping;
 use keyboard_tui::parser::keyboard_json::{
-    build_keyboard_geometry, extract_layout_names, parse_keyboard_info_json,
+    build_keyboard_geometry,
+    build_keyboard_geometry_with_led_mapping,
+    extract_layout_names,
+    parse_keyboard_info_json,
 };
 use std::path::PathBuf;
 
@@ -95,6 +98,48 @@ fn test_build_crkbd_geometry() {
         geometry.matrix_rows,
         geometry.matrix_cols
     );
+}
+
+#[test]
+fn test_corne_choc_pro_led_mapping_matches_qmk() {
+    if !qmk_submodule_exists() {
+        eprintln!("Skipping test: QMK submodule not initialized");
+        return;
+    }
+
+    let qmk_path = get_qmk_path();
+
+    // Use variant path so we pick up standard/keyboard.json with rgb_matrix.layout
+    let info = parse_keyboard_info_json(&qmk_path, "keebart/corne_choc_pro/standard")
+        .expect("Failed to parse Corne Choc Pro info.json");
+
+    // LAYOUT_split_3x6_3 is the main 3x6 layout for Corne Choc Pro
+    let layout_name = "LAYOUT_split_3x6_3";
+
+    let geometry = build_keyboard_geometry_with_led_mapping(
+        &info,
+        &qmk_path,
+        "keebart/corne_choc_pro/standard",
+        layout_name,
+    )
+    .expect("Failed to build Corne geometry with LED mapping");
+
+    // Extract a few known matrix positions from keyboard.json that also
+    // exist in the LAYOUT_split_3x6_3 layout:
+    // - LED 3  -> matrix [0, 5]
+    // - LED 18 -> matrix [0, 0]
+    // - LED 31 -> matrix [7, 3]
+    let find_led = |row: u8, col: u8| -> Option<u8> {
+        geometry
+            .keys
+            .iter()
+            .find(|k| k.matrix_position == (row, col))
+            .map(|k| k.led_index)
+    };
+
+    assert_eq!(find_led(0, 5), Some(3), "matrix (0,5) should map to LED 3");
+    assert_eq!(find_led(0, 0), Some(18), "matrix (0,0) should map to LED 18");
+    assert_eq!(find_led(7, 3), Some(31), "matrix (7,3) should map to LED 31");
 }
 
 #[test]

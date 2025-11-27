@@ -95,9 +95,10 @@ fn launch_editor_with_default_layout(config: &config::Config) -> Result<()> {
     let keyboard_info =
         parser::keyboard_json::parse_keyboard_info_json(qmk_path, &config.build.keyboard)?;
 
-    // Build geometry from the selected layout
-    let geometry = parser::keyboard_json::build_keyboard_geometry(
+    // Build geometry from the selected layout, applying RGB matrix LED mapping
+    let geometry = parser::keyboard_json::build_keyboard_geometry_with_led_mapping(
         &keyboard_info,
+        qmk_path,
         &config.build.keyboard,
         &config.build.layout,
     )?;
@@ -228,8 +229,9 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
                                 &config.build.keyboard,
                             )?;
 
-                            let geometry = parser::keyboard_json::build_keyboard_geometry(
+                            let geometry = parser::keyboard_json::build_keyboard_geometry_with_led_mapping(
                                 &keyboard_info,
+                                qmk_path,
                                 &config.build.keyboard,
                                 &config.build.layout,
                             )?;

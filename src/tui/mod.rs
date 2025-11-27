@@ -389,7 +389,10 @@ impl AppState {
     /// Result indicating success or error with context
     pub fn rebuild_geometry(&mut self, layout_name: &str) -> Result<()> {
         use crate::models::VisualLayoutMapping;
-        use crate::parser::keyboard_json::{build_keyboard_geometry, parse_keyboard_info_json};
+        use crate::parser::keyboard_json::{
+            build_keyboard_geometry_with_led_mapping,
+            parse_keyboard_info_json,
+        };
 
         // Parse keyboard info.json to get layout definition
         let qmk_path = self
@@ -410,31 +413,43 @@ impl AppState {
             .context(format!("Layout '{}' not found in keyboard info.json", layout_name))?;
         let key_count = layout_def.layout.len();
 
-        // Build new geometry for selected layout
-        let new_geometry = build_keyboard_geometry(&info, &base_keyboard, layout_name)
-            .context("Failed to build keyboard geometry")?;
-
-        // Build new visual layout mapping
-        let new_mapping = VisualLayoutMapping::build(&new_geometry);
-
         // Update config to persist layout choice
         self.config.build.layout = layout_name.to_string();
 
-        // Determine and update keyboard variant based on layout
-        // This will add the variant subdirectory (e.g., "/standard", "/mini") if needed
-        match self.config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count) {
+        // Determine keyboard variant based on layout so we can use
+        // variant-specific keyboard.json (e.g., standard/mini) for RGB mapping.
+        let keyboard_for_led_mapping = match self
+            .config
+            .build
+            .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
+        {
             Ok(variant_path) => {
-                self.config.build.keyboard = variant_path;
+                self.config.build.keyboard = variant_path.clone();
+                variant_path
             }
             Err(e) => {
                 // Log warning but don't fail - keyboard might not have variants
                 eprintln!("Note: Could not determine keyboard variant: {}", e);
+                base_keyboard.clone()
             }
-        }
+        };
+
+        // Build new geometry for selected layout, applying RGB matrix LED mapping
+        let new_geometry = build_keyboard_geometry_with_led_mapping(
+            &info,
+            qmk_path,
+            &keyboard_for_led_mapping,
+            layout_name,
+        )
+        .context("Failed to build keyboard geometry")?;
+
+        // Build new visual layout mapping
+        let new_mapping = VisualLayoutMapping::build(&new_geometry);
 
         // Update AppState with new geometry and mapping
         self.geometry = new_geometry;
         self.mapping = new_mapping;
+
 
         // Adjust all layers to match new geometry
         // Add KC_NO keys for new positions, keep existing keys where they still fit

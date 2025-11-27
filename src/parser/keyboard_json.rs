@@ -68,6 +68,126 @@ const fn default_key_size() -> f32 {
     1.0
 }
 
+/// RGB matrix LED layout entry from keyboard.json.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RgbMatrixLayoutEntry {
+    /// Matrix position [row, col] for this LED
+    #[serde(default)]
+    pub matrix: Option<[u8; 2]>,
+    /// Physical X coordinate in arbitrary units (optional)
+    #[serde(default)]
+    pub x: Option<f32>,
+    /// Physical Y coordinate in arbitrary units (optional)
+    #[serde(default)]
+    pub y: Option<f32>,
+    /// Flags bitfield (keyboard-specific semantics, optional)
+    #[serde(default)]
+    pub flags: Option<u8>,
+}
+
+/// RGB matrix configuration from keyboard.json.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RgbMatrixConfig {
+    /// Per-LED layout entries in electrical LED order.
+    #[serde(default)]
+    pub layout: Vec<RgbMatrixLayoutEntry>,
+}
+
+/// QMK keyboard.json structure (simplified for our needs).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct QmkKeyboardJson {
+    /// Optional RGB matrix configuration.
+    #[serde(default)]
+    pub rgb_matrix: Option<RgbMatrixConfig>,
+}
+
+/// Parses a QMK keyboard.json file by keyboard name.
+///
+/// Returns `Ok(None)` if no keyboard.json is found for the given keyboard
+/// (or its base keyboard if the name includes a variant suffix).
+pub fn parse_keyboard_json(qmk_path: &Path, keyboard: &str) -> Result<Option<QmkKeyboardJson>> {
+    let keyboards_dir = qmk_path.join("keyboards");
+    let keyboard_dir = keyboards_dir.join(keyboard);
+    let keyboard_json_path = keyboard_dir.join("keyboard.json");
+
+    if keyboard_json_path.exists() {
+        let content = fs::read_to_string(&keyboard_json_path).context(format!(
+            "Failed to read keyboard.json: {}",
+            keyboard_json_path.display()
+        ))?;
+
+        let keyboard_json: QmkKeyboardJson = serde_json::from_str(&content).context(format!(
+            "Failed to parse keyboard.json: {}",
+            keyboard_json_path.display()
+        ))?;
+
+        return Ok(Some(keyboard_json));
+    }
+
+    // If the keyboard path looks like it includes a variant suffix,
+    // fall back to the base keyboard directory for keyboard.json.
+    if let Some((base, _variant)) = keyboard.rsplit_once('/') {
+        let base_dir = keyboards_dir.join(base);
+        let base_keyboard_json_path = base_dir.join("keyboard.json");
+
+        if base_keyboard_json_path.exists() {
+            let content = fs::read_to_string(&base_keyboard_json_path).context(format!(
+                "Failed to read keyboard.json: {}",
+                base_keyboard_json_path.display()
+            ))?;
+
+            let keyboard_json: QmkKeyboardJson =
+                serde_json::from_str(&content).context(format!(
+                    "Failed to parse keyboard.json: {}",
+                    base_keyboard_json_path.display()
+                ))?;
+
+            return Ok(Some(keyboard_json));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Builds `KeyboardGeometry` from QMK info.json and optional keyboard.json RGB matrix mapping.
+///
+/// When a keyboard.json with `rgb_matrix.layout` is present for the given keyboard,
+/// this function remaps `KeyGeometry.led_index` so that it matches the RGB matrix LED
+/// order used by QMK (`g_led_config`). If no keyboard.json (or `rgb_matrix.layout`) is
+/// found, it falls back to the sequential LED indices from info.json layout order.
+pub fn build_keyboard_geometry_with_led_mapping(
+    info: &QmkInfoJson,
+    qmk_path: &Path,
+    keyboard_name: &str,
+    layout_name: &str,
+) -> Result<KeyboardGeometry> {
+    // First build basic geometry from info.json layout definition.
+    let mut geometry = build_keyboard_geometry(info, keyboard_name, layout_name)?;
+
+    // Try to load keyboard.json for RGB matrix information.
+    if let Some(kb_json) = parse_keyboard_json(qmk_path, keyboard_name)? {
+        if let Some(rgb) = kb_json.rgb_matrix {
+            // Build matrix -> LED index map from rgb_matrix.layout.
+            let mut matrix_to_led: HashMap<(u8, u8), u8> = HashMap::new();
+            for (idx, entry) in rgb.layout.iter().enumerate() {
+                if let Some([row, col]) = entry.matrix {
+                    // Keep the first mapping we see for a given matrix position.
+                    matrix_to_led.entry((row, col)).or_insert(idx as u8);
+                }
+            }
+
+            // Remap each key's led_index based on its matrix position if present.
+            for key in &mut geometry.keys {
+                if let Some(&led_idx) = matrix_to_led.get(&key.matrix_position) {
+                    key.led_index = led_idx;
+                }
+            }
+        }
+    }
+
+    Ok(geometry)
+}
+
 /// Scans the QMK keyboards directory and returns a list of available keyboards.
 ///
 /// # Arguments
@@ -500,5 +620,62 @@ mod tests {
         assert_eq!(keyboards.len(), 2);
         assert!(keyboards.contains(&"keyboard1".to_string()));
         assert!(keyboards.contains(&"vendor/model_a".to_string()));
+    }
+
+    #[test]
+    fn test_parse_keyboard_json_and_led_mapping() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_root = temp_dir.path();
+        let keyboards_dir = qmk_root.join("keyboards");
+        fs::create_dir(&keyboards_dir).unwrap();
+
+        // Create a fake keyboard with both info.json and keyboard.json
+        let kb_dir = keyboards_dir.join("vendor").join("model");
+        fs::create_dir_all(&kb_dir).unwrap();
+
+        // info.json with two keys, sequential layout order
+        let info_json = r#"{
+            "keyboard_name": "test_keyboard",
+            "layouts": {
+                "LAYOUT": {
+                    "layout": [
+                        {"x": 0, "y": 0, "matrix": [0, 0]},
+                        {"x": 1, "y": 0, "matrix": [0, 1]}
+                    ]
+                }
+            }
+        }"#;
+        fs::write(kb_dir.join("info.json"), info_json).unwrap();
+
+        // keyboard.json with rgb_matrix.layout that reverses the LED order
+        let keyboard_json = r#"{
+            "keyboard_name": "test_keyboard",
+            "rgb_matrix": {
+                "layout": [
+                    {"matrix": [0, 1]},
+                    {"matrix": [0, 0]}
+                ]
+            }
+        }"#;
+        fs::write(kb_dir.join("keyboard.json"), keyboard_json).unwrap();
+
+        let info = parse_keyboard_info_json(qmk_root, "vendor/model").unwrap();
+        let geometry = build_keyboard_geometry_with_led_mapping(
+            &info,
+            qmk_root,
+            "vendor/model",
+            "LAYOUT",
+        )
+        .unwrap();
+
+        assert_eq!(geometry.keys.len(), 2);
+
+        // Matrix positions should remain unchanged
+        assert_eq!(geometry.keys[0].matrix_position, (0, 0));
+        assert_eq!(geometry.keys[1].matrix_position, (0, 1));
+
+        // LED indices should come from rgb_matrix.layout mapping
+        let led_indices: Vec<u8> = geometry.keys.iter().map(|k| k.led_index).collect();
+        assert_eq!(led_indices, vec![1, 0]);
     }
 }

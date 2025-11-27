@@ -345,7 +345,7 @@ fn test_generation_vial_json_structure() {
 }
 
 #[test]
-fn test_generation_led_ordering() {
+fn test_generation_keymap_uses_layout_order() {
     // Arrange
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let layout = create_test_layout();
@@ -361,8 +361,10 @@ fn test_generation_led_ordering() {
     let (keymap_path, _, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should be able to read keymap.c");
 
-    // Assert - Keys should be ordered by LED index (0, 1, 2, 3, 4, 5)
-    // Find the first LAYOUT_test macro in Layer 0
+    // Assert - Keys should be ordered by info.json layout index.
+    // In our synthetic geometry, layout order and LED order are identical
+    // (KC_0..KC_5 for positions (0,0)..(1,2)), so we continue to assert
+    // that this textual order is preserved in the generated LAYOUT_test.
     let layer0_start = content
         .find("// Layer 0: Base")
         .expect("Should find Layer 0 comment");
@@ -372,7 +374,7 @@ fn test_generation_led_ordering() {
         .expect("Should find LAYOUT_test macro");
     let layout_section = &layer0_layout[layout_start..];
 
-    // Keys should appear in LED order: KC_0, KC_1, KC_2, KC_3, KC_4, KC_5
+    // Keys should appear in order: KC_0, KC_1, KC_2, KC_3, KC_4, KC_5
     let kc0_pos = layout_section.find("KC_0").expect("Should find KC_0");
     let kc1_pos = layout_section.find("KC_1").expect("Should find KC_1");
     let kc2_pos = layout_section.find("KC_2").expect("Should find KC_2");
