@@ -97,7 +97,9 @@ impl StatusBar {
             Some(PopupType::LayoutPicker) => "[A[B: Navigate | Enter: Select | Esc: Cancel",
             Some(PopupType::LightingConfig) => "L: Toggle mode | Enter: Apply | Esc: Cancel",
             Some(PopupType::LightingSuggestion) => "E: Enable static lighting | K: Keep default | Esc: Dismiss",
+            Some(PopupType::LayerManager) => "[A[B: Select | n: New | r: Rename | d: Delete | u/j: Reorder | Esc: Close",
             None => {
+
 
                 // Main keyboard editing mode
                 "↑↓←→/hjkl: Navigate | Enter: Edit key | x/Del: Clear | Tab: Layer | Ctrl+S: Save | Ctrl+Q: Quit | ?: Help"
