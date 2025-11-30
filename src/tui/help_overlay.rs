@@ -126,18 +126,8 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+Tab", Style::default().fg(theme.success)),
-                Span::styled("            Switch to previous layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Home", Style::default().fg(theme.success)),
-                Span::styled("                 Move to first key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("End", Style::default().fg(theme.success)),
-                Span::styled("                  Move to last key", Style::default().fg(theme.text)),
+                Span::styled("Shift+Tab / Shift+Tab", Style::default().fg(theme.success)),
+                Span::styled("   Switch to previous layer", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Editing Section
@@ -241,16 +231,6 @@ impl HelpOverlayState {
                 ),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+P", Style::default().fg(theme.success)),
-                Span::styled("               Configure QMK firmware path", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+K", Style::default().fg(theme.success)),
-                Span::styled("               Select keyboard from QMK repository", Style::default().fg(theme.text)),
-            ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Ctrl+Y", Style::default().fg(theme.success)),
