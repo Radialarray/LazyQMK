@@ -75,6 +75,7 @@ fn create_test_layout() -> Layout {
         metadata,
         layers: vec![layer0, layer1],
         categories: vec![],
+        inactive_key_behavior: keyboard_tui::models::InactiveKeyBehavior::default(),
     }
 }
 

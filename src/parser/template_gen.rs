@@ -46,6 +46,17 @@ pub fn generate_markdown(layout: &Layout) -> Result<String> {
         output.push_str(&generate_categories(layout));
     }
 
+    // Generate settings section if any non-default settings exist
+    if let Some(settings_section) = generate_settings(layout) {
+        // Add separator if categories weren't written
+        if layout.categories.is_empty() {
+            output.push_str("---\n\n");
+        } else {
+            output.push('\n');
+        }
+        output.push_str(&settings_section);
+    }
+
     Ok(output)
 }
 
@@ -191,6 +202,33 @@ fn generate_categories(layout: &Layout) -> String {
     output
 }
 
+/// Generates the settings section.
+/// Only writes non-default settings to keep files clean.
+fn generate_settings(layout: &Layout) -> Option<String> {
+    use crate::models::InactiveKeyBehavior;
+
+    // Check if we have any non-default settings
+    let has_non_default = layout.inactive_key_behavior != InactiveKeyBehavior::default();
+
+    if !has_non_default {
+        return None;
+    }
+
+    let mut output = String::from("## Settings\n\n");
+
+    // Write inactive_key_behavior if not default
+    if layout.inactive_key_behavior != InactiveKeyBehavior::default() {
+        let value = match layout.inactive_key_behavior {
+            InactiveKeyBehavior::ShowColor => "show_color",
+            InactiveKeyBehavior::Off => "off",
+            InactiveKeyBehavior::Dim => "dim",
+        };
+        output.push_str(&format!("- inactive_key_behavior: {value}\n"));
+    }
+
+    Some(output)
+}
+
 /// Performs an atomic file write using temp file + rename pattern.
 ///
 /// This ensures the target file is never left in a corrupted state:
@@ -270,6 +308,7 @@ mod tests {
             metadata,
             layers: vec![layer],
             categories: vec![category],
+            inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
         }
     }
 

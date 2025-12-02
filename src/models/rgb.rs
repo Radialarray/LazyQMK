@@ -87,6 +87,31 @@ impl RgbColor {
     pub const fn to_ratatui_color(&self) -> ratatui::style::Color {
         ratatui::style::Color::Rgb(self.r, self.g, self.b)
     }
+
+    /// Returns a dimmed version of the color at the given percentage.
+    ///
+    /// # Arguments
+    ///
+    /// * `percent` - Brightness percentage (0-100). 0 = black, 100 = original color.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use keyboard_tui::models::RgbColor;
+    ///
+    /// let color = RgbColor::new(200, 100, 50);
+    /// let dimmed = color.dim(50); // 50% brightness
+    /// assert_eq!(dimmed, RgbColor::new(100, 50, 25));
+    /// ```
+    #[must_use]
+    pub const fn dim(&self, percent: u8) -> Self {
+        let percent = if percent > 100 { 100 } else { percent };
+        Self {
+            r: (self.r as u16 * percent as u16 / 100) as u8,
+            g: (self.g as u16 * percent as u16 / 100) as u8,
+            b: (self.b as u16 * percent as u16 / 100) as u8,
+        }
+    }
 }
 
 impl fmt::Display for RgbColor {

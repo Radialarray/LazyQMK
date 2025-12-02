@@ -254,7 +254,8 @@ impl<'a> FirmwareGenerator<'a> {
     /// Generates resolved colors for a layer ordered by LED index.
     ///
     /// Colors use the same visual -> LED mapping as `generate_layer_keys_by_led`
-    /// and honor the layout's four-level color priority system.
+    /// and honor the layout's four-level color priority system and the
+    /// `inactive_key_behavior` setting.
     ///
     /// If the layer has `colors_enabled = false`, returns all black (off) colors.
     fn generate_layer_colors_by_led(
@@ -275,6 +276,7 @@ impl<'a> FirmwareGenerator<'a> {
         }
 
         // Map each key's resolved color to its LED position
+        // Uses resolve_display_color which considers inactive_key_behavior
         for key in &layer.keys {
             let visual_pos = key.position;
 
@@ -288,7 +290,8 @@ impl<'a> FirmwareGenerator<'a> {
                     )
                 })?;
 
-            let color = self.layout.resolve_key_color(layer_idx, key);
+            // Use resolve_display_color to respect inactive_key_behavior
+            let (color, _is_key_specific) = self.layout.resolve_display_color(layer_idx, key);
             colors_by_led[led_idx as usize] = color;
         }
 

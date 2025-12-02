@@ -105,6 +105,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         metadata,
         layers: Vec::new(),
         categories: Vec::new(),
+        inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
     };
 
     // Parse content (layers and categories)
@@ -214,6 +215,13 @@ fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
         if line == "## Categories" {
             line_num = parse_categories(lines, line_num, layout)
                 .with_context(|| format!("Error parsing categories at line {}", line_num + 1))?;
+            continue;
+        }
+
+        // Check for settings section (## Settings)
+        if line == "## Settings" {
+            line_num = parse_settings(lines, line_num, layout)
+                .with_context(|| format!("Error parsing settings at line {}", line_num + 1))?;
             continue;
         }
 
@@ -443,6 +451,47 @@ fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
 
             let category = Category::new(&id, &name, color)?;
             layout.add_category(category)?;
+        }
+
+        line_num += 1;
+    }
+
+    Ok(line_num)
+}
+
+/// Parses the settings section.
+fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
+    use crate::models::InactiveKeyBehavior;
+    
+    let mut line_num = start_line + 1; // Skip "## Settings" header
+
+    while line_num < lines.len() {
+        let line = lines[line_num].trim();
+
+        // Skip empty lines
+        if line.is_empty() {
+            line_num += 1;
+            continue;
+        }
+
+        // Stop at next section
+        if line.starts_with("##") || line.starts_with("---") {
+            break;
+        }
+
+        // Parse setting: **Setting Name**: value
+        if line.starts_with("**Inactive Key Behavior**:") {
+            let value = line
+                .strip_prefix("**Inactive Key Behavior**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            
+            layout.inactive_key_behavior = match value.as_str() {
+                "off" | "black" => InactiveKeyBehavior::Off,
+                "dim" | "dim (50%)" | "50%" => InactiveKeyBehavior::Dim,
+                _ => InactiveKeyBehavior::ShowColor, // Default for "show color" or any other value
+            };
         }
 
         line_num += 1;

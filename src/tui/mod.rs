@@ -16,6 +16,7 @@ pub mod layout_picker;
 pub mod metadata_editor;
 #[allow(dead_code)]
 pub mod onboarding_wizard;
+pub mod settings_manager;
 pub mod status_bar;
 pub mod template_browser;
 pub mod theme;
@@ -52,6 +53,7 @@ pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use layer_manager::LayerManagerState;
 pub use metadata_editor::MetadataEditorState;
+pub use settings_manager::SettingsManagerState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
 pub use theme::Theme;
@@ -193,6 +195,8 @@ pub enum PopupType {
     LayoutPicker,
     /// Setup wizard popup
     SetupWizard,
+    /// Settings manager popup
+    SettingsManager,
 }
 
 /// Application state - single source of truth
@@ -251,6 +255,8 @@ pub struct AppState {
     pub layout_picker_state: config_dialogs::LayoutPickerState,
     /// Setup wizard component state
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
+    /// Settings manager component state
+    pub settings_manager_state: SettingsManagerState,
 
     // System resources
     /// Keycode database
@@ -333,6 +339,7 @@ impl AppState {
             help_overlay_state: HelpOverlayState::new(),
             layout_picker_state: config_dialogs::LayoutPickerState::new(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
+            settings_manager_state: SettingsManagerState::new(),
             keycode_db,
             geometry,
             mapping,
@@ -683,6 +690,15 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::SetupWizard => {
             onboarding_wizard::render(f, &state.wizard_state, &state.theme);
         }
+        PopupType::SettingsManager => {
+            settings_manager::render_settings_manager(
+                f,
+                f.size(),
+                &state.settings_manager_state,
+                state.layout.inactive_key_behavior,
+                &state.theme,
+            );
+        }
     }
 }
 
@@ -886,6 +902,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::MetadataEditor) => handle_metadata_editor_input(state, key),
         Some(PopupType::LayoutPicker) => handle_layout_picker_input(state, key),
         Some(PopupType::SetupWizard) => handle_setup_wizard_input(state, key),
+        Some(PopupType::SettingsManager) => handle_settings_manager_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {
@@ -1091,6 +1108,84 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
         Err(e) => {
             state.set_error(format!("Wizard error: {e}"));
             Ok(false)
+        }
+    }
+}
+
+/// Handle input for settings manager
+fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    use settings_manager::ManagerMode;
+    use crate::models::InactiveKeyBehavior;
+
+    match &state.settings_manager_state.mode.clone() {
+        ManagerMode::Browsing => {
+            match key.code {
+                KeyCode::Esc => {
+                    state.active_popup = None;
+                    state.set_status("Settings closed");
+                    Ok(false)
+                }
+                KeyCode::Up => {
+                    let count = settings_manager::SettingItem::all().len();
+                    state.settings_manager_state.select_previous(count);
+                    Ok(false)
+                }
+                KeyCode::Down => {
+                    let count = settings_manager::SettingItem::all().len();
+                    state.settings_manager_state.select_next(count);
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Start editing the selected setting
+                    let settings = settings_manager::SettingItem::all();
+                    if let Some(setting) = settings.get(state.settings_manager_state.selected) {
+                        match setting {
+                            settings_manager::SettingItem::InactiveKeyBehavior => {
+                                state.settings_manager_state
+                                    .start_selecting_inactive_behavior(state.layout.inactive_key_behavior);
+                                state.set_status("Select option with ↑↓, Enter to apply");
+                            }
+                        }
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+        ManagerMode::SelectingInactiveKeyBehavior { .. } => {
+            match key.code {
+                KeyCode::Esc => {
+                    state.settings_manager_state.cancel();
+                    state.set_status("Cancelled");
+                    Ok(false)
+                }
+                KeyCode::Up => {
+                    let count = InactiveKeyBehavior::all().len();
+                    state.settings_manager_state.option_previous(count);
+                    Ok(false)
+                }
+                KeyCode::Down => {
+                    let count = InactiveKeyBehavior::all().len();
+                    state.settings_manager_state.option_next(count);
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Apply the selected option
+                    if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                        if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
+                            state.layout.inactive_key_behavior = behavior;
+                            state.mark_dirty();
+                            state.settings_manager_state.cancel();
+                            state.set_status(format!(
+                                "Inactive key behavior set to: {}",
+                                behavior.display_name()
+                            ));
+                        }
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
         }
     }
 }
@@ -1554,6 +1649,14 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             state.layer_manager_state.reset(state.current_layer);
             state.active_popup = Some(PopupType::LayerManager);
             state.set_status("Layer Manager - n: New, r: Rename, v: Toggle Colors, d: Delete");
+            Ok(false)
+        }
+
+        // Settings Manager (Shift+S)
+        (KeyCode::Char('S'), KeyModifiers::SHIFT) => {
+            state.settings_manager_state.reset();
+            state.active_popup = Some(PopupType::SettingsManager);
+            state.set_status("Settings - ↑↓: Navigate, Enter: Change, Esc: Close");
             Ok(false)
         }
 

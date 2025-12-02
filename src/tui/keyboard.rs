@@ -80,22 +80,30 @@ impl KeyboardWidget {
             let is_selected = row == state.selected_position.row as usize
                 && col == state.selected_position.col as usize;
 
-            // Resolve key color (respects colors_enabled flag)
-            let (key_color, color_indicator) = if let Some(rgb) = state.layout.resolve_key_color_if_enabled(state.current_layer, key) {
-                // Colors are enabled - use resolved color
-                let color = Color::Rgb(rgb.r, rgb.g, rgb.b);
-                let indicator = if key.color_override.is_some() {
-                    "i" // Individual override
-                } else if key.category_id.is_some() {
-                    "k" // Key category
-                } else if layer.category_id.is_some() {
-                    "L" // Layer category
+            // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
+            let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
+                if !current_layer.layer_colors_enabled {
+                    // Layer colors disabled - show neutral gray with "-" indicator
+                    (Color::DarkGray, "-")
                 } else {
-                    "d" // Layer default
-                };
-                (color, indicator)
+                    // Use resolve_display_color which considers inactive_key_behavior
+                    let (rgb, is_key_specific) = state.layout.resolve_display_color(state.current_layer, key);
+                    let color = Color::Rgb(rgb.r, rgb.g, rgb.b);
+                    
+                    let indicator = if is_key_specific {
+                        if key.color_override.is_some() {
+                            "i" // Individual override
+                        } else {
+                            "k" // Key category
+                        }
+                    } else if layer.category_id.is_some() {
+                        "L" // Layer category
+                    } else {
+                        "d" // Layer default
+                    };
+                    (color, indicator)
+                }
             } else {
-                // Colors are disabled - use neutral gray, show "-" indicator
                 (Color::DarkGray, "-")
             };
 

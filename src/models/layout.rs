@@ -8,6 +8,53 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// Behavior for keys without a color defined on the current layer.
+///
+/// This controls how keys are displayed when they don't have an explicit
+/// color assignment (individual, category, or layer default) on the active layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum InactiveKeyBehavior {
+    /// Show the resolved color (fallback through priority system)
+    #[default]
+    ShowColor,
+    /// Turn off LEDs for keys without color on current layer (black)
+    Off,
+    /// Dim the color (reduce brightness/opacity)
+    Dim,
+}
+
+impl InactiveKeyBehavior {
+    /// Returns all available behavior options.
+    #[must_use]
+    pub const fn all() -> &'static [InactiveKeyBehavior] {
+        &[
+            InactiveKeyBehavior::ShowColor,
+            InactiveKeyBehavior::Off,
+            InactiveKeyBehavior::Dim,
+        ]
+    }
+
+    /// Returns a human-readable name for this behavior.
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
+        match self {
+            Self::ShowColor => "Show Color",
+            Self::Off => "Off (Black)",
+            Self::Dim => "Dim (50%)",
+        }
+    }
+
+    /// Returns a description of this behavior.
+    #[must_use]
+    pub const fn description(&self) -> &'static str {
+        match self {
+            Self::ShowColor => "Show resolved color from priority system",
+            Self::Off => "Turn off LEDs for keys without layer color",
+            Self::Dim => "Dim keys without layer color to 50% brightness",
+        }
+    }
+}
+
 /// File metadata embedded in YAML frontmatter.
 ///
 /// # Validation
@@ -156,6 +203,9 @@ pub struct Layout {
     pub layers: Vec<Layer>,
     /// User-defined categories for organization
     pub categories: Vec<Category>,
+    /// Behavior for keys without a color on the current layer
+    #[serde(default)]
+    pub inactive_key_behavior: InactiveKeyBehavior,
 }
 
 #[allow(dead_code)]
@@ -167,6 +217,7 @@ impl Layout {
             metadata,
             layers: Vec::new(),
             categories: Vec::new(),
+            inactive_key_behavior: InactiveKeyBehavior::default(),
         })
     }
 
@@ -367,6 +418,69 @@ impl Layout {
 
         // Fallback to white if layer doesn't exist (shouldn't happen)
         Some(RgbColor::default())
+    }
+
+    /// Resolves the color for a key for display, respecting inactive_key_behavior.
+    ///
+    /// This method considers the `inactive_key_behavior` setting for keys that
+    /// don't have an individual color or key category. Keys that would normally
+    /// inherit from layer-level colors are considered "inactive" and their
+    /// display is modified based on the setting:
+    ///
+    /// - `ShowColor`: Show the resolved layer color normally
+    /// - `Off`: Show black (RGB 0, 0, 0)
+    /// - `Dim`: Show the layer color at 50% brightness
+    ///
+    /// Returns a tuple of (color, is_key_specific) where:
+    /// - color: The RGB color to display
+    /// - is_key_specific: true if color came from individual override or key category
+    #[must_use]
+    pub fn resolve_display_color(&self, layer_idx: usize, key: &KeyDefinition) -> (RgbColor, bool) {
+        // 1. Individual key color override (highest priority, key-specific)
+        if let Some(color) = key.color_override {
+            return (color, true);
+        }
+
+        // 2. Key category color (key-specific)
+        if let Some(cat_id) = &key.category_id {
+            if let Some(category) = self.get_category(cat_id) {
+                return (category.color, true);
+            }
+        }
+
+        // From here, colors are layer-level (not key-specific)
+        // Apply inactive_key_behavior
+        
+        // First, check if layer colors are enabled
+        if let Some(layer) = self.get_layer(layer_idx) {
+            if !layer.layer_colors_enabled {
+                // Layer colors disabled entirely - show gray
+                return (RgbColor::new(64, 64, 64), false);
+            }
+
+            // Get the layer-level color (layer category or default)
+            let layer_color = if let Some(cat_id) = &layer.category_id {
+                if let Some(category) = self.get_category(cat_id) {
+                    category.color
+                } else {
+                    layer.default_color
+                }
+            } else {
+                layer.default_color
+            };
+
+            // Apply inactive_key_behavior
+            let display_color = match self.inactive_key_behavior {
+                InactiveKeyBehavior::ShowColor => layer_color,
+                InactiveKeyBehavior::Off => RgbColor::new(0, 0, 0),
+                InactiveKeyBehavior::Dim => layer_color.dim(50),
+            };
+
+            return (display_color, false);
+        }
+
+        // Fallback to white if layer doesn't exist
+        (RgbColor::default(), false)
     }
 
     /// Validates the layout structure.

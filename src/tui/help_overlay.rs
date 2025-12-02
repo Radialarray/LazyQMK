@@ -370,6 +370,39 @@ impl HelpOverlayState {
                 Span::styled("              Close manager", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
+            // Settings Manager Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ SETTINGS ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+S", Style::default().fg(theme.success)),
+                Span::styled("             Open settings manager", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In settings manager:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Up/Down", Style::default().fg(theme.success)),
+                Span::styled("             Navigate settings", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Left/Right", Style::default().fg(theme.success)),
+                Span::styled("          Change value", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Close settings", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
             // Templates Section
             Line::from(vec![
                 Span::styled(

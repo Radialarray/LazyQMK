@@ -101,6 +101,9 @@ impl StatusBar {
             Some(PopupType::SetupWizard) => {
                 "Enter: Next | Esc: Back/Cancel | ↑↓: Navigate | Type: Input"
             }
+            Some(PopupType::SettingsManager) => {
+                "↑↓: Navigate | Enter: Change | Esc: Close"
+            }
             None => {
                 // Main keyboard editing mode
                 "↑↓←→/hjkl: Navigate | Enter: Edit key | x/Del: Clear | Tab: Layer | Ctrl+S: Save | Ctrl+Q: Quit | ?: Help"
