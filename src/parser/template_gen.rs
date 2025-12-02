@@ -224,6 +224,7 @@ mod tests {
             tags: vec!["test".to_string()],
             is_template: false,
             version: "1.0".to_string(),
+            layout_variant: None,
         };
 
         let mut layer = Layer {

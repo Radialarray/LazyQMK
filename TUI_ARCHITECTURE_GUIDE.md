@@ -461,6 +461,21 @@ Layout (entire keymap)
 - `tags`: Searchable keywords
 - `is_template`: Template flag
 - `version`: Schema version
+- `layout_variant`: Selected QMK layout variant (e.g., "LAYOUT_split_3x6_3_ex2")
+
+**Layout Variant Persistence:**
+The `layout_variant` field stores the user's selected QMK layout variant in the markdown
+frontmatter. This enables:
+- Proper geometry restoration when loading a saved layout
+- Correct RGB matrix lookup for layer-aware coloring
+- Automatic detection of keyboard variant (36/40/42/46 keys)
+
+The variant is saved when the user switches layouts via Ctrl+Y, and is used during
+layout loading to:
+1. Extract the base keyboard name using `extract_base_keyboard()`
+2. Determine the correct keyboard variant path based on key count
+3. Load the appropriate `KeyboardGeometry` and `VisualLayoutMapping`
+4. Adjust layer key positions to match the visual geometry
 
 ---
 
@@ -1137,6 +1152,7 @@ created: "2024-01-15T10:30:00Z"
 modified: "2024-01-20T15:45:00Z"
 is_template: false
 version: "1.0"
+layout_variant: "LAYOUT_split_3x6_3_ex2"
 ---
 ```
 
@@ -1146,6 +1162,7 @@ version: "1.0"
 - Tags for searchability
 - Template flag
 - Schema version for future compatibility
+- Layout variant for geometry restoration
 
 ### Configuration Files
 

@@ -358,6 +358,7 @@ impl AppState {
 
     /// Returns a reference to the current theme
     #[must_use]
+    #[allow(dead_code)]
     pub const fn theme(&self) -> &Theme {
         &self.theme
     }
@@ -376,7 +377,7 @@ impl AppState {
     /// Result indicating success or error with context
     pub fn rebuild_geometry(&mut self, layout_name: &str) -> Result<()> {
         use crate::models::VisualLayoutMapping;
-        use crate::parser::keyboard_json::{build_keyboard_geometry, parse_keyboard_info_json};
+        use crate::parser::keyboard_json::{build_keyboard_geometry_with_rgb, build_matrix_to_led_map, parse_keyboard_info_json, parse_variant_keyboard_json};
 
         // Parse keyboard info.json to get layout definition
         let qmk_path = self
@@ -397,8 +398,19 @@ impl AppState {
             .context(format!("Layout '{}' not found in keyboard info.json", layout_name))?;
         let key_count = layout_def.layout.len();
 
-        // Build new geometry for selected layout
-        let new_geometry = build_keyboard_geometry(&info, &base_keyboard, layout_name)
+        // Determine keyboard variant first so we can look for RGB matrix config
+        let variant_path = match self.config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count) {
+            Ok(path) => path,
+            Err(_) => base_keyboard.to_string(),
+        };
+
+        // Try to get RGB matrix mapping from variant keyboard.json
+        let matrix_to_led = parse_variant_keyboard_json(qmk_path, &variant_path)
+            .and_then(|variant| variant.rgb_matrix)
+            .map(|rgb_config| build_matrix_to_led_map(&rgb_config));
+
+        // Build new geometry for selected layout with RGB matrix mapping if available
+        let new_geometry = build_keyboard_geometry_with_rgb(&info, &base_keyboard, layout_name, matrix_to_led.as_ref())
             .context("Failed to build keyboard geometry")?;
 
         // Build new visual layout mapping
@@ -407,17 +419,11 @@ impl AppState {
         // Update config to persist layout choice
         self.config.build.layout = layout_name.to_string();
 
-        // Determine and update keyboard variant based on layout
-        // This will add the variant subdirectory (e.g., "/standard", "/mini") if needed
-        match self.config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count) {
-            Ok(variant_path) => {
-                self.config.build.keyboard = variant_path;
-            }
-            Err(e) => {
-                // Log warning but don't fail - keyboard might not have variants
-                eprintln!("Note: Could not determine keyboard variant: {}", e);
-            }
-        }
+        // Update keyboard variant (already determined above for RGB matrix lookup)
+        self.config.build.keyboard = variant_path;
+
+        // Store the layout variant in the layout metadata for persistence
+        self.layout.metadata.layout_variant = Some(layout_name.to_string());
 
         // Update AppState with new geometry and mapping
         self.geometry = new_geometry;
@@ -439,7 +445,9 @@ impl AppState {
     /// - All key positions in the geometry have corresponding keys in each layer
     /// - Keys are added as KC_NO for new positions
     /// - Existing keys at valid positions are preserved
-    fn adjust_layers_to_geometry(&mut self) -> Result<()> {
+    ///
+    /// Call this after loading a layout to ensure keys match the geometry.
+    pub fn adjust_layers_to_geometry(&mut self) -> Result<()> {
         use crate::models::layer::KeyDefinition;
         
         // Get all valid positions from the mapping
@@ -1298,7 +1306,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         }
 
         // Layer switching
-        (KeyCode::Tab, KeyModifiers::SHIFT) => {
+        (KeyCode::BackTab, _) => {
             if state.current_layer > 0 {
                 state.current_layer -= 1;
                 state.set_status(format!("Layer {}", state.current_layer));

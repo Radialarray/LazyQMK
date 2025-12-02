@@ -34,6 +34,9 @@ pub struct LayoutMetadata {
     pub is_template: bool,
     /// Schema version (e.g., "1.0")
     pub version: String,
+    /// QMK layout variant (e.g., "LAYOUT_split_3x6_3_ex2")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_variant: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -53,6 +56,7 @@ impl LayoutMetadata {
             tags: Vec::new(),
             is_template: false,
             version: "1.0".to_string(),
+            layout_variant: None,
         })
     }
 
