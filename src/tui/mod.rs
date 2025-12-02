@@ -2639,4 +2639,89 @@ mod tests {
         let result = AppState::extract_base_keyboard("a/b/c/standard");
         assert_eq!(result, "a/b/c");
     }
+
+    // === PendingKeycodeState Tests ===
+
+    #[test]
+    fn test_pending_keycode_new() {
+        let state = PendingKeycodeState::new();
+        assert!(state.keycode_type.is_none());
+        assert!(state.param1.is_none());
+        assert!(state.param2.is_none());
+    }
+
+    #[test]
+    fn test_pending_keycode_reset() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::LayerTap);
+        state.param1 = Some("@layer-uuid".to_string());
+        state.param2 = Some("KC_SPC".to_string());
+
+        state.reset();
+
+        assert!(state.keycode_type.is_none());
+        assert!(state.param1.is_none());
+        assert!(state.param2.is_none());
+    }
+
+    #[test]
+    fn test_build_keycode_layer_tap() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::LayerTap);
+        state.param1 = Some("@abc-123".to_string());
+        state.param2 = Some("KC_SPC".to_string());
+
+        let result = state.build_keycode();
+        assert_eq!(result, Some("LT(@abc-123, KC_SPC)".to_string()));
+    }
+
+    #[test]
+    fn test_build_keycode_mod_tap() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::ModTap);
+        state.param1 = Some("MOD_LCTL | MOD_LSFT".to_string());
+        state.param2 = Some("KC_A".to_string());
+
+        let result = state.build_keycode();
+        assert_eq!(result, Some("MT(MOD_LCTL | MOD_LSFT, KC_A)".to_string()));
+    }
+
+    #[test]
+    fn test_build_keycode_layer_mod() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::LayerMod);
+        state.param1 = Some("@layer-uuid".to_string());
+        state.param2 = Some("MOD_LSFT".to_string());
+
+        let result = state.build_keycode();
+        assert_eq!(result, Some("LM(@layer-uuid, MOD_LSFT)".to_string()));
+    }
+
+    #[test]
+    fn test_build_keycode_swap_hands_tap() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::SwapHandsTap);
+        state.param1 = Some("KC_SPC".to_string());
+
+        let result = state.build_keycode();
+        assert_eq!(result, Some("SH_T(KC_SPC)".to_string()));
+    }
+
+    #[test]
+    fn test_build_keycode_incomplete_lt() {
+        let mut state = PendingKeycodeState::new();
+        state.keycode_type = Some(ParameterizedKeycodeType::LayerTap);
+        state.param1 = Some("@abc-123".to_string());
+        // Missing param2
+
+        let result = state.build_keycode();
+        assert!(result.is_none(), "Incomplete LT should return None");
+    }
+
+    #[test]
+    fn test_build_keycode_no_type() {
+        let state = PendingKeycodeState::new();
+        let result = state.build_keycode();
+        assert!(result.is_none(), "No keycode type should return None");
+    }
 }
