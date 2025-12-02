@@ -219,11 +219,11 @@ fn generate_settings(layout: &Layout) -> Option<String> {
     // Write inactive_key_behavior if not default
     if layout.inactive_key_behavior != InactiveKeyBehavior::default() {
         let value = match layout.inactive_key_behavior {
-            InactiveKeyBehavior::ShowColor => "show_color",
-            InactiveKeyBehavior::Off => "off",
-            InactiveKeyBehavior::Dim => "dim",
+            InactiveKeyBehavior::ShowColor => "Show Color",
+            InactiveKeyBehavior::Off => "Off",
+            InactiveKeyBehavior::Dim => "Dim",
         };
-        output.push_str(&format!("- inactive_key_behavior: {value}\n"));
+        output.push_str(&format!("**Inactive Key Behavior**: {value}\n"));
     }
 
     Some(output)
@@ -410,5 +410,40 @@ mod tests {
             parsed_layout.layers[0].keys.len(),
             layout.layers[0].keys.len()
         );
+    }
+
+    #[test]
+    fn test_settings_round_trip() {
+        use crate::models::InactiveKeyBehavior;
+        
+        let mut layout = create_test_layout();
+        
+        // Test with Off setting
+        layout.inactive_key_behavior = InactiveKeyBehavior::Off;
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with Off:\n{markdown}");
+        assert!(markdown.contains("## Settings"));
+        assert!(markdown.contains("**Inactive Key Behavior**: Off"));
+        
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::Off);
+        
+        // Test with Dim setting
+        layout.inactive_key_behavior = InactiveKeyBehavior::Dim;
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with Dim:\n{markdown}");
+        assert!(markdown.contains("**Inactive Key Behavior**: Dim"));
+        
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::Dim);
+        
+        // Test with ShowColor (default) - should NOT write settings section
+        layout.inactive_key_behavior = InactiveKeyBehavior::ShowColor;
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with ShowColor:\n{markdown}");
+        assert!(!markdown.contains("## Settings"));
+        
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::ShowColor);
     }
 }
