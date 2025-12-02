@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, Paragraph},
+    widgets::{Block, Borders, Clear, Gauge, Paragraph},
     Frame,
 };
 
@@ -111,6 +111,14 @@ impl Default for ColorPickerState {
 pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
     let theme = &state.theme;
     let area = centered_rect(60, 50, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background with theme color
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     // Split into sections
     let chunks = Layout::default()

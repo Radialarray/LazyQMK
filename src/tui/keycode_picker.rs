@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame,
 };
 
@@ -53,6 +53,14 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let theme = &state.theme;
     let area = centered_rect(60, 70, f.size());
 
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background with theme color
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -71,7 +79,11 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
             Style::default().add_modifier(Modifier::BOLD),
         ),
     ])];
-    let search = Paragraph::new(search_text).block(Block::default().borders(Borders::ALL));
+    let search = Paragraph::new(search_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().bg(theme.background)),
+    );
     f.render_widget(search, chunks[0]);
 
     // Category info
@@ -84,7 +96,11 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     } else {
         "All Categories (press 1-8 to filter)".to_string()
     };
-    let category = Paragraph::new(category_text).block(Block::default().borders(Borders::ALL));
+    let category = Paragraph::new(category_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().bg(theme.background)),
+    );
     f.render_widget(category, chunks[1]);
 
     // Get filtered keycodes based on search and category
@@ -110,7 +126,8 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
         .block(
             Block::default()
                 .title(format!(" Keycodes ({}) ", keycodes.len()))
-                .borders(Borders::ALL),
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
         )
         .highlight_style(
             Style::default()
@@ -134,7 +151,11 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let help = Paragraph::new(
         "↑↓: Navigate | Enter: Select | Esc: Cancel | 1-8: Filter by category | Type to search",
     )
-    .block(Block::default().borders(Borders::ALL));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().bg(theme.background)),
+    );
     f.render_widget(help, chunks[3]);
 }
 

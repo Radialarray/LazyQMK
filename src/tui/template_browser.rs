@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame,
 };
 use std::fs;
@@ -232,6 +232,14 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect, theme: &c
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
     let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Clear the background area first
+    f.render_widget(Clear, popup_area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, popup_area);
 
     // Split into title, search, list, and details sections
     let chunks = RatatuiLayout::default()

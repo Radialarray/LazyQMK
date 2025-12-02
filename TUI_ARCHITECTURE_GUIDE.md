@@ -165,6 +165,70 @@ A terminal-based keyboard layout editor that allows users to:
 
 ---
 
+## 2.1 Theming System
+
+### OS-Integrated Theme Detection
+
+The application automatically detects the operating system's dark/light mode preference and applies the appropriate color scheme. This ensures visual consistency with the user's terminal environment.
+
+**Detection Strategy:**
+- Uses the `dark-light` crate (v2.0) for cross-platform theme detection
+- Queries OS settings at startup and on each render loop iteration
+- Dynamically responds to theme changes while running (no restart required)
+
+**Implementation:**
+
+**Theme Module (`src/tui/theme.rs`):**
+- `Theme::detect()` - Main entry point, queries OS and returns appropriate theme
+- `Theme::dark()` - Dark mode colors (light text on dark backgrounds)
+- `Theme::light()` - Light mode colors (dark text on light backgrounds)
+- `ThemeVariant` enum - `Dark` or `Light` variant marker
+
+**Theme Properties:**
+- `background` - Main application background color
+- `text` - Primary text color  
+- `text_muted` - Secondary/dimmed text color
+- `accent` - Highlight color for selections, focus
+- `border` - Border color for frames and boxes
+- `success`, `error`, `warning` - Status colors
+
+**Color Values:**
+
+| Property | Dark Mode | Light Mode |
+|----------|-----------|------------|
+| background | Black | White |
+| text | White | Black |
+| text_muted | Gray | DarkGray |
+| accent | Yellow | Blue |
+| border | Gray | DarkGray |
+
+**Usage Pattern:**
+
+All UI components receive a `Theme` reference and apply colors consistently:
+1. Outer `Block` widgets use `bg(theme.background)` for backgrounds
+2. Inner content blocks also apply `bg(theme.background)` to prevent color bleeding
+3. Text spans use `theme.text` or `theme.text_muted` for foreground colors
+4. Borders and accents use `theme.border` and `theme.accent`
+
+**Dynamic Detection Loop:**
+
+The theme is re-detected on each iteration of the main event loop and sub-loops (wizard, picker):
+- Main TUI loop (`src/tui/mod.rs` - `run_tui()`)
+- Onboarding wizard loop (`src/main.rs` - `run_onboarding_wizard()`)
+- Layout picker loop (`src/main.rs` - `run_layout_picker()`)
+
+This allows the app to respond immediately when the user changes their OS theme preference.
+
+**Why Not Manual Toggle:**
+
+Earlier versions included an F12 toggle for theme switching, but this was removed because:
+1. Two independent theme systems (OS + app) caused color conflicts
+2. Terminal background colors are controlled by the OS/terminal, not the app
+3. Automatic detection provides a seamless, consistent experience
+4. Removes configuration burden from the user
+
+---
+
 ## 3. Core Architecture
 
 ### Architectural Pattern

@@ -8,7 +8,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame,
 };
 use std::path::PathBuf;
@@ -250,6 +250,14 @@ impl Default for LayoutPickerState {
 pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState, theme: &Theme) {
     let area = centered_rect(60, 40, f.size());
 
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -297,6 +305,14 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState, theme: &
 #[allow(dead_code)]
 pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState, theme: &Theme) {
     let area = centered_rect(70, 80, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -356,6 +372,14 @@ pub fn render_layout_picker(
     theme: &Theme,
 ) {
     let area = centered_rect(70, 50, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)

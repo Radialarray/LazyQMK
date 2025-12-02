@@ -30,7 +30,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Modifier, Style},
     text::Line,
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame, Terminal,
 };
 use std::io;
@@ -52,7 +52,7 @@ pub use keycode_picker::KeycodePickerState;
 pub use metadata_editor::MetadataEditorState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
-pub use theme::{Theme, ThemeVariant};
+pub use theme::Theme;
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -187,6 +187,8 @@ pub enum PopupType {
     UnsavedChangesPrompt,
     /// Layout picker popup
     LayoutPicker,
+    /// Setup wizard popup
+    SetupWizard,
 }
 
 /// Application state - single source of truth
@@ -241,6 +243,8 @@ pub struct AppState {
     pub help_overlay_state: HelpOverlayState,
     /// Layout picker component state
     pub layout_picker_state: config_dialogs::LayoutPickerState,
+    /// Setup wizard component state
+    pub wizard_state: onboarding_wizard::OnboardingWizardState,
 
     // System resources
     /// Keycode database
@@ -294,7 +298,7 @@ impl AppState {
         config: Config,
     ) -> Result<Self> {
         let keycode_db = KeycodeDb::load().context("Failed to load keycode database")?;
-        let theme = Theme::from_name(&config.ui.theme);
+        let theme = Theme::detect();
 
         // Initialize selected position to first valid key position
         let selected_position = mapping.get_first_position().unwrap_or(Position { row: 0, col: 0 });
@@ -321,6 +325,7 @@ impl AppState {
             metadata_editor_state: MetadataEditorState::default(),
             help_overlay_state: HelpOverlayState::new(),
             layout_picker_state: config_dialogs::LayoutPickerState::new(),
+            wizard_state: onboarding_wizard::OnboardingWizardState::new(),
             keycode_db,
             geometry,
             mapping,
@@ -531,6 +536,9 @@ pub fn run_tui(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
 ) -> Result<()> {
     loop {
+        // Re-detect OS theme on each loop iteration to respond to system theme changes
+        state.theme = Theme::detect();
+
         // Render current state
         terminal.draw(|f| render(f, state))?;
 
@@ -656,12 +664,23 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::MetadataEditor => {
             metadata_editor::render_metadata_editor(f, &state.metadata_editor_state, &state.theme);
         }
+        PopupType::SetupWizard => {
+            onboarding_wizard::render(f, &state.wizard_state, &state.theme);
+        }
     }
 }
 
 /// Render unsaved changes prompt
 fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     let area = centered_rect(60, 30, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     let text = vec![
         Line::from(""),
@@ -687,6 +706,15 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
     let area = centered_rect(70, 60, f.size());
 
     let dialog_state = &state.template_save_dialog_state;
+    let theme = &state.theme;
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     // Split into fields
     let chunks = RatatuiLayout::default()
@@ -703,7 +731,6 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
         .split(area);
 
     // Title
-    let theme = &state.theme;
     let title = Paragraph::new("Save as Template")
         .style(
             Style::default()
@@ -841,6 +868,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::HelpOverlay) => handle_help_overlay_input(state, key),
         Some(PopupType::MetadataEditor) => handle_metadata_editor_input(state, key),
         Some(PopupType::LayoutPicker) => handle_layout_picker_input(state, key),
+        Some(PopupType::SetupWizard) => handle_setup_wizard_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {
@@ -1006,6 +1034,48 @@ fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Res
         }
     }
     Ok(false)
+}
+
+/// Handle input for setup wizard
+fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Delegate to wizard's handle_input function
+    match onboarding_wizard::handle_input(&mut state.wizard_state, key) {
+        Ok(should_exit) => {
+            if should_exit {
+                // Wizard completed or cancelled
+                if state.wizard_state.is_complete {
+                    // Build and save the new config
+                    match state.wizard_state.build_config() {
+                        Ok(new_config) => {
+                            // Update the app config
+                            state.config = new_config;
+                            
+                            // Save the config
+                            if let Err(e) = state.config.save() {
+                                state.set_error(format!("Failed to save configuration: {e}"));
+                            } else {
+                                state.set_status("Configuration saved successfully");
+                            }
+                        }
+                        Err(e) => {
+                            state.set_error(format!("Failed to build configuration: {e}"));
+                        }
+                    }
+                } else {
+                    state.set_status("Setup wizard cancelled");
+                }
+                
+                state.active_popup = None;
+                // Reset wizard state for next time
+                state.wizard_state = onboarding_wizard::OnboardingWizardState::new();
+            }
+            Ok(false)
+        }
+        Err(e) => {
+            state.set_error(format!("Wizard error: {e}"));
+            Ok(false)
+        }
+    }
 }
 
 /// Handle input for unsaved changes prompt
@@ -1492,25 +1562,12 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Theme Toggle (F12)
-        (KeyCode::F(12), _) => {
-            // Toggle between dark and light themes
-            let new_theme_name = if state.theme.variant() == ThemeVariant::Dark {
-                "light"
-            } else {
-                "dark"
-            };
-            
-            state.theme = Theme::from_name(new_theme_name);
-            state.config.ui.theme = new_theme_name.to_string();
-            
-            // Save config to persist theme preference
-            if let Err(e) = state.config.save() {
-                state.set_error(format!("Theme changed to {} but failed to save: {}", new_theme_name, e));
-            } else {
-                state.set_status(format!("Theme changed to {}", new_theme_name));
-            }
-            
+        // Setup Wizard (Ctrl+W)
+        (KeyCode::Char('w'), KeyModifiers::CONTROL) => {
+            // Pre-populate wizard with current config
+            state.wizard_state = onboarding_wizard::OnboardingWizardState::from_config(&state.config);
+            state.active_popup = Some(PopupType::SetupWizard);
+            state.set_status("Setup Wizard - configure QMK path, keyboard, and layout");
             Ok(false)
         }
 

@@ -95,6 +95,9 @@ impl StatusBar {
             }
             Some(PopupType::UnsavedChangesPrompt) => "y: Save and quit | n: Discard | Esc: Cancel",
             Some(PopupType::LayoutPicker) => "↑↓: Navigate | Enter: Select | Esc: Cancel",
+            Some(PopupType::SetupWizard) => {
+                "Enter: Next | Esc: Back/Cancel | ↑↓: Navigate | Type: Input"
+            }
             None => {
                 // Main keyboard editing mode
                 "↑↓←→/hjkl: Navigate | Enter: Edit key | x/Del: Clear | Tab: Layer | Ctrl+S: Save | Ctrl+Q: Quit | ?: Help"

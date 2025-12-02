@@ -1,10 +1,9 @@
 //! Theme system for consistent UI colors across dark and light modes.
 //!
-//! This module provides a centralized theme management system that replaces
-//! hardcoded colors throughout the TUI with semantic color roles.
+//! This module provides a centralized theme management system that automatically
+//! detects the OS theme (dark/light mode) and applies appropriate colors.
 
 use ratatui::style::Color;
-use serde::{Deserialize, Serialize};
 
 /// Semantic color theme for the TUI.
 ///
@@ -47,9 +46,9 @@ pub struct Theme {
     pub inactive: Color,
 }
 
-/// Theme variant identifier for serialization and config.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+/// Theme variant identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ThemeVariant {
     /// Dark theme optimized for dark terminal backgrounds
     Dark,
@@ -58,9 +57,29 @@ pub enum ThemeVariant {
 }
 
 impl Theme {
-    /// Creates a dark theme optimized for dark terminal backgrounds.
+    /// Detects the OS theme and returns the appropriate Theme.
     ///
-    /// This is the default theme and maintains the existing color scheme.
+    /// This uses the `dark-light` crate to detect whether the OS is in
+    /// dark or light mode, and returns the matching theme.
+    ///
+    /// # Examples
+    /// ```
+    /// use keyboard_tui::tui::theme::Theme;
+    ///
+    /// let theme = Theme::detect();
+    /// // Theme will match OS dark/light mode setting
+    /// ```
+    #[must_use]
+    pub fn detect() -> Self {
+        match dark_light::detect() {
+            Ok(dark_light::Mode::Light) => Self::light(),
+            Ok(dark_light::Mode::Dark) => Self::dark(),
+            Ok(dark_light::Mode::Unspecified) => Self::dark(), // Fall back to dark if unspecified
+            Err(_) => Self::dark(), // Fall back to dark on error
+        }
+    }
+
+    /// Creates a dark theme optimized for dark terminal backgrounds.
     ///
     /// # Color Choices
     /// - Uses bright colors (Cyan, Yellow) for UI chrome
@@ -119,14 +138,6 @@ impl Theme {
     }
 
     /// Creates a theme from a variant enum.
-    ///
-    /// # Examples
-    /// ```
-    /// use keyboard_tui::tui::theme::{Theme, ThemeVariant};
-    ///
-    /// let dark = Theme::from_variant(ThemeVariant::Dark);
-    /// let light = Theme::from_variant(ThemeVariant::Light);
-    /// ```
     #[must_use]
     #[allow(dead_code)]
     pub const fn from_variant(variant: ThemeVariant) -> Self {
@@ -136,37 +147,16 @@ impl Theme {
         }
     }
 
-    /// Creates a theme from a string name (typically from config).
-    ///
-    /// # Supported Names
-    /// - `"dark"` or `"default"` → Dark theme
-    /// - `"light"` → Light theme
-    /// - Any other value → Dark theme (fallback)
-    ///
-    /// # Examples
-    /// ```
-    /// use keyboard_tui::tui::theme::Theme;
-    ///
-    /// let dark = Theme::from_name("dark");
-    /// let light = Theme::from_name("light");
-    /// let default_fallback = Theme::from_name("invalid");
-    /// ```
-    #[must_use]
-    pub fn from_name(name: &str) -> Self {
-        match name.to_lowercase().as_str() {
-            "light" => Self::light(),
-            "dark" | "default" | _ => Self::dark(),
-        }
-    }
-
     /// Returns the theme variant for the current theme.
     ///
     /// This is determined by checking the background color.
     #[must_use]
+    #[allow(dead_code)]
     pub const fn variant(&self) -> ThemeVariant {
-        // Determine variant based on background color
         match self.background {
-            Color::White | Color::Rgb(255, 255, 255) => ThemeVariant::Light,
+            Color::White | Color::Rgb(255, 255, 255) | Color::Rgb(245, 245, 245) => {
+                ThemeVariant::Light
+            }
             _ => ThemeVariant::Dark,
         }
     }
@@ -174,7 +164,7 @@ impl Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::dark()
+        Self::detect()
     }
 }
 
@@ -204,22 +194,6 @@ mod tests {
     }
 
     #[test]
-    fn test_theme_from_name() {
-        let dark1 = Theme::from_name("dark");
-        assert_eq!(dark1.background, Color::Black);
-
-        let dark2 = Theme::from_name("default");
-        assert_eq!(dark2.background, Color::Black);
-
-        let light = Theme::from_name("light");
-        assert_eq!(light.background, Color::White);
-
-        // Test fallback to dark for invalid names
-        let fallback = Theme::from_name("invalid");
-        assert_eq!(fallback.background, Color::Black);
-    }
-
-    #[test]
     fn test_theme_from_variant() {
         let dark = Theme::from_variant(ThemeVariant::Dark);
         assert_eq!(dark, Theme::dark());
@@ -235,12 +209,6 @@ mod tests {
 
         let light = Theme::light();
         assert_eq!(light.variant(), ThemeVariant::Light);
-    }
-
-    #[test]
-    fn test_theme_default() {
-        let default = Theme::default();
-        assert_eq!(default, Theme::dark());
     }
 
     #[test]
@@ -263,5 +231,13 @@ mod tests {
         assert_ne!(theme.success, theme.error);
         assert_ne!(theme.primary, theme.accent);
         assert_ne!(theme.text, theme.text_muted);
+    }
+
+    #[test]
+    fn test_theme_detect() {
+        // Just verify detect() returns a valid theme without panicking
+        let theme = Theme::detect();
+        // Should be either dark or light variant
+        assert!(theme.variant() == ThemeVariant::Dark || theme.variant() == ThemeVariant::Light);
     }
 }

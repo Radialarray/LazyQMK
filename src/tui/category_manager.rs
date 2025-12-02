@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -168,6 +168,9 @@ pub fn render_category_manager(
         width: dialog_width,
         height: dialog_height,
     };
+
+    // Clear the background area first
+    f.render_widget(Clear, dialog_area);
 
     // Background block
     let block = Block::default()
