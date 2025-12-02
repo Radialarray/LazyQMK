@@ -255,6 +255,8 @@ impl<'a> FirmwareGenerator<'a> {
     ///
     /// Colors use the same visual -> LED mapping as `generate_layer_keys_by_led`
     /// and honor the layout's four-level color priority system.
+    ///
+    /// If the layer has `colors_enabled = false`, returns all black (off) colors.
     fn generate_layer_colors_by_led(
         &self,
         layer_idx: usize,
@@ -266,6 +268,11 @@ impl<'a> FirmwareGenerator<'a> {
             .layout
             .get_layer(layer_idx)
             .with_context(|| format!("Invalid layer index {}", layer_idx))?;
+
+        // If layer colors are disabled for this layer, return all black (LEDs off)
+        if !layer.layer_colors_enabled {
+            return Ok(vec![crate::models::RgbColor::new(0, 0, 0); led_count]);
+        }
 
         // Map each key's resolved color to its LED position
         for key in &layer.keys {

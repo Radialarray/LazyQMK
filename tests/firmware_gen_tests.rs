@@ -54,6 +54,7 @@ fn create_test_layout() -> Layout {
         default_color: RgbColor::new(255, 255, 255),
         category_id: None,
         keys: keys.clone(),
+        layer_colors_enabled: true,
     };
 
     // Second layer with some transparent keys
@@ -67,6 +68,7 @@ fn create_test_layout() -> Layout {
         default_color: RgbColor::new(100, 100, 255),
         category_id: None,
         keys: layer1_keys,
+        layer_colors_enabled: true,
     };
 
     Layout {
