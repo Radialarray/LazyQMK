@@ -211,13 +211,33 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("1-6", Style::default().fg(theme.success)),
-                Span::styled("                 Filter by category", Style::default().fg(theme.text)),
+                Span::styled("Left/Right", Style::default().fg(theme.success)),
+                Span::styled("          Switch category tab", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Tab/Shift+Tab", Style::default().fg(theme.success)),
+                Span::styled("       Cycle categories", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("0-9", Style::default().fg(theme.success)),
+                Span::styled("                 Jump to category (0=All)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Up/Down", Style::default().fg(theme.success)),
                 Span::styled("             Navigate list", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Page Up/Down", Style::default().fg(theme.success)),
+                Span::styled("        Scroll by page", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Home/End", Style::default().fg(theme.success)),
+                Span::styled("            Jump to top/bottom", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),

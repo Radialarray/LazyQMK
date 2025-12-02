@@ -370,7 +370,7 @@ mod tests {
         let db = get_test_db();
         let category = db.get_category("basic").unwrap();
         assert_eq!(category.id, "basic");
-        assert_eq!(category.name, "Basic Keys");
+        assert_eq!(category.name, "Basic");
     }
 
     #[test]
