@@ -237,6 +237,37 @@ impl Layout {
         }
     }
 
+    /// Toggles layer-level RGB colors for a specific layer.
+    pub fn toggle_layer_colors(&mut self, layer_idx: usize) -> Option<bool> {
+        if let Some(layer) = self.layers.get_mut(layer_idx) {
+            layer.toggle_layer_colors();
+            self.metadata.touch();
+            Some(layer.layer_colors_enabled)
+        } else {
+            None
+        }
+    }
+
+    /// Toggles layer-level RGB colors for all layers at once.
+    /// Returns the new state (true if any layer has colors enabled after toggle).
+    pub fn toggle_all_layer_colors(&mut self) -> bool {
+        // If any layer has colors enabled, disable all. Otherwise, enable all.
+        let any_enabled = self.layers.iter().any(|l| l.layer_colors_enabled);
+        let new_state = !any_enabled;
+        
+        for layer in &mut self.layers {
+            layer.set_layer_colors_enabled(new_state);
+        }
+        self.metadata.touch();
+        new_state
+    }
+
+    /// Checks if any layer has layer-level colors enabled.
+    #[must_use]
+    pub fn any_layer_colors_enabled(&self) -> bool {
+        self.layers.iter().any(|l| l.layer_colors_enabled)
+    }
+
     /// Resolves the color for a key using the four-level priority system.
     ///
     /// Priority (highest to lowest):
@@ -290,6 +321,52 @@ impl Layout {
 
         // Fallback to white if layer doesn't exist (shouldn't happen)
         RgbColor::default()
+    }
+
+    /// Resolves the color for a key, respecting the layer's colors_enabled flag.
+    ///
+    /// When `colors_enabled = false` for a layer:
+    /// - Individual key color overrides still work (priority 1)
+    /// - Key category colors still work (priority 2)
+    /// - Layer category and layer default colors are disabled (priorities 3-4)
+    ///
+    /// Returns `None` only if the layer has colors disabled AND the key has no
+    /// individual color or key category. This allows showing a neutral color
+    /// for keys that would normally inherit from the layer.
+    #[must_use]
+    pub fn resolve_key_color_if_enabled(&self, layer_idx: usize, key: &KeyDefinition) -> Option<RgbColor> {
+        // 1. Individual key color override (always works)
+        if let Some(color) = key.color_override {
+            return Some(color);
+        }
+
+        // 2. Key category color (always works)
+        if let Some(cat_id) = &key.category_id {
+            if let Some(category) = self.get_category(cat_id) {
+                return Some(category.color);
+            }
+        }
+
+        // Check if layer colors are enabled
+        if let Some(layer) = self.get_layer(layer_idx) {
+            if !layer.layer_colors_enabled {
+                // Layer colors disabled - return None for layer-level colors
+                return None;
+            }
+
+            // 3. Layer category color (only if colors_enabled)
+            if let Some(cat_id) = &layer.category_id {
+                if let Some(category) = self.get_category(cat_id) {
+                    return Some(category.color);
+                }
+            }
+
+            // 4. Layer default color (only if colors_enabled)
+            return Some(layer.default_color);
+        }
+
+        // Fallback to white if layer doesn't exist (shouldn't happen)
+        Some(RgbColor::default())
     }
 
     /// Validates the layout structure.

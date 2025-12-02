@@ -117,6 +117,16 @@ pub struct Layer {
     pub category_id: Option<String>,
     /// Key assignments for all positions (fixed size per layout)
     pub keys: Vec<KeyDefinition>,
+    /// Whether layer-level RGB colors are enabled (default: true)
+    /// When false, layer default color and layer category color are disabled,
+    /// but individual key colors and key category colors still work.
+    #[serde(default = "default_layer_colors_enabled")]
+    pub layer_colors_enabled: bool,
+}
+
+/// Default value for layer_colors_enabled (true)
+fn default_layer_colors_enabled() -> bool {
+    true
 }
 
 #[allow(dead_code)]
@@ -144,6 +154,7 @@ impl Layer {
             default_color,
             category_id: None,
             keys: Vec::new(),
+            layer_colors_enabled: true,
         })
     }
 
@@ -196,6 +207,16 @@ impl Layer {
         Self::validate_name(&name)?;
         self.name = name;
         Ok(())
+    }
+
+    /// Toggles layer-level RGB colors on/off.
+    pub fn toggle_layer_colors(&mut self) {
+        self.layer_colors_enabled = !self.layer_colors_enabled;
+    }
+
+    /// Sets whether layer-level RGB colors are enabled.
+    pub fn set_layer_colors_enabled(&mut self, enabled: bool) {
+        self.layer_colors_enabled = enabled;
     }
 }
 

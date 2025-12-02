@@ -1439,6 +1439,33 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
+        // Toggle colors for current layer (v key)
+        (KeyCode::Char('v'), _) => {
+            if let Some(enabled) = state.layout.toggle_layer_colors(state.current_layer) {
+                state.dirty = true;
+                let status = if enabled {
+                    format!("Layer {} colors enabled", state.current_layer)
+                } else {
+                    format!("Layer {} colors disabled", state.current_layer)
+                };
+                state.set_status(status);
+            }
+            Ok(false)
+        }
+
+        // Toggle colors for all layers (Shift+V)
+        (KeyCode::Char('V'), KeyModifiers::SHIFT) => {
+            let enabled = state.layout.toggle_all_layer_colors();
+            state.dirty = true;
+            let status = if enabled {
+                "All layer colors enabled".to_string()
+            } else {
+                "All layer colors disabled".to_string()
+            };
+            state.set_status(status);
+            Ok(false)
+        }
+
         // Category picker for individual key (Shift+K)
         (KeyCode::Char('K'), KeyModifiers::SHIFT) => {
             if state.get_selected_key().is_some() {

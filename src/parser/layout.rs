@@ -244,6 +244,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     // Parse layer properties (Color and optional Category)
     let mut layer_color = None;
     let mut layer_category = None;
+    let mut layer_colors_enabled = true; // Default to true
 
     while line_num < lines.len() {
         let line = lines[line_num].trim();
@@ -274,6 +275,18 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
             continue;
         }
 
+        // Parse optional layer colors enabled: **Layer Colors**: true/false
+        if line.starts_with("**Layer Colors**:") {
+            let value = line
+                .strip_prefix("**Layer Colors**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layer_colors_enabled = value == "true" || value == "yes" || value == "1";
+            line_num += 1;
+            continue;
+        }
+
         // Table starts - break out of properties loop
         if line.starts_with('|') {
             break;
@@ -289,6 +302,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     // Create layer
     let mut layer = Layer::new(layer_number, layer_name, color)?;
     layer.category_id = layer_category;
+    layer.layer_colors_enabled = layer_colors_enabled;
 
     // Parse table
     line_num = parse_layer_table(lines, line_num, &mut layer)?;

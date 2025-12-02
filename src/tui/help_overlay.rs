@@ -196,6 +196,16 @@ impl HelpOverlayState {
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("v", Style::default().fg(theme.success)),
+                Span::styled("                   Toggle colors for current layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+V", Style::default().fg(theme.success)),
+                Span::styled("             Toggle colors for all layers", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("c", Style::default().fg(theme.success)),
                 Span::styled("                   Set layer default color", Style::default().fg(theme.text)),
             ]),
@@ -256,6 +266,11 @@ impl HelpOverlayState {
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("d", Style::default().fg(theme.inactive)),
                 Span::styled(" Layer default color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("-", Style::default().fg(theme.inactive)),
+                Span::styled(" Colors disabled for layer", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Category System Section

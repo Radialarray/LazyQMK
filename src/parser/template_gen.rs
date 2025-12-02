@@ -72,6 +72,11 @@ fn generate_layer(layer: &crate::models::Layer) -> Result<String> {
         output.push_str(&format!("**Category**: {cat_id}\n"));
     }
 
+    // Layer colors enabled (only write if false, since true is the default)
+    if !layer.layer_colors_enabled {
+        output.push_str("**Layer Colors**: false\n");
+    }
+
     output.push('\n');
 
     // Generate table
@@ -233,6 +238,7 @@ mod tests {
             default_color: RgbColor::new(128, 128, 128),
             category_id: None,
             keys: vec![],
+            layer_colors_enabled: true,
         };
 
         // Add some keys

@@ -80,19 +80,23 @@ impl KeyboardWidget {
             let is_selected = row == state.selected_position.row as usize
                 && col == state.selected_position.col as usize;
 
-            // Resolve key color
-            let rgb = state.layout.resolve_key_color(state.current_layer, key);
-            let key_color = Color::Rgb(rgb.r, rgb.g, rgb.b);
-
-            // Determine color indicator
-            let color_indicator = if key.color_override.is_some() {
-                "i" // Individual override
-            } else if key.category_id.is_some() {
-                "k" // Key category
-            } else if layer.category_id.is_some() {
-                "L" // Layer category
+            // Resolve key color (respects colors_enabled flag)
+            let (key_color, color_indicator) = if let Some(rgb) = state.layout.resolve_key_color_if_enabled(state.current_layer, key) {
+                // Colors are enabled - use resolved color
+                let color = Color::Rgb(rgb.r, rgb.g, rgb.b);
+                let indicator = if key.color_override.is_some() {
+                    "i" // Individual override
+                } else if key.category_id.is_some() {
+                    "k" // Key category
+                } else if layer.category_id.is_some() {
+                    "L" // Layer category
+                } else {
+                    "d" // Layer default
+                };
+                (color, indicator)
             } else {
-                "d" // Layer default
+                // Colors are disabled - use neutral gray, show "-" indicator
+                (Color::DarkGray, "-")
             };
 
             // Format keycode for display
