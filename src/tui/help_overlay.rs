@@ -206,28 +206,23 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Type", Style::default().fg(theme.success)),
-                Span::styled("                Search keycodes", Style::default().fg(theme.text)),
+                Span::styled("↑/↓", Style::default().fg(theme.success)),
+                Span::styled("                 Navigate categories/keycodes", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Left/Right", Style::default().fg(theme.success)),
-                Span::styled("          Switch category tab", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab/Shift+Tab", Style::default().fg(theme.success)),
-                Span::styled("       Cycle categories", Style::default().fg(theme.text)),
+                Span::styled("Tab/←/→", Style::default().fg(theme.success)),
+                Span::styled("             Switch between sidebar & list", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("0-9", Style::default().fg(theme.success)),
-                Span::styled("                 Jump to category (0=All)", Style::default().fg(theme.text)),
+                Span::styled("                 Jump to category (in sidebar)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Up/Down", Style::default().fg(theme.success)),
-                Span::styled("             Navigate list", Style::default().fg(theme.text)),
+                Span::styled("Type", Style::default().fg(theme.success)),
+                Span::styled("                Search keycodes (in list)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),

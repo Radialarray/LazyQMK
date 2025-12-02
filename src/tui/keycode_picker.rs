@@ -13,17 +13,29 @@ use ratatui::{
 use super::layer_picker::LayerKeycodeType;
 use super::{AppState, LayerPickerState, PopupType};
 
+/// Which pane has focus in the keycode picker
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PickerFocus {
+    /// Category sidebar has focus
+    #[default]
+    Sidebar,
+    /// Keycode list has focus
+    Keycodes,
+}
+
 /// Keycode picker state
 #[derive(Debug, Clone)]
 pub struct KeycodePickerState {
     /// Search query string
     pub search: String,
-    /// Selected keycode index
+    /// Selected keycode index in the list
     pub selected: usize,
-    /// Current category tab index (0 = All)
+    /// Current category index (0 = All)
     pub category_index: usize,
-    /// Tab scroll offset for overflow
-    pub tab_scroll: usize,
+    /// Which pane has focus
+    pub focus: PickerFocus,
+    /// Sidebar scroll offset (for very tall category lists)
+    pub sidebar_scroll: usize,
 }
 
 impl Default for KeycodePickerState {
@@ -40,7 +52,8 @@ impl KeycodePickerState {
             search: String::new(),
             selected: 0,
             category_index: 0,
-            tab_scroll: 0,
+            focus: PickerFocus::Sidebar,
+            sidebar_scroll: 0,
         }
     }
 
@@ -49,24 +62,15 @@ impl KeycodePickerState {
         self.search.clear();
         self.selected = 0;
         self.category_index = 0;
-        self.tab_scroll = 0;
-    }
-
-    /// Get the active category ID (None for "All")
-    pub fn active_category(&self) -> Option<String> {
-        if self.category_index == 0 {
-            None
-        } else {
-            // Will be resolved against actual categories in render/input
-            Some(format!("__idx_{}", self.category_index - 1))
-        }
+        self.focus = PickerFocus::Sidebar;
+        self.sidebar_scroll = 0;
     }
 }
 
-/// Render the keycode picker popup
+/// Render the keycode picker popup with sidebar layout
 pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let theme = &state.theme;
-    let area = centered_rect(70, 80, f.size());
+    let area = centered_rect(80, 85, f.size());
 
     // Clear the background area first
     f.render_widget(Clear, area);
@@ -75,24 +79,43 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
+    // Main horizontal split: sidebar (20%) | content (80%)
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(3), // Category tabs
-            Constraint::Length(3), // Search box
-            Constraint::Min(10),   // Keycode list
-            Constraint::Length(2), // Help text
+            Constraint::Length(22), // Fixed width sidebar for category names
+            Constraint::Min(40),    // Keycode list takes remaining space
         ])
         .split(area);
+
+    let sidebar_area = main_chunks[0];
+    let content_area = main_chunks[1];
 
     // Get categories from database
     let categories = state.keycode_db.categories();
     let category_index = state.keycode_picker_state.category_index;
+    let focus = state.keycode_picker_state.focus;
 
-    // Build category tabs
-    render_category_tabs(f, chunks[0], categories, category_index, state.keycode_picker_state.tab_scroll, theme);
+    // Render sidebar with categories
+    render_sidebar(f, sidebar_area, categories, category_index, focus, theme);
+
+    // Content area: search box + keycode list + help
+    let content_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Search box
+            Constraint::Min(10),   // Keycode list
+            Constraint::Length(2), // Help text
+        ])
+        .split(content_area);
 
     // Search box
+    let search_border_color = if focus == PickerFocus::Keycodes {
+        theme.primary
+    } else {
+        theme.surface
+    };
+    
     let search_text = vec![Line::from(vec![
         Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
         Span::styled(
@@ -104,10 +127,10 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let search = Paragraph::new(search_text).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.primary))
+            .border_style(Style::default().fg(search_border_color))
             .style(Style::default().bg(theme.background)),
     );
-    f.render_widget(search, chunks[1]);
+    f.render_widget(search, content_chunks[0]);
 
     // Get filtered keycodes based on search and category
     let active_category = if category_index == 0 {
@@ -155,12 +178,18 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
             .unwrap_or_else(|| "Unknown".to_string())
     };
 
+    let list_border_color = if focus == PickerFocus::Keycodes {
+        theme.primary
+    } else {
+        theme.surface
+    };
+
     let list = List::new(list_items)
         .block(
             Block::default()
                 .title(format!(" {} ({}) ", category_name, keycodes.len()))
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.surface))
+                .border_style(Style::default().fg(list_border_color))
                 .style(Style::default().bg(theme.background)),
         )
         .highlight_style(
@@ -173,79 +202,83 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
 
     // Create list state for highlighting
     let mut list_state = ListState::default();
-    list_state.select(Some(
-        state
-            .keycode_picker_state
-            .selected
-            .min(keycodes.len().saturating_sub(1)),
-    ));
+    if focus == PickerFocus::Keycodes {
+        list_state.select(Some(
+            state
+                .keycode_picker_state
+                .selected
+                .min(keycodes.len().saturating_sub(1)),
+        ));
+    }
 
-    f.render_stateful_widget(list, chunks[2], &mut list_state);
+    f.render_stateful_widget(list, content_chunks[1], &mut list_state);
 
-    // Help text - compact version
-    let help_spans = vec![
-        Span::styled("◄►", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-        Span::raw(" Category  "),
-        Span::styled("↑↓", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-        Span::raw(" Select  "),
-        Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
-        Span::raw(" Apply  "),
-        Span::styled("Esc", Style::default().fg(theme.error).add_modifier(Modifier::BOLD)),
-        Span::raw(" Cancel  "),
-        Span::styled("0", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-        Span::raw(" All"),
-    ];
+    // Help text
+    let help_spans = if focus == PickerFocus::Sidebar {
+        vec![
+            Span::styled("↑↓", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::raw(" Category  "),
+            Span::styled("Tab/→", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::raw(" Keycodes  "),
+            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::raw(" Select  "),
+            Span::styled("Esc", Style::default().fg(theme.error).add_modifier(Modifier::BOLD)),
+            Span::raw(" Cancel"),
+        ]
+    } else {
+        vec![
+            Span::styled("↑↓", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::raw(" Navigate  "),
+            Span::styled("Tab/←", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::raw(" Categories  "),
+            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::raw(" Apply  "),
+            Span::styled("Esc", Style::default().fg(theme.error).add_modifier(Modifier::BOLD)),
+            Span::raw(" Cancel  "),
+            Span::styled("Type", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::raw(" Search"),
+        ]
+    };
     let help = Paragraph::new(Line::from(help_spans))
         .style(Style::default().fg(theme.text_muted))
         .block(Block::default().style(Style::default().bg(theme.background)));
-    f.render_widget(help, chunks[3]);
+    f.render_widget(help, content_chunks[2]);
 }
 
-/// Render the category tab bar
-fn render_category_tabs(
+/// Render the category sidebar
+fn render_sidebar(
     f: &mut Frame,
     area: Rect,
     categories: &[crate::keycode_db::KeycodeCategory],
     selected: usize,
-    scroll: usize,
+    focus: PickerFocus,
     theme: &crate::tui::theme::Theme,
 ) {
-    let inner = Rect {
-        x: area.x + 1,
-        y: area.y + 1,
-        width: area.width.saturating_sub(2),
-        height: 1,
+    let border_color = if focus == PickerFocus::Sidebar {
+        theme.primary
+    } else {
+        theme.surface
     };
 
-    // Build tab labels: "All" + all categories
-    let mut tabs: Vec<(&str, bool)> = vec![("All", selected == 0)];
+    // Build category list items: "All" + all categories
+    let mut items: Vec<ListItem> = Vec::with_capacity(categories.len() + 1);
+    
+    // "All" option
+    let all_style = if selected == 0 {
+        Style::default()
+            .fg(theme.background)
+            .bg(theme.primary)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.text)
+    };
+    items.push(ListItem::new(Line::from(vec![
+        Span::styled(" All", all_style),
+    ])));
+
+    // Category items
     for (i, cat) in categories.iter().enumerate() {
-        tabs.push((&cat.name, selected == i + 1));
-    }
-
-    // Calculate which tabs fit
-    let available_width = inner.width as usize;
-    let mut spans: Vec<Span> = Vec::new();
-    let mut current_width = 0;
-
-    // Add scroll indicator if needed
-    if scroll > 0 {
-        spans.push(Span::styled("◄ ", Style::default().fg(theme.text_muted)));
-        current_width += 2;
-    }
-
-    let mut _visible_tabs = 0;
-    let mut needs_right_scroll = false;
-
-    for (i, (name, is_selected)) in tabs.iter().enumerate().skip(scroll) {
-        let tab_width = name.len() + 3; // " Name " + separator
-
-        if current_width + tab_width > available_width.saturating_sub(2) {
-            needs_right_scroll = true;
-            break;
-        }
-
-        let style = if *is_selected {
+        let style = if selected == i + 1 {
             Style::default()
                 .fg(theme.background)
                 .bg(theme.primary)
@@ -253,55 +286,54 @@ fn render_category_tabs(
         } else {
             Style::default().fg(theme.text)
         };
-
-        // Add number hint for first 10 categories
-        let label = if i < 10 {
-            format!("{} ", i)
+        
+        // Truncate long names to fit sidebar
+        let name = if cat.name.len() > 18 {
+            format!(" {}…", &cat.name[..17])
         } else {
-            String::new()
+            format!(" {}", cat.name)
         };
-
-        spans.push(Span::styled(format!(" {}{} ", label, name), style));
-        spans.push(Span::styled("│", Style::default().fg(theme.surface)));
-
-        current_width += tab_width;
-        _visible_tabs += 1;
+        
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(name, style),
+        ])));
     }
 
-    // Remove last separator
-    if !spans.is_empty() && spans.last().map(|s| s.content.as_ref()) == Some("│") {
-        spans.pop();
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .title(" Categories ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(border_color))
+                .style(Style::default().bg(theme.background)),
+        )
+        .highlight_symbol(if focus == PickerFocus::Sidebar { "►" } else { " " });
+
+    // Create list state for sidebar
+    let mut list_state = ListState::default();
+    if focus == PickerFocus::Sidebar {
+        list_state.select(Some(selected));
     }
 
-    // Add right scroll indicator if needed
-    if needs_right_scroll {
-        // Fill remaining space
-        let remaining = available_width.saturating_sub(current_width).saturating_sub(2);
-        if remaining > 0 {
-            spans.push(Span::raw(" ".repeat(remaining)));
-        }
-        spans.push(Span::styled(" ►", Style::default().fg(theme.text_muted)));
-    }
-
-    // Render the border
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.surface))
-        .title(" Categories ")
-        .title_style(Style::default().fg(theme.text_muted))
-        .style(Style::default().bg(theme.background));
-    f.render_widget(block, area);
-
-    // Render tabs inside
-    let tabs_para = Paragraph::new(Line::from(spans));
-    f.render_widget(tabs_para, inner);
+    f.render_stateful_widget(list, area, &mut list_state);
 }
 
 /// Handle input for keycode picker
 pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    let categories = state.keycode_db.categories();
-    let total_tabs = categories.len() + 1; // +1 for "All"
+    let total_categories = state.keycode_db.categories().len() + 1; // +1 for "All"
 
+    match state.keycode_picker_state.focus {
+        PickerFocus::Sidebar => handle_sidebar_input(state, key, total_categories),
+        PickerFocus::Keycodes => handle_keycodes_input(state, key),
+    }
+}
+
+/// Handle input when sidebar has focus
+fn handle_sidebar_input(
+    state: &mut AppState,
+    key: event::KeyEvent,
+    total_categories: usize,
+) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
             state.active_popup = None;
@@ -309,28 +341,80 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
             state.set_status("Cancelled");
             Ok(false)
         }
+        KeyCode::Up => {
+            if state.keycode_picker_state.category_index > 0 {
+                state.keycode_picker_state.category_index -= 1;
+                state.keycode_picker_state.selected = 0; // Reset keycode selection
+            }
+            Ok(false)
+        }
+        KeyCode::Down => {
+            if state.keycode_picker_state.category_index < total_categories - 1 {
+                state.keycode_picker_state.category_index += 1;
+                state.keycode_picker_state.selected = 0; // Reset keycode selection
+            }
+            Ok(false)
+        }
+        KeyCode::Home => {
+            state.keycode_picker_state.category_index = 0;
+            state.keycode_picker_state.selected = 0;
+            Ok(false)
+        }
+        KeyCode::End => {
+            state.keycode_picker_state.category_index = total_categories - 1;
+            state.keycode_picker_state.selected = 0;
+            Ok(false)
+        }
+        // Switch to keycodes pane
+        KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
+            state.keycode_picker_state.focus = PickerFocus::Keycodes;
+            Ok(false)
+        }
+        // Number keys for quick category jump
+        KeyCode::Char(c) if c.is_ascii_digit() => {
+            let idx = c.to_digit(10).unwrap() as usize;
+            if idx < total_categories {
+                state.keycode_picker_state.category_index = idx;
+                state.keycode_picker_state.selected = 0;
+            }
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
+}
+
+/// Handle input when keycodes list has focus
+fn handle_keycodes_input(
+    state: &mut AppState,
+    key: event::KeyEvent,
+) -> Result<bool> {
+    match key.code {
+        KeyCode::Esc => {
+            state.active_popup = None;
+            state.keycode_picker_state.reset();
+            state.set_status("Cancelled");
+            Ok(false)
+        }
+        // Switch back to sidebar
+        KeyCode::Left => {
+            state.keycode_picker_state.focus = PickerFocus::Sidebar;
+            Ok(false)
+        }
+        KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
+            state.keycode_picker_state.focus = PickerFocus::Sidebar;
+            Ok(false)
+        }
+        KeyCode::Tab => {
+            // Tab without shift cycles back to sidebar
+            state.keycode_picker_state.focus = PickerFocus::Sidebar;
+            Ok(false)
+        }
         KeyCode::Enter => {
-            // Get filtered keycodes
-            let category_index = state.keycode_picker_state.category_index;
-            let active_category = if category_index == 0 {
-                None
-            } else {
-                categories.get(category_index - 1).map(|c| c.id.as_str())
-            };
-
-            let keycodes = if let Some(cat_id) = active_category {
-                state
-                    .keycode_db
-                    .search_in_category(&state.keycode_picker_state.search, cat_id)
-            } else {
-                state.keycode_db.search(&state.keycode_picker_state.search)
-            };
-
+            let keycodes = get_filtered_keycodes(state);
             let selected_keycode_opt = keycodes
                 .get(state.keycode_picker_state.selected)
                 .map(|kc| kc.code.clone());
 
-            // Select current keycode
             if let Some(keycode) = selected_keycode_opt {
                 // Check if this is a layer-switching keycode (MO, TG, TO, etc.)
                 if let Some(layer_type) = LayerKeycodeType::from_keycode(&keycode) {
@@ -359,60 +443,37 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
 
             Ok(false)
         }
-        // Category navigation with Left/Right arrows
-        KeyCode::Left => {
-            if state.keycode_picker_state.category_index > 0 {
-                state.keycode_picker_state.category_index -= 1;
-                state.keycode_picker_state.selected = 0;
-                // Adjust scroll if needed
-                if state.keycode_picker_state.category_index < state.keycode_picker_state.tab_scroll {
-                    state.keycode_picker_state.tab_scroll = state.keycode_picker_state.category_index;
-                }
+        KeyCode::Up => {
+            if state.keycode_picker_state.selected > 0 {
+                state.keycode_picker_state.selected -= 1;
             }
             Ok(false)
         }
-        KeyCode::Right => {
-            if state.keycode_picker_state.category_index < total_tabs - 1 {
-                state.keycode_picker_state.category_index += 1;
-                state.keycode_picker_state.selected = 0;
-                // Adjust scroll if needed (rough estimate: scroll when > 5 tabs from start)
-                if state.keycode_picker_state.category_index > state.keycode_picker_state.tab_scroll + 5 {
-                    state.keycode_picker_state.tab_scroll = state.keycode_picker_state.category_index.saturating_sub(5);
-                }
+        KeyCode::Down => {
+            let keycodes = get_filtered_keycodes(state);
+            if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
+                state.keycode_picker_state.selected += 1;
             }
             Ok(false)
         }
-        // Tab/Shift+Tab for category cycling
-        KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
-            if state.keycode_picker_state.category_index > 0 {
-                state.keycode_picker_state.category_index -= 1;
-            } else {
-                state.keycode_picker_state.category_index = total_tabs - 1;
-            }
+        KeyCode::Home => {
             state.keycode_picker_state.selected = 0;
             Ok(false)
         }
-        KeyCode::Tab => {
-            state.keycode_picker_state.category_index = (state.keycode_picker_state.category_index + 1) % total_tabs;
-            state.keycode_picker_state.selected = 0;
+        KeyCode::End => {
+            let keycodes = get_filtered_keycodes(state);
+            state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
             Ok(false)
         }
-        // Number keys 0-9 for quick category jump
-        KeyCode::Char(c) if c.is_ascii_digit() => {
-            let idx = c.to_digit(10).unwrap() as usize;
-            if idx < total_tabs {
-                state.keycode_picker_state.category_index = idx;
-                state.keycode_picker_state.selected = 0;
-                let category_name = if idx == 0 {
-                    "All".to_string()
-                } else {
-                    categories
-                        .get(idx - 1)
-                        .map(|c| c.name.clone())
-                        .unwrap_or_else(|| "Unknown".to_string())
-                };
-                state.set_status(format!("Category: {}", category_name));
-            }
+        KeyCode::PageUp => {
+            state.keycode_picker_state.selected = 
+                state.keycode_picker_state.selected.saturating_sub(10);
+            Ok(false)
+        }
+        KeyCode::PageDown => {
+            let keycodes = get_filtered_keycodes(state);
+            state.keycode_picker_state.selected = 
+                (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
             Ok(false)
         }
         KeyCode::Char(c) => {
@@ -427,83 +488,27 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
             state.keycode_picker_state.selected = 0; // Reset selection
             Ok(false)
         }
-        KeyCode::Up => {
-            // Navigate up in list
-            if state.keycode_picker_state.selected > 0 {
-                state.keycode_picker_state.selected -= 1;
-            }
-            Ok(false)
-        }
-        KeyCode::Down => {
-            // Navigate down in list
-            let category_index = state.keycode_picker_state.category_index;
-            let active_category = if category_index == 0 {
-                None
-            } else {
-                categories.get(category_index - 1).map(|c| c.id.as_str())
-            };
-
-            let keycodes = if let Some(cat_id) = active_category {
-                state
-                    .keycode_db
-                    .search_in_category(&state.keycode_picker_state.search, cat_id)
-            } else {
-                state.keycode_db.search(&state.keycode_picker_state.search)
-            };
-
-            if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
-                state.keycode_picker_state.selected += 1;
-            }
-            Ok(false)
-        }
-        KeyCode::Home => {
-            state.keycode_picker_state.selected = 0;
-            Ok(false)
-        }
-        KeyCode::End => {
-            let category_index = state.keycode_picker_state.category_index;
-            let active_category = if category_index == 0 {
-                None
-            } else {
-                categories.get(category_index - 1).map(|c| c.id.as_str())
-            };
-
-            let keycodes = if let Some(cat_id) = active_category {
-                state
-                    .keycode_db
-                    .search_in_category(&state.keycode_picker_state.search, cat_id)
-            } else {
-                state.keycode_db.search(&state.keycode_picker_state.search)
-            };
-
-            state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
-            Ok(false)
-        }
-        KeyCode::PageUp => {
-            state.keycode_picker_state.selected = state.keycode_picker_state.selected.saturating_sub(10);
-            Ok(false)
-        }
-        KeyCode::PageDown => {
-            let category_index = state.keycode_picker_state.category_index;
-            let active_category = if category_index == 0 {
-                None
-            } else {
-                categories.get(category_index - 1).map(|c| c.id.as_str())
-            };
-
-            let keycodes = if let Some(cat_id) = active_category {
-                state
-                    .keycode_db
-                    .search_in_category(&state.keycode_picker_state.search, cat_id)
-            } else {
-                state.keycode_db.search(&state.keycode_picker_state.search)
-            };
-
-            state.keycode_picker_state.selected = 
-                (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
-            Ok(false)
-        }
         _ => Ok(false),
+    }
+}
+
+/// Get filtered keycodes based on current search and category
+fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
+    let categories = state.keycode_db.categories();
+    let category_index = state.keycode_picker_state.category_index;
+    
+    let active_category = if category_index == 0 {
+        None
+    } else {
+        categories.get(category_index - 1).map(|c| c.id.as_str())
+    };
+
+    if let Some(cat_id) = active_category {
+        state
+            .keycode_db
+            .search_in_category(&state.keycode_picker_state.search, cat_id)
+    } else {
+        state.keycode_db.search(&state.keycode_picker_state.search)
     }
 }
 
