@@ -483,6 +483,92 @@ impl Layout {
         (RgbColor::default(), false)
     }
 
+    /// Gets a layer by its unique ID.
+    #[must_use]
+    pub fn get_layer_by_id(&self, id: &str) -> Option<&Layer> {
+        self.layers.iter().find(|layer| layer.id == id)
+    }
+
+    /// Gets the index of a layer by its unique ID.
+    #[must_use]
+    pub fn get_layer_index_by_id(&self, id: &str) -> Option<usize> {
+        self.layers.iter().position(|layer| layer.id == id)
+    }
+
+    /// Checks if a keycode is a layer-switching keycode.
+    /// Matches: MO, TG, TO, DF, OSL, TT, LT, LM
+    #[must_use]
+    pub fn is_layer_keycode(keycode: &str) -> bool {
+        // Check for simple layer keycodes: MO(x), TG(x), TO(x), DF(x), OSL(x), TT(x)
+        let simple_layer_regex = regex::Regex::new(r"^(MO|TG|TO|DF|OSL|TT)\(").unwrap();
+        // Check for LT(layer, keycode) and LM(layer, mod)
+        let compound_layer_regex = regex::Regex::new(r"^(LT|LM)\(").unwrap();
+        
+        simple_layer_regex.is_match(keycode) || compound_layer_regex.is_match(keycode)
+    }
+
+    /// Extracts the layer reference from a keycode.
+    /// Returns (prefix, layer_ref, suffix) where layer_ref is either a number or @uuid
+    /// For LT(layer, kc), suffix contains ", kc)"
+    #[must_use]
+    pub fn parse_layer_keycode(keycode: &str) -> Option<(String, String, String)> {
+        // Simple layer keycodes: MO(@uuid), TG(1), etc.
+        let simple_regex = regex::Regex::new(r"^(MO|TG|TO|DF|OSL|TT)\(([^)]+)\)$").unwrap();
+        if let Some(caps) = simple_regex.captures(keycode) {
+            return Some((
+                caps[1].to_string(),
+                caps[2].to_string(),
+                String::new(),
+            ));
+        }
+
+        // Compound layer keycodes: LT(@uuid, KC_A), LM(1, MOD_LSFT)
+        let compound_regex = regex::Regex::new(r"^(LT|LM)\(([^,]+),\s*(.+)\)$").unwrap();
+        if let Some(caps) = compound_regex.captures(keycode) {
+            return Some((
+                caps[1].to_string(),
+                caps[2].to_string(),
+                format!(", {})", caps[3].to_string()),
+            ));
+        }
+
+        None
+    }
+
+    /// Resolves layer references in a keycode to layer indices.
+    /// Converts @uuid references to the current layer index.
+    /// Returns None if the layer reference is invalid.
+    #[must_use]
+    pub fn resolve_layer_keycode(&self, keycode: &str) -> Option<String> {
+        let (prefix, layer_ref, suffix) = Self::parse_layer_keycode(keycode)?;
+
+        // Check if it's a layer ID reference (starts with @)
+        let layer_index = if layer_ref.starts_with('@') {
+            let layer_id = &layer_ref[1..]; // Remove @ prefix
+            self.get_layer_index_by_id(layer_id)?
+        } else {
+            // It's already a number, try to parse it
+            layer_ref.parse::<usize>().ok()?
+        };
+
+        if suffix.is_empty() {
+            Some(format!("{}({})", prefix, layer_index))
+        } else {
+            Some(format!("{}({}{}", prefix, layer_index, suffix))
+        }
+    }
+
+    /// Creates a layer keycode with a reference to a layer by ID.
+    /// Example: create_layer_keycode("MO", "abc-123", None) -> "MO(@abc-123)"
+    /// Example: create_layer_keycode("LT", "abc-123", Some("KC_SPC")) -> "LT(@abc-123, KC_SPC)"
+    #[must_use]
+    pub fn create_layer_keycode(prefix: &str, layer_id: &str, extra: Option<&str>) -> String {
+        match extra {
+            Some(e) => format!("{}(@{}, {})", prefix, layer_id, e),
+            None => format!("{}(@{})", prefix, layer_id),
+        }
+    }
+
     /// Validates the layout structure.
     ///
     /// Checks:

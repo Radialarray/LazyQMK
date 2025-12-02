@@ -28,6 +28,7 @@ dirs = "5.0"
 chrono = { version = "0.4", features = ["serde"] }
 arboard = "3.4"
 dark-light = "2.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
 tempfile = "3.0"

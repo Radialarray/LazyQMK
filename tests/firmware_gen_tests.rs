@@ -51,6 +51,7 @@ fn create_test_layout() -> Layout {
     let layer0 = Layer {
         number: 0,
         name: "Base".to_string(),
+        id: uuid::Uuid::new_v4().to_string(),
         default_color: RgbColor::new(255, 255, 255),
         category_id: None,
         keys: keys.clone(),
@@ -65,6 +66,7 @@ fn create_test_layout() -> Layout {
     let layer1 = Layer {
         number: 1,
         name: "Function".to_string(),
+        id: uuid::Uuid::new_v4().to_string(),
         default_color: RgbColor::new(100, 100, 255),
         category_id: None,
         keys: layer1_keys,

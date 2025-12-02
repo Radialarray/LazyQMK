@@ -3,6 +3,7 @@
 use crate::models::RgbColor;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Position in visual grid coordinates (user's view).
 ///
@@ -107,6 +108,9 @@ impl KeyDefinition {
 /// - Category ID must exist in parent Layout.categories if Some
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Layer {
+    /// Unique identifier for this layer (stable across renames/reorders)
+    #[serde(default = "generate_layer_id")]
+    pub id: String,
     /// Layer number (0-based, max 255)
     pub number: u8,
     /// Human-readable name (e.g., "Base", "Lower", "Raise")
@@ -122,6 +126,11 @@ pub struct Layer {
     /// but individual key colors and key category colors still work.
     #[serde(default = "default_layer_colors_enabled")]
     pub layer_colors_enabled: bool,
+}
+
+/// Generates a new unique layer ID
+fn generate_layer_id() -> String {
+    Uuid::new_v4().to_string()
 }
 
 /// Default value for layer_colors_enabled (true)
@@ -149,6 +158,7 @@ impl Layer {
         Self::validate_name(&name)?;
 
         Ok(Self {
+            id: generate_layer_id(),
             number,
             name,
             default_color,

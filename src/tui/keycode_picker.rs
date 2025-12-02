@@ -10,7 +10,8 @@ use ratatui::{
     Frame,
 };
 
-use super::AppState;
+use super::layer_picker::LayerKeycodeType;
+use super::{AppState, LayerPickerState, PopupType};
 
 /// Keycode picker state
 #[derive(Debug, Clone)]
@@ -182,17 +183,33 @@ pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> 
                 .get(state.keycode_picker_state.selected)
                 .map(|kc| kc.code.clone());
 
-            // Select current keycode and close
+            // Select current keycode
             if let Some(keycode) = selected_keycode_opt {
+                // Check if this is a layer-switching keycode (MO, TG, TO, etc.)
+                if let Some(layer_type) = LayerKeycodeType::from_keycode(&keycode) {
+                    // Switch to layer picker for selecting which layer
+                    state.layer_picker_state = LayerPickerState::with_prefix(layer_type.prefix());
+                    state.active_popup = Some(PopupType::LayerPicker);
+                    state.keycode_picker_state.reset();
+                    state.set_status(format!(
+                        "Select layer for {} - {}",
+                        layer_type.prefix(),
+                        layer_type.description()
+                    ));
+                    return Ok(false);
+                }
+
+                // Regular keycode - assign directly
                 if let Some(selected_key) = state.get_selected_key_mut() {
                     selected_key.keycode = keycode.clone();
                     state.mark_dirty();
                     state.set_status(format!("Keycode assigned: {keycode}"));
                 }
+                
+                state.active_popup = None;
+                state.keycode_picker_state.reset();
             }
 
-            state.active_popup = None;
-            state.keycode_picker_state.reset();
             Ok(false)
         }
         KeyCode::Char(c) if c.is_ascii_digit() && ('1'..='8').contains(&c) => {

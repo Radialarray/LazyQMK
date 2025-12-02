@@ -75,6 +75,9 @@ fn generate_layer(layer: &crate::models::Layer) -> Result<String> {
     // Layer header: ## Layer N: Name
     output.push_str(&format!("## Layer {}: {}\n", layer.number, layer.name));
 
+    // Layer ID: **ID**: uuid (always write to preserve references)
+    output.push_str(&format!("**ID**: {}\n", layer.id));
+
     // Layer color: **Color**: #RRGGBB
     output.push_str(&format!("**Color**: {}\n", layer.default_color.to_hex()));
 
@@ -271,6 +274,7 @@ mod tests {
         };
 
         let mut layer = Layer {
+            id: "test-layer-0".to_string(),
             number: 0,
             name: "Base".to_string(),
             default_color: RgbColor::new(128, 128, 128),

@@ -177,6 +177,9 @@ impl<'a> FirmwareGenerator<'a> {
     /// This is the critical transformation: visual position → matrix → layout order.
     /// The layout order matches the info.json layout array, which is what QMK's
     /// LAYOUT macro expects.
+    ///
+    /// Layer references (e.g., `MO(@uuid)`) are resolved to numeric indices
+    /// (e.g., `MO(1)`) for firmware compatibility.
     fn generate_layer_keys_by_layout(
         &self,
         layer: &crate::models::layer::Layer,
@@ -199,11 +202,29 @@ impl<'a> FirmwareGenerator<'a> {
                     )
                 })?;
 
+            // Resolve layer references in keycode (e.g., MO(@uuid) -> MO(1))
+            let resolved_keycode = self.resolve_keycode(&key.keycode);
+
             // Store keycode at layout position
-            keys_by_layout[layout_idx as usize].clone_from(&key.keycode);
+            keys_by_layout[layout_idx as usize] = resolved_keycode;
         }
 
         Ok(keys_by_layout)
+    }
+
+    /// Resolves a keycode, converting layer references to numeric indices.
+    ///
+    /// If the keycode contains a layer reference like `MO(@uuid)`, it will be
+    /// resolved to the numeric index like `MO(1)`. If resolution fails (e.g.,
+    /// the referenced layer no longer exists), the original keycode is returned.
+    fn resolve_keycode(&self, keycode: &str) -> String {
+        // Try to resolve layer references
+        if let Some(resolved) = self.layout.resolve_layer_keycode(keycode) {
+            resolved
+        } else {
+            // Not a layer keycode or resolution failed - use as-is
+            keycode.to_string()
+        }
     }
 
     /// Generates key assignments for a layer ordered by LED index.

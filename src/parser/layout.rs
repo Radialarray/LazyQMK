@@ -253,6 +253,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     let mut layer_color = None;
     let mut layer_category = None;
     let mut layer_colors_enabled = true; // Default to true
+    let mut layer_id = None; // Optional layer ID for persistence
 
     while line_num < lines.len() {
         let line = lines[line_num].trim();
@@ -267,6 +268,18 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
             let color_str = line.strip_prefix("**Color**:").unwrap().trim();
             layer_color =
                 Some(RgbColor::from_hex(color_str).context("Failed to parse layer color")?);
+            line_num += 1;
+            continue;
+        }
+
+        // Parse optional ID: **ID**: uuid
+        if line.starts_with("**ID**:") {
+            layer_id = Some(
+                line.strip_prefix("**ID**:")
+                    .unwrap()
+                    .trim()
+                    .to_string(),
+            );
             line_num += 1;
             continue;
         }
@@ -309,6 +322,10 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
 
     // Create layer
     let mut layer = Layer::new(layer_number, layer_name, color)?;
+    // Use persisted ID if available, otherwise keep the generated one
+    if let Some(id) = layer_id {
+        layer.id = id;
+    }
     layer.category_id = layer_category;
     layer.layer_colors_enabled = layer_colors_enabled;
 

@@ -12,6 +12,7 @@ pub mod help_overlay;
 pub mod keyboard;
 pub mod keycode_picker;
 pub mod layer_manager;
+pub mod layer_picker;
 pub mod layout_picker;
 pub mod metadata_editor;
 #[allow(dead_code)]
@@ -52,6 +53,7 @@ pub use help_overlay::HelpOverlayState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use layer_manager::LayerManagerState;
+pub use layer_picker::LayerPickerState;
 pub use metadata_editor::MetadataEditorState;
 pub use settings_manager::SettingsManagerState;
 pub use status_bar::StatusBar;
@@ -179,6 +181,8 @@ pub enum PopupType {
     CategoryManager,
     /// Layer manager popup
     LayerManager,
+    /// Layer picker popup (for layer-switching keycodes)
+    LayerPicker,
     /// Template browser popup
     TemplateBrowser,
     /// Template save dialog popup
@@ -257,6 +261,8 @@ pub struct AppState {
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
     /// Settings manager component state
     pub settings_manager_state: SettingsManagerState,
+    /// Layer picker component state
+    pub layer_picker_state: LayerPickerState,
 
     // System resources
     /// Keycode database
@@ -340,6 +346,7 @@ impl AppState {
             layout_picker_state: config_dialogs::LayoutPickerState::new(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
             settings_manager_state: SettingsManagerState::new(),
+            layer_picker_state: LayerPickerState::new(),
             keycode_db,
             geometry,
             mapping,
@@ -659,6 +666,14 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 &state.theme,
             );
         }
+        PopupType::LayerPicker => {
+            layer_picker::render_layer_picker(
+                f,
+                &state.layer_picker_state,
+                &state.layout.layers,
+                &state.theme,
+            );
+        }
         PopupType::TemplateBrowser => {
             template_browser::render(f, &state.template_browser_state, f.size(), &state.theme);
         }
@@ -894,6 +909,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::CategoryPicker) => category_picker::handle_input(state, key),
         Some(PopupType::CategoryManager) => handle_category_manager_input(state, key),
         Some(PopupType::LayerManager) => handle_layer_manager_input(state, key),
+        Some(PopupType::LayerPicker) => handle_layer_picker_input(state, key),
         Some(PopupType::TemplateBrowser) => handle_template_browser_input(state, key),
         Some(PopupType::TemplateSaveDialog) => handle_template_save_dialog_input(state, key),
         Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
@@ -1068,6 +1084,47 @@ fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Res
         }
     }
     Ok(false)
+}
+
+/// Handle input for layer picker (for layer-switching keycodes)
+fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    match key.code {
+        KeyCode::Esc => {
+            state.active_popup = None;
+            state.layer_picker_state.reset();
+            state.set_status("Layer selection cancelled");
+            Ok(false)
+        }
+        KeyCode::Up => {
+            let layer_count = state.layout.layers.len();
+            state.layer_picker_state.select_previous(layer_count);
+            Ok(false)
+        }
+        KeyCode::Down => {
+            let layer_count = state.layout.layers.len();
+            state.layer_picker_state.select_next(layer_count);
+            Ok(false)
+        }
+        KeyCode::Enter => {
+            // Get the selected layer and build the keycode
+            let selected_idx = state.layer_picker_state.selected;
+            if let Some(layer) = state.layout.layers.get(selected_idx) {
+                let keycode = state.layer_picker_state.build_keycode(layer);
+                
+                // Assign to the selected key
+                if let Some(key) = state.get_selected_key_mut() {
+                    key.keycode = keycode.clone();
+                    state.mark_dirty();
+                    state.set_status(format!("Assigned: {}", keycode));
+                }
+            }
+            
+            state.active_popup = None;
+            state.layer_picker_state.reset();
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
 }
 
 /// Handle input for setup wizard
