@@ -11,6 +11,7 @@ pub mod config_dialogs;
 pub mod help_overlay;
 pub mod keyboard;
 pub mod keycode_picker;
+pub mod layer_manager;
 pub mod layout_picker;
 pub mod metadata_editor;
 #[allow(dead_code)]
@@ -49,6 +50,7 @@ pub use color_picker::ColorPickerState;
 pub use help_overlay::HelpOverlayState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
+pub use layer_manager::LayerManagerState;
 pub use metadata_editor::MetadataEditorState;
 pub use status_bar::StatusBar;
 pub use template_browser::TemplateBrowserState;
@@ -173,6 +175,8 @@ pub enum PopupType {
     CategoryPicker,
     /// Category manager popup
     CategoryManager,
+    /// Layer manager popup
+    LayerManager,
     /// Template browser popup
     TemplateBrowser,
     /// Template save dialog popup
@@ -231,6 +235,8 @@ pub struct AppState {
     pub category_picker_context: Option<CategoryPickerContext>,
     /// Category manager component state
     pub category_manager_state: CategoryManagerState,
+    /// Layer manager component state
+    pub layer_manager_state: LayerManagerState,
     /// Build log component state
     pub build_log_state: build_log::BuildLogState,
     /// Template browser component state
@@ -319,6 +325,7 @@ impl AppState {
             category_picker_state: CategoryPickerState::new(),
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
+            layer_manager_state: LayerManagerState::new(),
             build_log_state: build_log::BuildLogState::new(),
             template_browser_state: TemplateBrowserState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
@@ -636,6 +643,15 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 &state.theme,
             );
         }
+        PopupType::LayerManager => {
+            layer_manager::render_layer_manager(
+                f,
+                f.size(),
+                &state.layer_manager_state,
+                &state.layout.layers,
+                &state.theme,
+            );
+        }
         PopupType::TemplateBrowser => {
             template_browser::render(f, &state.template_browser_state, f.size(), &state.theme);
         }
@@ -861,6 +877,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::ColorPicker) => color_picker::handle_input(state, key),
         Some(PopupType::CategoryPicker) => category_picker::handle_input(state, key),
         Some(PopupType::CategoryManager) => handle_category_manager_input(state, key),
+        Some(PopupType::LayerManager) => handle_layer_manager_input(state, key),
         Some(PopupType::TemplateBrowser) => handle_template_browser_input(state, key),
         Some(PopupType::TemplateSaveDialog) => handle_template_save_dialog_input(state, key),
         Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
@@ -1532,6 +1549,14 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
+        // Layer Manager (Shift+N)
+        (KeyCode::Char('N'), KeyModifiers::SHIFT) => {
+            state.layer_manager_state.reset(state.current_layer);
+            state.active_popup = Some(PopupType::LayerManager);
+            state.set_status("Layer Manager - n: New, r: Rename, v: Toggle Colors, d: Delete");
+            Ok(false)
+        }
+
         // Browse templates (t key)
         (KeyCode::Char('t'), _) => {
             // Check for unsaved changes before loading template
@@ -1904,6 +1929,233 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
             // We just need to handle the completion
             // This will be managed by returning from the color picker
             Ok(false)
+        }
+    }
+}
+
+/// Handle input for layer manager
+fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    use layer_manager::ManagerMode;
+
+    match &state.layer_manager_state.mode.clone() {
+        ManagerMode::Browsing => {
+            match key.code {
+                KeyCode::Esc => {
+                    state.active_popup = None;
+                    state.set_status("Layer manager closed");
+                    Ok(false)
+                }
+                KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Move layer up (reorder)
+                    let selected = state.layer_manager_state.selected;
+                    if selected > 0 && state.layout.layers.len() > 1 {
+                        state.layout.layers.swap(selected, selected - 1);
+                        state.layer_manager_state.selected = selected - 1;
+                        // Renumber layers
+                        for (i, layer) in state.layout.layers.iter_mut().enumerate() {
+                            layer.number = i as u8;
+                        }
+                        state.mark_dirty();
+                        state.set_status(format!("Layer moved up to position {}", selected - 1));
+                    }
+                    Ok(false)
+                }
+                KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Move layer down (reorder)
+                    let selected = state.layer_manager_state.selected;
+                    if selected < state.layout.layers.len() - 1 {
+                        state.layout.layers.swap(selected, selected + 1);
+                        state.layer_manager_state.selected = selected + 1;
+                        // Renumber layers
+                        for (i, layer) in state.layout.layers.iter_mut().enumerate() {
+                            layer.number = i as u8;
+                        }
+                        state.mark_dirty();
+                        state.set_status(format!("Layer moved down to position {}", selected + 1));
+                    }
+                    Ok(false)
+                }
+                KeyCode::Up => {
+                    state
+                        .layer_manager_state
+                        .select_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down => {
+                    state
+                        .layer_manager_state
+                        .select_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Go to selected layer
+                    state.current_layer = state.layer_manager_state.selected;
+                    state.active_popup = None;
+                    state.set_status(format!("Switched to layer {}", state.current_layer));
+                    Ok(false)
+                }
+                KeyCode::Char('n') => {
+                    // Start creating new layer
+                    state.layer_manager_state.start_creating();
+                    state.set_status("Enter layer name");
+                    Ok(false)
+                }
+                KeyCode::Char('r') => {
+                    // Start renaming
+                    let selected_idx = state.layer_manager_state.selected;
+                    if let Some(layer) = state.layout.layers.get(selected_idx) {
+                        let layer_clone = layer.clone();
+                        state.layer_manager_state.start_renaming(&layer_clone);
+                        state.set_status("Enter new layer name");
+                    } else {
+                        state.set_error("No layer selected");
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char('v') => {
+                    // Toggle layer colors
+                    let selected_idx = state.layer_manager_state.selected;
+                    if let Some(enabled) = state.layout.toggle_layer_colors(selected_idx) {
+                        state.mark_dirty();
+                        state.set_status(if enabled {
+                            format!("Layer {} colors enabled", selected_idx)
+                        } else {
+                            format!("Layer {} colors disabled", selected_idx)
+                        });
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char('d') => {
+                    // Start delete confirmation
+                    if state.layout.layers.len() <= 1 {
+                        state.set_error("Cannot delete the last layer");
+                    } else {
+                        state.layer_manager_state.start_deleting();
+                        state.set_status("Confirm deletion - y: Yes, n: No");
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+        ManagerMode::CreatingName { .. } | ManagerMode::Renaming { .. } => {
+            // Handle text input
+            match key.code {
+                KeyCode::Esc => {
+                    state.layer_manager_state.cancel();
+                    state.set_status("Cancelled");
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Process the input
+                    if let Some(input) = state.layer_manager_state.get_input() {
+                        let input = input.to_string();
+
+                        if input.trim().is_empty() {
+                            state.set_error("Layer name cannot be empty");
+                            return Ok(false);
+                        }
+
+                        match &state.layer_manager_state.mode {
+                            ManagerMode::CreatingName { .. } => {
+                                // Create new layer
+                                use crate::models::layer::Layer;
+                                use crate::models::RgbColor;
+                                let new_index = state.layout.layers.len();
+                                
+                                // Use a default color (gray) for new layers
+                                let default_color = RgbColor::new(128, 128, 128);
+                                
+                                match Layer::new(new_index as u8, &input, default_color) {
+                                    Ok(mut new_layer) => {
+                                        // Copy key positions from first layer (with transparent keycodes)
+                                        if let Some(first_layer) = state.layout.layers.first() {
+                                            for key in &first_layer.keys {
+                                                use crate::models::layer::KeyDefinition;
+                                                new_layer.add_key(KeyDefinition::new(key.position, "KC_TRNS"));
+                                            }
+                                        }
+                                        
+                                        state.layout.layers.push(new_layer);
+                                        state.layer_manager_state.selected = new_index;
+                                        state.mark_dirty();
+                                        state.layer_manager_state.cancel();
+                                        state.set_status(format!("Layer '{}' created", input));
+                                    }
+                                    Err(e) => {
+                                        state.set_error(format!("Failed to create layer: {}", e));
+                                    }
+                                }
+                            }
+                            ManagerMode::Renaming { layer_index, .. } => {
+                                // Update layer name
+                                let layer_index = *layer_index;
+                                if let Some(layer) = state.layout.layers.get_mut(layer_index) {
+                                    layer.name = input.clone();
+                                    state.mark_dirty();
+                                    state.layer_manager_state.cancel();
+                                    state.set_status(format!("Layer renamed to '{}'", input));
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char(c) => {
+                    if let Some(input) = state.layer_manager_state.get_input_mut() {
+                        input.push(c);
+                    }
+                    Ok(false)
+                }
+                KeyCode::Backspace => {
+                    if let Some(input) = state.layer_manager_state.get_input_mut() {
+                        input.pop();
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+        ManagerMode::ConfirmingDelete { layer_index } => {
+            let layer_index = *layer_index;
+            match key.code {
+                KeyCode::Char('y' | 'Y') => {
+                    // Delete layer (only if not the last one)
+                    if state.layout.layers.len() > 1 {
+                        state.layout.layers.remove(layer_index);
+
+                        // Renumber remaining layers
+                        for (i, layer) in state.layout.layers.iter_mut().enumerate() {
+                            layer.number = i as u8;
+                        }
+
+                        // Adjust current layer if needed
+                        if state.current_layer >= state.layout.layers.len() {
+                            state.current_layer = state.layout.layers.len() - 1;
+                        }
+
+                        // Adjust selection if needed
+                        if state.layer_manager_state.selected >= state.layout.layers.len() {
+                            state.layer_manager_state.selected = state.layout.layers.len() - 1;
+                        }
+
+                        state.mark_dirty();
+                        state.layer_manager_state.cancel();
+                        state.set_status("Layer deleted");
+                    } else {
+                        state.set_error("Cannot delete the last layer");
+                        state.layer_manager_state.cancel();
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char('n' | 'N') | KeyCode::Esc => {
+                    state.layer_manager_state.cancel();
+                    state.set_status("Deletion cancelled");
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
         }
     }
 }

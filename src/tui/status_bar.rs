@@ -82,6 +82,9 @@ impl StatusBar {
             Some(PopupType::CategoryManager) => {
                 "n: New | r: Rename | c: Color | d: Delete | Enter: Select | Esc: Close"
             }
+            Some(PopupType::LayerManager) => {
+                "n: New | r: Rename | v: Toggle Colors | d: Delete | Shift+↑↓: Reorder | Esc: Close"
+            }
             Some(PopupType::TemplateBrowser) => {
                 "↑↓: Navigate | Enter: Load | /: Search | Esc: Cancel"
             }
