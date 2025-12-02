@@ -129,6 +129,11 @@ impl HelpOverlayState {
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+N", Style::default().fg(theme.success)),
+                Span::styled("             Open layer manager", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Tab", Style::default().fg(theme.success)),
                 Span::styled("                 Next layer", Style::default().fg(theme.text)),
             ]),
@@ -136,6 +141,45 @@ impl HelpOverlayState {
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Shift+Tab", Style::default().fg(theme.success)),
                 Span::styled("           Previous layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In layer manager:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("n", Style::default().fg(theme.success)),
+                Span::styled("                   Create new layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("r", Style::default().fg(theme.success)),
+                Span::styled("                   Rename layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("v", Style::default().fg(theme.success)),
+                Span::styled("                   Toggle layer colors", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("d", Style::default().fg(theme.success)),
+                Span::styled("                   Delete layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+↑/↓", Style::default().fg(theme.success)),
+                Span::styled("           Reorder layers", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Go to selected layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Close manager", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Key Editor Section
