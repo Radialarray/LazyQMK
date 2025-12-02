@@ -30,6 +30,7 @@ fn create_test_layout() -> Layout {
         tags: vec!["test".to_string()],
         is_template: false,
         version: "1.0.0".to_string(),
+        layout_variant: None,
     };
 
     // Create a simple 2x3 layout (6 keys)
@@ -82,9 +83,11 @@ fn create_test_geometry() -> KeyboardGeometry {
     // Map positions to matrix coordinates and LED indices
     for row in 0..2 {
         for col in 0..3 {
+            let layout_idx = row * 3 + col;
             let key_geo = KeyGeometry {
                 matrix_position: (row, col),
-                led_index: (row * 3 + col),
+                led_index: layout_idx,
+                layout_index: layout_idx,
                 visual_x: f32::from(col) * 2.0,
                 visual_y: f32::from(row) * 2.0,
                 width: 1.0,
@@ -108,6 +111,8 @@ fn create_test_geometry() -> KeyboardGeometry {
 fn create_test_mapping() -> VisualLayoutMapping {
     let mut led_to_matrix = Vec::new();
     let mut matrix_to_led = HashMap::new();
+    let mut layout_to_matrix = Vec::new();
+    let mut matrix_to_layout = HashMap::new();
     let mut matrix_to_visual = HashMap::new();
     let mut visual_to_matrix = HashMap::new();
 
@@ -115,12 +120,15 @@ fn create_test_mapping() -> VisualLayoutMapping {
         for col in 0..3 {
             let pos = Position { row, col };
             let matrix_pos = (row, col);
-            let led_idx = (row * 3 + col);
+            let led_idx = row * 3 + col;
+            let layout_idx = row * 3 + col;
 
             // led_to_matrix is a Vec indexed by LED index
             led_to_matrix.push(matrix_pos);
+            layout_to_matrix.push(matrix_pos);
 
             matrix_to_led.insert(matrix_pos, led_idx);
+            matrix_to_layout.insert(matrix_pos, layout_idx);
             matrix_to_visual.insert(matrix_pos, pos);
             visual_to_matrix.insert(pos, matrix_pos);
         }
@@ -129,6 +137,8 @@ fn create_test_mapping() -> VisualLayoutMapping {
     VisualLayoutMapping {
         led_to_matrix,
         matrix_to_led,
+        layout_to_matrix,
+        matrix_to_layout,
         matrix_to_visual,
         visual_to_matrix,
     }
