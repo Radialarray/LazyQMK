@@ -472,13 +472,52 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Left/Right", Style::default().fg(theme.success)),
-                Span::styled("          Change value", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Edit selected setting", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Escape", Style::default().fg(theme.success)),
                 Span::styled("              Close settings", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  Tap-Hold settings (for home-row mods):", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Preset", Style::default().fg(theme.warning)),
+                Span::styled("              Quick config: Default/HomeRowMods/Responsive/Deliberate", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Tapping Term", Style::default().fg(theme.warning)),
+                Span::styled("        Tap vs hold decision time (100-500ms)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Quick Tap Term", Style::default().fg(theme.warning)),
+                Span::styled("      Auto-repeat window after tap", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Hold Mode", Style::default().fg(theme.warning)),
+                Span::styled("           Default/Permissive Hold/Hold On Other Key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Retro Tapping", Style::default().fg(theme.warning)),
+                Span::styled("       Send tap on release after hold timeout", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Flow Tap Term", Style::default().fg(theme.warning)),
+                Span::styled("       Rapid typing window (home-row mods)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Chordal Hold", Style::default().fg(theme.warning)),
+                Span::styled("        Opposite-hand rule for modifiers", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Templates Section

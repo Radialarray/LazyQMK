@@ -14,6 +14,6 @@ pub mod visual_layout_mapping;
 pub use category::Category;
 pub use keyboard_geometry::{KeyGeometry, KeyboardGeometry};
 pub use layer::{KeyDefinition, Layer, Position};
-pub use layout::{InactiveKeyBehavior, Layout, LayoutMetadata};
+pub use layout::{HoldDecisionMode, InactiveKeyBehavior, Layout, LayoutMetadata, TapHoldPreset, TapHoldSettings};
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

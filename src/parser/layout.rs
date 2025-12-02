@@ -106,6 +106,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         layers: Vec::new(),
         categories: Vec::new(),
         inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
+        tap_hold_settings: crate::models::TapHoldSettings::default(),
     };
 
     // Parse content (layers and categories)
@@ -478,9 +479,12 @@ fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
 
 /// Parses the settings section.
 fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
-    use crate::models::InactiveKeyBehavior;
-    
+    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
+
     let mut line_num = start_line + 1; // Skip "## Settings" header
+
+    // Track if a preset was explicitly specified in the file
+    let mut explicit_preset: Option<TapHoldPreset> = None;
 
     while line_num < lines.len() {
         let line = lines[line_num].trim();
@@ -503,7 +507,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .unwrap()
                 .trim()
                 .to_lowercase();
-            
+
             layout.inactive_key_behavior = match value.as_str() {
                 "off" | "black" => InactiveKeyBehavior::Off,
                 "dim" | "dim (50%)" | "50%" => InactiveKeyBehavior::Dim,
@@ -511,7 +515,137 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
             };
         }
 
+        // === Tap-Hold Settings ===
+
+        // Parse Tap-Hold Preset - remember it for later
+        if line.starts_with("**Tap-Hold Preset**:") {
+            let value = line
+                .strip_prefix("**Tap-Hold Preset**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            let preset = match value.as_str() {
+                "home row mods" | "homerowmods" => TapHoldPreset::HomeRowMods,
+                "responsive" => TapHoldPreset::Responsive,
+                "deliberate" => TapHoldPreset::Deliberate,
+                "custom" => TapHoldPreset::Custom,
+                _ => TapHoldPreset::Default,
+            };
+            explicit_preset = Some(preset);
+            layout.tap_hold_settings.preset = preset;
+        }
+
+        // Parse Tapping Term
+        if line.starts_with("**Tapping Term**:") {
+            let value = line
+                .strip_prefix("**Tapping Term**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches("ms")
+                .trim();
+            if let Ok(term) = value.parse::<u16>() {
+                layout.tap_hold_settings.tapping_term = term;
+            }
+        }
+
+        // Parse Quick Tap Term
+        if line.starts_with("**Quick Tap Term**:") {
+            let value = line
+                .strip_prefix("**Quick Tap Term**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            if value == "auto" || value == "same as tapping term" || value == "none" {
+                layout.tap_hold_settings.quick_tap_term = None;
+            } else {
+                let term_str = value.trim_end_matches("ms").trim();
+                if let Ok(term) = term_str.parse::<u16>() {
+                    layout.tap_hold_settings.quick_tap_term = Some(term);
+                }
+            }
+        }
+
+        // Parse Hold Mode
+        if line.starts_with("**Hold Mode**:") {
+            let value = line
+                .strip_prefix("**Hold Mode**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            layout.tap_hold_settings.hold_mode = match value.as_str() {
+                "permissive" | "permissive hold" => HoldDecisionMode::PermissiveHold,
+                "hold on other key" | "hold on other key press" | "aggressive" => {
+                    HoldDecisionMode::HoldOnOtherKeyPress
+                }
+                _ => HoldDecisionMode::Default,
+            };
+        }
+
+        // Parse Retro Tapping
+        if line.starts_with("**Retro Tapping**:") {
+            let value = line
+                .strip_prefix("**Retro Tapping**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            layout.tap_hold_settings.retro_tapping =
+                value == "on" || value == "true" || value == "yes" || value == "enabled";
+        }
+
+        // Parse Tapping Toggle
+        if line.starts_with("**Tapping Toggle**:") {
+            let value = line
+                .strip_prefix("**Tapping Toggle**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches(" taps")
+                .trim();
+            if let Ok(count) = value.parse::<u8>() {
+                layout.tap_hold_settings.tapping_toggle = count;
+            }
+        }
+
+        // Parse Flow Tap Term
+        if line.starts_with("**Flow Tap Term**:") {
+            let value = line
+                .strip_prefix("**Flow Tap Term**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            if value == "disabled" || value == "off" || value == "none" {
+                layout.tap_hold_settings.flow_tap_term = None;
+            } else {
+                let term_str = value.trim_end_matches("ms").trim();
+                if let Ok(term) = term_str.parse::<u16>() {
+                    layout.tap_hold_settings.flow_tap_term = Some(term);
+                }
+            }
+        }
+
+        // Parse Chordal Hold
+        if line.starts_with("**Chordal Hold**:") {
+            let value = line
+                .strip_prefix("**Chordal Hold**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            layout.tap_hold_settings.chordal_hold =
+                value == "on" || value == "true" || value == "yes" || value == "enabled";
+        }
+
         line_num += 1;
+    }
+
+    // If an explicit preset was specified, ensure it's preserved
+    // (individual setting parsing may have changed it via mark_custom in older code)
+    if let Some(preset) = explicit_preset {
+        layout.tap_hold_settings.preset = preset;
     }
 
     Ok(line_num)

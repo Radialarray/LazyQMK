@@ -208,25 +208,88 @@ fn generate_categories(layout: &Layout) -> String {
 /// Generates the settings section.
 /// Only writes non-default settings to keep files clean.
 fn generate_settings(layout: &Layout) -> Option<String> {
-    use crate::models::InactiveKeyBehavior;
+    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset, TapHoldSettings};
+
+    let default_inactive = InactiveKeyBehavior::default();
+    let default_tap_hold = TapHoldSettings::default();
 
     // Check if we have any non-default settings
-    let has_non_default = layout.inactive_key_behavior != InactiveKeyBehavior::default();
+    let has_inactive_setting = layout.inactive_key_behavior != default_inactive;
+    let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
 
-    if !has_non_default {
+    if !has_inactive_setting && !has_tap_hold_settings {
         return None;
     }
 
     let mut output = String::from("## Settings\n\n");
 
     // Write inactive_key_behavior if not default
-    if layout.inactive_key_behavior != InactiveKeyBehavior::default() {
+    if layout.inactive_key_behavior != default_inactive {
         let value = match layout.inactive_key_behavior {
             InactiveKeyBehavior::ShowColor => "Show Color",
             InactiveKeyBehavior::Off => "Off",
             InactiveKeyBehavior::Dim => "Dim",
         };
         output.push_str(&format!("**Inactive Key Behavior**: {value}\n"));
+    }
+
+    // Write tap-hold settings if any are non-default
+    if has_tap_hold_settings {
+        let ths = &layout.tap_hold_settings;
+
+        // Always write preset if not Default
+        if ths.preset != TapHoldPreset::Default {
+            let preset_name = match ths.preset {
+                TapHoldPreset::Default => "Default",
+                TapHoldPreset::HomeRowMods => "Home Row Mods",
+                TapHoldPreset::Responsive => "Responsive",
+                TapHoldPreset::Deliberate => "Deliberate",
+                TapHoldPreset::Custom => "Custom",
+            };
+            output.push_str(&format!("**Tap-Hold Preset**: {preset_name}\n"));
+        }
+
+        // Write individual settings that differ from default
+        if ths.tapping_term != default_tap_hold.tapping_term {
+            output.push_str(&format!("**Tapping Term**: {}ms\n", ths.tapping_term));
+        }
+
+        if ths.quick_tap_term != default_tap_hold.quick_tap_term {
+            match ths.quick_tap_term {
+                Some(term) => output.push_str(&format!("**Quick Tap Term**: {}ms\n", term)),
+                None => output.push_str("**Quick Tap Term**: Auto\n"),
+            }
+        }
+
+        if ths.hold_mode != default_tap_hold.hold_mode {
+            let mode_name = match ths.hold_mode {
+                HoldDecisionMode::Default => "Default",
+                HoldDecisionMode::PermissiveHold => "Permissive Hold",
+                HoldDecisionMode::HoldOnOtherKeyPress => "Hold On Other Key Press",
+            };
+            output.push_str(&format!("**Hold Mode**: {mode_name}\n"));
+        }
+
+        if ths.retro_tapping != default_tap_hold.retro_tapping {
+            let value = if ths.retro_tapping { "On" } else { "Off" };
+            output.push_str(&format!("**Retro Tapping**: {value}\n"));
+        }
+
+        if ths.tapping_toggle != default_tap_hold.tapping_toggle {
+            output.push_str(&format!("**Tapping Toggle**: {} taps\n", ths.tapping_toggle));
+        }
+
+        if ths.flow_tap_term != default_tap_hold.flow_tap_term {
+            match ths.flow_tap_term {
+                Some(term) => output.push_str(&format!("**Flow Tap Term**: {}ms\n", term)),
+                None => output.push_str("**Flow Tap Term**: Disabled\n"),
+            }
+        }
+
+        if ths.chordal_hold != default_tap_hold.chordal_hold {
+            let value = if ths.chordal_hold { "On" } else { "Off" };
+            output.push_str(&format!("**Chordal Hold**: {value}\n"));
+        }
     }
 
     Some(output)
@@ -313,6 +376,7 @@ mod tests {
             layers: vec![layer],
             categories: vec![category],
             inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
+            tap_hold_settings: crate::models::TapHoldSettings::default(),
         }
     }
 
@@ -449,5 +513,118 @@ mod tests {
         
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::ShowColor);
+    }
+
+    #[test]
+    fn test_tap_hold_settings_round_trip() {
+        use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
+
+        let mut layout = create_test_layout();
+
+        // Test with HomeRowMods preset
+        layout.tap_hold_settings = TapHoldSettings::from_preset(TapHoldPreset::HomeRowMods);
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with HomeRowMods:\n{markdown}");
+        assert!(markdown.contains("## Settings"));
+        assert!(markdown.contains("**Tap-Hold Preset**: Home Row Mods"));
+        assert!(markdown.contains("**Tapping Term**: 175ms"));
+        assert!(markdown.contains("**Retro Tapping**: On"));
+        assert!(markdown.contains("**Flow Tap Term**: 150ms"));
+        assert!(markdown.contains("**Chordal Hold**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.tap_hold_settings.preset, TapHoldPreset::HomeRowMods);
+        assert_eq!(parsed.tap_hold_settings.tapping_term, 175);
+        assert!(parsed.tap_hold_settings.retro_tapping);
+        assert_eq!(parsed.tap_hold_settings.flow_tap_term, Some(150));
+        assert!(parsed.tap_hold_settings.chordal_hold);
+
+        // Test with custom settings
+        layout.tap_hold_settings = TapHoldSettings {
+            tapping_term: 180,
+            quick_tap_term: Some(100),
+            hold_mode: HoldDecisionMode::HoldOnOtherKeyPress,
+            retro_tapping: true,
+            tapping_toggle: 3,
+            flow_tap_term: Some(120),
+            chordal_hold: true,
+            preset: TapHoldPreset::Custom,
+        };
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with Custom:\n{markdown}");
+        assert!(markdown.contains("**Tap-Hold Preset**: Custom"));
+        assert!(markdown.contains("**Tapping Term**: 180ms"));
+        assert!(markdown.contains("**Quick Tap Term**: 100ms"));
+        assert!(markdown.contains("**Hold Mode**: Hold On Other Key Press"));
+        assert!(markdown.contains("**Retro Tapping**: On"));
+        assert!(markdown.contains("**Tapping Toggle**: 3 taps"));
+        assert!(markdown.contains("**Flow Tap Term**: 120ms"));
+        assert!(markdown.contains("**Chordal Hold**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.tap_hold_settings.preset, TapHoldPreset::Custom);
+        assert_eq!(parsed.tap_hold_settings.tapping_term, 180);
+        assert_eq!(parsed.tap_hold_settings.quick_tap_term, Some(100));
+        assert_eq!(
+            parsed.tap_hold_settings.hold_mode,
+            HoldDecisionMode::HoldOnOtherKeyPress
+        );
+        assert!(parsed.tap_hold_settings.retro_tapping);
+        assert_eq!(parsed.tap_hold_settings.tapping_toggle, 3);
+        assert_eq!(parsed.tap_hold_settings.flow_tap_term, Some(120));
+        assert!(parsed.tap_hold_settings.chordal_hold);
+
+        // Test with default settings - should NOT write tap-hold settings
+        layout.tap_hold_settings = TapHoldSettings::default();
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with defaults:\n{markdown}");
+        assert!(!markdown.contains("Tap-Hold"));
+        assert!(!markdown.contains("Tapping Term"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.tap_hold_settings, TapHoldSettings::default());
+    }
+
+    #[test]
+    fn test_tap_hold_responsive_preset_round_trip() {
+        use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
+
+        let mut layout = create_test_layout();
+
+        // Test with Responsive preset
+        layout.tap_hold_settings = TapHoldSettings::from_preset(TapHoldPreset::Responsive);
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with Responsive:\n{markdown}");
+        assert!(markdown.contains("**Tap-Hold Preset**: Responsive"));
+        assert!(markdown.contains("**Tapping Term**: 150ms"));
+        assert!(markdown.contains("**Quick Tap Term**: 100ms"));
+        assert!(markdown.contains("**Hold Mode**: Hold On Other Key Press"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.tap_hold_settings.preset, TapHoldPreset::Responsive);
+        assert_eq!(parsed.tap_hold_settings.tapping_term, 150);
+        assert_eq!(parsed.tap_hold_settings.quick_tap_term, Some(100));
+        assert_eq!(
+            parsed.tap_hold_settings.hold_mode,
+            HoldDecisionMode::HoldOnOtherKeyPress
+        );
+    }
+
+    #[test]
+    fn test_tap_hold_deliberate_preset_round_trip() {
+        use crate::models::{TapHoldPreset, TapHoldSettings};
+
+        let mut layout = create_test_layout();
+
+        // Test with Deliberate preset
+        layout.tap_hold_settings = TapHoldSettings::from_preset(TapHoldPreset::Deliberate);
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with Deliberate:\n{markdown}");
+        assert!(markdown.contains("**Tap-Hold Preset**: Deliberate"));
+        assert!(markdown.contains("**Tapping Term**: 250ms"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.tap_hold_settings.preset, TapHoldPreset::Deliberate);
+        assert_eq!(parsed.tap_hold_settings.tapping_term, 250);
     }
 }

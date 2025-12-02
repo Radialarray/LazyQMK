@@ -554,6 +554,8 @@ impl<'a> FirmwareGenerator<'a> {
     /// Note: RGB_MATRIX_LED_COUNT should be defined in the keyboard's variant-specific
     /// keyboard.json file, not in the keymap config.h.
     fn generate_merged_config_h(&self) -> Result<String> {
+        use crate::models::{HoldDecisionMode, TapHoldSettings};
+
         let mut content = String::new();
  
         // Add our generated configuration
@@ -565,6 +567,63 @@ impl<'a> FirmwareGenerator<'a> {
         content.push_str("\n");
         content.push_str("// Add keymap-specific configuration here\n");
  
+        // === Tap-Hold Settings ===
+        let ths = &self.layout.tap_hold_settings;
+        let default_ths = TapHoldSettings::default();
+
+        // Only emit non-default tap-hold settings
+        if *ths != default_ths {
+            content.push_str("\n// Tap-Hold Configuration\n");
+
+            // Tapping Term
+            if ths.tapping_term != default_ths.tapping_term {
+                content.push_str(&format!("#define TAPPING_TERM {}\n", ths.tapping_term));
+            }
+
+            // Quick Tap Term
+            if ths.quick_tap_term != default_ths.quick_tap_term {
+                if let Some(term) = ths.quick_tap_term {
+                    content.push_str(&format!("#define QUICK_TAP_TERM {}\n", term));
+                }
+                // None means use TAPPING_TERM (QMK default), no need to emit
+            }
+
+            // Hold Mode
+            if ths.hold_mode != default_ths.hold_mode {
+                match ths.hold_mode {
+                    HoldDecisionMode::PermissiveHold => {
+                        content.push_str("#define PERMISSIVE_HOLD\n");
+                    }
+                    HoldDecisionMode::HoldOnOtherKeyPress => {
+                        content.push_str("#define HOLD_ON_OTHER_KEY_PRESS\n");
+                    }
+                    HoldDecisionMode::Default => {}
+                }
+            }
+
+            // Retro Tapping
+            if ths.retro_tapping != default_ths.retro_tapping && ths.retro_tapping {
+                content.push_str("#define RETRO_TAPPING\n");
+            }
+
+            // Tapping Toggle
+            if ths.tapping_toggle != default_ths.tapping_toggle {
+                content.push_str(&format!("#define TAPPING_TOGGLE {}\n", ths.tapping_toggle));
+            }
+
+            // Flow Tap Term (QMK 0.26+)
+            if ths.flow_tap_term != default_ths.flow_tap_term {
+                if let Some(term) = ths.flow_tap_term {
+                    content.push_str(&format!("#define FLOW_TAP_TERM {}\n", term));
+                }
+            }
+
+            // Chordal Hold (QMK 0.26+)
+            if ths.chordal_hold != default_ths.chordal_hold && ths.chordal_hold {
+                content.push_str("#define CHORDAL_HOLD\n");
+            }
+        }
+
         // If the keyboard has RGB matrix and the layout defines
         // any custom colors, default to the TUI-driven lighting
         // mode so firmware reflects the editor by default.
@@ -978,5 +1037,81 @@ mod tests {
         assert!(color_table.contains("{255, 255, 255}")); // White
         assert!(color_table.contains("{255,   0,   0}")); // Red
         assert!(color_table.contains("{  0, 255,   0}")); // Green
+    }
+
+    #[test]
+    fn test_config_h_emits_tap_hold_settings() {
+        use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
+
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Apply HomeRowMods preset
+        layout.tap_hold_settings = TapHoldSettings::from_preset(TapHoldPreset::HomeRowMods);
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Verify tap-hold settings are emitted
+        assert!(config_h.contains("// Tap-Hold Configuration"));
+        assert!(config_h.contains("#define TAPPING_TERM 175"));
+        assert!(config_h.contains("#define QUICK_TAP_TERM 120"));
+        assert!(config_h.contains("#define PERMISSIVE_HOLD"));
+        assert!(config_h.contains("#define RETRO_TAPPING"));
+        assert!(config_h.contains("#define FLOW_TAP_TERM 150"));
+        assert!(config_h.contains("#define CHORDAL_HOLD"));
+    }
+
+    #[test]
+    fn test_config_h_does_not_emit_default_tap_hold() {
+        let (layout, geometry, mapping, config) = create_test_setup();
+
+        // Layout has default tap-hold settings
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should NOT contain tap-hold defines
+        assert!(!config_h.contains("TAPPING_TERM"));
+        assert!(!config_h.contains("QUICK_TAP_TERM"));
+        assert!(!config_h.contains("PERMISSIVE_HOLD"));
+        assert!(!config_h.contains("RETRO_TAPPING"));
+    }
+
+    #[test]
+    fn test_config_h_emits_hold_on_other_key_press() {
+        use crate::models::{HoldDecisionMode, TapHoldSettings};
+
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Set up custom tap-hold settings with HoldOnOtherKeyPress
+        layout.tap_hold_settings = TapHoldSettings {
+            tapping_term: 150,
+            hold_mode: HoldDecisionMode::HoldOnOtherKeyPress,
+            ..TapHoldSettings::default()
+        };
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        assert!(config_h.contains("#define TAPPING_TERM 150"));
+        assert!(config_h.contains("#define HOLD_ON_OTHER_KEY_PRESS"));
+        assert!(!config_h.contains("PERMISSIVE_HOLD"));
+    }
+
+    #[test]
+    fn test_config_h_emits_tapping_toggle() {
+        use crate::models::TapHoldSettings;
+
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Change tapping toggle from default (5) to 3
+        layout.tap_hold_settings = TapHoldSettings {
+            tapping_toggle: 3,
+            ..TapHoldSettings::default()
+        };
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        assert!(config_h.contains("#define TAPPING_TOGGLE 3"));
     }
 }

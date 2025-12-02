@@ -793,6 +793,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 f.size(),
                 &state.settings_manager_state,
                 state.layout.inactive_key_behavior,
+                &state.layout.tap_hold_settings,
                 &state.theme,
             );
         }
@@ -1432,45 +1433,195 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
 
 /// Handle input for settings manager
 fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    use settings_manager::ManagerMode;
-    use crate::models::InactiveKeyBehavior;
+    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
+    use settings_manager::{ManagerMode, SettingItem};
 
     match &state.settings_manager_state.mode.clone() {
-        ManagerMode::Browsing => {
-            match key.code {
-                KeyCode::Esc => {
-                    state.active_popup = None;
-                    state.set_status("Settings closed");
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    let count = settings_manager::SettingItem::all().len();
-                    state.settings_manager_state.select_previous(count);
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    let count = settings_manager::SettingItem::all().len();
-                    state.settings_manager_state.select_next(count);
-                    Ok(false)
-                }
-                KeyCode::Enter => {
-                    // Start editing the selected setting
-                    let settings = settings_manager::SettingItem::all();
-                    if let Some(setting) = settings.get(state.settings_manager_state.selected) {
-                        match setting {
-                            settings_manager::SettingItem::InactiveKeyBehavior => {
-                                state.settings_manager_state
-                                    .start_selecting_inactive_behavior(state.layout.inactive_key_behavior);
-                                state.set_status("Select option with ↑↓, Enter to apply");
-                            }
+        ManagerMode::Browsing => match key.code {
+            KeyCode::Esc => {
+                state.active_popup = None;
+                state.set_status("Settings closed");
+                Ok(false)
+            }
+            KeyCode::Up => {
+                let count = SettingItem::all().len();
+                state.settings_manager_state.select_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down => {
+                let count = SettingItem::all().len();
+                state.settings_manager_state.select_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Start editing the selected setting
+                let settings = SettingItem::all();
+                if let Some(setting) = settings.get(state.settings_manager_state.selected) {
+                    match setting {
+                        SettingItem::InactiveKeyBehavior => {
+                            state
+                                .settings_manager_state
+                                .start_selecting_inactive_behavior(
+                                    state.layout.inactive_key_behavior,
+                                );
+                        }
+                        SettingItem::TapHoldPreset => {
+                            state
+                                .settings_manager_state
+                                .start_selecting_tap_hold_preset(
+                                    state.layout.tap_hold_settings.preset,
+                                );
+                        }
+                        SettingItem::TappingTerm => {
+                            state.settings_manager_state.start_editing_numeric(
+                                *setting,
+                                state.layout.tap_hold_settings.tapping_term,
+                                100,
+                                500,
+                            );
+                        }
+                        SettingItem::QuickTapTerm => {
+                            let current =
+                                state.layout.tap_hold_settings.quick_tap_term.unwrap_or(0);
+                            state
+                                .settings_manager_state
+                                .start_editing_numeric(*setting, current, 0, 500);
+                        }
+                        SettingItem::HoldMode => {
+                            state.settings_manager_state.start_selecting_hold_mode(
+                                state.layout.tap_hold_settings.hold_mode,
+                            );
+                        }
+                        SettingItem::RetroTapping => {
+                            state.settings_manager_state.start_toggling_boolean(
+                                *setting,
+                                state.layout.tap_hold_settings.retro_tapping,
+                            );
+                        }
+                        SettingItem::TappingToggle => {
+                            state.settings_manager_state.start_editing_numeric(
+                                *setting,
+                                state.layout.tap_hold_settings.tapping_toggle as u16,
+                                1,
+                                10,
+                            );
+                        }
+                        SettingItem::FlowTapTerm => {
+                            let current =
+                                state.layout.tap_hold_settings.flow_tap_term.unwrap_or(0);
+                            state
+                                .settings_manager_state
+                                .start_editing_numeric(*setting, current, 0, 300);
+                        }
+                        SettingItem::ChordalHold => {
+                            state.settings_manager_state.start_toggling_boolean(
+                                *setting,
+                                state.layout.tap_hold_settings.chordal_hold,
+                            );
                         }
                     }
-                    Ok(false)
+                    state.set_status("Select option with ↑↓, Enter to apply");
                 }
-                _ => Ok(false),
+                Ok(false)
             }
-        }
-        ManagerMode::SelectingInactiveKeyBehavior { .. } => {
+            _ => Ok(false),
+        },
+        ManagerMode::SelectingInactiveKeyBehavior { .. } => match key.code {
+            KeyCode::Esc => {
+                state.settings_manager_state.cancel();
+                state.set_status("Cancelled");
+                Ok(false)
+            }
+            KeyCode::Up => {
+                let count = InactiveKeyBehavior::all().len();
+                state.settings_manager_state.option_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down => {
+                let count = InactiveKeyBehavior::all().len();
+                state.settings_manager_state.option_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                    if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
+                        state.layout.inactive_key_behavior = behavior;
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                        state.set_status(format!(
+                            "Inactive key behavior set to: {}",
+                            behavior.display_name()
+                        ));
+                    }
+                }
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
+        ManagerMode::SelectingTapHoldPreset { .. } => match key.code {
+            KeyCode::Esc => {
+                state.settings_manager_state.cancel();
+                state.set_status("Cancelled");
+                Ok(false)
+            }
+            KeyCode::Up => {
+                let count = TapHoldPreset::all().len();
+                state.settings_manager_state.option_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down => {
+                let count = TapHoldPreset::all().len();
+                state.settings_manager_state.option_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                    if let Some(&preset) = TapHoldPreset::all().get(selected_idx) {
+                        state.layout.tap_hold_settings.apply_preset(preset);
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                        state.set_status(format!(
+                            "Tap-hold preset set to: {}",
+                            preset.display_name()
+                        ));
+                    }
+                }
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
+        ManagerMode::SelectingHoldMode { .. } => match key.code {
+            KeyCode::Esc => {
+                state.settings_manager_state.cancel();
+                state.set_status("Cancelled");
+                Ok(false)
+            }
+            KeyCode::Up => {
+                let count = HoldDecisionMode::all().len();
+                state.settings_manager_state.option_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down => {
+                let count = HoldDecisionMode::all().len();
+                state.settings_manager_state.option_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                    if let Some(&mode) = HoldDecisionMode::all().get(selected_idx) {
+                        state.layout.tap_hold_settings.hold_mode = mode;
+                        state.layout.tap_hold_settings.mark_custom();
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                        state.set_status(format!("Hold mode set to: {}", mode.display_name()));
+                    }
+                }
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
+        ManagerMode::EditingNumeric { setting, .. } => {
+            let setting = *setting;
             match key.code {
                 KeyCode::Esc => {
                     state.settings_manager_state.cancel();
@@ -1478,33 +1629,115 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     Ok(false)
                 }
                 KeyCode::Up => {
-                    let count = InactiveKeyBehavior::all().len();
-                    state.settings_manager_state.option_previous(count);
+                    state.settings_manager_state.increment_numeric(10);
                     Ok(false)
                 }
                 KeyCode::Down => {
-                    let count = InactiveKeyBehavior::all().len();
-                    state.settings_manager_state.option_next(count);
+                    state.settings_manager_state.decrement_numeric(10);
+                    Ok(false)
+                }
+                KeyCode::Char(c) if c.is_ascii_digit() => {
+                    state.settings_manager_state.handle_char_input(c);
+                    Ok(false)
+                }
+                KeyCode::Backspace => {
+                    state.settings_manager_state.handle_backspace();
                     Ok(false)
                 }
                 KeyCode::Enter => {
-                    // Apply the selected option
-                    if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                        if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
-                            state.layout.inactive_key_behavior = behavior;
-                            state.mark_dirty();
-                            state.settings_manager_state.cancel();
-                            state.set_status(format!(
-                                "Inactive key behavior set to: {}",
-                                behavior.display_name()
-                            ));
-                        }
+                    if let Some(value) = state.settings_manager_state.get_numeric_value() {
+                        apply_numeric_setting(state, setting, value);
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
                     }
                     Ok(false)
                 }
                 _ => Ok(false),
             }
         }
+        ManagerMode::TogglingBoolean { setting, .. } => {
+            let setting = *setting;
+            match key.code {
+                KeyCode::Esc => {
+                    state.settings_manager_state.cancel();
+                    state.set_status("Cancelled");
+                    Ok(false)
+                }
+                KeyCode::Up | KeyCode::Down => {
+                    state.settings_manager_state.option_previous(2);
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    if let Some(value) = state.settings_manager_state.get_boolean_value() {
+                        apply_boolean_setting(state, setting, value);
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+    }
+}
+
+/// Apply a numeric setting value
+fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: u16) {
+    use settings_manager::SettingItem;
+
+    match setting {
+        SettingItem::TappingTerm => {
+            state.layout.tap_hold_settings.tapping_term = value;
+            state.layout.tap_hold_settings.mark_custom();
+            state.set_status(format!("Tapping term set to: {}ms", value));
+        }
+        SettingItem::QuickTapTerm => {
+            state.layout.tap_hold_settings.quick_tap_term = if value == 0 { None } else { Some(value) };
+            state.layout.tap_hold_settings.mark_custom();
+            let display = if value == 0 {
+                "Auto".to_string()
+            } else {
+                format!("{}ms", value)
+            };
+            state.set_status(format!("Quick tap term set to: {}", display));
+        }
+        SettingItem::TappingToggle => {
+            state.layout.tap_hold_settings.tapping_toggle = value as u8;
+            state.layout.tap_hold_settings.mark_custom();
+            state.set_status(format!("Tapping toggle set to: {} taps", value));
+        }
+        SettingItem::FlowTapTerm => {
+            state.layout.tap_hold_settings.flow_tap_term = if value == 0 { None } else { Some(value) };
+            state.layout.tap_hold_settings.mark_custom();
+            let display = if value == 0 {
+                "Disabled".to_string()
+            } else {
+                format!("{}ms", value)
+            };
+            state.set_status(format!("Flow tap term set to: {}", display));
+        }
+        _ => {}
+    }
+}
+
+/// Apply a boolean setting value
+fn apply_boolean_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: bool) {
+    use settings_manager::SettingItem;
+
+    match setting {
+        SettingItem::RetroTapping => {
+            state.layout.tap_hold_settings.retro_tapping = value;
+            state.layout.tap_hold_settings.mark_custom();
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Retro tapping set to: {}", display));
+        }
+        SettingItem::ChordalHold => {
+            state.layout.tap_hold_settings.chordal_hold = value;
+            state.layout.tap_hold_settings.mark_custom();
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Chordal hold set to: {}", display));
+        }
+        _ => {}
     }
 }
 

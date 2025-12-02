@@ -186,6 +186,7 @@ fn create_test_layout() -> Layout {
         layers: vec![layer0, layer1],
         categories: vec![],
         inactive_key_behavior: keyboard_tui::models::InactiveKeyBehavior::default(),
+        tap_hold_settings: keyboard_tui::models::TapHoldSettings::default(),
     }
 }
 
