@@ -174,3 +174,13 @@ We design the plan to be forward-compatible with per-key animations:
 ## Complexity Tracking
 
 At this stage, no constitution violations beyond the planned custom RGB Matrix effect and additional static tables are anticipated. If the QMK lighting integration proves significantly more complex than expected, we will revisit this section to justify additional abstractions.
+
+## Concrete Implementation Steps (QMK RGB integration)
+
+1. Inspect RGB matrix and existing custom effects in `vial-qmk-keebart` (especially `quantum/rgb_matrix*` and keyboard-specific hooks).
+2. Finalize the data contract for `layer_base_colors` and `layer_base_colors_layer_count` between the Rust generator and QMK.
+3. Design a new `RGB_MATRIX_TUI_LAYER_COLORS` effect that, per LED, resolves the effective layer (respecting `layer_state` and transparent keys) and reads colors from `layer_base_colors[layer][led]`.
+4. Implement `RGB_MATRIX_TUI_LAYER_COLORS` in the forked QMK tree (new `tui_layer_colors` animation file) and register it in the RGB matrix effect list.
+5. Reconcile the generated `rgb_matrix_indicators_user` / `layout_colors` section so that, in `layout_static` mode, the firmware relies primarily on the new effect and baked per-layer colors.
+6. Ensure `config.h` generation only sets `RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_TUI_LAYER_COLORS` when RGB is present, custom colors exist, and `lighting_mode = layout_static`.
+7. Rebuild firmware from the TUI, compile with QMK `make`, and validate both key behaviour and layer-aware colors on hardware.

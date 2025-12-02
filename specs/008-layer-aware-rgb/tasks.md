@@ -16,31 +16,31 @@ description: "Task list for 008-layer-aware-rgb: device-side, layer-aware RGB li
 
 ## Phase 1: Rust-Side Color Table Generation
 
-- [ ] T001 [P] [P1] Analyze `Layout`, `Layer`, `VisualLayoutMapping` to confirm mapping from keys to LED indices (`src/models/layout.rs`, `src/models/keyboard_geometry.rs`, `src/models/visual_layout_mapping.rs`).
-- [ ] T002 [P] [P1] Add internal helper in `src/firmware/generator.rs` to compute `base_color[layer][led]` using `Layout::resolve_key_color` and `VisualLayoutMapping::visual_to_led_index`.
-- [ ] T003 [P] [P1] Handle error cases where a key's visual position cannot be mapped to an LED index, with clear error messages surfaced via firmware validation.
-- [ ] T004 [P] [P1] Add unit tests in `src/firmware/generator.rs` tests module to verify color table generation for a small synthetic layout and geometry.
+- [x] T001 [P] [P1] Analyze `Layout`, `Layer`, `VisualLayoutMapping` to confirm mapping from keys to LED indices (`src/models/layout.rs`, `src/models/keyboard_geometry.rs`, `src/models/visual_layout_mapping.rs`).
+- [x] T002 [P] [P1] Add internal helper in `src/firmware/generator.rs` to compute `base_color[layer][led]` using `Layout::resolve_key_color` and `VisualLayoutMapping::visual_to_led_index`.
+- [x] T003 [P] [P1] Handle error cases where a key's visual position cannot be mapped to an LED index, with clear error messages surfaced via firmware validation.
+- [x] T004 [P] [P1] Add unit tests in `src/firmware/generator.rs` tests module to verify color table generation for a small synthetic layout and geometry.
 
 ---
 
 ## Phase 2: Emit Color Tables into keymap.c
 
-- [ ] T005 [P] [P1] Extend `FirmwareGenerator::generate_keymap_c` in `src/firmware/generator.rs` to emit static PROGMEM color tables (per-layer, per-LED) after the keymaps.
-- [ ] T006 [P] [P1] Guard color table emission with appropriate `#ifdef` checks (e.g., `RGB_MATRIX_ENABLE`) so non-RGB keyboards still build without changes.
-- [ ] T007 [P] [P1] Ensure generated symbol names are stable and discoverable from QMK code (document expected names in comments).
-- [ ] T008 [P] [P1] Update existing generator unit tests (or add new ones) to assert that the color table is present in the generated `keymap.c` output when RGB is enabled.
+- [x] T005 [P] [P1] Extend `FirmwareGenerator::generate_keymap_c` in `src/firmware/generator.rs` to emit static PROGMEM color tables (per-layer, per-LED) after the keymaps.
+- [x] T006 [P] [P1] Guard color table emission with appropriate `#ifdef` checks (e.g., `RGB_MATRIX_ENABLE`) so non-RGB keyboards still build without changes.
+- [x] T007 [P] [P1] Ensure generated symbol names are stable and discoverable from QMK code (document expected names in comments).
+- [x] T008 [P] [P1] Update existing generator unit tests (or add new ones) to assert that the color table is present in the generated `keymap.c` output when RGB is enabled.
 
 ---
 
 ## Phase 3: QMK Lighting Mode Integration
 
-- [ ] T009 [P] [P1] Inspect `vial-qmk-keebart/quantum/rgb_matrix` to identify the cleanest extension point for a custom effect that consumes the baked color table.
-- [ ] T010 [P] [P1] Add a new RGB Matrix effect implementation in `vial-qmk-keebart` that:
+- [x] T009 [P] [P1] Inspect `vial-qmk-keebart/quantum/rgb_matrix` to identify the cleanest extension point for a custom effect that consumes the baked color table.
+- [x] T010 [P] [P1] Add a new RGB Matrix effect implementation in `vial-qmk-keebart` that:
   - Uses the baked `base_color[layer][led]` data.
   - Reads QMK `layer_state` to determine effective layer per key.
   - Writes colors into the RGB matrix buffer.
-- [ ] T011 [P] [P1] Wire the new effect into the relevant keyboard(s) so that the generated keymap selects it by default (or as a dedicated mode), updating `rules.mk`/`config.h` as needed.
-- [ ] T012 [ ] [P1] Build QMK firmware for at least one RGB-capable keyboard and verify that the new effect compiles and links correctly.
+- [x] T011 [P] [P1] Wire the new effect into the relevant keyboard(s) so that the generated keymap selects it by default (or as a dedicated mode), updating `rules.mk`/`config.h` as needed.
+- [x] T012 [ ] [P1] Build QMK firmware for at least one RGB-capable keyboard and verify that the new effect compiles and links correctly.
 
 ---
 
@@ -49,7 +49,7 @@ description: "Task list for 008-layer-aware-rgb: device-side, layer-aware RGB li
 - [ ] T013 [ ] [P1] Generate firmware from the TUI for an RGB keyboard and flash it.
 - [ ] T014 [ ] [P1] Validate that base-layer colors on the hardware match those shown in the TUI keyboard view.
 - [ ] T015 [ ] [P1] Press and hold a momentary layer key (e.g., `MO(1)`) and verify that keys affected by layer 1 show that layer's colors while held, reverting when released.
-- [ ] T016 [ ] [P1] Confirm that non-RGB keyboards (or keyboards without RGB_MATRIX enabled) still generate and build firmware without color tables or lighting changes.
+- [x] T016 [ ] [P1] Confirm that non-RGB keyboards (or keyboards without RGB_MATRIX enabled) still generate and build firmware without color tables or lighting changes.
 
 ---
 
@@ -65,8 +65,8 @@ description: "Task list for 008-layer-aware-rgb: device-side, layer-aware RGB li
 ## Phase N: Documentation & Cleanup
 
 - [ ] T021 [P] [P2] Document the new lighting behavior and its limitations in `README.md` or an appropriate docs file.
-- [ ] T022 [P] [P2] Add comments in `src/firmware/generator.rs` and the QMK effect implementation summarizing the data contract between generator and firmware.
-- [ ] T023 [P] [P2] Run `cargo test` and a representative QMK build to confirm there are no regressions.
+- [x] T022 [P] [P2] Add comments in `src/firmware/generator.rs` and the QMK effect implementation summarizing the data contract between generator and firmware.
+- [x] T023 [P] [P2] Run `cargo test` and a representative QMK build to confirm there are no regressions.
 
 ---
 
