@@ -245,6 +245,69 @@ impl HelpOverlayState {
                 Span::styled("              Cancel", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
+            Line::from(vec![
+                Span::styled("  Parameterized keycodes (multi-stage):", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("LT()", Style::default().fg(theme.warning)),
+                Span::styled("                Layer-Tap: select layer → tap key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("MT()", Style::default().fg(theme.warning)),
+                Span::styled("                Mod-Tap: select modifiers → tap key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("LM()", Style::default().fg(theme.warning)),
+                Span::styled("                Layer-Mod: select layer → modifiers", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("SH_T()", Style::default().fg(theme.warning)),
+                Span::styled("              Swap-Hands-Tap: select tap key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In modifier picker:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
+                Span::styled("          Navigate modifier options", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Space", Style::default().fg(theme.success)),
+                Span::styled("               Toggle modifier on/off", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("1-8", Style::default().fg(theme.success)),
+                Span::styled("                 Toggle individual modifiers", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("m", Style::default().fg(theme.success)),
+                Span::styled("                   Meh preset (Ctrl+Shift+Alt)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("h", Style::default().fg(theme.success)),
+                Span::styled("                   Hyper preset (Ctrl+Shift+Alt+Gui)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Confirm selection", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Cancel", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
             // Color System Section
             Line::from(vec![
                 Span::styled(
@@ -581,6 +644,9 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  • Templates preserve colors and categories", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  • LT/MT/LM/SH_T use multi-stage picker dialogs", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Footer
