@@ -69,16 +69,10 @@ impl HelpOverlayState {
         self.scroll_offset = self.scroll_offset.saturating_sub(visible_height);
     }
 
-    /// Get the comprehensive help content organized by category.
+    /// Get the comprehensive help content organized by feature.
     ///
-    /// This includes all shortcuts from US1-US9 features:
-    /// - Navigation (US1)
-    /// - Editing (US1, US2, US3)
-    /// - File Operations (US4)
-    /// - Build Operations (US6)
-    /// - Configuration (US7)
-    /// - Templates (US5)
-    /// - System (general)
+    /// Each section starts with how to open/toggle the feature,
+    /// followed by all related shortcuts grouped together.
     fn get_help_content(theme: &Theme) -> Vec<Line<'static>> {
         vec![
             // Header
@@ -112,38 +106,42 @@ impl HelpOverlayState {
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Move cursor (up/down/left/right)", Style::default().fg(theme.text)),
+                Span::styled("          Move cursor between keys", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("h/j/k/l", Style::default().fg(theme.success)),
-                Span::styled("             VIM-style navigation (left/down/up/right)", Style::default().fg(theme.text)),
+                Span::styled("             VIM-style navigation", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Home / End", Style::default().fg(theme.success)),
+                Span::styled("          Jump to first / last key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            // Layers Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ LAYERS ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Tab", Style::default().fg(theme.success)),
-                Span::styled("                  Switch to next layer", Style::default().fg(theme.text)),
+                Span::styled("                 Next layer", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Shift+Tab", Style::default().fg(theme.success)),
-                Span::styled("            Switch to previous layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Home", Style::default().fg(theme.success)),
-                Span::styled("                 Move to first key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("End", Style::default().fg(theme.success)),
-                Span::styled("                  Move to last key", Style::default().fg(theme.text)),
+                Span::styled("           Previous layer", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
-            // Editing Section
+            // Key Editor Section
             Line::from(vec![
                 Span::styled(
-                    "═══ EDITING ═══",
+                    "═══ KEY EDITOR ═══",
                     Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 ),
             ]),
@@ -151,121 +149,166 @@ impl HelpOverlayState {
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("                Open keycode picker for selected key", Style::default().fg(theme.text)),
+                Span::styled("               Open keycode picker", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("x / Delete", Style::default().fg(theme.success)),
-                Span::styled("           Clear selected key (set to KC_TRNS)", Style::default().fg(theme.text)),
+                Span::styled("          Clear key (set to KC_TRNS)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In keycode picker:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Type", Style::default().fg(theme.success)),
+                Span::styled("                Search keycodes", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("1-6", Style::default().fg(theme.success)),
+                Span::styled("                 Filter by category", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Up/Down", Style::default().fg(theme.success)),
+                Span::styled("             Navigate list", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Apply selected keycode", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Cancel", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            // Color System Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ COLOR SYSTEM ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("c", Style::default().fg(theme.success)),
+                Span::styled("                   Set layer default color", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Shift+C", Style::default().fg(theme.success)),
-                Span::styled("              Set individual key color override", Style::default().fg(theme.text)),
+                Span::styled("             Set individual key color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In color picker:", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                    Set layer default color", Style::default().fg(theme.text)),
+                Span::styled("Tab", Style::default().fg(theme.success)),
+                Span::styled("                 Switch R/G/B channel", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Left/Right", Style::default().fg(theme.success)),
+                Span::styled("          Adjust value (±1)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+Left/Right", Style::default().fg(theme.success)),
+                Span::styled("    Adjust value (±10)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Apply color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Cancel", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  Color priority (highest to lowest):", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("i", Style::default().fg(theme.warning)),
+                Span::styled(" Individual key override", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("k", Style::default().fg(theme.primary)),
+                Span::styled(" Key category color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("L", Style::default().fg(theme.primary)),
+                Span::styled(" Layer category color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("d", Style::default().fg(theme.inactive)),
+                Span::styled(" Layer default color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            // Category System Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ CATEGORY SYSTEM ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+T", Style::default().fg(theme.success)),
+                Span::styled("              Open category manager", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Shift+K", Style::default().fg(theme.success)),
-                Span::styled("              Assign category to selected key", Style::default().fg(theme.text)),
+                Span::styled("             Assign category to key", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+T", Style::default().fg(theme.success)),
-                Span::styled("               Open category manager (create/edit/delete)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // File Operations Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ FILE OPERATIONS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
+                Span::styled("Shift+L", Style::default().fg(theme.success)),
+                Span::styled("             Assign category to layer", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+S", Style::default().fg(theme.success)),
-                Span::styled("               Save current layout to file", Style::default().fg(theme.text)),
+                Span::styled("  In category manager:", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+Q", Style::default().fg(theme.success)),
-                Span::styled("               Quit (prompts if unsaved changes)", Style::default().fg(theme.text)),
+                Span::styled("n", Style::default().fg(theme.success)),
+                Span::styled("                   Create new category", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+E", Style::default().fg(theme.success)),
-                Span::styled("               Edit layout metadata (name, description, tags)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Build Operations Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ BUILD OPERATIONS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+G", Style::default().fg(theme.success)),
-                Span::styled("               Generate firmware files (keymap.c, vial.json)", Style::default().fg(theme.text)),
+                Span::styled("r", Style::default().fg(theme.success)),
+                Span::styled("                   Rename category", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+B", Style::default().fg(theme.success)),
-                Span::styled("               Build firmware in background", Style::default().fg(theme.text)),
+                Span::styled("c", Style::default().fg(theme.success)),
+                Span::styled("                   Change category color", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+L", Style::default().fg(theme.success)),
-                Span::styled("               View build log (scrollable)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Note:", Style::default().fg(theme.primary)),
-                Span::styled(" Build runs in background - watch status bar for progress", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Configuration Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ CONFIGURATION ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+W", Style::default().fg(theme.success)),
-                Span::styled("               Open setup wizard (QMK path, keyboard, layout)", Style::default().fg(theme.text)),
+                Span::styled("d", Style::default().fg(theme.success)),
+                Span::styled("                   Delete category", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+P", Style::default().fg(theme.success)),
-                Span::styled("               Configure QMK firmware path", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+K", Style::default().fg(theme.success)),
-                Span::styled("               Select keyboard from QMK repository", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+Y", Style::default().fg(theme.success)),
-                Span::styled("               Switch keyboard layout variant", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Info:", Style::default().fg(theme.primary)),
-                Span::styled(" Configuration saved to system config directory (KeyboardConfigurator/config.toml)", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Close manager", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Templates Section
@@ -279,191 +322,69 @@ impl HelpOverlayState {
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("t", Style::default().fg(theme.success)),
-                Span::styled("                    Browse and load templates", Style::default().fg(theme.text)),
+                Span::styled("                   Browse and load templates", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Shift+T", Style::default().fg(theme.success)),
-                Span::styled("              Save current layout as template", Style::default().fg(theme.text)),
+                Span::styled("             Save as template", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Info:", Style::default().fg(theme.primary)),
-                Span::styled(" Templates stored in ~/.config/KeyboardConfigurator/templates/", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // System Section
+            // File Operations Section
             Line::from(vec![
                 Span::styled(
-                    "═══ SYSTEM ═══",
+                    "═══ FILE OPERATIONS ═══",
                     Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("?", Style::default().fg(theme.success)),
-                Span::styled("                    Toggle this help overlay", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+S", Style::default().fg(theme.success)),
+                Span::styled("              Save layout", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("               Close current dialog/popup", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+E", Style::default().fg(theme.success)),
+                Span::styled("              Edit metadata (name, description, tags)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+Q", Style::default().fg(theme.success)),
+                Span::styled("              Quit (press twice if unsaved)", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
-            // Color Indicators Section
+            // Build System Section
             Line::from(vec![
                 Span::styled(
-                    "═══ COLOR INDICATORS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Keys display color source indicators in top-right corner:", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("i", Style::default().fg(theme.warning)),
-                Span::styled("  Individual color override (highest priority)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("k", Style::default().fg(theme.primary)),
-                Span::styled("  Key category color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("L", Style::default().fg(theme.primary)),
-                Span::styled("  Category layer default", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d", Style::default().fg(theme.inactive)),
-                Span::styled("  Layer default color (lowest priority)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Keycode Picker Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ KEYCODE PICKER ═══",
+                    "═══ BUILD SYSTEM ═══",
                     Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Type", Style::default().fg(theme.success)),
-                Span::styled("                  Fuzzy search for keycodes", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+G", Style::default().fg(theme.success)),
+                Span::styled("              Generate firmware (keymap.c, vial.json)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("1-6", Style::default().fg(theme.success)),
-                Span::styled("                  Filter by category (Basic/Nav/Symbols/Function/Media/Modifiers)", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+B", Style::default().fg(theme.success)),
+                Span::styled("              Build firmware (runs in background)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Navigate through filtered list", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("                Select keycode and apply to key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("               Cancel without changes", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Color Picker Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ COLOR PICKER ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
+                Span::styled("Ctrl+L", Style::default().fg(theme.success)),
+                Span::styled("              View build log", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab", Style::default().fg(theme.success)),
-                Span::styled("                  Switch between R/G/B channels", Style::default().fg(theme.text)),
+                Span::styled("  In build log:", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Left/Right", Style::default().fg(theme.success)),
-                Span::styled("          Adjust active channel value", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+Left/Right", Style::default().fg(theme.success)),
-                Span::styled("    Adjust by larger increments (±10)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("                Apply color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("               Cancel without changes", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Category Manager Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ CATEGORY MANAGER ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("n", Style::default().fg(theme.success)),
-                Span::styled("                    Create new category", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("r", Style::default().fg(theme.success)),
-                Span::styled("                    Rename selected category", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                    Change category color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d", Style::default().fg(theme.success)),
-                Span::styled("                    Delete selected category (with confirmation)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+L", Style::default().fg(theme.success)),
-                Span::styled("              Assign category to current layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("               Close category manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Build Log Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ BUILD LOG VIEWER ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Scroll through build log", Style::default().fg(theme.text)),
+                Span::styled("Up/Down", Style::default().fg(theme.success)),
+                Span::styled("             Scroll log", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
@@ -478,12 +399,60 @@ impl HelpOverlayState {
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Ctrl+C", Style::default().fg(theme.success)),
-                Span::styled("               Copy entire log to clipboard", Style::default().fg(theme.text)),
+                Span::styled("              Copy log to clipboard", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("               Close build log", Style::default().fg(theme.text)),
+                Span::styled("              Close log", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            // Configuration Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ CONFIGURATION ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+W", Style::default().fg(theme.success)),
+                Span::styled("              Setup wizard", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+P", Style::default().fg(theme.success)),
+                Span::styled("              Set QMK firmware path", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+K", Style::default().fg(theme.success)),
+                Span::styled("              Select keyboard", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+Y", Style::default().fg(theme.success)),
+                Span::styled("              Switch layout variant", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            // System Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ GENERAL ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("?", Style::default().fg(theme.success)),
+                Span::styled("                   Toggle this help", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Close any dialog/popup", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Tips Section
@@ -495,22 +464,16 @@ impl HelpOverlayState {
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  • Status bar shows context-sensitive help and current mode", Style::default().fg(theme.text)),
+                Span::styled("  • Asterisk (*) in title = unsaved changes", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  • Asterisk (*) in title bar indicates unsaved changes", Style::default().fg(theme.text)),
+                Span::styled("  • KC_TRNS passes keypress to lower layer", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  • Four-level color priority: Individual > Key Category > Layer Category > Default", Style::default().fg(theme.text)),
+                Span::styled("  • Build runs in background - keep editing!", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  • Use KC_TRNS (transparent) to pass through to lower layers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • Build runs in background - you can continue editing", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • Templates preserve all colors, categories, and metadata", Style::default().fg(theme.text)),
+                Span::styled("  • Templates preserve colors and categories", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             // Footer
@@ -522,7 +485,7 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled(
-                    "              Press '?' to close help • Press ↑↓ to scroll               ",
+                    "              Press '?' to close • ↑↓ to scroll               ",
                     Style::default().fg(theme.text_muted),
                 ),
             ]),
