@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
 
@@ -243,6 +243,11 @@ impl HelpOverlayState {
             Line::from(""),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+W", Style::default().fg(theme.success)),
+                Span::styled("               Open setup wizard (QMK path, keyboard, layout)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Ctrl+P", Style::default().fg(theme.success)),
                 Span::styled("               Configure QMK firmware path", Style::default().fg(theme.text)),
             ]),
@@ -300,11 +305,6 @@ impl HelpOverlayState {
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("?", Style::default().fg(theme.success)),
                 Span::styled("                    Toggle this help overlay", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("F12", Style::default().fg(theme.success)),
-                Span::styled("                  Toggle dark/light theme", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
@@ -550,6 +550,14 @@ impl HelpOverlayState {
             height,
         };
 
+        // Clear the background area first
+        frame.render_widget(Clear, modal_area);
+
+        // Render opaque background
+        let background = Block::default()
+            .style(Style::default().bg(theme.background));
+        frame.render_widget(background, modal_area);
+
         // Create layout for content area and scrollbar
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
@@ -570,7 +578,8 @@ impl HelpOverlayState {
                     .title(" Help - Keyboard Shortcuts ")
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(theme.primary)),
+                    .border_style(Style::default().fg(theme.primary))
+                    .style(Style::default().bg(theme.background)),
             )
             .style(Style::default().fg(theme.text))
             .wrap(Wrap { trim: false })

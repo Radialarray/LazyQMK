@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -81,6 +81,14 @@ pub fn render_build_log(
 ) {
     // Calculate centered area (80% width, 60% height)
     let area = centered_rect(80, 60, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default()
+        .style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
 
     // Get log lines
     let log_lines = &build_state.log_lines;
