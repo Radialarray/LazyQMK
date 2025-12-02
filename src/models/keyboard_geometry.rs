@@ -14,8 +14,10 @@ use serde::{Deserialize, Serialize};
 pub struct KeyGeometry {
     /// Electrical matrix position (row, col)
     pub matrix_position: (u8, u8),
-    /// Sequential LED index (0-based)
+    /// Physical LED index from rgb_matrix.layout (for RGB colors)
     pub led_index: u8,
+    /// Layout array index from info.json (for keymap generation)
+    pub layout_index: u8,
     /// Physical X position in keyboard units (1u = key width)
     pub visual_x: f32,
     /// Physical Y position in keyboard units
@@ -41,6 +43,7 @@ impl KeyGeometry {
         Self {
             matrix_position,
             led_index,
+            layout_index: led_index, // Default: layout_index equals led_index
             visual_x,
             visual_y,
             width: 1.0,

@@ -93,21 +93,21 @@ impl<'a> FirmwareGenerator<'a> {
                 layer_idx, self.config.build.layout
             ));
 
-            // Generate keys in LED order
-            let keys_by_led = self.generate_layer_keys_by_led(layer)?;
+            // Generate keys in layout order (matches info.json layout array)
+            let keys_by_layout = self.generate_layer_keys_by_layout(layer)?;
 
             // Format keys (wrap at reasonable line length)
-            let keys_str = keys_by_led.join(", ");
+            let keys_str = keys_by_layout.join(", ");
             if keys_str.len() > 80 {
                 // Multi-line formatting
                 code.push_str("\n        ");
-                for (idx, keycode) in keys_by_led.iter().enumerate() {
+                for (idx, keycode) in keys_by_layout.iter().enumerate() {
                     code.push_str(keycode);
-                    if idx < keys_by_led.len() - 1 {
+                    if idx < keys_by_layout.len() - 1 {
                         code.push_str(", ");
                     }
                     // Line wrap every 6 keys
-                    if (idx + 1) % 6 == 0 && idx < keys_by_led.len() - 1 {
+                    if (idx + 1) % 6 == 0 && idx < keys_by_layout.len() - 1 {
                         code.push_str("\n        ");
                     }
                 }
@@ -172,9 +172,45 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(code)
     }
 
+    /// Generates keycodes for a layer ordered by layout index.
+    ///
+    /// This is the critical transformation: visual position → matrix → layout order.
+    /// The layout order matches the info.json layout array, which is what QMK's
+    /// LAYOUT macro expects.
+    fn generate_layer_keys_by_layout(
+        &self,
+        layer: &crate::models::layer::Layer,
+    ) -> Result<Vec<String>> {
+        let key_count = self.mapping.key_count();
+        let mut keys_by_layout = vec![String::from("KC_NO"); key_count];
+
+        // Map each key to its layout position
+        for key in &layer.keys {
+            let visual_pos = key.position;
+
+            // Visual → Layout index
+            let layout_idx = self
+                .mapping
+                .visual_to_layout_index(visual_pos.row, visual_pos.col)
+                .with_context(|| {
+                    format!(
+                        "Failed to map visual position ({}, {}) to layout index",
+                        visual_pos.row, visual_pos.col
+                    )
+                })?;
+
+            // Store keycode at layout position
+            keys_by_layout[layout_idx as usize].clone_from(&key.keycode);
+        }
+
+        Ok(keys_by_layout)
+    }
+
     /// Generates key assignments for a layer ordered by LED index.
     ///
-    /// This is the critical transformation: visual position d1 matrix d1 LED order.
+    /// Used only for LED-related features. For keymap generation, use
+    /// generate_layer_keys_by_layout instead.
+    #[allow(dead_code)]
     fn generate_layer_keys_by_led(
         &self,
         layer: &crate::models::layer::Layer,
@@ -333,17 +369,14 @@ impl<'a> FirmwareGenerator<'a> {
 
         code.push_str("};\n");
         code.push_str(&format!(
-            "const uint8_t PROGMEM layer_base_colors_layer_count = {};;\n",
-            layer_count
+            "const uint8_t PROGMEM layer_base_colors_layer_count = {layer_count};\n"
         ));
         code.push_str("#endif\n");
 
         Ok(code)
     }
 
-     /// Generates vial.json configuration.
-
-
+    /// Generates vial.json configuration.
     ///
     /// Creates a Vial JSON file with layout definition and metadata.
     fn generate_vial_json(&self) -> Result<String> {
@@ -669,7 +702,7 @@ mod tests {
 
     #[test]
     fn test_generate_merged_config_h_sets_default_mode_when_colored_and_rgb() {
-        let (mut layout, geometry, mapping, mut config) = create_test_setup();
+        let (mut layout, geometry, mapping, config) = create_test_setup();
 
         // Mark layout as "colored" by changing the default color
         // and adding a category used by a key.
@@ -731,5 +764,188 @@ mod tests {
         assert_eq!(colors_by_led[0], RgbColor::new(255, 255, 255));
         // Second key uses category color.
         assert_eq!(colors_by_led[1], nav_color);
+    }
+
+    #[test]
+    fn test_generate_rgb_matrix_color_table_structure() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Add a second layer with a different default color
+        let mut layer2 = Layer::new(1, "Navigation", RgbColor::new(0, 128, 255)).unwrap();
+        layer2.add_key(KeyDefinition::new(Position::new(0, 0), "KC_LEFT"));
+        layer2.add_key(KeyDefinition::new(Position::new(0, 1), "KC_RIGHT"));
+        layout.add_layer(layer2).unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let color_table = generator.generate_rgb_matrix_color_table().unwrap();
+
+        // Verify structure
+        assert!(color_table.contains("#ifdef RGB_MATRIX_ENABLE"));
+        assert!(color_table.contains("#endif"));
+        assert!(color_table.contains("const uint8_t PROGMEM layer_base_colors[2][2][3]"));
+        assert!(color_table.contains("layer_base_colors_layer_count = 2;"));
+
+        // Verify layer 0 colors (white default)
+        assert!(color_table.contains("{255, 255, 255}"));
+        // Verify layer 1 colors (blue-ish default)
+        assert!(color_table.contains("{  0, 128, 255}"));
+    }
+
+    #[test]
+    fn test_generate_rgb_matrix_color_table_empty_for_non_rgb() {
+        let (layout, mut geometry, mapping, config) = create_test_setup();
+
+        // Remove keys to simulate non-RGB keyboard
+        geometry.keys.clear();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let color_table = generator.generate_rgb_matrix_color_table().unwrap();
+
+        // Should be empty for non-RGB keyboards
+        assert!(color_table.is_empty());
+    }
+
+    #[test]
+    fn test_layout_has_custom_colors_with_category() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Initially should have no custom colors (just white default)
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        assert!(!generator.layout_has_custom_colors());
+
+        // Add a category
+        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        assert!(generator.layout_has_custom_colors());
+    }
+
+    #[test]
+    fn test_layout_has_custom_colors_with_layer_default() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Change layer default color from white
+        layout.get_layer_mut(0).unwrap().default_color = RgbColor::new(128, 128, 128);
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        assert!(generator.layout_has_custom_colors());
+    }
+
+    #[test]
+    fn test_layout_has_custom_colors_with_key_override() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Add key color override
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 0))
+            .unwrap()
+            .color_override = Some(RgbColor::new(255, 0, 0));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        assert!(generator.layout_has_custom_colors());
+    }
+
+    #[test]
+    fn test_generate_layer_colors_respects_priority_order() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Set up all four color levels for key at (0, 1):
+        // 1. Global default is white (255, 255, 255)
+        // 2. Layer default: blue
+        layout.get_layer_mut(0).unwrap().default_color = RgbColor::new(0, 0, 255);
+
+        // 3. Category: green
+        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 1))
+            .unwrap()
+            .category_id = Some("nav".to_string());
+
+        // 4. Key override: red (highest priority)
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 1))
+            .unwrap()
+            .color_override = Some(RgbColor::new(255, 0, 0));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let colors = generator.generate_layer_colors_by_led(0).unwrap();
+
+        // Key at LED 0 should use layer default (blue) since no category or override
+        assert_eq!(colors[0], RgbColor::new(0, 0, 255));
+
+        // Key at LED 1 should use override (red) - highest priority
+        assert_eq!(colors[1], RgbColor::new(255, 0, 0));
+    }
+
+    #[test]
+    fn test_keymap_c_includes_rgb_table_when_rgb_enabled() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Add category to trigger custom colors
+        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should include RGB matrix color table
+        assert!(keymap_c.contains("#ifdef RGB_MATRIX_ENABLE"));
+        assert!(keymap_c.contains("layer_base_colors"));
+        assert!(keymap_c.contains("layer_base_colors_layer_count"));
+    }
+
+    #[test]
+    fn test_config_h_sets_tui_layer_colors_mode() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Add category to trigger custom colors
+        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should set the TUI layer colors mode as default
+        assert!(config_h.contains("RGB_MATRIX_TUI_LAYER_COLORS"));
+        assert!(config_h.contains("#    define RGB_MATRIX_DEFAULT_MODE RGB_MATRIX_TUI_LAYER_COLORS"));
+        assert!(config_h.contains("LAYER_BASE_COLORS_LAYER_COUNT 1"));
+    }
+
+    #[test]
+    fn test_multi_layer_color_table_generation() {
+        let (mut layout, geometry, mapping, config) = create_test_setup();
+
+        // Layer 0: White default
+        // Layer 1: Red default
+        let mut layer1 = Layer::new(1, "Red Layer", RgbColor::new(255, 0, 0)).unwrap();
+        layer1.add_key(KeyDefinition::new(Position::new(0, 0), "KC_1"));
+        layer1.add_key(KeyDefinition::new(Position::new(0, 1), "KC_2"));
+        layout.add_layer(layer1).unwrap();
+
+        // Layer 2: Green default
+        let mut layer2 = Layer::new(2, "Green Layer", RgbColor::new(0, 255, 0)).unwrap();
+        layer2.add_key(KeyDefinition::new(Position::new(0, 0), "KC_3"));
+        layer2.add_key(KeyDefinition::new(Position::new(0, 1), "KC_4"));
+        layout.add_layer(layer2).unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let color_table = generator.generate_rgb_matrix_color_table().unwrap();
+
+        // Verify 3 layers
+        assert!(color_table.contains("layer_base_colors[3][2][3]"));
+        assert!(color_table.contains("layer_base_colors_layer_count = 3;"));
+
+        // Verify each layer's colors are present
+        assert!(color_table.contains("{255, 255, 255}")); // White
+        assert!(color_table.contains("{255,   0,   0}")); // Red
+        assert!(color_table.contains("{  0, 255,   0}")); // Green
     }
 }

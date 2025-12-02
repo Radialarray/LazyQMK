@@ -128,6 +128,7 @@ impl Theme {
     /// let light = Theme::from_variant(ThemeVariant::Light);
     /// ```
     #[must_use]
+    #[allow(dead_code)]
     pub const fn from_variant(variant: ThemeVariant) -> Self {
         match variant {
             ThemeVariant::Dark => Self::dark(),

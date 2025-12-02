@@ -6,10 +6,11 @@ use std::collections::HashMap;
 
 /// Bidirectional coordinate transformation system.
 ///
-/// Manages three coordinate spaces:
+/// Manages four coordinate spaces:
 /// 1. **Visual** - User's view in Markdown tables (row, col)
 /// 2. **Matrix** - Electrical wiring (row, col)
-/// 3. **LED** - Sequential LED index
+/// 3. **LED** - Physical LED wiring order (for RGB colors)
+/// 4. **Layout** - info.json layout array order (for keymap generation)
 ///
 /// # Building Process
 ///
@@ -17,6 +18,8 @@ use std::collections::HashMap;
 /// 2. For each `KeyGeometry`:
 ///    - `led_to_matrix`[`led_index`] = `matrix_position`
 ///    - `matrix_to_led`[`matrix_position`] = `led_index`
+///    - `layout_to_matrix`[`layout_index`] = `matrix_position`
+///    - `matrix_to_layout`[`matrix_position`] = `layout_index`
 ///    - Compute `visual_position` from `visual_x/visual_y` (quantize to grid)
 ///    - `matrix_to_visual`[`matrix_position`] = `visual_position`
 ///    - `visual_to_matrix`[`visual_position`] = `matrix_position`
@@ -28,10 +31,14 @@ use std::collections::HashMap;
 /// - Thumb keys: Span multiple visual columns but single matrix position
 #[derive(Debug, Clone)]
 pub struct VisualLayoutMapping {
-    /// LED index → matrix position (indexed by LED)
+    /// LED index → matrix position (indexed by physical LED order)
     pub led_to_matrix: Vec<(u8, u8)>,
-    /// Matrix position → LED index
+    /// Matrix position → LED index (for RGB colors)
     pub matrix_to_led: HashMap<(u8, u8), u8>,
+    /// Layout index → matrix position (indexed by info.json layout order)
+    pub layout_to_matrix: Vec<(u8, u8)>,
+    /// Matrix position → layout index (for keymap generation)
+    pub matrix_to_layout: HashMap<(u8, u8), u8>,
     /// Matrix → visual position
     pub matrix_to_visual: HashMap<(u8, u8), Position>,
     /// Visual → matrix position
@@ -46,6 +53,8 @@ impl VisualLayoutMapping {
         Self {
             led_to_matrix: Vec::new(),
             matrix_to_led: HashMap::new(),
+            layout_to_matrix: Vec::new(),
+            matrix_to_layout: HashMap::new(),
             matrix_to_visual: HashMap::new(),
             visual_to_matrix: HashMap::new(),
         }
@@ -59,17 +68,24 @@ impl VisualLayoutMapping {
     pub fn build(geometry: &KeyboardGeometry) -> Self {
         let mut mapping = Self::new();
 
-        // Pre-allocate led_to_matrix vector
+        // Pre-allocate vectors
         let max_led = geometry.keys.iter().map(|k| k.led_index).max().unwrap_or(0) as usize;
+        let max_layout = geometry.keys.iter().map(|k| k.layout_index).max().unwrap_or(0) as usize;
         mapping.led_to_matrix.resize(max_led + 1, (0, 0));
+        mapping.layout_to_matrix.resize(max_layout + 1, (0, 0));
 
         for key in &geometry.keys {
             let matrix_pos = key.matrix_position;
             let led_idx = key.led_index;
+            let layout_idx = key.layout_index;
 
-            // Build LED <-> Matrix mappings
+            // Build LED <-> Matrix mappings (for RGB colors)
             mapping.led_to_matrix[led_idx as usize] = matrix_pos;
             mapping.matrix_to_led.insert(matrix_pos, led_idx);
+
+            // Build Layout <-> Matrix mappings (for keymap generation)
+            mapping.layout_to_matrix[layout_idx as usize] = matrix_pos;
+            mapping.matrix_to_layout.insert(matrix_pos, layout_idx);
 
             // Compute visual position from physical coordinates
             // Quantize to grid (round to nearest integer position)
@@ -119,10 +135,21 @@ impl VisualLayoutMapping {
         self.matrix_to_led.get(matrix_pos).copied()
     }
 
+    /// Converts visual position to layout index.
+    ///
+    /// Used for keymap generation - keys must be in info.json layout order.
+    #[must_use]
+    pub fn visual_to_layout_index(&self, row: u8, col: u8) -> Option<u8> {
+        let visual_pos = Position::new(row, col);
+        let matrix_pos = self.visual_to_matrix.get(&visual_pos)?;
+        self.matrix_to_layout.get(matrix_pos).copied()
+    }
+
     /// Gets the total number of keys in the mapping.
     #[must_use]
-    pub const fn key_count(&self) -> usize {
-        self.led_to_matrix.len()
+    pub fn key_count(&self) -> usize {
+        // Use layout_to_matrix as the canonical key count
+        self.layout_to_matrix.len()
     }
 
     /// Returns all valid visual positions in this mapping.

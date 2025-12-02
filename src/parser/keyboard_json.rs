@@ -64,6 +64,37 @@ pub struct MatrixPins {
     pub cols: Option<Vec<String>>,
 }
 
+/// Variant-specific keyboard.json structure (for RGB matrix info)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VariantKeyboardJson {
+    /// Keyboard name
+    pub keyboard_name: Option<String>,
+    /// RGB matrix configuration
+    pub rgb_matrix: Option<RgbMatrixConfig>,
+}
+
+/// RGB matrix configuration from keyboard.json
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RgbMatrixConfig {
+    /// Split keyboard LED counts [left, right]
+    pub split_count: Option<[u8; 2]>,
+    /// LED layout - array defines physical wiring order
+    pub layout: Vec<RgbLedEntry>,
+}
+
+/// RGB LED entry from rgb_matrix.layout array
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RgbLedEntry {
+    /// Matrix position [row, col] for this LED
+    pub matrix: [u8; 2],
+    /// Physical X position
+    pub x: u8,
+    /// Physical Y position
+    pub y: u8,
+    /// LED flags
+    pub flags: u8,
+}
+
 const fn default_key_size() -> f32 {
     1.0
 }
@@ -206,8 +237,53 @@ pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkIn
     );
 }
 
+/// Parses a variant-specific keyboard.json file for RGB matrix configuration.
+///
+/// This looks for a keyboard.json file in the variant directory that contains
+/// the `rgb_matrix.layout` array, which defines the physical LED wiring order.
+///
+/// # Arguments
+///
+/// * `qmk_path` - Path to QMK firmware root directory
+/// * `keyboard` - Full keyboard path including variant (e.g., "keebart/corne_choc_pro/standard")
+///
+/// # Returns
+///
+/// Parsed variant keyboard.json structure, or None if not found
+pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
+    let keyboards_dir = qmk_path.join("keyboards");
+    let keyboard_json_path = keyboards_dir.join(keyboard).join("keyboard.json");
 
-    
+    if !keyboard_json_path.exists() {
+        return None;
+    }
+
+    let content = fs::read_to_string(&keyboard_json_path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
+/// Builds a mapping from matrix position (row, col) to physical LED index.
+///
+/// The RGB matrix layout in keyboard.json defines LEDs in their physical wiring order.
+/// This function creates a reverse lookup to find the LED index for any matrix position.
+///
+/// # Arguments
+///
+/// * `rgb_config` - RGB matrix configuration from keyboard.json
+///
+/// # Returns
+///
+/// HashMap from (row, col) to LED index
+#[must_use]
+pub fn build_matrix_to_led_map(rgb_config: &RgbMatrixConfig) -> HashMap<(u8, u8), u8> {
+    let mut map = HashMap::new();
+    for (led_index, led_entry) in rgb_config.layout.iter().enumerate() {
+        let row = led_entry.matrix[0];
+        let col = led_entry.matrix[1];
+        map.insert((row, col), led_index as u8);
+    }
+    map
+}
 
 
 /// Layout variant information including name and key count.
@@ -292,10 +368,37 @@ pub fn extract_layout_definition<'a>(
 /// # Returns
 ///
 /// `KeyboardGeometry` with physical key positions and matrix mappings
+#[allow(dead_code)]
 pub fn build_keyboard_geometry(
     info: &QmkInfoJson,
     keyboard_name: &str,
     layout_name: &str,
+) -> Result<KeyboardGeometry> {
+    build_keyboard_geometry_with_rgb(info, keyboard_name, layout_name, None)
+}
+
+/// Builds `KeyboardGeometry` from QMK info.json layout definition with optional RGB matrix mapping.
+///
+/// When `matrix_to_led` is provided (from parsing the variant's keyboard.json rgb_matrix section),
+/// it uses the physical LED wiring order instead of the layout array order. This is critical for
+/// keyboards with serpentine LED wiring where the physical LED order doesn't match the logical
+/// key order.
+///
+/// # Arguments
+///
+/// * `info` - Parsed QMK info.json structure
+/// * `keyboard_name` - Keyboard identifier
+/// * `layout_name` - Layout variant name
+/// * `matrix_to_led` - Optional map from matrix position (row, col) to physical LED index
+///
+/// # Returns
+///
+/// `KeyboardGeometry` with physical key positions and correct LED mappings
+pub fn build_keyboard_geometry_with_rgb(
+    info: &QmkInfoJson,
+    keyboard_name: &str,
+    layout_name: &str,
+    matrix_to_led: Option<&HashMap<(u8, u8), u8>>,
 ) -> Result<KeyboardGeometry> {
     let layout_def = extract_layout_definition(info, layout_name)?;
 
@@ -317,12 +420,20 @@ pub fn build_keyboard_geometry(
 
     // Build KeyGeometry for each key
     let mut keys = Vec::new();
-    for (led_index, key_pos) in layout_def.layout.iter().enumerate() {
+    for (layout_index, key_pos) in layout_def.layout.iter().enumerate() {
         let matrix_position = key_pos.matrix.unwrap(); // Already validated above
+        let matrix_pos_tuple = (matrix_position[0], matrix_position[1]);
+
+        // Use physical LED index from RGB matrix mapping if available,
+        // otherwise fall back to layout array index
+        let led_index = matrix_to_led
+            .and_then(|map| map.get(&matrix_pos_tuple).copied())
+            .unwrap_or(layout_index as u8);
 
         let key_geometry = KeyGeometry {
-            matrix_position: (matrix_position[0], matrix_position[1]),
-            led_index: led_index as u8,
+            matrix_position: matrix_pos_tuple,
+            led_index,
+            layout_index: layout_index as u8,
             visual_x: key_pos.x,
             visual_y: key_pos.y,
             width: key_pos.w,

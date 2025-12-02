@@ -119,6 +119,7 @@ impl LayoutPickerState {
 
     /// Gets the selected layout path, or None if "Create New" is selected.
     #[must_use]
+    #[allow(dead_code)]
     pub fn get_selected_layout(&self) -> Option<&LayoutInfo> {
         if self.create_new {
             None

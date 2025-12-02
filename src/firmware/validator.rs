@@ -448,11 +448,12 @@ impl<'a> FirmwareValidator<'a> {
 /// # Arguments
 ///
 /// * `qmk_path` - Path to QMK firmware directory
-/// * `keyboard` - Keyboard path (e.g., "keebart/corne_choc_pro/standard")
+/// * `keyboard` - Keyboard path (e.g., "`keebart/corne_choc_pro/standard`")
 ///
 /// # Returns
 ///
 /// Returns a vector of warning messages for any deprecated options found.
+#[allow(dead_code)]
 pub fn check_deprecated_options(
     qmk_path: &std::path::Path,
     keyboard: &str,
