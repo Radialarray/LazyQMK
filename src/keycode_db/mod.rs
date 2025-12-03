@@ -19,6 +19,31 @@ pub struct KeycodeCategory {
     pub description: String,
 }
 
+/// Type of parameter a keycode expects
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ParamType {
+    /// Needs a basic keycode (opens keycode picker)
+    Keycode,
+    /// Needs a layer selection (opens layer picker)
+    Layer,
+    /// Needs modifier selection (opens modifier picker)
+    Modifier,
+}
+
+/// Parameter definition for parameterized keycodes
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KeycodeParam {
+    /// Type of parameter
+    #[serde(rename = "type")]
+    pub param_type: ParamType,
+    /// Parameter name (for display)
+    pub name: String,
+    /// Optional description
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
 /// Individual keycode definition.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeycodeDefinition {
@@ -37,13 +62,22 @@ pub struct KeycodeDefinition {
     /// Alternative keycode names/aliases
     #[serde(default)]
     pub aliases: Vec<String>,
+    /// Parameters this keycode requires (for parameterized keycodes)
+    #[serde(default)]
+    pub params: Vec<KeycodeParam>,
 }
 
-/// Database schema from keycodes.json.
+/// Categories index file schema (categories.json).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct KeycodeDatabase {
+struct CategoriesIndex {
     version: String,
     categories: Vec<KeycodeCategory>,
+}
+
+/// Category file schema (categories/*.json).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CategoryFile {
+    category: KeycodeCategory,
     keycodes: Vec<KeycodeDefinition>,
 }
 
@@ -66,17 +100,51 @@ pub struct KeycodeDb {
 
 #[allow(dead_code)]
 impl KeycodeDb {
-    /// Loads the keycode database from the embedded JSON file.
+    /// Loads the keycode database from embedded category files.
     pub fn load() -> Result<Self> {
-        let json_data = include_str!("keycodes.json");
-        let db: KeycodeDatabase =
-            serde_json::from_str(json_data).context("Failed to parse embedded keycodes.json")?;
+        // Load categories index
+        let categories_json = include_str!("categories.json");
+        let index: CategoriesIndex = serde_json::from_str(categories_json)
+            .context("Failed to parse categories.json")?;
+
+        // Load each category file
+        let mut all_keycodes = Vec::new();
+        
+        // Include all category files at compile time
+        let category_files: &[(&str, &str)] = &[
+            ("basic", include_str!("categories/basic.json")),
+            ("symbols", include_str!("categories/symbols.json")),
+            ("shifted", include_str!("categories/shifted.json")),
+            ("navigation", include_str!("categories/navigation.json")),
+            ("function", include_str!("categories/function.json")),
+            ("numpad", include_str!("categories/numpad.json")),
+            ("modifiers", include_str!("categories/modifiers.json")),
+            ("mod_combo", include_str!("categories/mod_combo.json")),
+            ("mod_tap", include_str!("categories/mod_tap.json")),
+            ("layers", include_str!("categories/layers.json")),
+            ("one_shot", include_str!("categories/one_shot.json")),
+            ("mouse", include_str!("categories/mouse.json")),
+            ("media", include_str!("categories/media.json")),
+            ("rgb", include_str!("categories/rgb.json")),
+            ("backlight", include_str!("categories/backlight.json")),
+            ("audio", include_str!("categories/audio.json")),
+            ("system", include_str!("categories/system.json")),
+            ("international", include_str!("categories/international.json")),
+            ("advanced", include_str!("categories/advanced.json")),
+            ("magic", include_str!("categories/magic.json")),
+        ];
+
+        for (cat_id, json_data) in category_files {
+            let cat_file: CategoryFile = serde_json::from_str(json_data)
+                .with_context(|| format!("Failed to parse {cat_id}.json"))?;
+            all_keycodes.extend(cat_file.keycodes);
+        }
 
         let mut lookup = HashMap::new();
         let mut patterns = Vec::new();
 
         // Build lookup table
-        for (idx, keycode) in db.keycodes.iter().enumerate() {
+        for (idx, keycode) in all_keycodes.iter().enumerate() {
             lookup.insert(keycode.code.clone(), idx);
 
             // Add aliases to lookup
@@ -93,8 +161,8 @@ impl KeycodeDb {
         }
 
         Ok(Self {
-            keycodes: db.keycodes,
-            categories: db.categories,
+            keycodes: all_keycodes,
+            categories: index.categories,
             lookup,
             patterns,
         })
@@ -253,6 +321,28 @@ impl KeycodeDb {
     pub const fn category_count(&self) -> usize {
         self.categories.len()
     }
+
+    /// Check if a keycode is parameterized (requires additional input).
+    #[must_use]
+    pub fn is_parameterized(&self, code: &str) -> bool {
+        self.get(code)
+            .is_some_and(|kc| !kc.params.is_empty())
+    }
+
+    /// Get the parameters for a keycode, if any.
+    #[must_use]
+    pub fn get_params(&self, code: &str) -> Option<&[KeycodeParam]> {
+        self.get(code)
+            .filter(|kc| !kc.params.is_empty())
+            .map(|kc| kc.params.as_slice())
+    }
+
+    /// Get the prefix (code without parentheses) for a parameterized keycode.
+    /// E.g., "LCG()" -> "LCG", "LCTL_T()" -> "LCTL_T"
+    #[must_use]
+    pub fn get_prefix(code: &str) -> Option<&str> {
+        code.strip_suffix("()")
+    }
 }
 
 #[cfg(test)]
@@ -391,5 +481,81 @@ mod tests {
         assert!(categories.iter().any(|c| c.id == "basic"));
         assert!(categories.iter().any(|c| c.id == "navigation"));
         assert!(categories.iter().any(|c| c.id == "media"));
+    }
+
+    #[test]
+    fn test_is_parameterized() {
+        let db = get_test_db();
+        // Layer keycodes are parameterized
+        assert!(db.is_parameterized("MO()"));
+        assert!(db.is_parameterized("LT()"));
+        assert!(db.is_parameterized("LM()"));
+        // Modifier wrappers are parameterized
+        assert!(db.is_parameterized("LCG()"));
+        assert!(db.is_parameterized("LCTL()"));
+        // Mod-taps are parameterized
+        assert!(db.is_parameterized("LCTL_T()"));
+        // Basic keys are NOT parameterized
+        assert!(!db.is_parameterized("KC_A"));
+        assert!(!db.is_parameterized("KC_ENT"));
+    }
+
+    #[test]
+    fn test_get_params_layer_only() {
+        let db = get_test_db();
+        let params = db.get_params("MO()").unwrap();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].param_type, ParamType::Layer);
+    }
+
+    #[test]
+    fn test_get_params_layer_tap() {
+        let db = get_test_db();
+        let params = db.get_params("LT()").unwrap();
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].param_type, ParamType::Layer);
+        assert_eq!(params[1].param_type, ParamType::Keycode);
+    }
+
+    #[test]
+    fn test_get_params_layer_mod() {
+        let db = get_test_db();
+        let params = db.get_params("LM()").unwrap();
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].param_type, ParamType::Layer);
+        assert_eq!(params[1].param_type, ParamType::Modifier);
+    }
+
+    #[test]
+    fn test_get_params_modifier_wrapper() {
+        let db = get_test_db();
+        let params = db.get_params("LCG()").unwrap();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].param_type, ParamType::Keycode);
+    }
+
+    #[test]
+    fn test_get_params_mod_tap() {
+        let db = get_test_db();
+        let params = db.get_params("LCTL_T()").unwrap();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].param_type, ParamType::Keycode);
+    }
+
+    #[test]
+    fn test_get_params_custom_mod_tap() {
+        let db = get_test_db();
+        let params = db.get_params("MT()").unwrap();
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].param_type, ParamType::Modifier);
+        assert_eq!(params[1].param_type, ParamType::Keycode);
+    }
+
+    #[test]
+    fn test_get_prefix() {
+        assert_eq!(KeycodeDb::get_prefix("LCG()"), Some("LCG"));
+        assert_eq!(KeycodeDb::get_prefix("LCTL_T()"), Some("LCTL_T"));
+        assert_eq!(KeycodeDb::get_prefix("MO()"), Some("MO"));
+        assert_eq!(KeycodeDb::get_prefix("KC_A"), None);
     }
 }

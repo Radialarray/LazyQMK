@@ -1,0 +1,129 @@
+{
+  "category": {
+    "id": "function",
+    "name": "F-Keys",
+    "description": "F1-F24 function keys"
+  },
+  "keycodes": [
+    {
+      "code": "KC_F1",
+      "name": "F1",
+      "category": "function"
+    },
+    {
+      "code": "KC_F2",
+      "name": "F2",
+      "category": "function"
+    },
+    {
+      "code": "KC_F3",
+      "name": "F3",
+      "category": "function"
+    },
+    {
+      "code": "KC_F4",
+      "name": "F4",
+      "category": "function"
+    },
+    {
+      "code": "KC_F5",
+      "name": "F5",
+      "category": "function"
+    },
+    {
+      "code": "KC_F6",
+      "name": "F6",
+      "category": "function"
+    },
+    {
+      "code": "KC_F7",
+      "name": "F7",
+      "category": "function"
+    },
+    {
+      "code": "KC_F8",
+      "name": "F8",
+      "category": "function"
+    },
+    {
+      "code": "KC_F9",
+      "name": "F9",
+      "category": "function"
+    },
+    {
+      "code": "KC_F10",
+      "name": "F10",
+      "category": "function"
+    },
+    {
+      "code": "KC_F11",
+      "name": "F11",
+      "category": "function"
+    },
+    {
+      "code": "KC_F12",
+      "name": "F12",
+      "category": "function"
+    },
+    {
+      "code": "KC_F13",
+      "name": "F13",
+      "category": "function"
+    },
+    {
+      "code": "KC_F14",
+      "name": "F14",
+      "category": "function"
+    },
+    {
+      "code": "KC_F15",
+      "name": "F15",
+      "category": "function"
+    },
+    {
+      "code": "KC_F16",
+      "name": "F16",
+      "category": "function"
+    },
+    {
+      "code": "KC_F17",
+      "name": "F17",
+      "category": "function"
+    },
+    {
+      "code": "KC_F18",
+      "name": "F18",
+      "category": "function"
+    },
+    {
+      "code": "KC_F19",
+      "name": "F19",
+      "category": "function"
+    },
+    {
+      "code": "KC_F20",
+      "name": "F20",
+      "category": "function"
+    },
+    {
+      "code": "KC_F21",
+      "name": "F21",
+      "category": "function"
+    },
+    {
+      "code": "KC_F22",
+      "name": "F22",
+      "category": "function"
+    },
+    {
+      "code": "KC_F23",
+      "name": "F23",
+      "category": "function"
+    },
+    {
+      "code": "KC_F24",
+      "name": "F24",
+      "category": "function"
+    }
+  ]
+}

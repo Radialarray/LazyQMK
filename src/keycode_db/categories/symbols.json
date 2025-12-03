@@ -1,0 +1,104 @@
+{
+  "category": {
+    "id": "symbols",
+    "name": "Symbols",
+    "description": "Punctuation and special characters"
+  },
+  "keycodes": [
+    {
+      "code": "KC_MINS",
+      "name": "- _",
+      "category": "symbols",
+      "aliases": [
+        "KC_MINUS"
+      ]
+    },
+    {
+      "code": "KC_EQL",
+      "name": "= +",
+      "category": "symbols",
+      "aliases": [
+        "KC_EQUAL"
+      ]
+    },
+    {
+      "code": "KC_LBRC",
+      "name": "[ {",
+      "category": "symbols"
+    },
+    {
+      "code": "KC_RBRC",
+      "name": "] }",
+      "category": "symbols"
+    },
+    {
+      "code": "KC_BSLS",
+      "name": "\\ |",
+      "category": "symbols",
+      "aliases": [
+        "KC_BACKSLASH"
+      ]
+    },
+    {
+      "code": "KC_SCLN",
+      "name": "; :",
+      "category": "symbols",
+      "aliases": [
+        "KC_SEMICOLON"
+      ]
+    },
+    {
+      "code": "KC_QUOT",
+      "name": "' \"",
+      "category": "symbols",
+      "aliases": [
+        "KC_QUOTE"
+      ]
+    },
+    {
+      "code": "KC_GRV",
+      "name": "` ~",
+      "category": "symbols",
+      "aliases": [
+        "KC_GRAVE"
+      ]
+    },
+    {
+      "code": "KC_COMM",
+      "name": ", <",
+      "category": "symbols",
+      "aliases": [
+        "KC_COMMA"
+      ]
+    },
+    {
+      "code": "KC_DOT",
+      "name": ". >",
+      "category": "symbols"
+    },
+    {
+      "code": "KC_SLSH",
+      "name": "/ ?",
+      "category": "symbols",
+      "aliases": [
+        "KC_SLASH"
+      ]
+    },
+    {
+      "code": "KC_NUHS",
+      "name": "Non-US #",
+      "category": "symbols",
+      "aliases": [
+        "KC_NONUS_HASH"
+      ]
+    },
+    {
+      "code": "KC_NUBS",
+      "name": "Non-US \\",
+      "category": "symbols",
+      "aliases": [
+        "KC_NONUS_BACKSLASH"
+      ]
+    }
+  ]
+}

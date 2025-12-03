@@ -10,7 +10,7 @@ use ratatui::{
     Frame,
 };
 
-use super::layer_picker::LayerKeycodeType;
+use crate::keycode_db::{KeycodeDb, ParamType};
 use super::{AppState, LayerPickerState, ParameterizedKeycodeType, PendingKeycodeState, PopupType};
 
 /// Which pane has focus in the keycode picker
@@ -416,85 +416,13 @@ fn handle_keycodes_input(
                 .map(|kc| kc.code.clone());
 
             if let Some(keycode) = selected_keycode_opt {
-                // Check for parameterized keycodes that need multi-stage input
-                match keycode.as_str() {
-                    "LT()" => {
-                        // Layer-Tap: need layer, then tap keycode
-                        state.pending_keycode = PendingKeycodeState::new();
-                        state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::LayerTap);
-                        state.layer_picker_state = LayerPickerState::with_prefix("LT");
-                        state.active_popup = Some(PopupType::LayerPicker);
-                        state.keycode_picker_state.reset();
-                        state.set_status("Select layer for LT (tap for keycode, hold for layer)");
-                        return Ok(false);
+                // Check if this keycode has parameters defined in the database
+                // Clone the params to avoid borrow conflicts
+                let params_opt = state.keycode_db.get_params(&keycode).map(|p| p.to_vec());
+                if let Some(params) = params_opt {
+                    if let Some(prefix) = KeycodeDb::get_prefix(&keycode) {
+                        return handle_parameterized_keycode(state, prefix, &params);
                     }
-                    "MT()" => {
-                        // Mod-Tap: need modifier, then tap keycode
-                        state.pending_keycode = PendingKeycodeState::new();
-                        state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::ModTap);
-                        state.active_popup = Some(PopupType::ModifierPicker);
-                        state.keycode_picker_state.reset();
-                        state.set_status("Select modifier(s) for MT");
-                        return Ok(false);
-                    }
-                    "LM()" => {
-                        // Layer-Mod: need layer, then modifier
-                        state.pending_keycode = PendingKeycodeState::new();
-                        state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::LayerMod);
-                        state.layer_picker_state = LayerPickerState::with_prefix("LM");
-                        state.active_popup = Some(PopupType::LayerPicker);
-                        state.keycode_picker_state.reset();
-                        state.set_status("Select layer for LM (layer with modifier active)");
-                        return Ok(false);
-                    }
-                    "SH_T()" => {
-                        // Swap-Hands-Tap: need tap keycode only
-                        state.pending_keycode = PendingKeycodeState::new();
-                        state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::SwapHandsTap);
-                        state.active_popup = Some(PopupType::TapKeycodePicker);
-                        state.keycode_picker_state = KeycodePickerState::new();
-                        state.set_status("Select tap keycode for SH_T (hold to swap hands)");
-                        return Ok(false);
-                    }
-                    _ => {}
-                }
-
-                // Check if this is a layer-switching keycode (MO, TG, TO, etc.)
-                if let Some(layer_type) = LayerKeycodeType::from_keycode(&keycode) {
-                    // Switch to layer picker for selecting which layer
-                    state.layer_picker_state = LayerPickerState::with_prefix(layer_type.prefix());
-                    state.active_popup = Some(PopupType::LayerPicker);
-                    state.keycode_picker_state.reset();
-                    state.set_status(format!(
-                        "Select layer for {} - {}",
-                        layer_type.prefix(),
-                        layer_type.description()
-                    ));
-                    return Ok(false);
-                }
-
-                // Check if this is a simple mod-tap keycode (LCTL_T(), LSFT_T(), etc.)
-                // These end with "_T()" and need a tap keycode parameter
-                if let Some(prefix) = get_simple_mod_tap_prefix(&keycode) {
-                    state.pending_keycode = PendingKeycodeState::new();
-                    state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::SimpleModTap);
-                    state.pending_keycode.param1 = Some(prefix.clone());
-                    state.active_popup = Some(PopupType::TapKeycodePicker);
-                    state.keycode_picker_state = KeycodePickerState::new();
-                    state.set_status(format!("Select tap keycode for {}", prefix));
-                    return Ok(false);
-                }
-
-                // Check if this is a modifier wrapper keycode (LCTL(), LCG(), MEH(), etc.)
-                // These wrap a keycode with modifier(s) - e.g., LCG(KC_Q) = Ctrl+Cmd+Q
-                if let Some(prefix) = get_modifier_wrapper_prefix(&keycode) {
-                    state.pending_keycode = PendingKeycodeState::new();
-                    state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::SimpleModTap);
-                    state.pending_keycode.param1 = Some(prefix.clone());
-                    state.active_popup = Some(PopupType::TapKeycodePicker);
-                    state.keycode_picker_state = KeycodePickerState::new();
-                    state.set_status(format!("Select keycode to wrap with {}", prefix));
-                    return Ok(false);
                 }
 
                 // Regular keycode - assign directly
@@ -710,105 +638,92 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-/// Check if a keycode is a simple mod-tap (e.g., LCTL_T(), LSFT_T()) that needs a tap keycode.
-/// Returns the prefix (e.g., "LCTL_T") if it is, None otherwise.
-fn get_simple_mod_tap_prefix(keycode: &str) -> Option<String> {
-    // List of all simple mod-tap prefixes that take a single keycode parameter
-    const SIMPLE_MOD_TAP_PREFIXES: &[&str] = &[
-        // Single modifiers (left)
-        "LCTL_T", "CTL_T",
-        "LSFT_T", "SFT_T", 
-        "LALT_T", "ALT_T", "LOPT_T", "OPT_T",
-        "LGUI_T", "GUI_T", "LCMD_T", "LWIN_T", "CMD_T", "WIN_T",
-        // Single modifiers (right)
-        "RCTL_T",
-        "RSFT_T",
-        "RALT_T", "ROPT_T", "ALGR_T",
-        "RGUI_T", "RCMD_T", "RWIN_T",
-        // Combo modifiers (left)
-        "LCS_T",   // Ctrl+Shift
-        "LCA_T",   // Ctrl+Alt
-        "LCG_T",   // Ctrl+GUI
-        "LSA_T",   // Shift+Alt
-        "LSG_T",   // Shift+GUI
-        "LAG_T",   // Alt+GUI
-        "LCSG_T",  // Ctrl+Shift+GUI
-        "LCAG_T",  // Ctrl+Alt+GUI
-        "LSAG_T",  // Shift+Alt+GUI
-        // Combo modifiers (right)
-        "RCS_T",
-        "RCA_T",
-        "RCG_T",
-        "RSA_T",
-        "RSG_T",
-        "RAG_T",
-        "RCSG_T",
-        "RCAG_T",
-        "RSAG_T",
-        // Special combos
-        "MEH_T",   // Ctrl+Shift+Alt
-        "HYPR_T",  // Ctrl+Shift+Alt+GUI
-    ];
+/// Handle a parameterized keycode selection based on its params from the database.
+/// This replaces the old hardcoded match statements with a data-driven approach.
+fn handle_parameterized_keycode(
+    state: &mut AppState,
+    prefix: &str,
+    params: &[crate::keycode_db::KeycodeParam],
+) -> Result<bool> {
+    state.pending_keycode = PendingKeycodeState::new();
+    state.keycode_picker_state.reset();
 
-    // Check if keycode matches pattern PREFIX_T() or PREFIX()
-    for prefix in SIMPLE_MOD_TAP_PREFIXES {
-        let pattern = format!("{}()", prefix);
-        if keycode == pattern {
-            return Some(prefix.to_string());
+    // Determine the keycode type based on the parameter pattern
+    let keycode_type = determine_keycode_type(prefix, params);
+    state.pending_keycode.keycode_type = Some(keycode_type.clone());
+
+    // For keycodes with a fixed prefix (like LCTL_T, LCG), store it
+    if matches!(
+        keycode_type,
+        ParameterizedKeycodeType::SimpleModTap | ParameterizedKeycodeType::SwapHandsTap
+    ) {
+        state.pending_keycode.param1 = Some(prefix.to_string());
+    }
+
+    // Set up the first picker based on the first parameter type
+    let first_param = &params[0];
+    match first_param.param_type {
+        ParamType::Layer => {
+            state.layer_picker_state = LayerPickerState::with_prefix(prefix);
+            state.active_popup = Some(PopupType::LayerPicker);
+            state.set_status(format!(
+                "Select {} for {}",
+                first_param.description.as_deref().unwrap_or("layer"),
+                prefix
+            ));
+        }
+        ParamType::Modifier => {
+            state.active_popup = Some(PopupType::ModifierPicker);
+            state.set_status(format!(
+                "Select {} for {}",
+                first_param.description.as_deref().unwrap_or("modifier"),
+                prefix
+            ));
+        }
+        ParamType::Keycode => {
+            state.active_popup = Some(PopupType::TapKeycodePicker);
+            state.keycode_picker_state = KeycodePickerState::new();
+            state.set_status(format!(
+                "Select {} for {}",
+                first_param.description.as_deref().unwrap_or("keycode"),
+                prefix
+            ));
         }
     }
-    
-    None
+
+    Ok(false)
 }
 
-/// Check if a keycode is a modifier wrapper (e.g., LCTL(), LCG(), MEH()) that wraps another keycode.
-/// Returns the prefix (e.g., "LCTL", "LCG") if it is, None otherwise.
-fn get_modifier_wrapper_prefix(keycode: &str) -> Option<String> {
-    // List of all modifier wrapper prefixes (these wrap a keycode with modifiers)
-    // Unlike mod-tap, these don't have dual function - they just add modifiers to a key
-    const MODIFIER_WRAPPER_PREFIXES: &[&str] = &[
-        // Single modifiers (left)
-        "LCTL", "C",
-        "LSFT", "S",
-        "LALT", "A", "LOPT",
-        "LGUI", "G", "LCMD", "LWIN",
-        // Single modifiers (right)
-        "RCTL",
-        "RSFT",
-        "RALT", "ROPT", "ALGR",
-        "RGUI", "RCMD", "RWIN",
-        // Combo modifiers (left)
-        "LCS",   // Ctrl+Shift
-        "LCA",   // Ctrl+Alt
-        "LCG",   // Ctrl+GUI
-        "LSA",   // Shift+Alt
-        "LSG",   // Shift+GUI
-        "LAG",   // Alt+GUI
-        "LCSG",  // Ctrl+Shift+GUI
-        "LCAG",  // Ctrl+Alt+GUI
-        "LSAG",  // Shift+Alt+GUI
-        // Combo modifiers (right)
-        "RCS",
-        "RCA",
-        "RCG",
-        "RSA",
-        "RSG",
-        "RAG",
-        "RCSG",
-        "RCAG",
-        "RSAG",
-        // Special combos
-        "MEH",   // Ctrl+Shift+Alt
-        "HYPR",  // Ctrl+Shift+Alt+GUI
-    ];
-
-    // Check if keycode matches pattern PREFIX()
-    for prefix in MODIFIER_WRAPPER_PREFIXES {
-        let pattern = format!("{}()", prefix);
-        if keycode == pattern {
-            return Some(prefix.to_string());
+/// Determine the ParameterizedKeycodeType based on prefix and params pattern
+fn determine_keycode_type(
+    prefix: &str,
+    params: &[crate::keycode_db::KeycodeParam],
+) -> ParameterizedKeycodeType {
+    match (params.len(), params.first().map(|p| &p.param_type)) {
+        // Two params: Layer + Keycode = LayerTap
+        (2, Some(ParamType::Layer)) if params[1].param_type == ParamType::Keycode => {
+            ParameterizedKeycodeType::LayerTap
         }
+        // Two params: Layer + Modifier = LayerMod
+        (2, Some(ParamType::Layer)) if params[1].param_type == ParamType::Modifier => {
+            ParameterizedKeycodeType::LayerMod
+        }
+        // Two params: Modifier + Keycode = ModTap (custom, like MT())
+        (2, Some(ParamType::Modifier)) if params[1].param_type == ParamType::Keycode => {
+            ParameterizedKeycodeType::ModTap
+        }
+        // One param: Keycode with special prefix
+        (1, Some(ParamType::Keycode)) if prefix == "SH_T" => {
+            ParameterizedKeycodeType::SwapHandsTap
+        }
+        // One param: Keycode (mod-tap or modifier wrapper)
+        (1, Some(ParamType::Keycode)) => ParameterizedKeycodeType::SimpleModTap,
+        // One param: Layer only (MO, TG, TO, etc.) - handled separately via layer_picker
+        // One param: Modifier only (OSM) - for now use ModTap flow
+        (1, Some(ParamType::Modifier)) => ParameterizedKeycodeType::ModTap,
+        // Single layer param - shouldn't happen here as it's handled by layer_picker
+        (1, Some(ParamType::Layer)) => ParameterizedKeycodeType::LayerTap,
+        // Fallback
+        _ => ParameterizedKeycodeType::SimpleModTap,
     }
-    
-    None
 }

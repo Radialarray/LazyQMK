@@ -1,0 +1,189 @@
+{
+  "category": {
+    "id": "one_shot",
+    "name": "One-Shot",
+    "description": "One-shot modifiers and layers"
+  },
+  "keycodes": [
+    {
+      "code": "OS_TOGG",
+      "name": "One Shot Toggle",
+      "category": "one_shot",
+      "aliases": [
+        "QK_ONE_SHOT_TOGGLE"
+      ]
+    },
+    {
+      "code": "OS_ON",
+      "name": "One Shot On",
+      "category": "one_shot",
+      "aliases": [
+        "QK_ONE_SHOT_ON"
+      ]
+    },
+    {
+      "code": "OS_OFF",
+      "name": "One Shot Off",
+      "category": "one_shot",
+      "aliases": [
+        "QK_ONE_SHOT_OFF"
+      ]
+    },
+    {
+      "code": "OSM()",
+      "name": "One Shot Mod",
+      "category": "one_shot",
+      "pattern": "OSM\\((MOD_[A-Z]+)\\)",
+      "description": "Hold modifier for one keypress",
+      "params": [
+        {
+          "type": "modifier",
+          "name": "modifier",
+          "description": "One-shot modifier"
+        }
+      ]
+    },
+    {
+      "code": "OS_LCTL",
+      "name": "OS Left Ctrl",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LSFT",
+      "name": "OS Left Shift",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LALT",
+      "name": "OS Left Alt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LGUI",
+      "name": "OS Left GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCTL",
+      "name": "OS Right Ctrl",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RSFT",
+      "name": "OS Right Shift",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RALT",
+      "name": "OS Right Alt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RGUI",
+      "name": "OS Right GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LCS",
+      "name": "OS Ctrl+Shift",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LCA",
+      "name": "OS Ctrl+Alt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LCG",
+      "name": "OS Ctrl+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LSA",
+      "name": "OS Shift+Alt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LSG",
+      "name": "OS Shift+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LAG",
+      "name": "OS Alt+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LCSG",
+      "name": "OS Ctrl+Shift+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LCAG",
+      "name": "OS Ctrl+Alt+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_LSAG",
+      "name": "OS Shift+Alt+GUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCS",
+      "name": "OS RCtrl+RShift",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCA",
+      "name": "OS RCtrl+RAlt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCG",
+      "name": "OS RCtrl+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RSA",
+      "name": "OS RShift+RAlt",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RSG",
+      "name": "OS RShift+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RAG",
+      "name": "OS RAlt+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCSG",
+      "name": "OS RCtrl+RShift+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RCAG",
+      "name": "OS RCtrl+RAlt+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_RSAG",
+      "name": "OS RShift+RAlt+RGUI",
+      "category": "one_shot"
+    },
+    {
+      "code": "OS_MEH",
+      "name": "OS Meh",
+      "category": "one_shot",
+      "description": "Ctrl+Shift+Alt"
+    },
+    {
+      "code": "OS_HYPR",
+      "name": "OS Hyper",
+      "category": "one_shot",
+      "description": "Ctrl+Shift+Alt+GUI"
+    }
+  ]
+}

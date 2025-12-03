@@ -1,0 +1,129 @@
+{
+  "category": {
+    "id": "audio",
+    "name": "Audio",
+    "description": "Audio, music mode, clicky"
+  },
+  "keycodes": [
+    {
+      "code": "AU_ON",
+      "name": "Audio On",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_ON"
+      ]
+    },
+    {
+      "code": "AU_OFF",
+      "name": "Audio Off",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_OFF"
+      ]
+    },
+    {
+      "code": "AU_TOGG",
+      "name": "Audio Toggle",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_TOGGLE"
+      ]
+    },
+    {
+      "code": "CK_TOGG",
+      "name": "Clicky Toggle",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_TOGGLE"
+      ]
+    },
+    {
+      "code": "CK_ON",
+      "name": "Clicky On",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_ON"
+      ]
+    },
+    {
+      "code": "CK_OFF",
+      "name": "Clicky Off",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_OFF"
+      ]
+    },
+    {
+      "code": "CK_UP",
+      "name": "Clicky Up",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_UP"
+      ]
+    },
+    {
+      "code": "CK_DOWN",
+      "name": "Clicky Down",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_DOWN"
+      ]
+    },
+    {
+      "code": "CK_RST",
+      "name": "Clicky Reset",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_CLICKY_RESET"
+      ]
+    },
+    {
+      "code": "MU_ON",
+      "name": "Music On",
+      "category": "audio",
+      "aliases": [
+        "QK_MUSIC_ON"
+      ]
+    },
+    {
+      "code": "MU_OFF",
+      "name": "Music Off",
+      "category": "audio",
+      "aliases": [
+        "QK_MUSIC_OFF"
+      ]
+    },
+    {
+      "code": "MU_TOGG",
+      "name": "Music Toggle",
+      "category": "audio",
+      "aliases": [
+        "QK_MUSIC_TOGGLE"
+      ]
+    },
+    {
+      "code": "MU_NEXT",
+      "name": "Music Mode Next",
+      "category": "audio",
+      "aliases": [
+        "QK_MUSIC_MODE_NEXT"
+      ]
+    },
+    {
+      "code": "AU_NEXT",
+      "name": "Audio Voice Next",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_VOICE_NEXT"
+      ]
+    },
+    {
+      "code": "AU_PREV",
+      "name": "Audio Voice Prev",
+      "category": "audio",
+      "aliases": [
+        "QK_AUDIO_VOICE_PREVIOUS"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "category": {
+    "id": "backlight",
+    "name": "Backlight",
+    "description": "Backlight controls"
+  },
+  "keycodes": [
+    {
+      "code": "BL_TOGG",
+      "name": "Backlight Toggle",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_TOGGLE"
+      ]
+    },
+    {
+      "code": "BL_STEP",
+      "name": "Backlight Step",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_STEP"
+      ]
+    },
+    {
+      "code": "BL_ON",
+      "name": "Backlight On",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_ON"
+      ]
+    },
+    {
+      "code": "BL_OFF",
+      "name": "Backlight Off",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_OFF"
+      ]
+    },
+    {
+      "code": "BL_UP",
+      "name": "Backlight Up",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_UP"
+      ]
+    },
+    {
+      "code": "BL_DOWN",
+      "name": "Backlight Down",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_DOWN"
+      ]
+    },
+    {
+      "code": "BL_BRTG",
+      "name": "Backlight Breathing",
+      "category": "backlight",
+      "aliases": [
+        "QK_BACKLIGHT_TOGGLE_BREATHING"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "category": {
+    "id": "system",
+    "name": "System",
+    "description": "Boot, power, sleep, system keys"
+  },
+  "keycodes": [
+    {
+      "code": "KC_PSCR",
+      "name": "Print Screen",
+      "category": "system",
+      "aliases": [
+        "KC_PRINT_SCREEN"
+      ]
+    },
+    {
+      "code": "KC_SCRL",
+      "name": "Scroll Lock",
+      "category": "system",
+      "aliases": [
+        "KC_SCROLL_LOCK",
+        "KC_BRMD"
+      ]
+    },
+    {
+      "code": "KC_PAUS",
+      "name": "Pause",
+      "category": "system",
+      "aliases": [
+        "KC_PAUSE",
+        "KC_BRK",
+        "KC_BRMU"
+      ]
+    },
+    {
+      "code": "KC_PWR",
+      "name": "System Power",
+      "category": "system",
+      "aliases": [
+        "KC_SYSTEM_POWER"
+      ]
+    },
+    {
+      "code": "KC_SLEP",
+      "name": "System Sleep",
+      "category": "system",
+      "aliases": [
+        "KC_SYSTEM_SLEEP"
+      ]
+    },
+    {
+      "code": "KC_WAKE",
+      "name": "System Wake",
+      "category": "system",
+      "aliases": [
+        "KC_SYSTEM_WAKE"
+      ]
+    },
+    {
+      "code": "QK_BOOT",
+      "name": "Bootloader",
+      "category": "system",
+      "description": "Enter bootloader mode",
+      "aliases": [
+        "RESET"
+      ]
+    },
+    {
+      "code": "QK_REBOOT",
+      "name": "Reboot",
+      "category": "system",
+      "description": "Reboot keyboard"
+    },
+    {
+      "code": "DB_TOGG",
+      "name": "Debug Toggle",
+      "category": "system",
+      "description": "Toggle debug mode",
+      "aliases": [
+        "QK_DEBUG_TOGGLE"
+      ]
+    },
+    {
+      "code": "EE_CLR",
+      "name": "Clear EEPROM",
+      "category": "system",
+      "description": "Reset EEPROM to defaults",
+      "aliases": [
+        "QK_CLEAR_EEPROM"
+      ]
+    }
+  ]
+}

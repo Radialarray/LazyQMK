@@ -1,0 +1,333 @@
+{
+  "category": {
+    "id": "basic",
+    "name": "Basic",
+    "description": "Letters, numbers, Enter, Tab, Space"
+  },
+  "keycodes": [
+    {
+      "code": "KC_A",
+      "name": "A",
+      "category": "basic"
+    },
+    {
+      "code": "KC_B",
+      "name": "B",
+      "category": "basic"
+    },
+    {
+      "code": "KC_C",
+      "name": "C",
+      "category": "basic"
+    },
+    {
+      "code": "KC_D",
+      "name": "D",
+      "category": "basic"
+    },
+    {
+      "code": "KC_E",
+      "name": "E",
+      "category": "basic"
+    },
+    {
+      "code": "KC_F",
+      "name": "F",
+      "category": "basic"
+    },
+    {
+      "code": "KC_G",
+      "name": "G",
+      "category": "basic"
+    },
+    {
+      "code": "KC_H",
+      "name": "H",
+      "category": "basic"
+    },
+    {
+      "code": "KC_I",
+      "name": "I",
+      "category": "basic"
+    },
+    {
+      "code": "KC_J",
+      "name": "J",
+      "category": "basic"
+    },
+    {
+      "code": "KC_K",
+      "name": "K",
+      "category": "basic"
+    },
+    {
+      "code": "KC_L",
+      "name": "L",
+      "category": "basic"
+    },
+    {
+      "code": "KC_M",
+      "name": "M",
+      "category": "basic"
+    },
+    {
+      "code": "KC_N",
+      "name": "N",
+      "category": "basic"
+    },
+    {
+      "code": "KC_O",
+      "name": "O",
+      "category": "basic"
+    },
+    {
+      "code": "KC_P",
+      "name": "P",
+      "category": "basic"
+    },
+    {
+      "code": "KC_Q",
+      "name": "Q",
+      "category": "basic"
+    },
+    {
+      "code": "KC_R",
+      "name": "R",
+      "category": "basic"
+    },
+    {
+      "code": "KC_S",
+      "name": "S",
+      "category": "basic"
+    },
+    {
+      "code": "KC_T",
+      "name": "T",
+      "category": "basic"
+    },
+    {
+      "code": "KC_U",
+      "name": "U",
+      "category": "basic"
+    },
+    {
+      "code": "KC_V",
+      "name": "V",
+      "category": "basic"
+    },
+    {
+      "code": "KC_W",
+      "name": "W",
+      "category": "basic"
+    },
+    {
+      "code": "KC_X",
+      "name": "X",
+      "category": "basic"
+    },
+    {
+      "code": "KC_Y",
+      "name": "Y",
+      "category": "basic"
+    },
+    {
+      "code": "KC_Z",
+      "name": "Z",
+      "category": "basic"
+    },
+    {
+      "code": "KC_1",
+      "name": "1",
+      "category": "basic"
+    },
+    {
+      "code": "KC_2",
+      "name": "2",
+      "category": "basic"
+    },
+    {
+      "code": "KC_3",
+      "name": "3",
+      "category": "basic"
+    },
+    {
+      "code": "KC_4",
+      "name": "4",
+      "category": "basic"
+    },
+    {
+      "code": "KC_5",
+      "name": "5",
+      "category": "basic"
+    },
+    {
+      "code": "KC_6",
+      "name": "6",
+      "category": "basic"
+    },
+    {
+      "code": "KC_7",
+      "name": "7",
+      "category": "basic"
+    },
+    {
+      "code": "KC_8",
+      "name": "8",
+      "category": "basic"
+    },
+    {
+      "code": "KC_9",
+      "name": "9",
+      "category": "basic"
+    },
+    {
+      "code": "KC_0",
+      "name": "0",
+      "category": "basic"
+    },
+    {
+      "code": "KC_ENT",
+      "name": "Enter",
+      "category": "basic",
+      "aliases": [
+        "KC_ENTER"
+      ]
+    },
+    {
+      "code": "KC_ESC",
+      "name": "Escape",
+      "category": "basic",
+      "aliases": [
+        "KC_ESCAPE"
+      ]
+    },
+    {
+      "code": "KC_BSPC",
+      "name": "Backspace",
+      "category": "basic",
+      "aliases": [
+        "KC_BACKSPACE"
+      ]
+    },
+    {
+      "code": "KC_TAB",
+      "name": "Tab",
+      "category": "basic"
+    },
+    {
+      "code": "KC_SPC",
+      "name": "Space",
+      "category": "basic",
+      "aliases": [
+        "KC_SPACE"
+      ]
+    },
+    {
+      "code": "KC_CAPS",
+      "name": "Caps Lock",
+      "category": "basic",
+      "aliases": [
+        "KC_CAPSLOCK"
+      ]
+    },
+    {
+      "code": "KC_EXEC",
+      "name": "Execute",
+      "category": "basic",
+      "aliases": [
+        "KC_EXECUTE"
+      ]
+    },
+    {
+      "code": "KC_HELP",
+      "name": "Help",
+      "category": "basic"
+    },
+    {
+      "code": "KC_SLCT",
+      "name": "Select",
+      "category": "basic",
+      "aliases": [
+        "KC_SELECT"
+      ]
+    },
+    {
+      "code": "KC_STOP",
+      "name": "Stop",
+      "category": "basic"
+    },
+    {
+      "code": "KC_AGIN",
+      "name": "Again",
+      "category": "basic",
+      "aliases": [
+        "KC_AGAIN"
+      ]
+    },
+    {
+      "code": "KC_UNDO",
+      "name": "Undo",
+      "category": "basic"
+    },
+    {
+      "code": "KC_CUT",
+      "name": "Cut",
+      "category": "basic"
+    },
+    {
+      "code": "KC_COPY",
+      "name": "Copy",
+      "category": "basic"
+    },
+    {
+      "code": "KC_PSTE",
+      "name": "Paste",
+      "category": "basic",
+      "aliases": [
+        "KC_PASTE"
+      ]
+    },
+    {
+      "code": "KC_FIND",
+      "name": "Find",
+      "category": "basic"
+    },
+    {
+      "code": "KC_LCAP",
+      "name": "Locking Caps Lock",
+      "category": "basic",
+      "aliases": [
+        "KC_LOCKING_CAPS_LOCK"
+      ]
+    },
+    {
+      "code": "KC_LNUM",
+      "name": "Locking Num Lock",
+      "category": "basic",
+      "aliases": [
+        "KC_LOCKING_NUM_LOCK"
+      ]
+    },
+    {
+      "code": "KC_LSCR",
+      "name": "Locking Scroll Lock",
+      "category": "basic",
+      "aliases": [
+        "KC_LOCKING_SCROLL_LOCK"
+      ]
+    },
+    {
+      "code": "KC_APP",
+      "name": "Application",
+      "category": "basic",
+      "aliases": [
+        "KC_APPLICATION"
+      ]
+    },
+    {
+      "code": "KC_MENU",
+      "name": "Menu",
+      "category": "basic"
+    }
+  ]
+}

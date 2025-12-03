@@ -1,0 +1,222 @@
+{
+  "category": {
+    "id": "media",
+    "name": "Media",
+    "description": "Volume, playback, brightness"
+  },
+  "keycodes": [
+    {
+      "code": "KC_MUTE",
+      "name": "Mute",
+      "category": "media",
+      "aliases": [
+        "KC_AUDIO_MUTE"
+      ]
+    },
+    {
+      "code": "KC_VOLU",
+      "name": "Volume Up",
+      "category": "media",
+      "aliases": [
+        "KC_AUDIO_VOL_UP"
+      ]
+    },
+    {
+      "code": "KC_VOLD",
+      "name": "Volume Down",
+      "category": "media",
+      "aliases": [
+        "KC_AUDIO_VOL_DOWN"
+      ]
+    },
+    {
+      "code": "KC_MNXT",
+      "name": "Next Track",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_NEXT_TRACK"
+      ]
+    },
+    {
+      "code": "KC_MPRV",
+      "name": "Previous Track",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_PREV_TRACK"
+      ]
+    },
+    {
+      "code": "KC_MSTP",
+      "name": "Stop",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_STOP"
+      ]
+    },
+    {
+      "code": "KC_MPLY",
+      "name": "Play/Pause",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_PLAY_PAUSE"
+      ]
+    },
+    {
+      "code": "KC_MSEL",
+      "name": "Media Select",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_SELECT"
+      ]
+    },
+    {
+      "code": "KC_BRIU",
+      "name": "Brightness Up",
+      "category": "media",
+      "aliases": [
+        "KC_BRIGHTNESS_UP"
+      ]
+    },
+    {
+      "code": "KC_BRID",
+      "name": "Brightness Down",
+      "category": "media",
+      "aliases": [
+        "KC_BRIGHTNESS_DOWN"
+      ]
+    },
+    {
+      "code": "KC_EJCT",
+      "name": "Eject",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_EJECT"
+      ]
+    },
+    {
+      "code": "KC_MFFD",
+      "name": "Fast Forward",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_FAST_FORWARD"
+      ]
+    },
+    {
+      "code": "KC_MRWD",
+      "name": "Rewind",
+      "category": "media",
+      "aliases": [
+        "KC_MEDIA_REWIND"
+      ]
+    },
+    {
+      "code": "KC_MAIL",
+      "name": "Launch Mail",
+      "category": "media"
+    },
+    {
+      "code": "KC_CALC",
+      "name": "Calculator",
+      "category": "media",
+      "aliases": [
+        "KC_CALCULATOR"
+      ]
+    },
+    {
+      "code": "KC_MYCM",
+      "name": "My Computer",
+      "category": "media",
+      "aliases": [
+        "KC_MY_COMPUTER"
+      ]
+    },
+    {
+      "code": "KC_WSCH",
+      "name": "Browser Search",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_SEARCH"
+      ]
+    },
+    {
+      "code": "KC_WHOM",
+      "name": "Browser Home",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_HOME"
+      ]
+    },
+    {
+      "code": "KC_WBAK",
+      "name": "Browser Back",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_BACK"
+      ]
+    },
+    {
+      "code": "KC_WFWD",
+      "name": "Browser Forward",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_FORWARD"
+      ]
+    },
+    {
+      "code": "KC_WSTP",
+      "name": "Browser Stop",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_STOP"
+      ]
+    },
+    {
+      "code": "KC_WREF",
+      "name": "Browser Refresh",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_REFRESH"
+      ]
+    },
+    {
+      "code": "KC_WFAV",
+      "name": "Browser Favorites",
+      "category": "media",
+      "aliases": [
+        "KC_WWW_FAVORITES"
+      ]
+    },
+    {
+      "code": "KC_MCTL",
+      "name": "Mission Control",
+      "category": "media",
+      "aliases": [
+        "KC_MISSION_CONTROL"
+      ]
+    },
+    {
+      "code": "KC_LPAD",
+      "name": "Launchpad",
+      "category": "media",
+      "aliases": [
+        "KC_LAUNCHPAD"
+      ]
+    },
+    {
+      "code": "KC_ASST",
+      "name": "Assistant",
+      "category": "media",
+      "aliases": [
+        "KC_ASSISTANT"
+      ]
+    },
+    {
+      "code": "KC_CPNL",
+      "name": "Control Panel",
+      "category": "media",
+      "aliases": [
+        "KC_CONTROL_PANEL"
+      ]
+    }
+  ]
+}

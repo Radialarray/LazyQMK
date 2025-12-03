@@ -1,0 +1,225 @@
+{
+  "category": {
+    "id": "magic",
+    "name": "Magic",
+    "description": "NKRO, key swaps, and OS settings"
+  },
+  "keycodes": [
+    {
+      "code": "NK_TOGG",
+      "name": "NKRO Toggle",
+      "category": "magic",
+      "description": "Toggle N-Key Rollover",
+      "aliases": [
+        "QK_MAGIC_TOGGLE_NKRO"
+      ]
+    },
+    {
+      "code": "NK_ON",
+      "name": "NKRO On",
+      "category": "magic",
+      "description": "Enable N-Key Rollover",
+      "aliases": [
+        "QK_MAGIC_NKRO_ON"
+      ]
+    },
+    {
+      "code": "NK_OFF",
+      "name": "NKRO Off",
+      "category": "magic",
+      "description": "Disable N-Key Rollover",
+      "aliases": [
+        "QK_MAGIC_NKRO_OFF"
+      ]
+    },
+    {
+      "code": "AG_TOGG",
+      "name": "Alt-GUI Toggle",
+      "category": "magic",
+      "description": "Toggle Alt/GUI swap (Mac/Win)",
+      "aliases": [
+        "QK_MAGIC_TOGGLE_ALT_GUI"
+      ]
+    },
+    {
+      "code": "AG_LSWP",
+      "name": "Left Alt-GUI Swap",
+      "category": "magic",
+      "description": "Swap Left Alt and GUI",
+      "aliases": [
+        "QK_MAGIC_SWAP_LALT_LGUI"
+      ]
+    },
+    {
+      "code": "AG_RSWP",
+      "name": "Right Alt-GUI Swap",
+      "category": "magic",
+      "description": "Swap Right Alt and GUI",
+      "aliases": [
+        "QK_MAGIC_SWAP_RALT_RGUI"
+      ]
+    },
+    {
+      "code": "AG_LNRM",
+      "name": "Left Alt-GUI Normal",
+      "category": "magic",
+      "description": "Reset Left Alt and GUI",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_LALT_LGUI"
+      ]
+    },
+    {
+      "code": "AG_RNRM",
+      "name": "Right Alt-GUI Normal",
+      "category": "magic",
+      "description": "Reset Right Alt and GUI",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_RALT_RGUI"
+      ]
+    },
+    {
+      "code": "CG_TOGG",
+      "name": "Ctrl-GUI Toggle",
+      "category": "magic",
+      "description": "Toggle Ctrl/GUI swap",
+      "aliases": [
+        "QK_MAGIC_TOGGLE_CTL_GUI"
+      ]
+    },
+    {
+      "code": "CG_LSWP",
+      "name": "Left Ctrl-GUI Swap",
+      "category": "magic",
+      "description": "Swap Left Ctrl and GUI",
+      "aliases": [
+        "QK_MAGIC_SWAP_LCTL_LGUI"
+      ]
+    },
+    {
+      "code": "CG_RSWP",
+      "name": "Right Ctrl-GUI Swap",
+      "category": "magic",
+      "description": "Swap Right Ctrl and GUI",
+      "aliases": [
+        "QK_MAGIC_SWAP_RCTL_RGUI"
+      ]
+    },
+    {
+      "code": "CG_LNRM",
+      "name": "Left Ctrl-GUI Normal",
+      "category": "magic",
+      "description": "Reset Left Ctrl and GUI",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_LCTL_LGUI"
+      ]
+    },
+    {
+      "code": "CG_RNRM",
+      "name": "Right Ctrl-GUI Normal",
+      "category": "magic",
+      "description": "Reset Right Ctrl and GUI",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_RCTL_RGUI"
+      ]
+    },
+    {
+      "code": "CL_SWAP",
+      "name": "Caps Lock Swap",
+      "category": "magic",
+      "description": "Swap Caps Lock and Ctrl",
+      "aliases": [
+        "QK_MAGIC_SWAP_CONTROL_CAPSLOCK"
+      ]
+    },
+    {
+      "code": "CL_NORM",
+      "name": "Caps Lock Normal",
+      "category": "magic",
+      "description": "Reset Caps Lock",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_CONTROL_CAPSLOCK"
+      ]
+    },
+    {
+      "code": "CL_TOGG",
+      "name": "Caps Lock Toggle",
+      "category": "magic",
+      "description": "Toggle Caps Lock swap",
+      "aliases": [
+        "QK_MAGIC_TOGGLE_CONTROL_CAPSLOCK"
+      ]
+    },
+    {
+      "code": "CL_CTRL",
+      "name": "Caps Lock as Ctrl",
+      "category": "magic",
+      "description": "Caps Lock acts as Ctrl",
+      "aliases": [
+        "QK_MAGIC_CAPS_TO_CONTROL"
+      ]
+    },
+    {
+      "code": "GU_ON",
+      "name": "GUI On",
+      "category": "magic",
+      "description": "Enable GUI key",
+      "aliases": [
+        "QK_MAGIC_GUI_ON"
+      ]
+    },
+    {
+      "code": "GU_OFF",
+      "name": "GUI Off",
+      "category": "magic",
+      "description": "Disable GUI key",
+      "aliases": [
+        "QK_MAGIC_GUI_OFF"
+      ]
+    },
+    {
+      "code": "GU_TOGG",
+      "name": "GUI Toggle",
+      "category": "magic",
+      "description": "Toggle GUI key",
+      "aliases": [
+        "QK_MAGIC_TOGGLE_GUI"
+      ]
+    },
+    {
+      "code": "GE_SWAP",
+      "name": "Grave-Esc Swap",
+      "category": "magic",
+      "description": "Swap Grave and Escape",
+      "aliases": [
+        "QK_MAGIC_SWAP_GRAVE_ESCAPE"
+      ]
+    },
+    {
+      "code": "GE_NORM",
+      "name": "Grave-Esc Normal",
+      "category": "magic",
+      "description": "Reset Grave and Escape",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_GRAVE_ESCAPE"
+      ]
+    },
+    {
+      "code": "BS_SWAP",
+      "name": "Backslash-Bksp Swap",
+      "category": "magic",
+      "description": "Swap Backslash and Backspace",
+      "aliases": [
+        "QK_MAGIC_SWAP_BACKSLASH_BACKSPACE"
+      ]
+    },
+    {
+      "code": "BS_NORM",
+      "name": "Backslash-Bksp Normal",
+      "category": "magic",
+      "description": "Reset Backslash and Backspace",
+      "aliases": [
+        "QK_MAGIC_UNSWAP_BACKSLASH_BACKSPACE"
+      ]
+    }
+  ]
+}

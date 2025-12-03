@@ -1,0 +1,73 @@
+{
+  "category": {
+    "id": "modifiers",
+    "name": "Modifiers",
+    "description": "Shift, Ctrl, Alt, GUI/Win/Cmd"
+  },
+  "keycodes": [
+    {
+      "code": "KC_LCTL",
+      "name": "Left Control",
+      "category": "modifiers",
+      "aliases": [
+        "KC_LCTRL"
+      ]
+    },
+    {
+      "code": "KC_LSFT",
+      "name": "Left Shift",
+      "category": "modifiers",
+      "aliases": [
+        "KC_LSHIFT"
+      ]
+    },
+    {
+      "code": "KC_LALT",
+      "name": "Left Alt",
+      "category": "modifiers"
+    },
+    {
+      "code": "KC_LGUI",
+      "name": "Left GUI (Win/Cmd)",
+      "category": "modifiers"
+    },
+    {
+      "code": "KC_RCTL",
+      "name": "Right Control",
+      "category": "modifiers",
+      "aliases": [
+        "KC_RCTRL"
+      ]
+    },
+    {
+      "code": "KC_RSFT",
+      "name": "Right Shift",
+      "category": "modifiers",
+      "aliases": [
+        "KC_RSHIFT"
+      ]
+    },
+    {
+      "code": "KC_RALT",
+      "name": "Right Alt",
+      "category": "modifiers"
+    },
+    {
+      "code": "KC_RGUI",
+      "name": "Right GUI (Win/Cmd)",
+      "category": "modifiers"
+    },
+    {
+      "code": "KC_MEH",
+      "name": "Meh",
+      "category": "modifiers",
+      "description": "Ctrl+Shift+Alt"
+    },
+    {
+      "code": "KC_HYPR",
+      "name": "Hyper",
+      "category": "modifiers",
+      "description": "Ctrl+Shift+Alt+GUI"
+    }
+  ]
+}

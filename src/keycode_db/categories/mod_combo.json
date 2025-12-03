@@ -1,0 +1,398 @@
+{
+  "category": {
+    "id": "mod_combo",
+    "name": "Mod+Key",
+    "description": "LCTL(kc), MEH(kc), HYPR(kc)"
+  },
+  "keycodes": [
+    {
+      "code": "LCTL()",
+      "name": "Ctrl+",
+      "category": "mod_combo",
+      "pattern": "LCTL\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "C()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LSFT()",
+      "name": "Shift+",
+      "category": "mod_combo",
+      "pattern": "LSFT\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "S()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LALT()",
+      "name": "Alt+",
+      "category": "mod_combo",
+      "pattern": "LALT\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "A()",
+        "LOPT()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LGUI()",
+      "name": "GUI+",
+      "category": "mod_combo",
+      "pattern": "LGUI\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "G()",
+        "LCMD()",
+        "LWIN()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCTL()",
+      "name": "RCtrl+",
+      "category": "mod_combo",
+      "pattern": "RCTL\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RSFT()",
+      "name": "RShift+",
+      "category": "mod_combo",
+      "pattern": "RSFT\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RALT()",
+      "name": "RAlt+",
+      "category": "mod_combo",
+      "pattern": "RALT\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "ROPT()",
+        "ALGR()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RGUI()",
+      "name": "RGUI+",
+      "category": "mod_combo",
+      "pattern": "RGUI\\(([A-Z0-9_]+)\\)",
+      "aliases": [
+        "RCMD()",
+        "RWIN()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LCS()",
+      "name": "Ctrl+Shift+",
+      "category": "mod_combo",
+      "pattern": "LCS\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LCA()",
+      "name": "Ctrl+Alt+",
+      "category": "mod_combo",
+      "pattern": "LCA\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LCG()",
+      "name": "Ctrl+GUI+",
+      "category": "mod_combo",
+      "pattern": "LCG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LSA()",
+      "name": "Shift+Alt+",
+      "category": "mod_combo",
+      "pattern": "LSA\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LSG()",
+      "name": "Shift+GUI+",
+      "category": "mod_combo",
+      "pattern": "LSG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LAG()",
+      "name": "Alt+GUI+",
+      "category": "mod_combo",
+      "pattern": "LAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LCSG()",
+      "name": "Ctrl+Shift+GUI+",
+      "category": "mod_combo",
+      "pattern": "LCSG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LCAG()",
+      "name": "Ctrl+Alt+GUI+",
+      "category": "mod_combo",
+      "pattern": "LCAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "LSAG()",
+      "name": "Shift+Alt+GUI+",
+      "category": "mod_combo",
+      "pattern": "LSAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCS()",
+      "name": "RCtrl+RShift+",
+      "category": "mod_combo",
+      "pattern": "RCS\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCA()",
+      "name": "RCtrl+RAlt+",
+      "category": "mod_combo",
+      "pattern": "RCA\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCG()",
+      "name": "RCtrl+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RCG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RSA()",
+      "name": "RShift+RAlt+",
+      "category": "mod_combo",
+      "pattern": "RSA\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RSG()",
+      "name": "RShift+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RSG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RAG()",
+      "name": "RAlt+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCSG()",
+      "name": "RCtrl+RShift+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RCSG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RCAG()",
+      "name": "RCtrl+RAlt+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RCAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "RSAG()",
+      "name": "RShift+RAlt+RGUI+",
+      "category": "mod_combo",
+      "pattern": "RSAG\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "MEH()",
+      "name": "Meh+",
+      "category": "mod_combo",
+      "pattern": "MEH\\(([A-Z0-9_]+)\\)",
+      "description": "Ctrl+Shift+Alt",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    },
+    {
+      "code": "HYPR()",
+      "name": "Hyper+",
+      "category": "mod_combo",
+      "pattern": "HYPR\\(([A-Z0-9_]+)\\)",
+      "description": "Ctrl+Shift+Alt+GUI",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to wrap with modifier(s)"
+        }
+      ]
+    }
+  ]
+}

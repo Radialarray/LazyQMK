@@ -1,0 +1,105 @@
+{
+  "version": "2.0",
+  "categories": [
+    {
+      "id": "basic",
+      "name": "Basic",
+      "description": "Letters, numbers, Enter, Tab, Space"
+    },
+    {
+      "id": "symbols",
+      "name": "Symbols",
+      "description": "Punctuation and special characters"
+    },
+    {
+      "id": "shifted",
+      "name": "Shifted",
+      "description": "US ANSI shifted symbols (!@#$%)"
+    },
+    {
+      "id": "navigation",
+      "name": "Navigation",
+      "description": "Arrow keys, Home, End, PgUp/Dn"
+    },
+    {
+      "id": "function",
+      "name": "F-Keys",
+      "description": "F1-F24 function keys"
+    },
+    {
+      "id": "numpad",
+      "name": "Numpad",
+      "description": "Numeric keypad keys"
+    },
+    {
+      "id": "modifiers",
+      "name": "Modifiers",
+      "description": "Shift, Ctrl, Alt, GUI/Win/Cmd"
+    },
+    {
+      "id": "mod_combo",
+      "name": "Mod+Key",
+      "description": "LCTL(kc), MEH(kc), HYPR(kc)"
+    },
+    {
+      "id": "mod_tap",
+      "name": "Mod-Tap",
+      "description": "Tap for key, hold for modifier (home row mods)"
+    },
+    {
+      "id": "layers",
+      "name": "Layers",
+      "description": "Layer switching (use LT for tap+hold)"
+    },
+    {
+      "id": "one_shot",
+      "name": "One-Shot",
+      "description": "One-shot modifiers and layers"
+    },
+    {
+      "id": "mouse",
+      "name": "Mouse",
+      "description": "Mouse cursor, buttons, wheel"
+    },
+    {
+      "id": "media",
+      "name": "Media",
+      "description": "Volume, playback, brightness"
+    },
+    {
+      "id": "rgb",
+      "name": "RGB",
+      "description": "RGB lighting and matrix controls"
+    },
+    {
+      "id": "backlight",
+      "name": "Backlight",
+      "description": "Backlight controls"
+    },
+    {
+      "id": "audio",
+      "name": "Audio",
+      "description": "Audio, music mode, clicky"
+    },
+    {
+      "id": "system",
+      "name": "System",
+      "description": "Boot, power, sleep, system keys"
+    },
+    {
+      "id": "international",
+      "name": "Intl",
+      "description": "International and language keys"
+    },
+    {
+      "id": "advanced",
+      "name": "Advanced",
+      "description": "Leader key, autocorrect, macros"
+    },
+    {
+      "id": "magic",
+      "name": "Magic",
+      "description": "NKRO, key swaps, and OS settings"
+    }
+  ]
+}

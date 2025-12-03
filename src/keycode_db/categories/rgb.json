@@ -1,0 +1,201 @@
+{
+  "category": {
+    "id": "rgb",
+    "name": "RGB",
+    "description": "RGB lighting and matrix controls"
+  },
+  "keycodes": [
+    {
+      "code": "UG_TOGG",
+      "name": "RGB Toggle",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_TOGGLE"
+      ]
+    },
+    {
+      "code": "UG_NEXT",
+      "name": "RGB Mode Next",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_MODE_NEXT"
+      ]
+    },
+    {
+      "code": "UG_PREV",
+      "name": "RGB Mode Prev",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_MODE_PREVIOUS"
+      ]
+    },
+    {
+      "code": "UG_HUEU",
+      "name": "RGB Hue Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_HUE_UP"
+      ]
+    },
+    {
+      "code": "UG_HUED",
+      "name": "RGB Hue Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_HUE_DOWN"
+      ]
+    },
+    {
+      "code": "UG_SATU",
+      "name": "RGB Sat Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_SATURATION_UP"
+      ]
+    },
+    {
+      "code": "UG_SATD",
+      "name": "RGB Sat Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_SATURATION_DOWN"
+      ]
+    },
+    {
+      "code": "UG_VALU",
+      "name": "RGB Val Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_VALUE_UP"
+      ]
+    },
+    {
+      "code": "UG_VALD",
+      "name": "RGB Val Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_VALUE_DOWN"
+      ]
+    },
+    {
+      "code": "UG_SPDU",
+      "name": "RGB Speed Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_SPEED_UP"
+      ]
+    },
+    {
+      "code": "UG_SPDD",
+      "name": "RGB Speed Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_UNDERGLOW_SPEED_DOWN"
+      ]
+    },
+    {
+      "code": "RM_ON",
+      "name": "Matrix On",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_ON"
+      ]
+    },
+    {
+      "code": "RM_OFF",
+      "name": "Matrix Off",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_OFF"
+      ]
+    },
+    {
+      "code": "RM_TOGG",
+      "name": "Matrix Toggle",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_TOGGLE"
+      ]
+    },
+    {
+      "code": "RM_NEXT",
+      "name": "Matrix Mode Next",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_MODE_NEXT"
+      ]
+    },
+    {
+      "code": "RM_PREV",
+      "name": "Matrix Mode Prev",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_MODE_PREVIOUS"
+      ]
+    },
+    {
+      "code": "RM_HUEU",
+      "name": "Matrix Hue Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_HUE_UP"
+      ]
+    },
+    {
+      "code": "RM_HUED",
+      "name": "Matrix Hue Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_HUE_DOWN"
+      ]
+    },
+    {
+      "code": "RM_SATU",
+      "name": "Matrix Sat Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_SATURATION_UP"
+      ]
+    },
+    {
+      "code": "RM_SATD",
+      "name": "Matrix Sat Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_SATURATION_DOWN"
+      ]
+    },
+    {
+      "code": "RM_VALU",
+      "name": "Matrix Val Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_VALUE_UP"
+      ]
+    },
+    {
+      "code": "RM_VALD",
+      "name": "Matrix Val Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_VALUE_DOWN"
+      ]
+    },
+    {
+      "code": "RM_SPDU",
+      "name": "Matrix Speed Up",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_SPEED_UP"
+      ]
+    },
+    {
+      "code": "RM_SPDD",
+      "name": "Matrix Speed Down",
+      "category": "rgb",
+      "aliases": [
+        "QK_RGB_MATRIX_SPEED_DOWN"
+      ]
+    }
+  ]
+}

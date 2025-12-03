@@ -1,0 +1,168 @@
+{
+  "category": {
+    "id": "shifted",
+    "name": "Shifted",
+    "description": "US ANSI shifted symbols (!@#$%)"
+  },
+  "keycodes": [
+    {
+      "code": "KC_TILD",
+      "name": "~",
+      "category": "shifted",
+      "aliases": [
+        "KC_TILDE"
+      ]
+    },
+    {
+      "code": "KC_EXLM",
+      "name": "!",
+      "category": "shifted",
+      "aliases": [
+        "KC_EXCLAIM"
+      ]
+    },
+    {
+      "code": "KC_AT",
+      "name": "@",
+      "category": "shifted"
+    },
+    {
+      "code": "KC_HASH",
+      "name": "#",
+      "category": "shifted"
+    },
+    {
+      "code": "KC_DLR",
+      "name": "$",
+      "category": "shifted",
+      "aliases": [
+        "KC_DOLLAR"
+      ]
+    },
+    {
+      "code": "KC_PERC",
+      "name": "%",
+      "category": "shifted",
+      "aliases": [
+        "KC_PERCENT"
+      ]
+    },
+    {
+      "code": "KC_CIRC",
+      "name": "^",
+      "category": "shifted",
+      "aliases": [
+        "KC_CIRCUMFLEX"
+      ]
+    },
+    {
+      "code": "KC_AMPR",
+      "name": "&",
+      "category": "shifted",
+      "aliases": [
+        "KC_AMPERSAND"
+      ]
+    },
+    {
+      "code": "KC_ASTR",
+      "name": "*",
+      "category": "shifted",
+      "aliases": [
+        "KC_ASTERISK"
+      ]
+    },
+    {
+      "code": "KC_LPRN",
+      "name": "(",
+      "category": "shifted",
+      "aliases": [
+        "KC_LEFT_PAREN"
+      ]
+    },
+    {
+      "code": "KC_RPRN",
+      "name": ")",
+      "category": "shifted",
+      "aliases": [
+        "KC_RIGHT_PAREN"
+      ]
+    },
+    {
+      "code": "KC_UNDS",
+      "name": "_",
+      "category": "shifted",
+      "aliases": [
+        "KC_UNDERSCORE"
+      ]
+    },
+    {
+      "code": "KC_PLUS",
+      "name": "+",
+      "category": "shifted"
+    },
+    {
+      "code": "KC_LCBR",
+      "name": "{",
+      "category": "shifted",
+      "aliases": [
+        "KC_LEFT_CURLY_BRACE"
+      ]
+    },
+    {
+      "code": "KC_RCBR",
+      "name": "}",
+      "category": "shifted",
+      "aliases": [
+        "KC_RIGHT_CURLY_BRACE"
+      ]
+    },
+    {
+      "code": "KC_PIPE",
+      "name": "|",
+      "category": "shifted"
+    },
+    {
+      "code": "KC_COLN",
+      "name": ":",
+      "category": "shifted",
+      "aliases": [
+        "KC_COLON"
+      ]
+    },
+    {
+      "code": "KC_DQUO",
+      "name": "\"",
+      "category": "shifted",
+      "aliases": [
+        "KC_DOUBLE_QUOTE",
+        "KC_DQT"
+      ]
+    },
+    {
+      "code": "KC_LABK",
+      "name": "<",
+      "category": "shifted",
+      "aliases": [
+        "KC_LEFT_ANGLE_BRACKET",
+        "KC_LT"
+      ]
+    },
+    {
+      "code": "KC_RABK",
+      "name": ">",
+      "category": "shifted",
+      "aliases": [
+        "KC_RIGHT_ANGLE_BRACKET",
+        "KC_GT"
+      ]
+    },
+    {
+      "code": "KC_QUES",
+      "name": "?",
+      "category": "shifted",
+      "aliases": [
+        "KC_QUESTION"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+{
+  "category": {
+    "id": "advanced",
+    "name": "Advanced",
+    "description": "Leader key, autocorrect, macros"
+  },
+  "keycodes": [
+    {
+      "code": "QK_LEAD",
+      "name": "Leader Key",
+      "category": "advanced",
+      "aliases": [
+        "QK_LEADER"
+      ]
+    },
+    {
+      "code": "QK_LOCK",
+      "name": "Key Lock",
+      "category": "advanced",
+      "description": "Hold down next key until pressed again"
+    },
+    {
+      "code": "QK_LLCK",
+      "name": "Layer Lock",
+      "category": "advanced",
+      "aliases": [
+        "QK_LAYER_LOCK"
+      ],
+      "description": "Lock/unlock highest layer"
+    },
+    {
+      "code": "AS_DOWN",
+      "name": "Auto Shift Down",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_DOWN"
+      ]
+    },
+    {
+      "code": "AS_UP",
+      "name": "Auto Shift Up",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_UP"
+      ]
+    },
+    {
+      "code": "AS_RPT",
+      "name": "Auto Shift Report",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_REPORT"
+      ]
+    },
+    {
+      "code": "AS_ON",
+      "name": "Auto Shift On",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_ON"
+      ]
+    },
+    {
+      "code": "AS_OFF",
+      "name": "Auto Shift Off",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_OFF"
+      ]
+    },
+    {
+      "code": "AS_TOGG",
+      "name": "Auto Shift Toggle",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTO_SHIFT_TOGGLE"
+      ]
+    },
+    {
+      "code": "AC_ON",
+      "name": "Autocorrect On",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTOCORRECT_ON"
+      ]
+    },
+    {
+      "code": "AC_OFF",
+      "name": "Autocorrect Off",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTOCORRECT_OFF"
+      ]
+    },
+    {
+      "code": "AC_TOGG",
+      "name": "Autocorrect Toggle",
+      "category": "advanced",
+      "aliases": [
+        "QK_AUTOCORRECT_TOGGLE"
+      ]
+    },
+    {
+      "code": "CW_TOGG",
+      "name": "Caps Word Toggle",
+      "category": "advanced",
+      "description": "Toggle Caps Word mode",
+      "aliases": [
+        "QK_CAPS_WORD_TOGGLE"
+      ]
+    },
+    {
+      "code": "QK_GESC",
+      "name": "Grave Escape",
+      "category": "advanced",
+      "description": "Escape normally, ` with Shift/GUI",
+      "aliases": [
+        "QK_GRAVE_ESCAPE"
+      ]
+    },
+    {
+      "code": "DM_REC1",
+      "name": "Record Macro 1",
+      "category": "advanced",
+      "description": "Start recording macro 1",
+      "aliases": [
+        "QK_DYNAMIC_MACRO_RECORD_START_1"
+      ]
+    },
+    {
+      "code": "DM_REC2",
+      "name": "Record Macro 2",
+      "category": "advanced",
+      "description": "Start recording macro 2",
+      "aliases": [
+        "QK_DYNAMIC_MACRO_RECORD_START_2"
+      ]
+    },
+    {
+      "code": "DM_PLY1",
+      "name": "Play Macro 1",
+      "category": "advanced",
+      "description": "Play back macro 1",
+      "aliases": [
+        "QK_DYNAMIC_MACRO_PLAY_1"
+      ]
+    },
+    {
+      "code": "DM_PLY2",
+      "name": "Play Macro 2",
+      "category": "advanced",
+      "description": "Play back macro 2",
+      "aliases": [
+        "QK_DYNAMIC_MACRO_PLAY_2"
+      ]
+    },
+    {
+      "code": "DM_RSTP",
+      "name": "Stop Recording",
+      "category": "advanced",
+      "description": "Stop macro recording",
+      "aliases": [
+        "QK_DYNAMIC_MACRO_RECORD_STOP"
+      ]
+    },
+    {
+      "code": "QK_REP",
+      "name": "Repeat Key",
+      "category": "advanced",
+      "description": "Repeat last pressed key",
+      "aliases": [
+        "QK_REPEAT_KEY"
+      ]
+    },
+    {
+      "code": "QK_AREP",
+      "name": "Alt Repeat Key",
+      "category": "advanced",
+      "description": "Alternative repeat (configurable)",
+      "aliases": [
+        "QK_ALT_REPEAT_KEY"
+      ]
+    },
+    {
+      "code": "SC_LSPO",
+      "name": "Left Shift (",
+      "category": "advanced",
+      "description": "Shift when held, ( when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_LEFT_SHIFT_PARENTHESIS_OPEN"
+      ]
+    },
+    {
+      "code": "SC_RSPC",
+      "name": "Right Shift )",
+      "category": "advanced",
+      "description": "Shift when held, ) when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_RIGHT_SHIFT_PARENTHESIS_CLOSE"
+      ]
+    },
+    {
+      "code": "SC_LCPO",
+      "name": "Left Ctrl (",
+      "category": "advanced",
+      "description": "Ctrl when held, ( when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_LEFT_CTRL_PARENTHESIS_OPEN"
+      ]
+    },
+    {
+      "code": "SC_RCPC",
+      "name": "Right Ctrl )",
+      "category": "advanced",
+      "description": "Ctrl when held, ) when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_RIGHT_CTRL_PARENTHESIS_CLOSE"
+      ]
+    },
+    {
+      "code": "SC_LAPO",
+      "name": "Left Alt (",
+      "category": "advanced",
+      "description": "Alt when held, ( when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_LEFT_ALT_PARENTHESIS_OPEN"
+      ]
+    },
+    {
+      "code": "SC_RAPC",
+      "name": "Right Alt )",
+      "category": "advanced",
+      "description": "Alt when held, ) when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_RIGHT_ALT_PARENTHESIS_CLOSE"
+      ]
+    },
+    {
+      "code": "SC_SENT",
+      "name": "Shift Enter",
+      "category": "advanced",
+      "description": "Shift when held, Enter when tapped",
+      "aliases": [
+        "QK_SPACE_CADET_RIGHT_SHIFT_ENTER"
+      ]
+    },
+    {
+      "code": "SH_TOGG",
+      "name": "Swap Hands Toggle",
+      "category": "advanced",
+      "description": "Toggle one-handed mode",
+      "aliases": [
+        "QK_SWAP_HANDS_TOGGLE"
+      ]
+    },
+    {
+      "code": "SH_ON",
+      "name": "Swap Hands On",
+      "category": "advanced",
+      "description": "Enable swap hands",
+      "aliases": [
+        "QK_SWAP_HANDS_ON"
+      ]
+    },
+    {
+      "code": "SH_OFF",
+      "name": "Swap Hands Off",
+      "category": "advanced",
+      "description": "Disable swap hands",
+      "aliases": [
+        "QK_SWAP_HANDS_OFF"
+      ]
+    },
+    {
+      "code": "SH_MON",
+      "name": "Swap Hands Momentary",
+      "category": "advanced",
+      "description": "Momentary swap hands",
+      "aliases": [
+        "QK_SWAP_HANDS_MOMENTARY_ON"
+      ]
+    },
+    {
+      "code": "SH_TT",
+      "name": "Swap Hands Tap-Toggle",
+      "category": "advanced",
+      "description": "Tap-toggle swap hands",
+      "aliases": [
+        "QK_SWAP_HANDS_TAP_TOGGLE"
+      ]
+    },
+    {
+      "code": "SH_OS",
+      "name": "Swap Hands One-Shot",
+      "category": "advanced",
+      "description": "One-shot swap hands",
+      "aliases": [
+        "QK_SWAP_HANDS_ONE_SHOT"
+      ]
+    },
+    {
+      "code": "SH_T()",
+      "name": "Swap Hands Tap",
+      "category": "advanced",
+      "pattern": "SH_T\\(([A-Z0-9_]+)\\)",
+      "description": "Hold to swap hands, tap for keycode",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (hold swaps hands)"
+        }
+      ]
+    },
+    {
+      "code": "CM_ON",
+      "name": "Combos On",
+      "category": "advanced",
+      "description": "Enable combos",
+      "aliases": [
+        "QK_COMBO_ON"
+      ]
+    },
+    {
+      "code": "CM_OFF",
+      "name": "Combos Off",
+      "category": "advanced",
+      "description": "Disable combos",
+      "aliases": [
+        "QK_COMBO_OFF"
+      ]
+    },
+    {
+      "code": "CM_TOGG",
+      "name": "Combos Toggle",
+      "category": "advanced",
+      "description": "Toggle combos",
+      "aliases": [
+        "QK_COMBO_TOGGLE"
+      ]
+    }
+  ]
+}

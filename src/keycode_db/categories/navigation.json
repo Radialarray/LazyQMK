@@ -1,0 +1,68 @@
+{
+  "category": {
+    "id": "navigation",
+    "name": "Navigation",
+    "description": "Arrow keys, Home, End, PgUp/Dn"
+  },
+  "keycodes": [
+    {
+      "code": "KC_INS",
+      "name": "Insert",
+      "category": "navigation",
+      "aliases": [
+        "KC_INSERT"
+      ]
+    },
+    {
+      "code": "KC_HOME",
+      "name": "Home",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_PGUP",
+      "name": "Page Up",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_DEL",
+      "name": "Delete",
+      "category": "navigation",
+      "aliases": [
+        "KC_DELETE"
+      ]
+    },
+    {
+      "code": "KC_END",
+      "name": "End",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_PGDN",
+      "name": "Page Down",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_RGHT",
+      "name": "Right Arrow",
+      "category": "navigation",
+      "aliases": [
+        "KC_RIGHT"
+      ]
+    },
+    {
+      "code": "KC_LEFT",
+      "name": "Left Arrow",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_DOWN",
+      "name": "Down Arrow",
+      "category": "navigation"
+    },
+    {
+      "code": "KC_UP",
+      "name": "Up Arrow",
+      "category": "navigation"
+    }
+  ]
+}

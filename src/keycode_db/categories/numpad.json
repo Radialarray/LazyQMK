@@ -1,0 +1,113 @@
+{
+  "category": {
+    "id": "numpad",
+    "name": "Numpad",
+    "description": "Numeric keypad keys"
+  },
+  "keycodes": [
+    {
+      "code": "KC_NUM",
+      "name": "Num Lock",
+      "category": "numpad",
+      "aliases": [
+        "KC_NUM_LOCK"
+      ]
+    },
+    {
+      "code": "KC_PSLS",
+      "name": "Numpad /",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PAST",
+      "name": "Numpad *",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PMNS",
+      "name": "Numpad -",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PPLS",
+      "name": "Numpad +",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PENT",
+      "name": "Numpad Enter",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P1",
+      "name": "Numpad 1",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P2",
+      "name": "Numpad 2",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P3",
+      "name": "Numpad 3",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P4",
+      "name": "Numpad 4",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P5",
+      "name": "Numpad 5",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P6",
+      "name": "Numpad 6",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P7",
+      "name": "Numpad 7",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P8",
+      "name": "Numpad 8",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P9",
+      "name": "Numpad 9",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_P0",
+      "name": "Numpad 0",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PDOT",
+      "name": "Numpad .",
+      "category": "numpad"
+    },
+    {
+      "code": "KC_PCMM",
+      "name": "Numpad ,",
+      "category": "numpad",
+      "aliases": [
+        "KC_KP_COMMA"
+      ]
+    },
+    {
+      "code": "KC_PEQL",
+      "name": "Numpad =",
+      "category": "numpad",
+      "aliases": [
+        "KC_KP_EQUAL"
+      ]
+    }
+  ]
+}

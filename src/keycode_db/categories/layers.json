@@ -1,0 +1,182 @@
+{
+  "category": {
+    "id": "layers",
+    "name": "Layers",
+    "description": "Layer switching (use LT for tap+hold)"
+  },
+  "keycodes": [
+    {
+      "code": "MO()",
+      "name": "Momentary Layer",
+      "category": "layers",
+      "pattern": "MO\\((@?[\\w-]+)\\)",
+      "description": "Hold: activate layer (no tap action)",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "TG()",
+      "name": "Toggle Layer",
+      "category": "layers",
+      "pattern": "TG\\((@?[\\w-]+)\\)",
+      "description": "Press: toggle layer on/off",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "TO()",
+      "name": "Switch to Layer",
+      "category": "layers",
+      "pattern": "TO\\((@?[\\w-]+)\\)",
+      "description": "Press: switch to layer (deactivates others)",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "DF()",
+      "name": "Default Layer",
+      "category": "layers",
+      "pattern": "DF\\((@?[\\w-]+)\\)",
+      "description": "Press: set as base/default layer",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "OSL()",
+      "name": "One-Shot Layer",
+      "category": "layers",
+      "pattern": "OSL\\((@?[\\w-]+)\\)",
+      "description": "Press: activate layer for next keypress only",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "TT()",
+      "name": "Tap-Toggle Layer",
+      "category": "layers",
+      "pattern": "TT\\((@?[\\w-]+)\\)",
+      "description": "Tap: toggle layer, Hold: momentary",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "LT()",
+      "name": "Layer-Tap",
+      "category": "layers",
+      "pattern": "LT\\((@?[\\w-]+),\\s*([A-Z0-9_]+)\\)",
+      "description": "Tap: keycode, Hold: layer (dual-function)",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Layer to activate on hold"
+        },
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode to send on tap"
+        }
+      ]
+    },
+    {
+      "code": "PDF()",
+      "name": "Persistent Default",
+      "category": "layers",
+      "pattern": "PDF\\((@?[\\w-]+)\\)",
+      "description": "Set default layer (persists in EEPROM)",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Target layer"
+        }
+      ]
+    },
+    {
+      "code": "LM()",
+      "name": "Layer-Mod",
+      "category": "layers",
+      "pattern": "LM\\((@?[\\w-]+),\\s*(MOD_[A-Z]+)\\)",
+      "description": "Hold: layer + modifier together",
+      "params": [
+        {
+          "type": "layer",
+          "name": "layer",
+          "description": "Layer to activate"
+        },
+        {
+          "type": "modifier",
+          "name": "modifier",
+          "description": "Modifier to apply"
+        }
+      ]
+    },
+    {
+      "code": "KC_TRNS",
+      "name": "Transparent",
+      "category": "layers",
+      "description": "Pass through to lower layer",
+      "aliases": [
+        "KC_TRANSPARENT",
+        "_______"
+      ]
+    },
+    {
+      "code": "KC_NO",
+      "name": "No Key",
+      "category": "layers",
+      "description": "No key at this position",
+      "aliases": [
+        "XXXXXXX"
+      ]
+    },
+    {
+      "code": "TL_LOWR",
+      "name": "Tri-Layer Lower",
+      "category": "layers",
+      "description": "Hold for lower layer",
+      "aliases": [
+        "QK_TRI_LAYER_LOWER"
+      ]
+    },
+    {
+      "code": "TL_UPPR",
+      "name": "Tri-Layer Upper",
+      "category": "layers",
+      "description": "Hold for upper layer",
+      "aliases": [
+        "QK_TRI_LAYER_UPPER"
+      ]
+    }
+  ]
+}

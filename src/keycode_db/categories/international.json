@@ -1,0 +1,153 @@
+{
+  "category": {
+    "id": "international",
+    "name": "Intl",
+    "description": "International and language keys"
+  },
+  "keycodes": [
+    {
+      "code": "KC_INT1",
+      "name": "International 1",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_1"
+      ]
+    },
+    {
+      "code": "KC_INT2",
+      "name": "International 2",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_2"
+      ]
+    },
+    {
+      "code": "KC_INT3",
+      "name": "International 3",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_3"
+      ]
+    },
+    {
+      "code": "KC_INT4",
+      "name": "International 4",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_4"
+      ]
+    },
+    {
+      "code": "KC_INT5",
+      "name": "International 5",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_5"
+      ]
+    },
+    {
+      "code": "KC_INT6",
+      "name": "International 6",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_6"
+      ]
+    },
+    {
+      "code": "KC_INT7",
+      "name": "International 7",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_7"
+      ]
+    },
+    {
+      "code": "KC_INT8",
+      "name": "International 8",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_8"
+      ]
+    },
+    {
+      "code": "KC_INT9",
+      "name": "International 9",
+      "category": "international",
+      "aliases": [
+        "KC_INTERNATIONAL_9"
+      ]
+    },
+    {
+      "code": "KC_LNG1",
+      "name": "Language 1",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_1"
+      ]
+    },
+    {
+      "code": "KC_LNG2",
+      "name": "Language 2",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_2"
+      ]
+    },
+    {
+      "code": "KC_LNG3",
+      "name": "Language 3",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_3"
+      ]
+    },
+    {
+      "code": "KC_LNG4",
+      "name": "Language 4",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_4"
+      ]
+    },
+    {
+      "code": "KC_LNG5",
+      "name": "Language 5",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_5"
+      ]
+    },
+    {
+      "code": "KC_LNG6",
+      "name": "Language 6",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_6"
+      ]
+    },
+    {
+      "code": "KC_LNG7",
+      "name": "Language 7",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_7"
+      ]
+    },
+    {
+      "code": "KC_LNG8",
+      "name": "Language 8",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_8"
+      ]
+    },
+    {
+      "code": "KC_LNG9",
+      "name": "Language 9",
+      "category": "international",
+      "aliases": [
+        "KC_LANGUAGE_9"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "category": {
+    "id": "mouse",
+    "name": "Mouse",
+    "description": "Mouse cursor, buttons, wheel"
+  },
+  "keycodes": [
+    {
+      "code": "MS_UP",
+      "name": "Mouse Up",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_CURSOR_UP"
+      ]
+    },
+    {
+      "code": "MS_DOWN",
+      "name": "Mouse Down",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_CURSOR_DOWN"
+      ]
+    },
+    {
+      "code": "MS_LEFT",
+      "name": "Mouse Left",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_CURSOR_LEFT"
+      ]
+    },
+    {
+      "code": "MS_RGHT",
+      "name": "Mouse Right",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_CURSOR_RIGHT"
+      ]
+    },
+    {
+      "code": "MS_BTN1",
+      "name": "Mouse Button 1",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_1"
+      ]
+    },
+    {
+      "code": "MS_BTN2",
+      "name": "Mouse Button 2",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_2"
+      ]
+    },
+    {
+      "code": "MS_BTN3",
+      "name": "Mouse Button 3",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_3"
+      ]
+    },
+    {
+      "code": "MS_BTN4",
+      "name": "Mouse Button 4",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_4"
+      ]
+    },
+    {
+      "code": "MS_BTN5",
+      "name": "Mouse Button 5",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_5"
+      ]
+    },
+    {
+      "code": "MS_BTN6",
+      "name": "Mouse Button 6",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_6"
+      ]
+    },
+    {
+      "code": "MS_BTN7",
+      "name": "Mouse Button 7",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_7"
+      ]
+    },
+    {
+      "code": "MS_BTN8",
+      "name": "Mouse Button 8",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_BUTTON_8"
+      ]
+    },
+    {
+      "code": "MS_WHLU",
+      "name": "Wheel Up",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_WHEEL_UP"
+      ]
+    },
+    {
+      "code": "MS_WHLD",
+      "name": "Wheel Down",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_WHEEL_DOWN"
+      ]
+    },
+    {
+      "code": "MS_WHLL",
+      "name": "Wheel Left",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_WHEEL_LEFT"
+      ]
+    },
+    {
+      "code": "MS_WHLR",
+      "name": "Wheel Right",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_WHEEL_RIGHT"
+      ]
+    },
+    {
+      "code": "MS_ACL0",
+      "name": "Accel 0 (Slow)",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_ACCELERATION_0"
+      ]
+    },
+    {
+      "code": "MS_ACL1",
+      "name": "Accel 1 (Medium)",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_ACCELERATION_1"
+      ]
+    },
+    {
+      "code": "MS_ACL2",
+      "name": "Accel 2 (Fast)",
+      "category": "mouse",
+      "aliases": [
+        "QK_MOUSE_ACCELERATION_2"
+      ]
+    }
+  ]
+}

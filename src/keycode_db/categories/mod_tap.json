@@ -1,0 +1,426 @@
+{
+  "category": {
+    "id": "mod_tap",
+    "name": "Mod-Tap",
+    "description": "Tap for key, hold for modifier (home row mods)"
+  },
+  "keycodes": [
+    {
+      "code": "LCTL_T()",
+      "name": "Ctrl-Tap",
+      "category": "mod_tap",
+      "pattern": "LCTL_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Left Ctrl",
+      "aliases": [
+        "CTL_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LSFT_T()",
+      "name": "Shift-Tap",
+      "category": "mod_tap",
+      "pattern": "LSFT_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Left Shift",
+      "aliases": [
+        "SFT_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LALT_T()",
+      "name": "Alt-Tap",
+      "category": "mod_tap",
+      "pattern": "LALT_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Left Alt/Option",
+      "aliases": [
+        "ALT_T()",
+        "LOPT_T()",
+        "OPT_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LGUI_T()",
+      "name": "GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LGUI_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Left GUI/Cmd/Win",
+      "aliases": [
+        "GUI_T()",
+        "LCMD_T()",
+        "LWIN_T()",
+        "CMD_T()",
+        "WIN_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCTL_T()",
+      "name": "RCtrl-Tap",
+      "category": "mod_tap",
+      "pattern": "RCTL_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Right Ctrl",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RSFT_T()",
+      "name": "RShift-Tap",
+      "category": "mod_tap",
+      "pattern": "RSFT_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Right Shift",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RALT_T()",
+      "name": "RAlt-Tap",
+      "category": "mod_tap",
+      "pattern": "RALT_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Right Alt/AltGr",
+      "aliases": [
+        "ROPT_T()",
+        "ALGR_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RGUI_T()",
+      "name": "RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RGUI_T\\(([A-Z0-9_]+)\\)",
+      "description": "Tap: key, Hold: Right GUI/Cmd/Win",
+      "aliases": [
+        "RCMD_T()",
+        "RWIN_T()"
+      ],
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LCS_T()",
+      "name": "Ctrl+Shift-Tap",
+      "category": "mod_tap",
+      "pattern": "LCS_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LCA_T()",
+      "name": "Ctrl+Alt-Tap",
+      "category": "mod_tap",
+      "pattern": "LCA_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LCG_T()",
+      "name": "Ctrl+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LCG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LSA_T()",
+      "name": "Shift+Alt-Tap",
+      "category": "mod_tap",
+      "pattern": "LSA_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LSG_T()",
+      "name": "Shift+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LSG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LAG_T()",
+      "name": "Alt+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LCSG_T()",
+      "name": "Ctrl+Shift+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LCSG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LCAG_T()",
+      "name": "Ctrl+Alt+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LCAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "LSAG_T()",
+      "name": "Shift+Alt+GUI-Tap",
+      "category": "mod_tap",
+      "pattern": "LSAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCS_T()",
+      "name": "RCtrl+RShift-Tap",
+      "category": "mod_tap",
+      "pattern": "RCS_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCA_T()",
+      "name": "RCtrl+RAlt-Tap",
+      "category": "mod_tap",
+      "pattern": "RCA_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCG_T()",
+      "name": "RCtrl+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RCG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RSA_T()",
+      "name": "RShift+RAlt-Tap",
+      "category": "mod_tap",
+      "pattern": "RSA_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RSG_T()",
+      "name": "RShift+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RSG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RAG_T()",
+      "name": "RAlt+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCSG_T()",
+      "name": "RCtrl+RShift+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RCSG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RCAG_T()",
+      "name": "RCtrl+RAlt+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RCAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "RSAG_T()",
+      "name": "RShift+RAlt+RGUI-Tap",
+      "category": "mod_tap",
+      "pattern": "RSAG_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "MEH_T()",
+      "name": "Meh-Tap",
+      "category": "mod_tap",
+      "pattern": "MEH_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "HYPR_T()",
+      "name": "Hyper-Tap",
+      "category": "mod_tap",
+      "pattern": "HYPR_T\\(([A-Z0-9_]+)\\)",
+      "params": [
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap (modifier on hold)"
+        }
+      ]
+    },
+    {
+      "code": "MT()",
+      "name": "Mod-Tap (Custom)",
+      "category": "mod_tap",
+      "pattern": "MT\\((MOD_[A-Z_|]+),\\s*([A-Z0-9_]+)\\)",
+      "description": "Tap: keycode, Hold: modifier(s) - for home row mods",
+      "params": [
+        {
+          "type": "modifier",
+          "name": "modifier",
+          "description": "Modifier on hold"
+        },
+        {
+          "type": "keycode",
+          "name": "keycode",
+          "description": "Keycode on tap"
+        }
+      ]
+    }
+  ]
+}
