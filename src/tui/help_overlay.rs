@@ -338,7 +338,36 @@ impl HelpOverlayState {
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  In color picker:", Style::default().fg(theme.text_muted)),
+                Span::styled("  In color picker (Palette mode):", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
+                Span::styled("          Navigate colors/shades", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Tab", Style::default().fg(theme.success)),
+                Span::styled("                 Switch between color grid and shade bar", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("c", Style::default().fg(theme.success)),
+                Span::styled("                   Switch to custom RGB mode", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Enter", Style::default().fg(theme.success)),
+                Span::styled("               Apply color", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Cancel", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  In color picker (Custom RGB mode):", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
@@ -347,13 +376,18 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Left/Right", Style::default().fg(theme.success)),
-                Span::styled("          Adjust value (±1)", Style::default().fg(theme.text)),
+                Span::styled("←/→", Style::default().fg(theme.success)),
+                Span::styled("                 Adjust value (±1)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+Left/Right", Style::default().fg(theme.success)),
-                Span::styled("    Adjust value (±10)", Style::default().fg(theme.text)),
+                Span::styled("↑/↓", Style::default().fg(theme.success)),
+                Span::styled("                 Adjust value (±10)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("p", Style::default().fg(theme.success)),
+                Span::styled("                   Switch to palette mode", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
