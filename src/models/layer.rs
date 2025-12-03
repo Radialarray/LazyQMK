@@ -49,6 +49,9 @@ pub struct KeyDefinition {
     pub category_id: Option<String>,
     /// Flag for combo feature (future use)
     pub combo_participant: bool,
+    /// Optional user description for this key (e.g., "Primary thumb key")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -62,6 +65,7 @@ impl KeyDefinition {
             color_override: None,
             category_id: None,
             combo_participant: false,
+            description: None,
         }
     }
 
@@ -81,6 +85,12 @@ impl KeyDefinition {
     /// Sets the display label for this key.
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// Sets the description for this key.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 

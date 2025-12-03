@@ -11,6 +11,7 @@ pub mod color_picker;
 pub mod config_dialogs;
 pub mod help_overlay;
 pub mod help_registry;
+pub mod key_editor;
 pub mod keyboard;
 pub mod keycode_picker;
 pub mod layer_manager;
@@ -53,6 +54,7 @@ pub use category_manager::CategoryManagerState;
 pub use category_picker::CategoryPickerState;
 pub use color_picker::ColorPickerState;
 pub use help_overlay::HelpOverlayState;
+pub use key_editor::KeyEditorState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePickerState;
 pub use layer_manager::LayerManagerState;
@@ -288,6 +290,8 @@ pub enum PopupType {
     TapKeycodePicker,
     /// Modifier picker for MT/LM keycodes
     ModifierPicker,
+    /// Key editor popup for viewing/editing key properties
+    KeyEditor,
 }
 
 /// Selection mode for multi-key operations
@@ -366,6 +370,8 @@ pub struct AppState {
     pub pending_keycode: PendingKeycodeState,
     /// Modifier picker component state
     pub modifier_picker_state: ModifierPickerState,
+    /// Key editor component state
+    pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
     /// Flash highlight position (for paste feedback) - (layer, position, remaining_frames)
@@ -462,6 +468,7 @@ impl AppState {
             layer_picker_state: LayerPickerState::new(),
             pending_keycode: PendingKeycodeState::new(),
             modifier_picker_state: ModifierPickerState::new(),
+            key_editor_state: KeyEditorState::new(),
             clipboard: clipboard::KeyClipboard::new(),
             flash_highlight: None,
             selection_mode: None,
@@ -726,7 +733,7 @@ fn render(f: &mut Frame, state: &AppState) {
         .constraints([
             Constraint::Length(3), // Title bar
             Constraint::Min(10),   // Main content
-            Constraint::Length(3), // Status bar
+            Constraint::Length(6), // Status bar (increased for description + clipboard + build + help)
         ])
         .split(f.size());
 
@@ -857,6 +864,9 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 &state.modifier_picker_state,
                 &state.theme,
             );
+        }
+        PopupType::KeyEditor => {
+            key_editor::render_key_editor(f, state);
         }
     }
 }
@@ -1065,6 +1075,7 @@ fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool
         Some(PopupType::SettingsManager) => handle_settings_manager_input(state, key),
         Some(PopupType::TapKeycodePicker) => handle_tap_keycode_picker_input(state, key),
         Some(PopupType::ModifierPicker) => handle_modifier_picker_input(state, key),
+        Some(PopupType::KeyEditor) => key_editor::handle_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {
@@ -2820,10 +2831,35 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Open keycode picker
+        // Open key editor (if key is assigned) or keycode picker (if empty)
         (KeyCode::Enter, _) => {
-            state.active_popup = Some(PopupType::KeycodePicker);
-            state.keycode_picker_state = KeycodePickerState::new();
+            // Check if key is assigned (read-only first)
+            let key_info = state.get_selected_key().map(|key| {
+                (key.position, key_editor::is_key_assigned(&key.keycode), key.description.clone())
+            });
+            
+            if let Some((position, is_assigned, description)) = key_info {
+                if is_assigned {
+                    // Key is assigned - open key editor
+                    // Re-initialize editor state with copied data
+                    state.key_editor_state.position = position;
+                    state.key_editor_state.layer_idx = state.current_layer;
+                    state.key_editor_state.mode = key_editor::KeyEditorMode::View;
+                    state.key_editor_state.description_buffer = description.clone().unwrap_or_default();
+                    state.key_editor_state.cursor_position = state.key_editor_state.description_buffer.len();
+                    state.key_editor_state.original_description = description;
+                    state.active_popup = Some(PopupType::KeyEditor);
+                    state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
+                } else {
+                    // Key is empty (KC_NO, KC_TRNS) - open keycode picker directly
+                    state.active_popup = Some(PopupType::KeycodePicker);
+                    state.keycode_picker_state = KeycodePickerState::new();
+                }
+            } else {
+                // No key selected - just open keycode picker
+                state.active_popup = Some(PopupType::KeycodePicker);
+                state.keycode_picker_state = KeycodePickerState::new();
+            }
             Ok(false)
         }
 

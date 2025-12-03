@@ -152,6 +152,7 @@ fn create_test_layout() -> Layout {
                 color_override: None,
                 category_id: None,
                 combo_participant: false,
+                description: None,
             });
         }
     }

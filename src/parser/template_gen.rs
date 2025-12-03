@@ -40,16 +40,27 @@ pub fn generate_markdown(layout: &Layout) -> Result<String> {
         output.push('\n');
     }
 
+    // Generate key descriptions section if any exist
+    if let Some(descriptions_section) = generate_key_descriptions(layout) {
+        output.push_str("---\n\n");
+        output.push_str(&descriptions_section);
+    }
+
     // Generate categories section if any exist
     if !layout.categories.is_empty() {
-        output.push_str("---\n\n");
+        // Add separator only if descriptions weren't written
+        if !has_key_descriptions(layout) {
+            output.push_str("---\n\n");
+        } else {
+            output.push('\n');
+        }
         output.push_str(&generate_categories(layout));
     }
 
     // Generate settings section if any non-default settings exist
     if let Some(settings_section) = generate_settings(layout) {
-        // Add separator if categories weren't written
-        if layout.categories.is_empty() {
+        // Add separator if neither descriptions nor categories were written
+        if !has_key_descriptions(layout) && layout.categories.is_empty() {
             output.push_str("---\n\n");
         } else {
             output.push('\n');
@@ -203,6 +214,44 @@ fn generate_categories(layout: &Layout) -> String {
     }
 
     output
+}
+
+/// Checks if any keys in the layout have descriptions.
+fn has_key_descriptions(layout: &Layout) -> bool {
+    layout
+        .layers
+        .iter()
+        .any(|layer| layer.keys.iter().any(|key| key.description.is_some()))
+}
+
+/// Generates the key descriptions section.
+/// Format: `- layer:row:col: description text`
+fn generate_key_descriptions(layout: &Layout) -> Option<String> {
+    // Collect all keys with descriptions
+    let descriptions: Vec<_> = layout
+        .layers
+        .iter()
+        .enumerate()
+        .flat_map(|(layer_idx, layer)| {
+            layer.keys.iter().filter_map(move |key| {
+                key.description.as_ref().map(|desc| {
+                    (layer_idx, key.position.row, key.position.col, desc.clone())
+                })
+            })
+        })
+        .collect();
+
+    if descriptions.is_empty() {
+        return None;
+    }
+
+    let mut output = String::from("## Key Descriptions\n\n");
+
+    for (layer_idx, row, col, description) in descriptions {
+        output.push_str(&format!("- {}:{}:{}: {}\n", layer_idx, row, col, description));
+    }
+
+    Some(output)
 }
 
 /// Generates the settings section.
@@ -371,6 +420,7 @@ mod tests {
             color_override: None,
             category_id: None,
             combo_participant: false,
+            description: None,
         });
 
         layer.keys.push(KeyDefinition {
@@ -380,6 +430,7 @@ mod tests {
             color_override: Some(RgbColor::new(255, 0, 0)),
             category_id: None,
             combo_participant: false,
+            description: None,
         });
 
         let category = Category {
@@ -422,6 +473,7 @@ mod tests {
             color_override: None,
             category_id: None,
             combo_participant: false,
+            description: None,
         };
         assert_eq!(serialize_keycode_syntax(&key), "KC_A");
 
@@ -433,6 +485,7 @@ mod tests {
             color_override: Some(RgbColor::new(255, 0, 0)),
             category_id: None,
             combo_participant: false,
+            description: None,
         };
         assert_eq!(serialize_keycode_syntax(&key_with_color), "KC_A{#FF0000}");
 
@@ -444,6 +497,7 @@ mod tests {
             color_override: None,
             category_id: Some("navigation".to_string()),
             combo_participant: false,
+            description: None,
         };
         assert_eq!(
             serialize_keycode_syntax(&key_with_category),
@@ -458,6 +512,7 @@ mod tests {
             color_override: Some(RgbColor::new(0, 255, 0)),
             category_id: Some("symbols".to_string()),
             combo_participant: false,
+            description: None,
         };
         assert_eq!(
             serialize_keycode_syntax(&key_with_both),
@@ -644,5 +699,45 @@ mod tests {
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.tap_hold_settings.preset, TapHoldPreset::Deliberate);
         assert_eq!(parsed.tap_hold_settings.tapping_term, 250);
+    }
+
+    #[test]
+    fn test_key_descriptions_round_trip() {
+        let mut layout = create_test_layout();
+
+        // Add descriptions to some keys
+        layout.layers[0].keys[0].description = Some("Primary thumb key".to_string());
+        layout.layers[0].keys[1].description = Some("Secondary action key".to_string());
+
+        // Generate markdown
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with descriptions:\n{markdown}");
+
+        // Verify the descriptions section is present
+        assert!(markdown.contains("## Key Descriptions"));
+        assert!(markdown.contains("- 0:0:0: Primary thumb key"));
+        assert!(markdown.contains("- 0:0:1: Secondary action key"));
+
+        // Parse it back
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+
+        // Verify descriptions are preserved
+        assert_eq!(
+            parsed.layers[0].keys[0].description,
+            Some("Primary thumb key".to_string())
+        );
+        assert_eq!(
+            parsed.layers[0].keys[1].description,
+            Some("Secondary action key".to_string())
+        );
+    }
+
+    #[test]
+    fn test_key_descriptions_no_section_when_empty() {
+        let layout = create_test_layout();
+
+        // No descriptions - should not have descriptions section
+        let markdown = generate_markdown(&layout).unwrap();
+        assert!(!markdown.contains("## Key Descriptions"));
     }
 }

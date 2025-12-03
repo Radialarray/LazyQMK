@@ -227,6 +227,13 @@ fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
             continue;
         }
 
+        // Check for key descriptions section (## Key Descriptions)
+        if line == "## Key Descriptions" {
+            line_num = parse_key_descriptions(lines, line_num, layout)
+                .with_context(|| format!("Error parsing key descriptions at line {}", line_num + 1))?;
+            continue;
+        }
+
         line_num += 1;
     }
 
@@ -689,6 +696,52 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
     Ok(line_num)
 }
 
+/// Parses the key descriptions section.
+///
+/// Format: `- layer:row:col: description text`
+/// Example: `- 0:1:3: Primary thumb key - hold for symbols, tap for space`
+fn parse_key_descriptions(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
+    let mut line_num = start_line + 1; // Skip "## Key Descriptions" header
+
+    // Regex to match: - layer:row:col: description
+    let desc_regex = Regex::new(r"^-\s+(\d+):(\d+):(\d+):\s+(.+)$").unwrap();
+
+    while line_num < lines.len() {
+        let line = lines[line_num].trim();
+
+        // Skip empty lines
+        if line.is_empty() {
+            line_num += 1;
+            continue;
+        }
+
+        // Stop at next section
+        if line.starts_with("##") || line.starts_with("---") {
+            break;
+        }
+
+        // Parse description line: - layer:row:col: description text
+        if let Some(captures) = desc_regex.captures(line) {
+            let layer_idx: usize = captures[1].parse().unwrap_or(0);
+            let row: u8 = captures[2].parse().unwrap_or(0);
+            let col: u8 = captures[3].parse().unwrap_or(0);
+            let description = captures[4].trim().to_string();
+
+            // Find the key and set its description
+            if let Some(layer) = layout.layers.get_mut(layer_idx) {
+                let pos = Position::new(row, col);
+                if let Some(key) = layer.get_key_mut(pos) {
+                    key.description = Some(description);
+                }
+            }
+        }
+
+        line_num += 1;
+    }
+
+    Ok(line_num)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -864,5 +917,58 @@ version: "1.0"
             layer.get_key(Position::new(1, 2)).is_none(),
             "Column 2 should be empty (gap)"
         );
+    }
+}
+
+#[cfg(test)]
+mod description_tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_descriptions_from_real_format() {
+        let content = r#"---
+name: test
+description: ''
+author: ''
+created: 2025-12-03T17:29:20.830366Z
+modified: 2025-12-03T19:58:22.195899Z
+tags: []
+is_template: false
+version: '1.0'
+---
+# test
+
+## Layer 0: Base
+**ID**: test-id
+**Color**: #808080
+
+| C0        | C1   |
+|-----------|------|
+| LCG(KC_Q) | KC_Q |
+
+---
+
+## Key Descriptions
+
+- 0:0:0: This is a test
+- 0:0:1: Another test
+"#;
+
+        let layout = parse_markdown_layout_str(content).expect("Parse failed");
+        
+        println!("Layer 0 has {} keys", layout.layers[0].keys.len());
+        for key in &layout.layers[0].keys {
+            println!("  {:?}: {} -> {:?}", key.position, key.keycode, key.description);
+        }
+        
+        // Check that descriptions were parsed
+        let key0 = layout.layers[0].keys.iter().find(|k| k.position == Position { row: 0, col: 0 });
+        let key1 = layout.layers[0].keys.iter().find(|k| k.position == Position { row: 0, col: 1 });
+        
+        assert!(key0.is_some(), "Key at 0:0 not found");
+        assert!(key1.is_some(), "Key at 0:1 not found");
+        
+        assert_eq!(key0.unwrap().description, Some("This is a test".to_string()), "Key 0:0:0 description mismatch");
+        assert_eq!(key1.unwrap().description, Some("Another test".to_string()), "Key 0:0:1 description mismatch");
     }
 }

@@ -38,7 +38,6 @@ impl StatusBar {
         };
 
         // Build clipboard preview line
-        let has_clipboard = state.clipboard.has_content();
         let clipboard_preview = state.clipboard.get_preview().map(|preview| {
             Line::from(vec![
                 Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
@@ -51,43 +50,88 @@ impl StatusBar {
             ])
         });
 
+        // Get selected key's description (only show when no popup is active)
+        let description_line = if state.active_popup.is_none() {
+            state.get_selected_key().and_then(|key| {
+                key.description.as_ref().map(|desc| {
+                    // Truncate long descriptions
+                    let truncated = if desc.len() > 60 {
+                        format!("{}...", &desc[..57])
+                    } else {
+                        desc.clone()
+                    };
+                    Line::from(vec![
+                        Span::styled("Note: ", Style::default().fg(theme.accent)),
+                        Span::styled(truncated, Style::default().fg(theme.text)),
+                    ])
+                })
+            })
+        } else {
+            None
+        };
+
         // Determine if we should show hints (no active status/error message)
         let show_hints = state.status_message.is_empty() 
             && state.error_message.is_none()
             && state.active_popup.is_none();
 
-        let mut status_text = if let Some(error) = &state.error_message {
-            vec![Line::from(vec![
+        // Build the help line first (always shown at bottom)
+        let help_message = Self::get_contextual_help(state);
+        let help_line = Line::from(vec![
+            Span::styled("Help: ", Style::default().fg(theme.primary)),
+            Span::raw(help_message),
+        ]);
+
+        // Build content lines (status/hints, description, clipboard, build)
+        let mut content_lines: Vec<Line> = Vec::new();
+
+        // First line: error, status message, or hints
+        if let Some(error) = &state.error_message {
+            content_lines.push(Line::from(vec![
                 Span::styled("ERROR: ", Style::default().fg(theme.error)),
                 Span::raw(error),
-            ])]
+            ]));
         } else if !state.status_message.is_empty() {
-            vec![Line::from(state.status_message.as_str())]
+            content_lines.push(Line::from(state.status_message.as_str()));
         } else if show_hints {
-            // Show contextual hints when no status message
-            vec![Self::get_hints_line(state, theme)]
-        } else {
-            vec![Line::from("")]
-        };
+            content_lines.push(Self::get_hints_line(state, theme));
+        }
+
+        // Add key description if present
+        if let Some(desc_line) = description_line {
+            content_lines.push(desc_line);
+        }
 
         // Add clipboard preview if present
         if let Some(clip_line) = clipboard_preview {
-            status_text.push(clip_line);
+            content_lines.push(clip_line);
         }
 
         // Add build status line if present
         if let Some(build_line) = build_status_line {
-            status_text.push(build_line);
-        } else if !has_clipboard {
-            status_text.push(Line::from(""));
+            content_lines.push(build_line);
         }
 
-        // Add help line (contextual based on popup/mode)
-        let help_message = Self::get_contextual_help(state);
-        status_text.push(Line::from(vec![
-            Span::styled("Help: ", Style::default().fg(theme.primary)),
-            Span::raw(help_message),
-        ]));
+        // Calculate available lines (6 height - 2 for borders = 4 lines, minus 1 for help = 3 for content)
+        const MAX_CONTENT_LINES: usize = 3;
+        
+        // Pad with empty lines to push help to the bottom
+        let padding_needed = MAX_CONTENT_LINES.saturating_sub(content_lines.len());
+        
+        let mut status_text: Vec<Line> = Vec::new();
+        
+        // Add content lines (truncate if too many)
+        for line in content_lines.into_iter().take(MAX_CONTENT_LINES) {
+            status_text.push(line);
+        }
+        
+        // Add padding to push help line to bottom
+        for _ in 0..padding_needed {
+            status_text.push(Line::from(""));
+        }
+        
+        // Add help line at the bottom
+        status_text.push(help_line);
 
         let status = Paragraph::new(status_text)
             .block(Block::default().borders(Borders::ALL).title(" Status "));
@@ -201,6 +245,9 @@ impl StatusBar {
             }
             Some(PopupType::ModifierPicker) => {
                 "↑↓←→: Navigate | Space: Toggle | Enter: Confirm | Esc: Cancel"
+            }
+            Some(PopupType::KeyEditor) => {
+                "Enter: Reassign | D: Description | C: Color | Esc: Close"
             }
             None => {
                 // Main keyboard editing mode
