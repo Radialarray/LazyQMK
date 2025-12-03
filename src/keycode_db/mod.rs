@@ -477,6 +477,89 @@ impl KeycodeDb {
 
         None
     }
+
+    /// Check if a keycode is a layer-switching keycode.
+    /// 
+    /// This dynamically checks against all keycodes in the "layers" category
+    /// that have a layer parameter.
+    #[must_use]
+    pub fn is_layer_keycode(&self, keycode: &str) -> bool {
+        // Check against patterns from the layers category
+        for kc in self.get_category_keycodes("layers") {
+            // Skip KC_TRNS, KC_NO and similar non-parameterized layer keycodes
+            if kc.params.is_empty() {
+                continue;
+            }
+            
+            // Check if keycode matches this layer keycode's pattern
+            if let Some(pattern) = &kc.pattern {
+                if let Ok(regex) = Regex::new(pattern) {
+                    if regex.is_match(keycode) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Parse a layer keycode to extract (prefix, layer_ref, suffix).
+    /// 
+    /// For simple keycodes like MO(1), returns ("MO", "1", "")
+    /// For compound keycodes like LT(1, KC_A), returns ("LT", "1", ", KC_A)")
+    #[must_use]
+    pub fn parse_layer_keycode(&self, keycode: &str) -> Option<(String, String, String)> {
+        // Try to match against layers category keycodes
+        for kc in self.get_category_keycodes("layers") {
+            if kc.params.is_empty() {
+                continue;
+            }
+            
+            // Get the prefix from the code (e.g., "MO" from "MO()")
+            let prefix = kc.code.strip_suffix("()")?;
+            let prefix_with_paren = format!("{}(", prefix);
+            
+            if keycode.starts_with(&prefix_with_paren) && keycode.ends_with(')') {
+                let inner = &keycode[prefix_with_paren.len()..keycode.len() - 1];
+                
+                // Check if this is a compound keycode (has comma)
+                if kc.params.len() > 1 {
+                    // LT(layer, kc) or LM(layer, mod)
+                    if let Some(comma_pos) = inner.find(',') {
+                        let layer_ref = inner[..comma_pos].trim().to_string();
+                        let suffix = format!(", {})", inner[comma_pos + 1..].trim());
+                        return Some((prefix.to_string(), layer_ref, suffix));
+                    }
+                } else {
+                    // Simple layer keycode: MO(layer), TG(layer), etc.
+                    return Some((prefix.to_string(), inner.trim().to_string(), String::new()));
+                }
+            }
+        }
+        None
+    }
+
+    /// Get the list of simple layer keycode prefixes (single parameter).
+    /// E.g., ["MO", "TG", "TO", "DF", "OSL", "TT", "PDF"]
+    #[must_use]
+    pub fn get_simple_layer_prefixes(&self) -> Vec<&str> {
+        self.get_category_keycodes("layers")
+            .iter()
+            .filter(|kc| kc.params.len() == 1)
+            .filter_map(|kc| kc.code.strip_suffix("()"))
+            .collect()
+    }
+
+    /// Get the list of compound layer keycode prefixes (multiple parameters).
+    /// E.g., ["LT", "LM"]
+    #[must_use]
+    pub fn get_compound_layer_prefixes(&self) -> Vec<&str> {
+        self.get_category_keycodes("layers")
+            .iter()
+            .filter(|kc| kc.params.len() > 1)
+            .filter_map(|kc| kc.code.strip_suffix("()"))
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -769,5 +852,98 @@ mod tests {
         assert!(db.parse_tap_hold("KC_A").is_none());
         assert!(db.parse_tap_hold("MO(1)").is_none());
         assert!(db.parse_tap_hold("TG(2)").is_none());
+    }
+
+    #[test]
+    fn test_is_layer_keycode() {
+        let db = get_test_db();
+        // Simple layer keycodes
+        assert!(db.is_layer_keycode("MO(1)"));
+        assert!(db.is_layer_keycode("TG(2)"));
+        assert!(db.is_layer_keycode("TO(0)"));
+        assert!(db.is_layer_keycode("DF(1)"));
+        assert!(db.is_layer_keycode("OSL(3)"));
+        assert!(db.is_layer_keycode("TT(2)"));
+        assert!(db.is_layer_keycode("PDF(0)"));
+        // Compound layer keycodes
+        assert!(db.is_layer_keycode("LT(1, KC_A)"));
+        assert!(db.is_layer_keycode("LM(2, MOD_LCTL)"));
+        // UUID references
+        assert!(db.is_layer_keycode("MO(@abc-123)"));
+        assert!(db.is_layer_keycode("LT(@layer-id, KC_SPC)"));
+        // Not layer keycodes
+        assert!(!db.is_layer_keycode("KC_A"));
+        assert!(!db.is_layer_keycode("LCTL_T(KC_A)"));
+        assert!(!db.is_layer_keycode("KC_TRNS")); // Non-parameterized
+    }
+
+    #[test]
+    fn test_parse_layer_keycode_simple() {
+        let db = get_test_db();
+        let (prefix, layer_ref, suffix) = db.parse_layer_keycode("MO(1)").unwrap();
+        assert_eq!(prefix, "MO");
+        assert_eq!(layer_ref, "1");
+        assert_eq!(suffix, "");
+    }
+
+    #[test]
+    fn test_parse_layer_keycode_with_uuid() {
+        let db = get_test_db();
+        let (prefix, layer_ref, suffix) = db.parse_layer_keycode("TG(@abc-123)").unwrap();
+        assert_eq!(prefix, "TG");
+        assert_eq!(layer_ref, "@abc-123");
+        assert_eq!(suffix, "");
+    }
+
+    #[test]
+    fn test_parse_layer_keycode_compound() {
+        let db = get_test_db();
+        let (prefix, layer_ref, suffix) = db.parse_layer_keycode("LT(1, KC_A)").unwrap();
+        assert_eq!(prefix, "LT");
+        assert_eq!(layer_ref, "1");
+        assert_eq!(suffix, ", KC_A)");
+    }
+
+    #[test]
+    fn test_parse_layer_keycode_lm() {
+        let db = get_test_db();
+        let (prefix, layer_ref, suffix) = db.parse_layer_keycode("LM(@layer-id, MOD_LSFT)").unwrap();
+        assert_eq!(prefix, "LM");
+        assert_eq!(layer_ref, "@layer-id");
+        assert_eq!(suffix, ", MOD_LSFT)");
+    }
+
+    #[test]
+    fn test_parse_layer_keycode_not_layer() {
+        let db = get_test_db();
+        assert!(db.parse_layer_keycode("KC_A").is_none());
+        assert!(db.parse_layer_keycode("LCTL_T(KC_A)").is_none());
+    }
+
+    #[test]
+    fn test_get_simple_layer_prefixes() {
+        let db = get_test_db();
+        let prefixes = db.get_simple_layer_prefixes();
+        assert!(prefixes.contains(&"MO"));
+        assert!(prefixes.contains(&"TG"));
+        assert!(prefixes.contains(&"TO"));
+        assert!(prefixes.contains(&"DF"));
+        assert!(prefixes.contains(&"OSL"));
+        assert!(prefixes.contains(&"TT"));
+        assert!(prefixes.contains(&"PDF"));
+        // LT and LM are compound, not simple
+        assert!(!prefixes.contains(&"LT"));
+        assert!(!prefixes.contains(&"LM"));
+    }
+
+    #[test]
+    fn test_get_compound_layer_prefixes() {
+        let db = get_test_db();
+        let prefixes = db.get_compound_layer_prefixes();
+        assert!(prefixes.contains(&"LT"));
+        assert!(prefixes.contains(&"LM"));
+        // Simple layer keycodes should not be here
+        assert!(!prefixes.contains(&"MO"));
+        assert!(!prefixes.contains(&"TG"));
     }
 }

@@ -24,6 +24,7 @@ use tempfile::TempDir;
 /// Test that LT() keycodes with layer references are resolved correctly
 #[test]
 fn test_lt_keycode_resolution() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     // Create a layout with multiple layers
     let mut layout = create_test_layout();
     let layer1_id = layout.layers[1].id.clone();
@@ -32,7 +33,7 @@ fn test_lt_keycode_resolution() {
     layout.layers[0].keys[0].keycode = format!("LT(@{}, KC_SPC)", layer1_id);
     
     // The resolve_layer_keycode function should convert @uuid to index
-    let resolved = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode);
+    let resolved = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode, &keycode_db);
     assert!(resolved.is_some(), "Should resolve LT keycode");
     assert_eq!(resolved.unwrap(), "LT(1, KC_SPC)", "Should resolve to layer index 1");
 }
@@ -40,13 +41,14 @@ fn test_lt_keycode_resolution() {
 /// Test that LM() keycodes with layer references are resolved correctly
 #[test]
 fn test_lm_keycode_resolution() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let mut layout = create_test_layout();
     let layer1_id = layout.layers[1].id.clone();
     
     // Set a key to LM(@layer1_id, MOD_LSFT)
     layout.layers[0].keys[0].keycode = format!("LM(@{}, MOD_LSFT)", layer1_id);
     
-    let resolved = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode);
+    let resolved = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode, &keycode_db);
     assert!(resolved.is_some(), "Should resolve LM keycode");
     assert_eq!(resolved.unwrap(), "LM(1, MOD_LSFT)", "Should resolve to layer index 1");
 }
@@ -54,14 +56,15 @@ fn test_lm_keycode_resolution() {
 /// Test that simple layer keycodes still work (MO, TG, etc)
 #[test]
 fn test_simple_layer_keycode_resolution() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let mut layout = create_test_layout();
     let layer1_id = layout.layers[1].id.clone();
     
     layout.layers[0].keys[0].keycode = format!("MO(@{})", layer1_id);
     layout.layers[0].keys[1].keycode = format!("TG(@{})", layer1_id);
     
-    let resolved_mo = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode);
-    let resolved_tg = layout.resolve_layer_keycode(&layout.layers[0].keys[1].keycode);
+    let resolved_mo = layout.resolve_layer_keycode(&layout.layers[0].keys[0].keycode, &keycode_db);
+    let resolved_tg = layout.resolve_layer_keycode(&layout.layers[0].keys[1].keycode, &keycode_db);
     
     assert_eq!(resolved_mo.unwrap(), "MO(1)");
     assert_eq!(resolved_tg.unwrap(), "TG(1)");
@@ -70,11 +73,12 @@ fn test_simple_layer_keycode_resolution() {
 /// Test that invalid layer references return None
 #[test]
 fn test_invalid_layer_reference() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let layout = create_test_layout();
     
     // Reference a non-existent layer
     let keycode = "LT(@nonexistent-uuid, KC_A)";
-    let resolved = layout.resolve_layer_keycode(keycode);
+    let resolved = layout.resolve_layer_keycode(keycode, &keycode_db);
     
     assert!(resolved.is_none(), "Invalid layer reference should return None");
 }
@@ -82,14 +86,15 @@ fn test_invalid_layer_reference() {
 /// Test that MT() and SH_T() keycodes pass through (no layer reference)
 #[test]
 fn test_non_layer_keycodes_passthrough() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let layout = create_test_layout();
     
     // MT and SH_T don't have layer references, so resolve_layer_keycode returns None
     let mt_code = "MT(MOD_LCTL, KC_A)";
     let sht_code = "SH_T(KC_SPC)";
     
-    let resolved_mt = layout.resolve_layer_keycode(mt_code);
-    let resolved_sht = layout.resolve_layer_keycode(sht_code);
+    let resolved_mt = layout.resolve_layer_keycode(mt_code, &keycode_db);
+    let resolved_sht = layout.resolve_layer_keycode(sht_code, &keycode_db);
     
     // These are not layer keycodes, so they return None (handled by resolve_keycode fallback)
     assert!(resolved_mt.is_none(), "MT should not be a layer keycode");
@@ -99,6 +104,7 @@ fn test_non_layer_keycodes_passthrough() {
 /// Test firmware generation with parameterized keycodes
 #[test]
 fn test_generation_with_parameterized_keycodes() {
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
     let layer1_id = layout.layers[1].id.clone();
@@ -112,7 +118,7 @@ fn test_generation_with_parameterized_keycodes() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
     
     assert!(result.is_ok(), "Generation with parameterized keycodes should succeed");
@@ -358,8 +364,10 @@ fn test_generation_creates_files() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
 
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
     // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
 
     // Assert
@@ -389,8 +397,10 @@ fn test_generation_keymap_c_structure() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
 
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
     // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
     assert!(result.is_ok(), "Generation should succeed");
 
@@ -439,8 +449,10 @@ fn test_generation_vial_json_structure() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
 
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
     // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
     assert!(result.is_ok(), "Generation should succeed");
 
@@ -478,8 +490,10 @@ fn test_generation_led_ordering() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
 
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
     // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
     assert!(result.is_ok(), "Generation should succeed");
 
@@ -525,8 +539,10 @@ fn test_generation_with_categories() {
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
 
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
     // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
 
     // Assert
@@ -547,9 +563,10 @@ fn test_generation_atomic_write() {
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
 
     // Act - Generate twice to test atomic write (temp + rename)
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result1 = generator.generate();
     assert!(result1.is_ok(), "First generation should succeed");
 
@@ -591,7 +608,7 @@ fn test_full_pipeline_validation_to_generation() {
     );
 
     // Step 2: Generate
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
 
     // Assert

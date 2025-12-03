@@ -2,6 +2,7 @@
 
 #[cfg(test)]
 use crate::models::layer::Position;
+use crate::keycode_db::KeycodeDb;
 use crate::models::layer::{KeyDefinition, Layer};
 use crate::models::{Category, RgbColor};
 use anyhow::Result;
@@ -799,52 +800,14 @@ impl Layout {
         self.layers.iter().position(|layer| layer.id == id)
     }
 
-    /// Checks if a keycode is a layer-switching keycode.
-    /// Matches: MO, TG, TO, DF, OSL, TT, LT, LM
-    #[must_use]
-    pub fn is_layer_keycode(keycode: &str) -> bool {
-        // Check for simple layer keycodes: MO(x), TG(x), TO(x), DF(x), OSL(x), TT(x)
-        let simple_layer_regex = regex::Regex::new(r"^(MO|TG|TO|DF|OSL|TT)\(").unwrap();
-        // Check for LT(layer, keycode) and LM(layer, mod)
-        let compound_layer_regex = regex::Regex::new(r"^(LT|LM)\(").unwrap();
-        
-        simple_layer_regex.is_match(keycode) || compound_layer_regex.is_match(keycode)
-    }
-
-    /// Extracts the layer reference from a keycode.
-    /// Returns (prefix, layer_ref, suffix) where layer_ref is either a number or @uuid
-    /// For LT(layer, kc), suffix contains ", kc)"
-    #[must_use]
-    pub fn parse_layer_keycode(keycode: &str) -> Option<(String, String, String)> {
-        // Simple layer keycodes: MO(@uuid), TG(1), etc.
-        let simple_regex = regex::Regex::new(r"^(MO|TG|TO|DF|OSL|TT)\(([^)]+)\)$").unwrap();
-        if let Some(caps) = simple_regex.captures(keycode) {
-            return Some((
-                caps[1].to_string(),
-                caps[2].to_string(),
-                String::new(),
-            ));
-        }
-
-        // Compound layer keycodes: LT(@uuid, KC_A), LM(1, MOD_LSFT)
-        let compound_regex = regex::Regex::new(r"^(LT|LM)\(([^,]+),\s*(.+)\)$").unwrap();
-        if let Some(caps) = compound_regex.captures(keycode) {
-            return Some((
-                caps[1].to_string(),
-                caps[2].to_string(),
-                format!(", {})", caps[3].to_string()),
-            ));
-        }
-
-        None
-    }
-
     /// Resolves layer references in a keycode to layer indices.
-    /// Converts @uuid references to the current layer index.
+    /// 
+    /// Uses the keycode database to detect layer keycodes dynamically,
+    /// then converts @uuid references to the current layer index.
     /// Returns None if the layer reference is invalid.
     #[must_use]
-    pub fn resolve_layer_keycode(&self, keycode: &str) -> Option<String> {
-        let (prefix, layer_ref, suffix) = Self::parse_layer_keycode(keycode)?;
+    pub fn resolve_layer_keycode(&self, keycode: &str, keycode_db: &KeycodeDb) -> Option<String> {
+        let (prefix, layer_ref, suffix) = keycode_db.parse_layer_keycode(keycode)?;
 
         // Check if it's a layer ID reference (starts with @)
         let layer_index = if layer_ref.starts_with('@') {

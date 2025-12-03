@@ -3192,6 +3192,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
         &state.geometry,
         &state.mapping,
         &state.config,
+        &state.keycode_db,
     );
 
     match generator.generate() {

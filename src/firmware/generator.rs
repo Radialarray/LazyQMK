@@ -4,6 +4,7 @@
 //! from keyboard layouts using the LED index order.
 
 use crate::config::Config;
+use crate::keycode_db::KeycodeDb;
 use crate::models::keyboard_geometry::KeyboardGeometry;
 use crate::models::layout::Layout;
 use crate::models::visual_layout_mapping::VisualLayoutMapping;
@@ -17,6 +18,7 @@ pub struct FirmwareGenerator<'a> {
     geometry: &'a KeyboardGeometry,
     mapping: &'a VisualLayoutMapping,
     config: &'a Config,
+    keycode_db: &'a KeycodeDb,
 }
 
 impl<'a> FirmwareGenerator<'a> {
@@ -27,12 +29,14 @@ impl<'a> FirmwareGenerator<'a> {
         geometry: &'a KeyboardGeometry,
         mapping: &'a VisualLayoutMapping,
         config: &'a Config,
+        keycode_db: &'a KeycodeDb,
     ) -> Self {
         Self {
             layout,
             geometry,
             mapping,
             config,
+            keycode_db,
         }
     }
 
@@ -218,8 +222,8 @@ impl<'a> FirmwareGenerator<'a> {
     /// resolved to the numeric index like `MO(1)`. If resolution fails (e.g.,
     /// the referenced layer no longer exists), the original keycode is returned.
     fn resolve_keycode(&self, keycode: &str) -> String {
-        // Try to resolve layer references
-        if let Some(resolved) = self.layout.resolve_layer_keycode(keycode) {
+        // Try to resolve layer references using the keycode database
+        if let Some(resolved) = self.layout.resolve_layer_keycode(keycode, self.keycode_db) {
             resolved
         } else {
             // Not a layer keycode or resolution failed - use as-is
@@ -703,7 +707,7 @@ mod tests {
     use crate::models::RgbColor;
     use std::path::PathBuf;
 
-    fn create_test_setup() -> (Layout, KeyboardGeometry, VisualLayoutMapping, Config) {
+    fn create_test_setup() -> (Layout, KeyboardGeometry, VisualLayoutMapping, Config, KeycodeDb) {
         let mut layout = Layout::new("Test").unwrap();
         let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_A"));
@@ -722,13 +726,15 @@ mod tests {
         config.build.layout = "LAYOUT".to_string();
         config.build.keymap = "default".to_string();
 
-        (layout, geometry, mapping, config)
+        let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+
+        (layout, geometry, mapping, config, keycode_db)
     }
 
     #[test]
     fn test_generate_keymap_c() {
-        let (layout, geometry, mapping, config) = create_test_setup();
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
 
         let keymap_c = generator.generate_keymap_c().unwrap();
 
@@ -757,8 +763,8 @@ mod tests {
 
     #[test]
     fn test_generate_layer_keys_by_led() {
-        let (layout, geometry, mapping, config) = create_test_setup();
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
 
         let layer = &layout.layers[0];
         let keys_by_led = generator.generate_layer_keys_by_led(layer).unwrap();
@@ -770,8 +776,8 @@ mod tests {
 
     #[test]
     fn test_generate_vial_json() {
-        let (layout, geometry, mapping, config) = create_test_setup();
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
 
         let vial_json = generator.generate_vial_json().unwrap();
 
@@ -784,8 +790,8 @@ mod tests {
 
     #[test]
     fn test_generate_vial_layout_array() {
-        let (layout, geometry, mapping, config) = create_test_setup();
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
 
         let layout_array = generator.generate_vial_layout_array().unwrap();
         let layout_vec = layout_array.as_array().unwrap();
@@ -799,7 +805,7 @@ mod tests {
 
     #[test]
     fn test_generate_merged_config_h_sets_default_mode_when_colored_and_rgb() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Mark layout as "colored" by changing the default color
         // and adding a category used by a key.
@@ -814,7 +820,7 @@ mod tests {
             .category_id = Some("navigation".to_string());
 
         // RGB-capable geometry: already has two keys in create_test_setup.
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         assert!(config_h.contains("RGB_MATRIX_TUI_LAYER_COLORS"));
@@ -823,12 +829,12 @@ mod tests {
 
     #[test]
     fn test_generate_merged_config_h_does_not_set_default_mode_without_colors_or_rgb() {
-        let (layout, mut geometry, mapping, config) = create_test_setup();
+        let (layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Remove all keys from geometry so has_rgb_matrix() is false.
         geometry.keys.clear();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         assert!(!config_h.contains("RGB_MATRIX_TUI_LAYER_COLORS"));
@@ -837,7 +843,7 @@ mod tests {
 
     #[test]
     fn test_generate_layer_colors_by_led_uses_resolved_colors() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Add a category and assign it to the second key so we can
         // verify that resolve_key_color logic is respected.
@@ -853,7 +859,7 @@ mod tests {
             .unwrap()
             .category_id = Some("navigation".to_string());
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let colors_by_led = generator.generate_layer_colors_by_led(0).unwrap();
 
         assert_eq!(colors_by_led.len(), 2);
@@ -865,7 +871,7 @@ mod tests {
 
     #[test]
     fn test_generate_rgb_matrix_color_table_structure() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Add a second layer with a different default color
         let mut layer2 = Layer::new(1, "Navigation", RgbColor::new(0, 128, 255)).unwrap();
@@ -873,7 +879,7 @@ mod tests {
         layer2.add_key(KeyDefinition::new(Position::new(0, 1), "KC_RIGHT"));
         layout.add_layer(layer2).unwrap();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let color_table = generator.generate_rgb_matrix_color_table().unwrap();
 
         // Verify structure
@@ -890,12 +896,12 @@ mod tests {
 
     #[test]
     fn test_generate_rgb_matrix_color_table_empty_for_non_rgb() {
-        let (layout, mut geometry, mapping, config) = create_test_setup();
+        let (layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Remove keys to simulate non-RGB keyboard
         geometry.keys.clear();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let color_table = generator.generate_rgb_matrix_color_table().unwrap();
 
         // Should be empty for non-RGB keyboards
@@ -904,34 +910,34 @@ mod tests {
 
     #[test]
     fn test_layout_has_custom_colors_with_category() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Initially should have no custom colors (just white default)
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         assert!(!generator.layout_has_custom_colors());
 
         // Add a category
         let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
         layout.add_category(category).unwrap();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         assert!(generator.layout_has_custom_colors());
     }
 
     #[test]
     fn test_layout_has_custom_colors_with_layer_default() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Change layer default color from white
         layout.get_layer_mut(0).unwrap().default_color = RgbColor::new(128, 128, 128);
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         assert!(generator.layout_has_custom_colors());
     }
 
     #[test]
     fn test_layout_has_custom_colors_with_key_override() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Add key color override
         layout
@@ -941,13 +947,13 @@ mod tests {
             .unwrap()
             .color_override = Some(RgbColor::new(255, 0, 0));
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         assert!(generator.layout_has_custom_colors());
     }
 
     #[test]
     fn test_generate_layer_colors_respects_priority_order() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Set up all four color levels for key at (0, 1):
         // 1. Global default is white (255, 255, 255)
@@ -972,7 +978,7 @@ mod tests {
             .unwrap()
             .color_override = Some(RgbColor::new(255, 0, 0));
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let colors = generator.generate_layer_colors_by_led(0).unwrap();
 
         // Key at LED 0 should use layer default (blue) since no category or override
@@ -984,13 +990,13 @@ mod tests {
 
     #[test]
     fn test_keymap_c_includes_rgb_table_when_rgb_enabled() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Add category to trigger custom colors
         let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
         layout.add_category(category).unwrap();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let keymap_c = generator.generate_keymap_c().unwrap();
 
         // Should include RGB matrix color table
@@ -1001,13 +1007,13 @@ mod tests {
 
     #[test]
     fn test_config_h_sets_tui_layer_colors_mode() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Add category to trigger custom colors
         let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
         layout.add_category(category).unwrap();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         // Should set the TUI layer colors mode as default
@@ -1018,7 +1024,7 @@ mod tests {
 
     #[test]
     fn test_multi_layer_color_table_generation() {
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Layer 0: White default
         // Layer 1: Red default
@@ -1033,7 +1039,7 @@ mod tests {
         layer2.add_key(KeyDefinition::new(Position::new(0, 1), "KC_4"));
         layout.add_layer(layer2).unwrap();
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let color_table = generator.generate_rgb_matrix_color_table().unwrap();
 
         // Verify 3 layers
@@ -1050,12 +1056,12 @@ mod tests {
     fn test_config_h_emits_tap_hold_settings() {
         use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
 
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Apply HomeRowMods preset
         layout.tap_hold_settings = TapHoldSettings::from_preset(TapHoldPreset::HomeRowMods);
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         // Verify tap-hold settings are emitted
@@ -1070,10 +1076,10 @@ mod tests {
 
     #[test]
     fn test_config_h_does_not_emit_default_tap_hold() {
-        let (layout, geometry, mapping, config) = create_test_setup();
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Layout has default tap-hold settings
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         // Should NOT contain tap-hold defines
@@ -1087,7 +1093,7 @@ mod tests {
     fn test_config_h_emits_hold_on_other_key_press() {
         use crate::models::{HoldDecisionMode, TapHoldSettings};
 
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Set up custom tap-hold settings with HoldOnOtherKeyPress
         layout.tap_hold_settings = TapHoldSettings {
@@ -1096,7 +1102,7 @@ mod tests {
             ..TapHoldSettings::default()
         };
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         assert!(config_h.contains("#define TAPPING_TERM 150"));
@@ -1108,7 +1114,7 @@ mod tests {
     fn test_config_h_emits_tapping_toggle() {
         use crate::models::TapHoldSettings;
 
-        let (mut layout, geometry, mapping, config) = create_test_setup();
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 
         // Change tapping toggle from default (5) to 3
         layout.tap_hold_settings = TapHoldSettings {
@@ -1116,7 +1122,7 @@ mod tests {
             ..TapHoldSettings::default()
         };
 
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config);
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
         assert!(config_h.contains("#define TAPPING_TOGGLE 3"));
