@@ -10,6 +10,7 @@ pub mod clipboard;
 pub mod color_picker;
 pub mod config_dialogs;
 pub mod help_overlay;
+pub mod help_registry;
 pub mod keyboard;
 pub mod keycode_picker;
 pub mod layer_manager;
