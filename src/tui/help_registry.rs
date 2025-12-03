@@ -171,6 +171,8 @@ pub mod contexts {
     pub const LAYER_MANAGER: &str = "layer_manager";
     /// Category manager popup
     pub const CATEGORY_MANAGER: &str = "category_manager";
+    /// Category picker popup
+    pub const CATEGORY_PICKER: &str = "category_picker";
     /// Settings manager popup
     pub const SETTINGS_MANAGER: &str = "settings_manager";
     /// Metadata editor popup
@@ -179,12 +181,32 @@ pub mod contexts {
     pub const MODIFIER_PICKER: &str = "modifier_picker";
     /// Layer picker popup
     pub const LAYER_PICKER: &str = "layer_picker";
+    /// Layout picker popup
+    pub const LAYOUT_PICKER: &str = "layout_picker";
     /// Build log popup
     pub const BUILD_LOG: &str = "build_log";
     /// Help overlay
     pub const HELP: &str = "help";
     /// Selection mode
     pub const SELECTION: &str = "selection";
+    /// Template browser
+    pub const TEMPLATE_BROWSER: &str = "template_browser";
+    /// Template save dialog
+    pub const TEMPLATE_SAVE: &str = "template_save";
+    /// Setup wizard
+    pub const SETUP_WIZARD: &str = "setup_wizard";
+    /// Unsaved changes prompt
+    pub const UNSAVED_PROMPT: &str = "unsaved_prompt";
+    /// Clipboard operations (informational)
+    pub const CLIPBOARD: &str = "clipboard";
+    /// Parameterized keycodes (informational)
+    pub const PARAMETERIZED_KEYCODES: &str = "parameterized_keycodes";
+    /// Tap-hold settings (informational)
+    pub const TAP_HOLD_INFO: &str = "tap_hold_info";
+    /// Color priority (informational)
+    pub const COLOR_PRIORITY: &str = "color_priority";
+    /// Tips (informational)
+    pub const TIPS: &str = "tips";
 }
 
 #[cfg(test)]

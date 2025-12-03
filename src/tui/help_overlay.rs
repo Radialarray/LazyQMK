@@ -1,7 +1,8 @@
 //! Help overlay widget showing all keyboard shortcuts organized by category.
 //!
 //! This module provides a scrollable help overlay accessible via '?' key
-//! that documents all keyboard shortcuts and features.
+//! that documents all keyboard shortcuts and features. Content is loaded
+//! from the centralized help registry.
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -11,6 +12,7 @@ use ratatui::{
     Frame,
 };
 
+use super::help_registry::{contexts, HelpRegistry};
 use super::Theme;
 
 /// State for the help overlay.
@@ -27,7 +29,6 @@ impl HelpOverlayState {
     #[must_use]
     pub fn new() -> Self {
         // Calculate total lines using default dark theme for initialization
-        // (actual rendering will use the current theme)
         let content = Self::get_help_content(&Theme::default());
         let total_lines = content.len();
         Self {
@@ -69,767 +70,401 @@ impl HelpOverlayState {
         self.scroll_offset = self.scroll_offset.saturating_sub(visible_height);
     }
 
+    /// Format a binding's keys for display
+    fn format_keys(keys: &[String], alt_keys: &[String]) -> String {
+        let primary = keys.join("/");
+        if alt_keys.is_empty() {
+            primary
+        } else {
+            format!("{} ({})", primary, alt_keys.join("/"))
+        }
+    }
+
+    /// Add a section header
+    fn add_section_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("═══ {} ═══", title),
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+            ),
+        ]));
+        lines.push(Line::from(""));
+    }
+
+    /// Add a subsection header (for "In X:" labels)
+    fn add_subsection_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {}:", title), Style::default().fg(theme.text_muted)),
+        ]));
+    }
+
+    /// Add bindings from a context
+    fn add_context_bindings(
+        lines: &mut Vec<Line<'static>>,
+        registry: &HelpRegistry,
+        context_name: &str,
+        theme: &Theme,
+        key_style: Style,
+    ) {
+        let bindings = registry.get_bindings(context_name);
+        for binding in bindings {
+            let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+            // Pad keys to align actions
+            let padded_keys = format!("{:<18}", keys);
+            lines.push(Line::from(vec![
+                Span::raw("  "),
+                Span::styled(padded_keys, key_style),
+                Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+            ]));
+        }
+    }
+
     /// Get the comprehensive help content organized by feature.
-    ///
-    /// Each section starts with how to open/toggle the feature,
-    /// followed by all related shortcuts grouped together.
     fn get_help_content(theme: &Theme) -> Vec<Line<'static>> {
-        vec![
-            // Header
-            Line::from(vec![
-                Span::styled(
-                    "═══════════════════════════════════════════════════════════════",
-                    Style::default().fg(theme.primary),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    "                  Keyboard Layout Editor - Help                  ",
-                    Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    "═══════════════════════════════════════════════════════════════",
-                    Style::default().fg(theme.primary),
-                ),
-            ]),
-            Line::from(""),
-            // Navigation Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ NAVIGATION ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Move cursor between keys", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("h/j/k/l", Style::default().fg(theme.success)),
-                Span::styled("             VIM-style navigation", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Home / End", Style::default().fg(theme.success)),
-                Span::styled("          Jump to first / last key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Layers Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ LAYERS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+N", Style::default().fg(theme.success)),
-                Span::styled("             Open layer manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab", Style::default().fg(theme.success)),
-                Span::styled("                 Next layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+Tab", Style::default().fg(theme.success)),
-                Span::styled("           Previous layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In layer manager:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("n", Style::default().fg(theme.success)),
-                Span::styled("                   Create new layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("D", Style::default().fg(theme.success)),
-                Span::styled("                   Duplicate layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("r", Style::default().fg(theme.success)),
-                Span::styled("                   Rename layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                   Copy keys to another layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("s", Style::default().fg(theme.success)),
-                Span::styled("                   Swap with another layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("v", Style::default().fg(theme.success)),
-                Span::styled("                   Toggle layer colors", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d", Style::default().fg(theme.success)),
-                Span::styled("                   Delete layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+↑/↓", Style::default().fg(theme.success)),
-                Span::styled("           Reorder layers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Go to selected layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Close manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Key Editor Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ KEY EDITOR ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Open keycode picker", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("x / Delete", Style::default().fg(theme.success)),
-                Span::styled("          Clear key (set to KC_TRNS)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In keycode picker:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("↑/↓", Style::default().fg(theme.success)),
-                Span::styled("                 Navigate categories/keycodes", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab/←/→", Style::default().fg(theme.success)),
-                Span::styled("             Switch between sidebar & list", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("0-9", Style::default().fg(theme.success)),
-                Span::styled("                 Jump to category (in sidebar)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Type", Style::default().fg(theme.success)),
-                Span::styled("                Search keycodes (in list)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Page Up/Down", Style::default().fg(theme.success)),
-                Span::styled("        Scroll by page", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Home/End", Style::default().fg(theme.success)),
-                Span::styled("            Jump to top/bottom", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Apply selected keycode", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Cancel", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Parameterized keycodes (multi-stage):", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("LT()", Style::default().fg(theme.warning)),
-                Span::styled("                Layer-Tap: select layer → tap key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("MT()", Style::default().fg(theme.warning)),
-                Span::styled("                Mod-Tap: select modifiers → tap key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("LM()", Style::default().fg(theme.warning)),
-                Span::styled("                Layer-Mod: select layer → modifiers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("SH_T()", Style::default().fg(theme.warning)),
-                Span::styled("              Swap-Hands-Tap: select tap key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In modifier picker:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Navigate modifier options", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Space", Style::default().fg(theme.success)),
-                Span::styled("               Toggle modifier on/off", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("1-8", Style::default().fg(theme.success)),
-                Span::styled("                 Toggle individual modifiers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("m", Style::default().fg(theme.success)),
-                Span::styled("                   Meh preset (Ctrl+Shift+Alt)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("h", Style::default().fg(theme.success)),
-                Span::styled("                   Hyper preset (Ctrl+Shift+Alt+Gui)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Confirm selection", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Cancel", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Clipboard Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ CLIPBOARD ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Single key operations:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("y / Ctrl+C", Style::default().fg(theme.success)),
-                Span::styled("          Copy selected key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d / Ctrl+X", Style::default().fg(theme.success)),
-                Span::styled("          Cut selected key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("p / Ctrl+V", Style::default().fg(theme.success)),
-                Span::styled("          Paste at selection", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+Z", Style::default().fg(theme.success)),
-                Span::styled("              Undo last paste", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Cancel cut operation", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Multi-key selection:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+V", Style::default().fg(theme.success)),
-                Span::styled("             Enter/exit selection mode", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Space", Style::default().fg(theme.success)),
-                Span::styled("               Toggle key in selection", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+R", Style::default().fg(theme.success)),
-                Span::styled("             Rectangle select (move to expand)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("y / d", Style::default().fg(theme.success)),
-                Span::styled("               Copy/cut selected keys", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Exit selection mode", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Copy/cut includes keycode, color, category", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  Multi-paste maintains relative positions", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(""),
-            // Color System Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ COLOR SYSTEM ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("v", Style::default().fg(theme.success)),
-                Span::styled("                   Toggle colors for current layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Alt+V", Style::default().fg(theme.success)),
-                Span::styled("               Toggle colors for all layers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                   Set layer default color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+C", Style::default().fg(theme.success)),
-                Span::styled("             Set individual key color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In color picker (Palette mode):", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Arrow Keys", Style::default().fg(theme.success)),
-                Span::styled("          Navigate colors/shades", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab", Style::default().fg(theme.success)),
-                Span::styled("                 Switch between color grid and shade bar", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                   Switch to custom RGB mode", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Apply color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Cancel", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In color picker (Custom RGB mode):", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tab", Style::default().fg(theme.success)),
-                Span::styled("                 Switch R/G/B channel", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("←/→", Style::default().fg(theme.success)),
-                Span::styled("                 Adjust value (±1)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("↑/↓", Style::default().fg(theme.success)),
-                Span::styled("                 Adjust value (±10)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("p", Style::default().fg(theme.success)),
-                Span::styled("                   Switch to palette mode", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Apply color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Cancel", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Color priority (highest to lowest):", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("i", Style::default().fg(theme.warning)),
-                Span::styled(" Individual key override", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("k", Style::default().fg(theme.primary)),
-                Span::styled(" Key category color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("L", Style::default().fg(theme.primary)),
-                Span::styled(" Layer category color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d", Style::default().fg(theme.inactive)),
-                Span::styled(" Layer default color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("-", Style::default().fg(theme.inactive)),
-                Span::styled(" Colors disabled for layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Category System Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ CATEGORY SYSTEM ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+T", Style::default().fg(theme.success)),
-                Span::styled("              Open category manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+K", Style::default().fg(theme.success)),
-                Span::styled("             Assign category to key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+L", Style::default().fg(theme.success)),
-                Span::styled("             Assign category to layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In category manager:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("n", Style::default().fg(theme.success)),
-                Span::styled("                   Create new category", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("r", Style::default().fg(theme.success)),
-                Span::styled("                   Rename category", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("c", Style::default().fg(theme.success)),
-                Span::styled("                   Change category color", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("d", Style::default().fg(theme.success)),
-                Span::styled("                   Delete category", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Close manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Settings Manager Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ SETTINGS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+S", Style::default().fg(theme.success)),
-                Span::styled("             Open settings manager", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In settings manager:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Up/Down", Style::default().fg(theme.success)),
-                Span::styled("             Navigate settings", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Enter", Style::default().fg(theme.success)),
-                Span::styled("               Edit selected setting", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Close settings", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  Tap-Hold settings (for home-row mods):", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Preset", Style::default().fg(theme.warning)),
-                Span::styled("              Quick config: Default/HomeRowMods/Responsive/Deliberate", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Tapping Term", Style::default().fg(theme.warning)),
-                Span::styled("        Tap vs hold decision time (100-500ms)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Quick Tap Term", Style::default().fg(theme.warning)),
-                Span::styled("      Auto-repeat window after tap", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Hold Mode", Style::default().fg(theme.warning)),
-                Span::styled("           Default/Permissive Hold/Hold On Other Key", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Retro Tapping", Style::default().fg(theme.warning)),
-                Span::styled("       Send tap on release after hold timeout", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Flow Tap Term", Style::default().fg(theme.warning)),
-                Span::styled("       Rapid typing window (home-row mods)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Chordal Hold", Style::default().fg(theme.warning)),
-                Span::styled("        Opposite-hand rule for modifiers", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Templates Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ TEMPLATES ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("t", Style::default().fg(theme.success)),
-                Span::styled("                   Browse and load templates", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+T", Style::default().fg(theme.success)),
-                Span::styled("             Save as template", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // File Operations Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ FILE OPERATIONS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+S", Style::default().fg(theme.success)),
-                Span::styled("              Save layout", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+E", Style::default().fg(theme.success)),
-                Span::styled("              Edit metadata (name, description, tags)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+Q", Style::default().fg(theme.success)),
-                Span::styled("              Quit (press twice if unsaved)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Build System Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ BUILD SYSTEM ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+G", Style::default().fg(theme.success)),
-                Span::styled("              Generate firmware (keymap.c, vial.json)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+B", Style::default().fg(theme.success)),
-                Span::styled("              Build firmware (runs in background)", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+L", Style::default().fg(theme.success)),
-                Span::styled("              View build log", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  In build log:", Style::default().fg(theme.text_muted)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Up/Down", Style::default().fg(theme.success)),
-                Span::styled("             Scroll log", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Page Up/Down", Style::default().fg(theme.success)),
-                Span::styled("        Scroll by page", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Home/End", Style::default().fg(theme.success)),
-                Span::styled("            Jump to top/bottom", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+C", Style::default().fg(theme.success)),
-                Span::styled("              Copy log to clipboard", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Close log", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Configuration Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ CONFIGURATION ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+W", Style::default().fg(theme.success)),
-                Span::styled("              Setup wizard", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+P", Style::default().fg(theme.success)),
-                Span::styled("              Set QMK firmware path", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+K", Style::default().fg(theme.success)),
-                Span::styled("              Select keyboard", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Ctrl+Y", Style::default().fg(theme.success)),
-                Span::styled("              Switch layout variant", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // System Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ GENERAL ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("?", Style::default().fg(theme.success)),
-                Span::styled("                   Toggle this help", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Escape", Style::default().fg(theme.success)),
-                Span::styled("              Close any dialog/popup", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Tips Section
-            Line::from(vec![
-                Span::styled(
-                    "═══ TIPS ═══",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("  • Asterisk (*) in title = unsaved changes", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • KC_TRNS passes keypress to lower layer", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • Build runs in background - keep editing!", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • Templates preserve colors and categories", Style::default().fg(theme.text)),
-            ]),
-            Line::from(vec![
-                Span::styled("  • LT/MT/LM/SH_T use multi-stage picker dialogs", Style::default().fg(theme.text)),
-            ]),
-            Line::from(""),
-            // Footer
-            Line::from(vec![
-                Span::styled(
-                    "═══════════════════════════════════════════════════════════════",
-                    Style::default().fg(theme.primary),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    "              Press '?' to close • ↑↓ to scroll               ",
-                    Style::default().fg(theme.text_muted),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    "═══════════════════════════════════════════════════════════════",
-                    Style::default().fg(theme.primary),
-                ),
-            ]),
-        ]
+        let registry = HelpRegistry::default();
+        let mut lines = Vec::new();
+
+        let key_style = Style::default().fg(theme.success);
+        let info_style = Style::default().fg(theme.warning);
+
+        // Header
+        lines.push(Line::from(vec![
+            Span::styled(
+                "═══════════════════════════════════════════════════════════════",
+                Style::default().fg(theme.primary),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "                  Keyboard Layout Editor - Help                  ",
+                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "═══════════════════════════════════════════════════════════════",
+                Style::default().fg(theme.primary),
+            ),
+        ]));
+
+        // =====================================================================
+        // NAVIGATION - subset of main bindings
+        // =====================================================================
+        Self::add_section_header(&mut lines, "NAVIGATION", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                // Only show navigation-related bindings
+                if binding.action.contains("Navigate") || binding.action.contains("Jump") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        // =====================================================================
+        // LAYERS
+        // =====================================================================
+        Self::add_section_header(&mut lines, "LAYERS", theme);
+        
+        // Main layer shortcuts
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("layer") || binding.action.contains("Layer") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+        
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In layer manager", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::LAYER_MANAGER, theme, key_style);
+
+        // =====================================================================
+        // KEY EDITOR
+        // =====================================================================
+        Self::add_section_header(&mut lines, "KEY EDITOR", theme);
+        
+        // Main key editing shortcuts
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("keycode") || binding.action.contains("Clear key") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In keycode picker", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::KEYCODE_PICKER, theme, key_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "Parameterized keycodes (multi-stage)", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::PARAMETERIZED_KEYCODES, theme, info_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In modifier picker", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::MODIFIER_PICKER, theme, key_style);
+
+        // =====================================================================
+        // CLIPBOARD
+        // =====================================================================
+        Self::add_section_header(&mut lines, "CLIPBOARD", theme);
+        
+        lines.push(Line::from(vec![
+            Span::styled("  Single key operations:", Style::default().fg(theme.text_muted)),
+        ]));
+        Self::add_context_bindings(&mut lines, &registry, contexts::CLIPBOARD, theme, key_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "Multi-key selection", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::SELECTION, theme, key_style);
+
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled("  Copy/cut includes keycode, color, category", Style::default().fg(theme.text_muted)),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled("  Multi-paste maintains relative positions", Style::default().fg(theme.text_muted)),
+        ]));
+
+        // =====================================================================
+        // COLOR SYSTEM
+        // =====================================================================
+        Self::add_section_header(&mut lines, "COLOR SYSTEM", theme);
+        
+        // Main color shortcuts
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("color") || binding.action.contains("Color") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In color picker (Palette mode)", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::COLOR_PICKER_PALETTE, theme, key_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In color picker (Custom RGB mode)", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::COLOR_PICKER_RGB, theme, key_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "Color priority (highest to lowest)", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::COLOR_PRIORITY, theme, info_style);
+
+        // =====================================================================
+        // CATEGORY SYSTEM
+        // =====================================================================
+        Self::add_section_header(&mut lines, "CATEGORY SYSTEM", theme);
+        
+        // Main category shortcuts
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("ategory") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In category manager", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::CATEGORY_MANAGER, theme, key_style);
+
+        // =====================================================================
+        // SETTINGS
+        // =====================================================================
+        Self::add_section_header(&mut lines, "SETTINGS", theme);
+        
+        // Main settings shortcut
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action == "Settings" {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled("Open settings manager".to_string(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In settings manager", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::SETTINGS_MANAGER, theme, key_style);
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "Tap-Hold settings (for home-row mods)", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::TAP_HOLD_INFO, theme, info_style);
+
+        // =====================================================================
+        // TEMPLATES
+        // =====================================================================
+        Self::add_section_header(&mut lines, "TEMPLATES", theme);
+        
+        // Main template shortcuts
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("emplate") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        // =====================================================================
+        // FILE OPERATIONS
+        // =====================================================================
+        Self::add_section_header(&mut lines, "FILE OPERATIONS", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("Save") || binding.action.contains("metadata") || binding.action == "Quit" {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        // =====================================================================
+        // BUILD SYSTEM
+        // =====================================================================
+        Self::add_section_header(&mut lines, "BUILD SYSTEM", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("irmware") || binding.action.contains("build") || binding.action.contains("Generate") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        lines.push(Line::from(""));
+        Self::add_subsection_header(&mut lines, "In build log", theme);
+        Self::add_context_bindings(&mut lines, &registry, contexts::BUILD_LOG, theme, key_style);
+
+        // =====================================================================
+        // CONFIGURATION
+        // =====================================================================
+        Self::add_section_header(&mut lines, "CONFIGURATION", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("wizard") || binding.action.contains("variant") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        // =====================================================================
+        // GENERAL
+        // =====================================================================
+        Self::add_section_header(&mut lines, "GENERAL", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("help") || binding.action.contains("Help") || binding.action.contains("Cancel") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{:<18}", keys);
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
+        // =====================================================================
+        // TIPS
+        // =====================================================================
+        Self::add_section_header(&mut lines, "TIPS", theme);
+        
+        if let Some(ctx) = registry.get_context(contexts::TIPS) {
+            for binding in &ctx.bindings {
+                lines.push(Line::from(vec![
+                    Span::styled(format!("  • {}", binding.action), Style::default().fg(theme.text)),
+                ]));
+            }
+        }
+
+        // Footer
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "═══════════════════════════════════════════════════════════════",
+                Style::default().fg(theme.primary),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "              Press '?' to close • ↑↓ to scroll               ",
+                Style::default().fg(theme.text_muted),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "═══════════════════════════════════════════════════════════════",
+                Style::default().fg(theme.primary),
+            ),
+        ]));
+
+        lines
     }
 
     /// Render the help overlay as a centered modal.
