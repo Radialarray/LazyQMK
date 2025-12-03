@@ -289,6 +289,18 @@ pub enum PopupType {
     ModifierPicker,
 }
 
+/// Selection mode for multi-key operations
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SelectionMode {
+    /// Normal selection - adding/removing individual keys
+    Normal,
+    /// Rectangle selection - selecting a block of keys
+    Rectangle {
+        /// Starting corner of the rectangle
+        start: Position,
+    },
+}
+
 /// Application state - single source of truth
 ///
 /// All UI components read from this state immutably.
@@ -355,6 +367,12 @@ pub struct AppState {
     pub modifier_picker_state: ModifierPickerState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
+    /// Flash highlight position (for paste feedback) - (layer, position, remaining_frames)
+    pub flash_highlight: Option<(usize, Position, u8)>,
+    /// Visual selection mode for multi-key operations
+    pub selection_mode: Option<SelectionMode>,
+    /// Selected keys in selection mode (positions on current layer)
+    pub selected_keys: Vec<Position>,
 
     // System resources
     /// Keycode database
@@ -442,6 +460,9 @@ impl AppState {
             pending_keycode: PendingKeycodeState::new(),
             modifier_picker_state: ModifierPickerState::new(),
             clipboard: clipboard::KeyClipboard::new(),
+            flash_highlight: None,
+            selection_mode: None,
+            selected_keys: Vec::new(),
             keycode_db,
             geometry,
             mapping,
@@ -654,6 +675,15 @@ pub fn run_tui(
     loop {
         // Re-detect OS theme on each loop iteration to respond to system theme changes
         state.theme = Theme::detect();
+
+        // Decrement flash highlight counter
+        if let Some((layer, pos, frames)) = state.flash_highlight {
+            if frames > 1 {
+                state.flash_highlight = Some((layer, pos, frames - 1));
+            } else {
+                state.flash_highlight = None;
+            }
+        }
 
         // Render current state
         terminal.draw(|f| render(f, state))?;
@@ -1975,6 +2005,26 @@ fn handle_template_save_dialog_input(state: &mut AppState, key: event::KeyEvent)
     }
 }
 
+/// Calculate all positions within a rectangle defined by two corner positions.
+fn calculate_rectangle_selection(start: Position, end: Position, mapping: &VisualLayoutMapping) -> Vec<Position> {
+    let min_row = start.row.min(end.row);
+    let max_row = start.row.max(end.row);
+    let min_col = start.col.min(end.col);
+    let max_col = start.col.max(end.col);
+    
+    let mut selected = Vec::new();
+    for row in min_row..=max_row {
+        for col in min_col..=max_col {
+            let pos = Position::new(row, col);
+            // Only include positions that exist in the keyboard mapping
+            if mapping.is_valid_position(pos) {
+                selected.push(pos);
+            }
+        }
+    }
+    selected
+}
+
 /// Handle input for main UI
 fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match (key.code, key.modifiers) {
@@ -2000,10 +2050,14 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Navigation - Arrow keys
+        // Navigation - Arrow keys (with rectangle selection support)
         (KeyCode::Up, _) => {
             if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
                 state.selected_position = new_pos;
+                // Update rectangle selection if active
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2011,6 +2065,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Down, _) => {
             if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2018,6 +2075,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Left, _) => {
             if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2025,15 +2085,21 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Right, _) => {
             if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
         }
 
-        // Navigation - VIM style (hjkl)
+        // Navigation - VIM style (hjkl) (with rectangle selection support)
         (KeyCode::Char('h'), _) => {
             if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2041,6 +2107,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Char('j'), _) => {
             if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2048,6 +2117,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Char('k'), _) => {
             if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2071,6 +2143,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Char('l'), _) => {
             if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
                 state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
                 state.clear_error();
             }
             Ok(false)
@@ -2096,7 +2171,22 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
 
         // Clear key (x or Delete - but not Ctrl+X which is cut)
         (KeyCode::Char('x'), KeyModifiers::NONE) | (KeyCode::Delete, _) => {
-            if let Some(key) = state.get_selected_key_mut() {
+            if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
+                // Clear all selected keys
+                let layer = state.current_layer;
+                for pos in &state.selected_keys.clone() {
+                    if let Some(layer) = state.layout.layers.get_mut(layer) {
+                        if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                            key.keycode = "KC_TRNS".to_string();
+                        }
+                    }
+                }
+                let count = state.selected_keys.len();
+                state.selected_keys.clear();
+                state.selection_mode = None;
+                state.mark_dirty();
+                state.set_status(format!("Cleared {} keys", count));
+            } else if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = "KC_TRNS".to_string();
                 state.mark_dirty();
                 state.set_status("Key cleared (KC_TRNS)");
@@ -2104,9 +2194,83 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Copy key (y or Ctrl+C)
+        // Enter/exit selection mode (Shift+V for toggle, Space to add/remove current key)
+        (KeyCode::Char('V'), KeyModifiers::SHIFT) => {
+            if state.selection_mode.is_some() {
+                // Exit selection mode
+                state.selection_mode = None;
+                state.selected_keys.clear();
+                state.set_status("Selection mode cancelled");
+            } else {
+                // Enter selection mode with current key selected
+                state.selection_mode = Some(SelectionMode::Normal);
+                state.selected_keys.clear();
+                state.selected_keys.push(state.selected_position);
+                state.set_status("Selection mode - Space: toggle key, y: copy, d: cut, Esc: cancel");
+            }
+            Ok(false)
+        }
+
+        // Toggle current key in selection (Space in selection mode)
+        (KeyCode::Char(' '), KeyModifiers::NONE) => {
+            if state.selection_mode.is_some() {
+                let pos = state.selected_position;
+                if let Some(idx) = state.selected_keys.iter().position(|p| *p == pos) {
+                    state.selected_keys.remove(idx);
+                } else {
+                    state.selected_keys.push(pos);
+                }
+                state.set_status(format!("{} keys selected", state.selected_keys.len()));
+                Ok(false)
+            } else {
+                // Space outside selection mode - no action
+                Ok(false)
+            }
+        }
+
+        // Rectangle selection start (Shift+R in selection mode or as entry)
+        (KeyCode::Char('R'), KeyModifiers::SHIFT) => {
+            if state.selection_mode.is_some() {
+                // Start rectangle selection from current position
+                state.selection_mode = Some(SelectionMode::Rectangle { start: state.selected_position });
+                state.selected_keys.clear();
+                state.selected_keys.push(state.selected_position);
+                state.set_status("Rectangle select - move to opposite corner, Enter to confirm");
+            } else {
+                // Enter rectangle selection mode
+                state.selection_mode = Some(SelectionMode::Rectangle { start: state.selected_position });
+                state.selected_keys.clear();
+                state.selected_keys.push(state.selected_position);
+                state.set_status("Rectangle select - move to opposite corner, Enter to confirm");
+            }
+            Ok(false)
+        }
+
+        // Copy key (y or Ctrl+C) - handles both single and multi-selection
         (KeyCode::Char('y'), KeyModifiers::NONE) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-            if let Some(key) = state.get_selected_key() {
+            if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
+                // Copy all selected keys
+                let layer = state.current_layer;
+                let anchor = state.selected_keys[0];
+                let mut keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
+                
+                for pos in &state.selected_keys {
+                    if let Some(layer) = state.layout.layers.get(layer) {
+                        if let Some(key) = layer.keys.iter().find(|k| k.position == *pos) {
+                            keys.push((*pos, clipboard::ClipboardContent {
+                                keycode: key.keycode.clone(),
+                                color_override: key.color_override,
+                                category_id: key.category_id.clone(),
+                            }));
+                        }
+                    }
+                }
+                
+                let msg = state.clipboard.copy_multi(keys, anchor);
+                state.selection_mode = None;
+                state.selected_keys.clear();
+                state.set_status(msg);
+            } else if let Some(key) = state.get_selected_key() {
                 // Clone key data to avoid borrow conflict with clipboard
                 let keycode = key.keycode.clone();
                 let color_override = key.color_override;
@@ -2123,9 +2287,32 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Cut key (d or Ctrl+X)
+        // Cut key (d or Ctrl+X) - handles both single and multi-selection
         (KeyCode::Char('d'), KeyModifiers::NONE) | (KeyCode::Char('x'), KeyModifiers::CONTROL) => {
-            if let Some(key) = state.get_selected_key() {
+            if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
+                // Cut all selected keys
+                let layer = state.current_layer;
+                let anchor = state.selected_keys[0];
+                let positions = state.selected_keys.clone();
+                let mut keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
+                
+                for pos in &state.selected_keys {
+                    if let Some(layer_ref) = state.layout.layers.get(layer) {
+                        if let Some(key) = layer_ref.keys.iter().find(|k| k.position == *pos) {
+                            keys.push((*pos, clipboard::ClipboardContent {
+                                keycode: key.keycode.clone(),
+                                color_override: key.color_override,
+                                category_id: key.category_id.clone(),
+                            }));
+                        }
+                    }
+                }
+                
+                let msg = state.clipboard.cut_multi(keys, anchor, layer, positions);
+                state.selection_mode = None;
+                state.selected_keys.clear();
+                state.set_status(msg);
+            } else if let Some(key) = state.get_selected_key() {
                 // Clone key data to avoid borrow conflict with clipboard
                 let keycode = key.keycode.clone();
                 let color_override = key.color_override;
@@ -2146,9 +2333,108 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
 
         // Paste key (p or Ctrl+V)
         (KeyCode::Char('p'), KeyModifiers::NONE) | (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
-            if let Some(content) = state.clipboard.get_content().cloned() {
+            // Check for multi-key paste first
+            if let Some(multi) = state.clipboard.get_multi_content().cloned() {
+                // Calculate target positions relative to current position
+                // The anchor is the reference point, we need to shift all keys
+                let anchor = multi.anchor;
+                let current = state.selected_position;
+                
+                // Calculate offset from anchor to current position
+                let row_offset = current.row as isize - anchor.row as isize;
+                let col_offset = current.col as isize - anchor.col as isize;
+                
+                // Collect valid target positions and save undo state
+                let mut paste_targets: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
+                let mut undo_keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
+                
+                for (pos, content) in &multi.keys {
+                    // Calculate target position
+                    let target_row = pos.row as isize + row_offset;
+                    let target_col = pos.col as isize + col_offset;
+                    
+                    if target_row >= 0 && target_col >= 0 && target_row <= u8::MAX as isize && target_col <= u8::MAX as isize {
+                        let target_pos = Position::new(target_row as u8, target_col as u8);
+                        
+                        // Check if target position is valid
+                        if state.mapping.is_valid_position(target_pos) {
+                            // Save original for undo
+                            if let Some(layer) = state.layout.layers.get(state.current_layer) {
+                                if let Some(key) = layer.keys.iter().find(|k| k.position == target_pos) {
+                                    undo_keys.push((target_pos, clipboard::ClipboardContent {
+                                        keycode: key.keycode.clone(),
+                                        color_override: key.color_override,
+                                        category_id: key.category_id.clone(),
+                                    }));
+                                }
+                            }
+                            paste_targets.push((target_pos, content.clone()));
+                        }
+                    }
+                }
+                
+                if paste_targets.is_empty() {
+                    state.set_error("No valid positions for paste");
+                    return Ok(false);
+                }
+                
+                // Save undo state
+                state.clipboard.save_undo(
+                    state.current_layer,
+                    undo_keys,
+                    format!("Pasted {} keys", paste_targets.len()),
+                );
+                
+                // Get cut sources before paste
+                let cut_sources: Vec<(usize, Position)> = state.clipboard.get_multi_cut_sources().to_vec();
+                
+                // Apply pastes
+                let paste_count = paste_targets.len();
+                for (target_pos, content) in &paste_targets {
+                    if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                        if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *target_pos) {
+                            key.keycode = content.keycode.clone();
+                            key.color_override = content.color_override;
+                            key.category_id = content.category_id.clone();
+                        }
+                    }
+                }
+                
+                // Clear cut sources if this was a cut operation
+                for (layer_idx, pos) in cut_sources {
+                    if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
+                        if let Some(source_key) = layer.keys.iter_mut().find(|k| k.position == pos) {
+                            source_key.keycode = "KC_TRNS".to_string();
+                            source_key.color_override = None;
+                            source_key.category_id = None;
+                        }
+                    }
+                }
+                state.clipboard.clear_cut_source();
+                
+                // Flash the first pasted key (current position)
+                state.flash_highlight = Some((state.current_layer, current, 5));
+                
+                state.mark_dirty();
+                state.set_status(format!("Pasted {} keys", paste_count));
+            } else if let Some(content) = state.clipboard.get_content().cloned() {
+                // Single key paste (original logic)
                 // Get cut source before modifying clipboard
                 let cut_source = state.clipboard.get_cut_source();
+                
+                // Save undo state before making changes
+                if let Some(key) = state.get_selected_key() {
+                    let original = clipboard::ClipboardContent {
+                        keycode: key.keycode.clone(),
+                        color_override: key.color_override,
+                        category_id: key.category_id.clone(),
+                    };
+                    state.clipboard.save_undo(
+                        state.current_layer,
+                        vec![(state.selected_position, original)],
+                        format!("Pasted: {}", content.keycode),
+                    );
+                }
                 
                 // Apply clipboard content to selected key
                 if let Some(key) = state.get_selected_key_mut() {
@@ -2157,6 +2443,9 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                     key.category_id = content.category_id.clone();
                     state.mark_dirty();
                     state.set_status(format!("Pasted: {}", content.keycode));
+                    
+                    // Trigger flash highlight (5 frames ~= 250ms at 50ms/frame)
+                    state.flash_highlight = Some((state.current_layer, state.selected_position, 5));
                 }
 
                 // If this was a cut operation, clear the source key
@@ -2172,6 +2461,27 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 }
             } else {
                 state.set_error("Nothing in clipboard");
+            }
+            Ok(false)
+        }
+
+        // Undo last paste operation (Ctrl+Z)
+        (KeyCode::Char('z'), KeyModifiers::CONTROL) => {
+            if let Some(undo) = state.clipboard.take_undo() {
+                // Restore original keys
+                for (pos, content) in undo.original_keys {
+                    if let Some(layer) = state.layout.layers.get_mut(undo.layer_index) {
+                        if let Some(key) = layer.keys.iter_mut().find(|k| k.position == pos) {
+                            key.keycode = content.keycode;
+                            key.color_override = content.color_override;
+                            key.category_id = content.category_id;
+                        }
+                    }
+                }
+                state.mark_dirty();
+                state.set_status("Undone paste operation");
+            } else {
+                state.set_error("Nothing to undo");
             }
             Ok(false)
         }
@@ -2211,8 +2521,21 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Toggle colors for current layer (v key)
-        (KeyCode::Char('v'), _) => {
+        // Toggle colors for all layers (Alt+V)
+        (KeyCode::Char('v'), KeyModifiers::ALT) => {
+            let enabled = state.layout.toggle_all_layer_colors();
+            state.dirty = true;
+            let status = if enabled {
+                "All layer colors enabled".to_string()
+            } else {
+                "All layer colors disabled".to_string()
+            };
+            state.set_status(status);
+            Ok(false)
+        }
+
+        // Toggle colors for current layer (v key, no modifier)
+        (KeyCode::Char('v'), KeyModifiers::NONE) => {
             if let Some(enabled) = state.layout.toggle_layer_colors(state.current_layer) {
                 state.dirty = true;
                 let status = if enabled {
@@ -2222,19 +2545,6 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 };
                 state.set_status(status);
             }
-            Ok(false)
-        }
-
-        // Toggle colors for all layers (Shift+V)
-        (KeyCode::Char('V'), KeyModifiers::SHIFT) => {
-            let enabled = state.layout.toggle_all_layer_colors();
-            state.dirty = true;
-            let status = if enabled {
-                "All layer colors enabled".to_string()
-            } else {
-                "All layer colors disabled".to_string()
-            };
-            state.set_status(status);
             Ok(false)
         }
 
@@ -2386,9 +2696,13 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Escape - cancel cut operation if active
+        // Escape - cancel selection mode or cut operation
         (KeyCode::Esc, _) => {
-            if state.clipboard.is_cut() {
+            if state.selection_mode.is_some() {
+                state.selection_mode = None;
+                state.selected_keys.clear();
+                state.set_status("Selection cancelled");
+            } else if state.clipboard.is_cut() {
                 state.clipboard.cancel_cut();
                 state.set_status("Cut cancelled");
             }
@@ -2807,10 +3121,40 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                     }
                     Ok(false)
                 }
+                KeyCode::Char('D') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Start duplicating
+                    let selected_idx = state.layer_manager_state.selected;
+                    if let Some(layer) = state.layout.layers.get(selected_idx) {
+                        let layer_clone = layer.clone();
+                        state.layer_manager_state.start_duplicating(&layer_clone);
+                        state.set_status("Enter name for duplicate layer");
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char('c') => {
+                    // Start copy to another layer
+                    if state.layout.layers.len() <= 1 {
+                        state.set_error("Need at least 2 layers to copy");
+                    } else {
+                        state.layer_manager_state.start_copy_to(state.layout.layers.len());
+                        state.set_status("Select target layer");
+                    }
+                    Ok(false)
+                }
+                KeyCode::Char('s') => {
+                    // Start swap with another layer
+                    if state.layout.layers.len() <= 1 {
+                        state.set_error("Need at least 2 layers to swap");
+                    } else {
+                        state.layer_manager_state.start_swapping(state.layout.layers.len());
+                        state.set_status("Select layer to swap with");
+                    }
+                    Ok(false)
+                }
                 _ => Ok(false),
             }
         }
-        ManagerMode::CreatingName { .. } | ManagerMode::Renaming { .. } => {
+        ManagerMode::CreatingName { .. } | ManagerMode::Renaming { .. } | ManagerMode::Duplicating { .. } => {
             // Handle text input
             match key.code {
                 KeyCode::Esc => {
@@ -2869,6 +3213,39 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                     state.set_status(format!("Layer renamed to '{}'", input));
                                 }
                             }
+                            ManagerMode::Duplicating { source_index, .. } => {
+                                // Duplicate layer with new name
+                                use crate::models::layer::Layer;
+                                let source_index = *source_index;
+                                let new_index = state.layout.layers.len();
+                                
+                                if let Some(source) = state.layout.layers.get(source_index) {
+                                    match Layer::new(new_index as u8, &input, source.default_color) {
+                                        Ok(mut new_layer) => {
+                                            // Copy all keys from source
+                                            for key in &source.keys {
+                                                use crate::models::layer::KeyDefinition;
+                                                let mut new_key = KeyDefinition::new(key.position, &key.keycode);
+                                                new_key.color_override = key.color_override;
+                                                new_key.category_id = key.category_id.clone();
+                                                new_layer.add_key(new_key);
+                                            }
+                                            // Copy layer settings
+                                            new_layer.layer_colors_enabled = source.layer_colors_enabled;
+                                            new_layer.category_id = source.category_id.clone();
+                                            
+                                            state.layout.layers.push(new_layer);
+                                            state.layer_manager_state.selected = new_index;
+                                            state.mark_dirty();
+                                            state.layer_manager_state.cancel();
+                                            state.set_status(format!("Duplicated as '{}'", input));
+                                        }
+                                        Err(e) => {
+                                            state.set_error(format!("Failed to duplicate layer: {}", e));
+                                        }
+                                    }
+                                }
+                            }
                             _ => {}
                         }
                     }
@@ -2924,6 +3301,115 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                 KeyCode::Char('n' | 'N') | KeyCode::Esc => {
                     state.layer_manager_state.cancel();
                     state.set_status("Deletion cancelled");
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+        ManagerMode::CopyingTo { source_index, target_selected } => {
+            let source_index = *source_index;
+            let target_selected = *target_selected;
+            match key.code {
+                KeyCode::Esc => {
+                    state.layer_manager_state.cancel();
+                    state.set_status("Copy cancelled");
+                    Ok(false)
+                }
+                KeyCode::Up => {
+                    state.layer_manager_state.select_target_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down => {
+                    state.layer_manager_state.select_target_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Copy all keys from source to target
+                    if let Some(source) = state.layout.layers.get(source_index) {
+                        let keys_to_copy: Vec<_> = source.keys.iter().map(|k| {
+                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
+                        }).collect();
+                        
+                        if let Some(target) = state.layout.layers.get_mut(target_selected) {
+                            for (pos, keycode, color, category) in keys_to_copy {
+                                if let Some(key) = target.keys.iter_mut().find(|k| k.position == pos) {
+                                    key.keycode = keycode;
+                                    key.color_override = color;
+                                    key.category_id = category;
+                                }
+                            }
+                            state.mark_dirty();
+                            state.layer_manager_state.cancel();
+                            state.set_status(format!("Copied layer {} to layer {}", source_index, target_selected));
+                        }
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+        ManagerMode::Swapping { source_index, target_selected } => {
+            let source_index = *source_index;
+            let target_selected = *target_selected;
+            match key.code {
+                KeyCode::Esc => {
+                    state.layer_manager_state.cancel();
+                    state.set_status("Swap cancelled");
+                    Ok(false)
+                }
+                KeyCode::Up => {
+                    state.layer_manager_state.select_target_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down => {
+                    state.layer_manager_state.select_target_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Swap all keys between source and target
+                    // We need to collect both sets of keys first to avoid borrow issues
+                    let source_keys: Vec<_>;
+                    let target_keys: Vec<_>;
+                    
+                    if let (Some(source), Some(target)) = (
+                        state.layout.layers.get(source_index),
+                        state.layout.layers.get(target_selected),
+                    ) {
+                        source_keys = source.keys.iter().map(|k| {
+                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
+                        }).collect();
+                        target_keys = target.keys.iter().map(|k| {
+                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
+                        }).collect();
+                    } else {
+                        return Ok(false);
+                    }
+                    
+                    // Apply target keys to source layer
+                    if let Some(source) = state.layout.layers.get_mut(source_index) {
+                        for (pos, keycode, color, category) in &target_keys {
+                            if let Some(key) = source.keys.iter_mut().find(|k| k.position == *pos) {
+                                key.keycode = keycode.clone();
+                                key.color_override = *color;
+                                key.category_id = category.clone();
+                            }
+                        }
+                    }
+                    
+                    // Apply source keys to target layer
+                    if let Some(target) = state.layout.layers.get_mut(target_selected) {
+                        for (pos, keycode, color, category) in &source_keys {
+                            if let Some(key) = target.keys.iter_mut().find(|k| k.position == *pos) {
+                                key.keycode = keycode.clone();
+                                key.color_override = *color;
+                                key.category_id = category.clone();
+                            }
+                        }
+                    }
+                    
+                    state.mark_dirty();
+                    state.layer_manager_state.cancel();
+                    state.set_status(format!("Swapped layers {} and {}", source_index, target_selected));
                     Ok(false)
                 }
                 _ => Ok(false),

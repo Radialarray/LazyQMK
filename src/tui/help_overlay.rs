@@ -153,8 +153,23 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("D", Style::default().fg(theme.success)),
+                Span::styled("                   Duplicate layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("r", Style::default().fg(theme.success)),
                 Span::styled("                   Rename layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("c", Style::default().fg(theme.success)),
+                Span::styled("                   Copy keys to another layer", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("s", Style::default().fg(theme.success)),
+                Span::styled("                   Swap with another layer", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
@@ -317,6 +332,9 @@ impl HelpOverlayState {
             ]),
             Line::from(""),
             Line::from(vec![
+                Span::styled("  Single key operations:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("y / Ctrl+C", Style::default().fg(theme.success)),
                 Span::styled("          Copy selected key", Style::default().fg(theme.text)),
@@ -333,24 +351,49 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Ctrl+Z", Style::default().fg(theme.success)),
+                Span::styled("              Undo last paste", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
                 Span::styled("Escape", Style::default().fg(theme.success)),
                 Span::styled("              Cancel cut operation", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  Copy/cut includes:", Style::default().fg(theme.text_muted)),
+                Span::styled("  Multi-key selection:", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(vec![
-                Span::styled("  • Keycode", Style::default().fg(theme.text)),
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+V", Style::default().fg(theme.success)),
+                Span::styled("             Enter/exit selection mode", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  • Color override (if set)", Style::default().fg(theme.text)),
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Space", Style::default().fg(theme.success)),
+                Span::styled("               Toggle key in selection", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  • Category assignment (if set)", Style::default().fg(theme.text)),
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Shift+R", Style::default().fg(theme.success)),
+                Span::styled("             Rectangle select (move to expand)", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
-                Span::styled("  Cut source shown dimmed until paste/cancel", Style::default().fg(theme.text_muted)),
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("y / d", Style::default().fg(theme.success)),
+                Span::styled("               Copy/cut selected keys", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Exit selection mode", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  Copy/cut includes keycode, color, category", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  Multi-paste maintains relative positions", Style::default().fg(theme.text_muted)),
             ]),
             Line::from(""),
             // Color System Section
@@ -368,8 +411,8 @@ impl HelpOverlayState {
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),
-                Span::styled("Shift+V", Style::default().fg(theme.success)),
-                Span::styled("             Toggle colors for all layers", Style::default().fg(theme.text)),
+                Span::styled("Alt+V", Style::default().fg(theme.success)),
+                Span::styled("               Toggle colors for all layers", Style::default().fg(theme.text)),
             ]),
             Line::from(vec![
                 Span::styled("  ", Style::default().fg(theme.text)),

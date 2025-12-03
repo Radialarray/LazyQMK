@@ -114,6 +114,14 @@ impl KeyboardWidget {
             // Check if this key is the cut source (for visual feedback)
             let is_cut_source = state.clipboard.is_cut_source(state.current_layer, key.position);
 
+            // Check if this key is part of multi-selection
+            let is_in_selection = state.selected_keys.contains(&key.position);
+
+            // Check if this key should flash (paste feedback)
+            let is_flashing = state.flash_highlight
+                .map(|(layer, pos, _)| layer == state.current_layer && pos == key.position)
+                .unwrap_or(false);
+
             // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
             let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
                 if !current_layer.layer_colors_enabled {
@@ -194,6 +202,8 @@ impl KeyboardWidget {
                 key_color,
                 is_selected,
                 is_cut_source,
+                is_in_selection,
+                is_flashing,
                 theme,
             );
         }
@@ -208,14 +218,30 @@ impl KeyboardWidget {
         border_color: Color,
         is_selected: bool,
         is_cut_source: bool,
+        is_in_selection: bool,
+        is_flashing: bool,
         theme: &super::Theme,
     ) {
-        // Determine colors based on selection and cut state
-        let (border_style, content_bg, content_fg) = if is_selected {
+        // Determine colors based on selection, cut state, multi-selection, and flash
+        let (border_style, content_bg, content_fg) = if is_flashing {
+            // Flash highlight: bright accent background
+            (
+                Style::default().fg(theme.success).add_modifier(Modifier::BOLD),
+                Some(theme.success),
+                theme.background,
+            )
+        } else if is_selected {
             (
                 Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 Some(theme.accent),
                 theme.background,
+            )
+        } else if is_in_selection {
+            // Multi-selection: highlighted but not as prominent as primary selection
+            (
+                Style::default().fg(theme.warning).add_modifier(Modifier::BOLD),
+                Some(theme.surface),
+                theme.text,
             )
         } else if is_cut_source {
             // Cut source: dimmed appearance

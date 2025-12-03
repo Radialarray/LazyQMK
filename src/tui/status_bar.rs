@@ -39,6 +39,20 @@ impl StatusBar {
             None
         };
 
+        // Build clipboard preview line
+        let has_clipboard = state.clipboard.has_content();
+        let clipboard_preview = state.clipboard.get_preview().map(|preview| {
+            Line::from(vec![
+                Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
+                Span::styled(preview, Style::default().fg(theme.accent)),
+                if state.clipboard.can_undo() {
+                    Span::styled(" | Ctrl+Z: Undo", Style::default().fg(theme.text_muted))
+                } else {
+                    Span::raw("")
+                },
+            ])
+        });
+
         let mut status_text = if let Some(error) = &state.error_message {
             vec![Line::from(vec![
                 Span::styled("ERROR: ", Style::default().fg(theme.error)),
@@ -48,10 +62,15 @@ impl StatusBar {
             vec![Line::from(state.status_message.as_str())]
         };
 
+        // Add clipboard preview if present
+        if let Some(clip_line) = clipboard_preview {
+            status_text.push(clip_line);
+        }
+
         // Add build status line if present
         if let Some(build_line) = build_status_line {
             status_text.push(build_line);
-        } else {
+        } else if !has_clipboard {
             status_text.push(Line::from(""));
         }
 

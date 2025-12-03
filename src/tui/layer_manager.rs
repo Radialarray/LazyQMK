@@ -35,6 +35,27 @@ pub enum ManagerMode {
         /// Index of layer to delete
         layer_index: usize,
     },
+    /// Duplicating a layer (entering name for copy)
+    Duplicating {
+        /// Index of layer being duplicated
+        source_index: usize,
+        /// User input for new layer name
+        input: String,
+    },
+    /// Copying all keys to another layer (selecting target)
+    CopyingTo {
+        /// Index of source layer
+        source_index: usize,
+        /// Currently selected target layer
+        target_selected: usize,
+    },
+    /// Swapping two layers (selecting swap target)
+    Swapping {
+        /// Index of first layer (source)
+        source_index: usize,
+        /// Currently selected swap target
+        target_selected: usize,
+    },
 }
 
 /// State for the layer manager dialog
@@ -102,6 +123,84 @@ impl LayerManagerState {
         };
     }
 
+    /// Start duplicating the selected layer
+    pub fn start_duplicating(&mut self, layer: &Layer) {
+        self.mode = ManagerMode::Duplicating {
+            source_index: self.selected,
+            input: format!("{} (copy)", layer.name),
+        };
+    }
+
+    /// Start copying to another layer
+    pub fn start_copy_to(&mut self, layer_count: usize) {
+        // Start with next layer as default target (or first if at end)
+        let target = if self.selected + 1 < layer_count {
+            self.selected + 1
+        } else if self.selected > 0 {
+            0
+        } else {
+            return; // Only one layer, can't copy to itself
+        };
+        self.mode = ManagerMode::CopyingTo {
+            source_index: self.selected,
+            target_selected: target,
+        };
+    }
+
+    /// Start swapping with another layer
+    pub fn start_swapping(&mut self, layer_count: usize) {
+        // Start with next layer as default target (or first if at end)
+        let target = if self.selected + 1 < layer_count {
+            self.selected + 1
+        } else if self.selected > 0 {
+            0
+        } else {
+            return; // Only one layer, can't swap with itself
+        };
+        self.mode = ManagerMode::Swapping {
+            source_index: self.selected,
+            target_selected: target,
+        };
+    }
+
+    /// Navigate in copy-to or swap mode
+    pub fn select_target_previous(&mut self, layer_count: usize) {
+        match &mut self.mode {
+            ManagerMode::CopyingTo { source_index, target_selected }
+            | ManagerMode::Swapping { source_index, target_selected } => {
+                // Skip the source layer when navigating
+                loop {
+                    if *target_selected > 0 {
+                        *target_selected -= 1;
+                    } else {
+                        *target_selected = layer_count - 1;
+                    }
+                    if *target_selected != *source_index {
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Navigate in copy-to or swap mode
+    pub fn select_target_next(&mut self, layer_count: usize) {
+        match &mut self.mode {
+            ManagerMode::CopyingTo { source_index, target_selected }
+            | ManagerMode::Swapping { source_index, target_selected } => {
+                // Skip the source layer when navigating
+                loop {
+                    *target_selected = (*target_selected + 1) % layer_count;
+                    if *target_selected != *source_index {
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Cancel current operation and return to browsing
     pub fn cancel(&mut self) {
         self.mode = ManagerMode::Browsing;
@@ -118,9 +217,9 @@ impl LayerManagerState {
     #[must_use]
     pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
-            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
-                Some(input)
-            }
+            ManagerMode::CreatingName { input }
+            | ManagerMode::Renaming { input, .. }
+            | ManagerMode::Duplicating { input, .. } => Some(input),
             _ => None,
         }
     }
@@ -128,9 +227,9 @@ impl LayerManagerState {
     /// Get mutable reference to current input text
     pub fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
-            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
-                Some(input)
-            }
+            ManagerMode::CreatingName { input }
+            | ManagerMode::Renaming { input, .. }
+            | ManagerMode::Duplicating { input, .. } => Some(input),
             _ => None,
         }
     }
@@ -213,6 +312,40 @@ pub fn render_layer_manager(
                 render_delete_confirmation(f, inner_area, *layer_index, layer, layers.len(), theme);
             }
         }
+        ManagerMode::Duplicating { source_index, input } => {
+            if let Some(layer) = layers.get(*source_index) {
+                render_name_input(
+                    f,
+                    inner_area,
+                    &format!("Duplicate Layer: {}", layer.name),
+                    input,
+                    "Enter name for duplicate:",
+                    theme,
+                );
+            }
+        }
+        ManagerMode::CopyingTo { source_index, target_selected } => {
+            render_layer_picker(
+                f,
+                inner_area,
+                "Copy Keys To Layer",
+                *source_index,
+                *target_selected,
+                layers,
+                theme,
+            );
+        }
+        ManagerMode::Swapping { source_index, target_selected } => {
+            render_layer_picker(
+                f,
+                inner_area,
+                "Swap With Layer",
+                *source_index,
+                *target_selected,
+                layers,
+                theme,
+            );
+        }
     }
 }
 
@@ -229,7 +362,7 @@ fn render_layer_list(
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
             Constraint::Min(5),    // Layer list
-            Constraint::Length(6), // Help text
+            Constraint::Length(8), // Help text (more lines now)
         ])
         .split(area);
 
@@ -283,12 +416,20 @@ fn render_layer_list(
         Line::from(vec![
             Span::styled("n", Style::default().fg(theme.primary)),
             Span::raw(": New  "),
+            Span::styled("D", Style::default().fg(theme.primary)),
+            Span::raw(": Duplicate  "),
             Span::styled("r", Style::default().fg(theme.primary)),
             Span::raw(": Rename  "),
-            Span::styled("v", Style::default().fg(theme.primary)),
-            Span::raw(": Toggle Colors  "),
             Span::styled("d", Style::default().fg(theme.primary)),
             Span::raw(": Delete"),
+        ]),
+        Line::from(vec![
+            Span::styled("c", Style::default().fg(theme.primary)),
+            Span::raw(": Copy to  "),
+            Span::styled("s", Style::default().fg(theme.primary)),
+            Span::raw(": Swap with  "),
+            Span::styled("v", Style::default().fg(theme.primary)),
+            Span::raw(": Toggle Colors"),
         ]),
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
@@ -296,15 +437,11 @@ fn render_layer_list(
             Span::styled("Shift+↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": Reorder  "),
             Span::styled("Enter", Style::default().fg(theme.primary)),
-            Span::raw(": Go to Layer"),
+            Span::raw(": Go to"),
         ]),
         Line::from(vec![
             Span::styled("Esc", Style::default().fg(theme.primary)),
-            Span::raw(": Close  "),
-            Span::styled("●", Style::default().fg(theme.success)),
-            Span::raw("/"),
-            Span::styled("○", Style::default().fg(theme.text_muted)),
-            Span::raw(": Colors enabled/disabled"),
+            Span::raw(": Close"),
         ]),
     ];
 
@@ -438,4 +575,79 @@ fn render_delete_confirmation(
         .style(Style::default().fg(theme.text_muted));
 
     f.render_widget(help_widget, chunks[4]);
+}
+
+/// Render layer picker for copy-to or swap operations
+fn render_layer_picker(
+    f: &mut Frame,
+    area: Rect,
+    title: &str,
+    source_index: usize,
+    target_selected: usize,
+    layers: &[Layer],
+    theme: &Theme,
+) {
+    let chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(2), // Title/source info
+            Constraint::Min(5),    // Target layer list
+            Constraint::Length(3), // Help
+        ])
+        .split(area);
+
+    // Source info
+    let source_name = layers.get(source_index).map_or("?", |l| l.name.as_str());
+    let info = Paragraph::new(format!("From Layer {}: {}", source_index, source_name))
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(theme.text));
+    f.render_widget(info, chunks[0]);
+
+    // Target layer list
+    let items: Vec<ListItem> = layers
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != source_index) // Exclude source layer
+        .map(|(i, layer)| {
+            let is_selected = i == target_selected;
+            let style = if is_selected {
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(theme.text)
+            };
+
+            let prefix = if is_selected { "→ " } else { "  " };
+            let content = Line::from(vec![
+                Span::raw(prefix),
+                Span::styled(format!("Layer {}: ", i), Style::default().fg(theme.text_muted)),
+                Span::styled(&layer.name, style),
+            ]);
+
+            ListItem::new(content)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title(format!("Select Target - {}", title)))
+        .highlight_style(Style::default().bg(theme.surface));
+
+    f.render_widget(list, chunks[1]);
+
+    // Help text
+    let help = vec![Line::from(vec![
+        Span::styled("↑/↓", Style::default().fg(theme.primary)),
+        Span::raw(": Select  "),
+        Span::styled("Enter", Style::default().fg(theme.primary)),
+        Span::raw(": Confirm  "),
+        Span::styled("Esc", Style::default().fg(theme.primary)),
+        Span::raw(": Cancel"),
+    ])];
+
+    let help_widget = Paragraph::new(help)
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(theme.text_muted));
+
+    f.render_widget(help_widget, chunks[2]);
 }
