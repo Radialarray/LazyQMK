@@ -687,3 +687,330 @@ keys = ["Esc"]
 action = "Exit selection"
 hint = "Exit"
 priority = 5
+
+# =============================================================================
+# TEMPLATE BROWSER
+# =============================================================================
+
+[contexts.template_browser]
+name = "Template Browser"
+description = "Browse and load layout templates"
+
+[[contexts.template_browser.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate templates"
+hint = "Navigate"
+priority = 1
+
+[[contexts.template_browser.bindings]]
+keys = ["/"]
+action = "Search"
+hint = "Search"
+priority = 2
+
+[[contexts.template_browser.bindings]]
+keys = ["Enter"]
+action = "Load template"
+hint = "Load"
+priority = 3
+
+[[contexts.template_browser.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 4
+
+# =============================================================================
+# TEMPLATE SAVE DIALOG
+# =============================================================================
+
+[contexts.template_save]
+name = "Save Template"
+description = "Save current layout as template"
+
+[[contexts.template_save.bindings]]
+keys = ["Tab"]
+action = "Next field"
+hint = "Next"
+priority = 1
+
+[[contexts.template_save.bindings]]
+keys = ["Enter"]
+action = "Save"
+hint = "Save"
+priority = 2
+
+[[contexts.template_save.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+# =============================================================================
+# CATEGORY PICKER
+# =============================================================================
+
+[contexts.category_picker]
+name = "Category Picker"
+description = "Assign category to key or layer"
+
+[[contexts.category_picker.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.category_picker.bindings]]
+keys = ["Enter"]
+action = "Select"
+hint = "Select"
+priority = 2
+
+[[contexts.category_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+# =============================================================================
+# LAYOUT PICKER
+# =============================================================================
+
+[contexts.layout_picker]
+name = "Layout Picker"
+description = "Select keyboard layout variant"
+
+[[contexts.layout_picker.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.layout_picker.bindings]]
+keys = ["Enter"]
+action = "Select"
+hint = "Select"
+priority = 2
+
+[[contexts.layout_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+# =============================================================================
+# SETUP WIZARD
+# =============================================================================
+
+[contexts.setup_wizard]
+name = "Setup Wizard"
+description = "Initial configuration wizard"
+
+[[contexts.setup_wizard.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate options"
+hint = "Navigate"
+priority = 1
+
+[[contexts.setup_wizard.bindings]]
+keys = ["Enter"]
+action = "Next/Confirm"
+hint = "Next"
+priority = 2
+
+[[contexts.setup_wizard.bindings]]
+keys = ["Esc"]
+action = "Back/Cancel"
+hint = "Back"
+priority = 3
+
+# =============================================================================
+# UNSAVED CHANGES PROMPT
+# =============================================================================
+
+[contexts.unsaved_prompt]
+name = "Unsaved Changes"
+description = "Prompt when quitting with unsaved changes"
+
+[[contexts.unsaved_prompt.bindings]]
+keys = ["y"]
+action = "Save and quit"
+hint = "Save"
+priority = 1
+
+[[contexts.unsaved_prompt.bindings]]
+keys = ["n"]
+action = "Discard and quit"
+hint = "Discard"
+priority = 2
+
+[[contexts.unsaved_prompt.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+# =============================================================================
+# CLIPBOARD OPERATIONS (shown as informational section)
+# =============================================================================
+
+[contexts.clipboard]
+name = "Clipboard"
+description = "Copy/cut/paste operations"
+
+[[contexts.clipboard.bindings]]
+keys = ["y", "Ctrl+C"]
+action = "Copy key"
+priority = 1
+
+[[contexts.clipboard.bindings]]
+keys = ["d", "Ctrl+X"]
+action = "Cut key"
+priority = 2
+
+[[contexts.clipboard.bindings]]
+keys = ["p", "Ctrl+V"]
+action = "Paste"
+priority = 3
+
+[[contexts.clipboard.bindings]]
+keys = ["Ctrl+Z"]
+action = "Undo paste"
+priority = 4
+
+[[contexts.clipboard.bindings]]
+keys = ["Esc"]
+action = "Cancel cut"
+priority = 5
+
+# =============================================================================
+# PARAMETERIZED KEYCODES (informational)
+# =============================================================================
+
+[contexts.parameterized_keycodes]
+name = "Parameterized Keycodes"
+description = "Multi-stage keycode pickers"
+
+[[contexts.parameterized_keycodes.bindings]]
+keys = ["LT()"]
+action = "Layer-Tap: layer → tap key"
+priority = 1
+
+[[contexts.parameterized_keycodes.bindings]]
+keys = ["MT()"]
+action = "Mod-Tap: modifiers → tap key"
+priority = 2
+
+[[contexts.parameterized_keycodes.bindings]]
+keys = ["LM()"]
+action = "Layer-Mod: layer → modifiers"
+priority = 3
+
+[[contexts.parameterized_keycodes.bindings]]
+keys = ["SH_T()"]
+action = "Swap-Hands-Tap: tap key"
+priority = 4
+
+# =============================================================================
+# TAP-HOLD SETTINGS (informational)
+# =============================================================================
+
+[contexts.tap_hold_info]
+name = "Tap-Hold Settings"
+description = "Configuration for home-row mods"
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Preset"]
+action = "Quick config: Default/HomeRowMods/Responsive/Deliberate"
+priority = 1
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Tapping Term"]
+action = "Tap vs hold decision time (100-500ms)"
+priority = 2
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Quick Tap"]
+action = "Auto-repeat window after tap"
+priority = 3
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Hold Mode"]
+action = "Default/Permissive Hold/Hold On Other Key"
+priority = 4
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Retro Tapping"]
+action = "Send tap on release after hold timeout"
+priority = 5
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Flow Tap"]
+action = "Rapid typing window (home-row mods)"
+priority = 6
+
+[[contexts.tap_hold_info.bindings]]
+keys = ["Chordal Hold"]
+action = "Opposite-hand rule for modifiers"
+priority = 7
+
+# =============================================================================
+# COLOR PRIORITY (informational)
+# =============================================================================
+
+[contexts.color_priority]
+name = "Color Priority"
+description = "Color resolution order"
+
+[[contexts.color_priority.bindings]]
+keys = ["1"]
+action = "Individual key override (highest)"
+priority = 1
+
+[[contexts.color_priority.bindings]]
+keys = ["2"]
+action = "Key category color"
+priority = 2
+
+[[contexts.color_priority.bindings]]
+keys = ["3"]
+action = "Layer category color"
+priority = 3
+
+[[contexts.color_priority.bindings]]
+keys = ["4"]
+action = "Layer default color (lowest)"
+priority = 4
+
+# =============================================================================
+# TIPS (informational)
+# =============================================================================
+
+[contexts.tips]
+name = "Tips"
+description = "Usage tips"
+
+[[contexts.tips.bindings]]
+keys = ["*"]
+action = "Asterisk in title = unsaved changes"
+priority = 1
+
+[[contexts.tips.bindings]]
+keys = ["KC_TRNS"]
+action = "Passes keypress to lower layer"
+priority = 2
+
+[[contexts.tips.bindings]]
+keys = ["Build"]
+action = "Runs in background - keep editing!"
+priority = 3
+
+[[contexts.tips.bindings]]
+keys = ["Templates"]
+action = "Preserve colors and categories"
+priority = 4
+
+[[contexts.tips.bindings]]
+keys = ["LT/MT/LM/SH_T"]
+action = "Use multi-stage picker dialogs"
+priority = 5
