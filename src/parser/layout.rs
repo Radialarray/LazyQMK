@@ -107,6 +107,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         categories: Vec::new(),
         inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
         tap_hold_settings: crate::models::TapHoldSettings::default(),
+        rgb_timeout_ms: 0,
     };
 
     // Parse content (layers and categories)
@@ -637,6 +638,35 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 
             layout.tap_hold_settings.chordal_hold =
                 value == "on" || value == "true" || value == "yes" || value == "enabled";
+        }
+
+        // Parse RGB Timeout
+        if line.starts_with("**RGB Timeout**:") {
+            let value = line
+                .strip_prefix("**RGB Timeout**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            // Parse various formats: "5 min", "300 sec", "300000ms", "disabled", "off"
+            if value == "disabled" || value == "off" || value == "0" {
+                layout.rgb_timeout_ms = 0;
+            } else if let Some(mins) = value.strip_suffix(" min").or(value.strip_suffix("min")) {
+                if let Ok(m) = mins.trim().parse::<u32>() {
+                    layout.rgb_timeout_ms = m * 60000;
+                }
+            } else if let Some(secs) = value.strip_suffix(" sec").or(value.strip_suffix("sec")) {
+                if let Ok(s) = secs.trim().parse::<u32>() {
+                    layout.rgb_timeout_ms = s * 1000;
+                }
+            } else if let Some(ms) = value.strip_suffix("ms") {
+                if let Ok(m) = ms.trim().parse::<u32>() {
+                    layout.rgb_timeout_ms = m;
+                }
+            } else if let Ok(ms) = value.parse::<u32>() {
+                // Plain number, assume milliseconds
+                layout.rgb_timeout_ms = ms;
+            }
         }
 
         line_num += 1;

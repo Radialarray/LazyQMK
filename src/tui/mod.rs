@@ -794,6 +794,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 &state.settings_manager_state,
                 state.layout.inactive_key_behavior,
                 &state.layout.tap_hold_settings,
+                state.layout.rgb_timeout_ms,
                 &state.theme,
             );
         }
@@ -1519,6 +1520,17 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                 state.layout.tap_hold_settings.chordal_hold,
                             );
                         }
+                        SettingItem::RgbTimeout => {
+                            // RGB timeout is stored as ms but we edit in seconds for usability
+                            // Max 10 minutes = 600000ms, stored as u32 but edited as u16 seconds
+                            let current_secs = (state.layout.rgb_timeout_ms / 1000) as u16;
+                            state.settings_manager_state.start_editing_numeric(
+                                *setting,
+                                current_secs,
+                                0,
+                                600, // Max 10 minutes in seconds
+                            );
+                        }
                     }
                     state.set_status("Select option with ↑↓, Enter to apply");
                 }
@@ -1715,6 +1727,18 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
                 format!("{}ms", value)
             };
             state.set_status(format!("Flow tap term set to: {}", display));
+        }
+        SettingItem::RgbTimeout => {
+            // value is in seconds, convert to milliseconds for storage
+            state.layout.rgb_timeout_ms = u32::from(value) * 1000;
+            let display = if value == 0 {
+                "Disabled".to_string()
+            } else if value >= 60 && value % 60 == 0 {
+                format!("{} min", value / 60)
+            } else {
+                format!("{} sec", value)
+            };
+            state.set_status(format!("RGB timeout set to: {}", display));
         }
         _ => {}
     }

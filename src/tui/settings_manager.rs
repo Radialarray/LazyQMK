@@ -21,6 +21,8 @@ use super::Theme;
 pub enum SettingGroup {
     /// General layout settings
     General,
+    /// RGB lighting settings
+    Rgb,
     /// Tap-hold timing and behavior settings
     TapHold,
 }
@@ -29,7 +31,7 @@ impl SettingGroup {
     /// Returns all groups in display order.
     #[must_use]
     pub const fn all() -> &'static [SettingGroup] {
-        &[SettingGroup::General, SettingGroup::TapHold]
+        &[SettingGroup::General, SettingGroup::Rgb, SettingGroup::TapHold]
     }
 
     /// Returns display name.
@@ -37,6 +39,7 @@ impl SettingGroup {
     pub const fn display_name(&self) -> &'static str {
         match self {
             Self::General => "General",
+            Self::Rgb => "RGB Lighting",
             Self::TapHold => "Tap-Hold",
         }
     }
@@ -48,6 +51,10 @@ pub enum SettingItem {
     // === General Settings ===
     /// Behavior for keys without color on current layer
     InactiveKeyBehavior,
+
+    // === RGB Settings ===
+    /// RGB Matrix timeout (auto-off after inactivity)
+    RgbTimeout,
 
     // === Tap-Hold Settings ===
     /// Preset for common tap-hold configurations
@@ -74,6 +81,7 @@ impl SettingItem {
     pub const fn all() -> &'static [SettingItem] {
         &[
             SettingItem::InactiveKeyBehavior,
+            SettingItem::RgbTimeout,
             SettingItem::TapHoldPreset,
             SettingItem::TappingTerm,
             SettingItem::QuickTapTerm,
@@ -90,6 +98,7 @@ impl SettingItem {
     pub const fn group(&self) -> SettingGroup {
         match self {
             Self::InactiveKeyBehavior => SettingGroup::General,
+            Self::RgbTimeout => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
             | Self::QuickTapTerm
@@ -106,6 +115,7 @@ impl SettingItem {
     pub const fn display_name(&self) -> &'static str {
         match self {
             Self::InactiveKeyBehavior => "Inactive Key Behavior",
+            Self::RgbTimeout => "RGB Timeout",
             Self::TapHoldPreset => "Preset",
             Self::TappingTerm => "Tapping Term",
             Self::QuickTapTerm => "Quick Tap Term",
@@ -124,6 +134,7 @@ impl SettingItem {
             Self::InactiveKeyBehavior => {
                 "How to display keys without a color on the current layer"
             }
+            Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
             Self::TapHoldPreset => "Quick configuration preset for common use cases",
             Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
             Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
@@ -400,6 +411,7 @@ pub fn render_settings_manager(
     state: &SettingsManagerState,
     inactive_key_behavior: InactiveKeyBehavior,
     tap_hold_settings: &TapHoldSettings,
+    rgb_timeout_ms: u32,
     theme: &Theme,
 ) {
     // Center the dialog (80% width, 80% height)
@@ -436,7 +448,7 @@ pub fn render_settings_manager(
 
     match &state.mode {
         ManagerMode::Browsing => {
-            render_settings_list(f, inner_area, state, inactive_key_behavior, tap_hold_settings, theme);
+            render_settings_list(f, inner_area, state, inactive_key_behavior, tap_hold_settings, rgb_timeout_ms, theme);
         }
         ManagerMode::SelectingInactiveKeyBehavior { selected_option } => {
             render_inactive_behavior_selector(f, inner_area, *selected_option, theme);
@@ -463,6 +475,7 @@ fn render_settings_list(
     state: &SettingsManagerState,
     inactive_key_behavior: InactiveKeyBehavior,
     tap_hold_settings: &TapHoldSettings,
+    rgb_timeout_ms: u32,
     theme: &Theme,
 ) {
     // Split area for list and help text
@@ -506,7 +519,7 @@ fn render_settings_list(
         };
 
         // Get current value for this setting
-        let value = get_setting_value_display(*setting, inactive_key_behavior, tap_hold_settings);
+        let value = get_setting_value_display(*setting, inactive_key_behavior, tap_hold_settings, rgb_timeout_ms);
 
         let marker = if display_index == state.selected {
             "▶ "
@@ -566,9 +579,21 @@ fn get_setting_value_display(
     setting: SettingItem,
     inactive_key_behavior: InactiveKeyBehavior,
     tap_hold: &TapHoldSettings,
+    rgb_timeout_ms: u32,
 ) -> String {
     match setting {
         SettingItem::InactiveKeyBehavior => inactive_key_behavior.display_name().to_string(),
+        SettingItem::RgbTimeout => {
+            if rgb_timeout_ms == 0 {
+                "Disabled".to_string()
+            } else if rgb_timeout_ms >= 60000 && rgb_timeout_ms % 60000 == 0 {
+                format!("{} min", rgb_timeout_ms / 60000)
+            } else if rgb_timeout_ms >= 1000 && rgb_timeout_ms % 1000 == 0 {
+                format!("{} sec", rgb_timeout_ms / 1000)
+            } else {
+                format!("{}ms", rgb_timeout_ms)
+            }
+        }
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),
         SettingItem::QuickTapTerm => match tap_hold.quick_tap_term {
@@ -763,13 +788,19 @@ fn render_numeric_editor(
         );
     f.render_widget(title_text, chunks[0]);
 
+    // Determine unit based on setting type
+    let unit = match setting {
+        SettingItem::RgbTimeout => "sec",
+        _ => "ms",
+    };
+
     // Value display
     let value_text = vec![
         Line::from(""),
         Line::from(vec![
             Span::styled("Current value: ", Style::default().fg(theme.text_muted)),
             Span::styled(
-                format!("{value}ms"),
+                format!("{value}{unit}"),
                 Style::default()
                     .fg(theme.success)
                     .add_modifier(Modifier::BOLD),
@@ -777,7 +808,7 @@ fn render_numeric_editor(
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
-            format!("Range: {min}ms - {max}ms"),
+            format!("Range: {min}{unit} - {max}{unit}"),
             Style::default().fg(theme.text_muted),
         )]),
     ];

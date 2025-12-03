@@ -216,8 +216,9 @@ fn generate_settings(layout: &Layout) -> Option<String> {
     // Check if we have any non-default settings
     let has_inactive_setting = layout.inactive_key_behavior != default_inactive;
     let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
+    let has_rgb_timeout = layout.rgb_timeout_ms > 0;
 
-    if !has_inactive_setting && !has_tap_hold_settings {
+    if !has_inactive_setting && !has_tap_hold_settings && !has_rgb_timeout {
         return None;
     }
 
@@ -231,6 +232,22 @@ fn generate_settings(layout: &Layout) -> Option<String> {
             InactiveKeyBehavior::Dim => "Dim",
         };
         output.push_str(&format!("**Inactive Key Behavior**: {value}\n"));
+    }
+
+    // Write RGB timeout if set
+    if has_rgb_timeout {
+        // Convert milliseconds to a human-readable format
+        let timeout_ms = layout.rgb_timeout_ms;
+        if timeout_ms >= 60000 && timeout_ms % 60000 == 0 {
+            // Whole minutes
+            output.push_str(&format!("**RGB Timeout**: {} min\n", timeout_ms / 60000));
+        } else if timeout_ms >= 1000 && timeout_ms % 1000 == 0 {
+            // Whole seconds
+            output.push_str(&format!("**RGB Timeout**: {} sec\n", timeout_ms / 1000));
+        } else {
+            // Milliseconds
+            output.push_str(&format!("**RGB Timeout**: {}ms\n", timeout_ms));
+        }
     }
 
     // Write tap-hold settings if any are non-default
@@ -377,6 +394,7 @@ mod tests {
             categories: vec![category],
             inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
+            rgb_timeout_ms: 0,
         }
     }
 

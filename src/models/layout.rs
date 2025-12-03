@@ -504,6 +504,10 @@ pub struct Layout {
     /// Tap-hold configuration (LT, MT, TT timing and behavior)
     #[serde(default)]
     pub tap_hold_settings: TapHoldSettings,
+    /// RGB Matrix timeout in milliseconds (0 = disabled)
+    /// Automatically turns off RGB after this many ms of inactivity
+    #[serde(default)]
+    pub rgb_timeout_ms: u32,
 }
 
 #[allow(dead_code)]
@@ -517,6 +521,7 @@ impl Layout {
             categories: Vec::new(),
             inactive_key_behavior: InactiveKeyBehavior::default(),
             tap_hold_settings: TapHoldSettings::default(),
+            rgb_timeout_ms: 0,
         })
     }
 

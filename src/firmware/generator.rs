@@ -624,6 +624,13 @@ impl<'a> FirmwareGenerator<'a> {
             }
         }
 
+        // === RGB Settings ===
+        // RGB Matrix timeout (auto-off after inactivity)
+        if self.layout.rgb_timeout_ms > 0 {
+            content.push_str("\n// RGB Matrix Timeout (auto-off after inactivity)\n");
+            content.push_str(&format!("#define RGB_MATRIX_TIMEOUT {}\n", self.layout.rgb_timeout_ms));
+        }
+
         // If the keyboard has RGB matrix and the layout defines
         // any custom colors, default to the TUI-driven lighting
         // mode so firmware reflects the editor by default.
