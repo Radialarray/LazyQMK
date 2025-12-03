@@ -6,6 +6,7 @@
 pub mod build_log;
 pub mod category_manager;
 pub mod category_picker;
+pub mod clipboard;
 pub mod color_picker;
 pub mod config_dialogs;
 pub mod help_overlay;
@@ -352,6 +353,8 @@ pub struct AppState {
     pub pending_keycode: PendingKeycodeState,
     /// Modifier picker component state
     pub modifier_picker_state: ModifierPickerState,
+    /// Key clipboard for copy/cut/paste operations
+    pub clipboard: clipboard::KeyClipboard,
 
     // System resources
     /// Keycode database
@@ -438,6 +441,7 @@ impl AppState {
             layer_picker_state: LayerPickerState::new(),
             pending_keycode: PendingKeycodeState::new(),
             modifier_picker_state: ModifierPickerState::new(),
+            clipboard: clipboard::KeyClipboard::new(),
             keycode_db,
             geometry,
             mapping,
@@ -2090,12 +2094,84 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Clear key
-        (KeyCode::Char('x') | KeyCode::Delete, _) => {
+        // Clear key (x or Delete - but not Ctrl+X which is cut)
+        (KeyCode::Char('x'), KeyModifiers::NONE) | (KeyCode::Delete, _) => {
             if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = "KC_TRNS".to_string();
                 state.mark_dirty();
                 state.set_status("Key cleared (KC_TRNS)");
+            }
+            Ok(false)
+        }
+
+        // Copy key (y or Ctrl+C)
+        (KeyCode::Char('y'), KeyModifiers::NONE) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+            if let Some(key) = state.get_selected_key() {
+                // Clone key data to avoid borrow conflict with clipboard
+                let keycode = key.keycode.clone();
+                let color_override = key.color_override;
+                let category_id = key.category_id.clone();
+                let msg = state.clipboard.copy(
+                    &keycode,
+                    color_override,
+                    category_id.as_deref(),
+                );
+                state.set_status(msg);
+            } else {
+                state.set_error("No key to copy");
+            }
+            Ok(false)
+        }
+
+        // Cut key (d or Ctrl+X)
+        (KeyCode::Char('d'), KeyModifiers::NONE) | (KeyCode::Char('x'), KeyModifiers::CONTROL) => {
+            if let Some(key) = state.get_selected_key() {
+                // Clone key data to avoid borrow conflict with clipboard
+                let keycode = key.keycode.clone();
+                let color_override = key.color_override;
+                let category_id = key.category_id.clone();
+                let msg = state.clipboard.cut(
+                    &keycode,
+                    color_override,
+                    category_id.as_deref(),
+                    state.current_layer,
+                    state.selected_position,
+                );
+                state.set_status(msg);
+            } else {
+                state.set_error("No key to cut");
+            }
+            Ok(false)
+        }
+
+        // Paste key (p or Ctrl+V)
+        (KeyCode::Char('p'), KeyModifiers::NONE) | (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
+            if let Some(content) = state.clipboard.get_content().cloned() {
+                // Get cut source before modifying clipboard
+                let cut_source = state.clipboard.get_cut_source();
+                
+                // Apply clipboard content to selected key
+                if let Some(key) = state.get_selected_key_mut() {
+                    key.keycode = content.keycode.clone();
+                    key.color_override = content.color_override;
+                    key.category_id = content.category_id.clone();
+                    state.mark_dirty();
+                    state.set_status(format!("Pasted: {}", content.keycode));
+                }
+
+                // If this was a cut operation, clear the source key
+                if let Some((layer_idx, pos)) = cut_source {
+                    if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
+                        if let Some(source_key) = layer.keys.iter_mut().find(|k| k.position == pos) {
+                            source_key.keycode = "KC_TRNS".to_string();
+                            source_key.color_override = None;
+                            source_key.category_id = None;
+                        }
+                    }
+                    state.clipboard.clear_cut_source();
+                }
+            } else {
+                state.set_error("Nothing in clipboard");
             }
             Ok(false)
         }
@@ -2307,6 +2383,15 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             state.wizard_state = onboarding_wizard::OnboardingWizardState::from_config(&state.config);
             state.active_popup = Some(PopupType::SetupWizard);
             state.set_status("Setup Wizard - configure QMK path, keyboard, and layout");
+            Ok(false)
+        }
+
+        // Escape - cancel cut operation if active
+        (KeyCode::Esc, _) => {
+            if state.clipboard.is_cut() {
+                state.clipboard.cancel_cut();
+                state.set_status("Cut cancelled");
+            }
             Ok(false)
         }
 

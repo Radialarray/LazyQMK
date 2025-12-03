@@ -308,6 +308,51 @@ impl HelpOverlayState {
                 Span::styled("              Cancel", Style::default().fg(theme.text)),
             ]),
             Line::from(""),
+            // Clipboard Section
+            Line::from(vec![
+                Span::styled(
+                    "═══ CLIPBOARD ═══",
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("y / Ctrl+C", Style::default().fg(theme.success)),
+                Span::styled("          Copy selected key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("d / Ctrl+X", Style::default().fg(theme.success)),
+                Span::styled("          Cut selected key", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("p / Ctrl+V", Style::default().fg(theme.success)),
+                Span::styled("          Paste at selection", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  ", Style::default().fg(theme.text)),
+                Span::styled("Escape", Style::default().fg(theme.success)),
+                Span::styled("              Cancel cut operation", Style::default().fg(theme.text)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  Copy/cut includes:", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(vec![
+                Span::styled("  • Keycode", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  • Color override (if set)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  • Category assignment (if set)", Style::default().fg(theme.text)),
+            ]),
+            Line::from(vec![
+                Span::styled("  Cut source shown dimmed until paste/cancel", Style::default().fg(theme.text_muted)),
+            ]),
+            Line::from(""),
             // Color System Section
             Line::from(vec![
                 Span::styled(

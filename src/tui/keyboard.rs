@@ -111,6 +111,9 @@ impl KeyboardWidget {
             let is_selected = row == state.selected_position.row as usize
                 && col == state.selected_position.col as usize;
 
+            // Check if this key is the cut source (for visual feedback)
+            let is_cut_source = state.clipboard.is_cut_source(state.current_layer, key.position);
+
             // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
             let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
                 if !current_layer.layer_colors_enabled {
@@ -190,6 +193,7 @@ impl KeyboardWidget {
                 color_indicator,
                 key_color,
                 is_selected,
+                is_cut_source,
                 theme,
             );
         }
@@ -203,14 +207,22 @@ impl KeyboardWidget {
         indicator: &str,
         border_color: Color,
         is_selected: bool,
+        is_cut_source: bool,
         theme: &super::Theme,
     ) {
-        // Determine colors based on selection state
+        // Determine colors based on selection and cut state
         let (border_style, content_bg, content_fg) = if is_selected {
             (
                 Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 Some(theme.accent),
                 theme.background,
+            )
+        } else if is_cut_source {
+            // Cut source: dimmed appearance
+            (
+                Style::default().fg(border_color).add_modifier(Modifier::DIM),
+                None,
+                theme.text_muted,
             )
         } else {
             (
