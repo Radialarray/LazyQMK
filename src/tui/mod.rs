@@ -1308,6 +1308,14 @@ fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Res
 fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
+            // Check if we were editing a combo part
+            if state.key_editor_state.combo_edit.is_some() {
+                state.key_editor_state.combo_edit = None;
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.layer_picker_state.reset();
+                state.set_status("Cancelled - back to key editor");
+                return Ok(false);
+            }
             // Check if this was part of a parameterized keycode flow
             if state.pending_keycode.keycode_type.is_some() {
                 state.pending_keycode.reset();
@@ -1332,6 +1340,25 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             let selected_idx = state.layer_picker_state.selected;
             if let Some(layer) = state.layout.layers.get(selected_idx) {
                 let layer_ref = format!("@{}", layer.id);
+                
+                // Check if we're editing a combo keycode part
+                if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
+                    let new_combo = match part {
+                        key_editor::ComboEditPart::Hold => combo_type.with_hold(&layer_ref),
+                        key_editor::ComboEditPart::Tap => combo_type.with_tap(&layer_ref),
+                    };
+                    let new_keycode = new_combo.to_keycode();
+                    
+                    if let Some(key) = state.get_selected_key_mut() {
+                        key.keycode = new_keycode.clone();
+                        state.mark_dirty();
+                        state.set_status(format!("Updated: {}", new_keycode));
+                    }
+                    
+                    state.active_popup = Some(PopupType::KeyEditor);
+                    state.layer_picker_state.reset();
+                    return Ok(false);
+                }
                 
                 // Check if we're in a parameterized keycode flow
                 match &state.pending_keycode.keycode_type {
@@ -1428,6 +1455,14 @@ fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -
 fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
+            // Check if we were editing a combo part
+            if state.key_editor_state.combo_edit.is_some() {
+                state.key_editor_state.combo_edit = None;
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.modifier_picker_state.reset();
+                state.set_status("Cancelled - back to key editor");
+                return Ok(false);
+            }
             state.pending_keycode.reset();
             state.modifier_picker_state.reset();
             state.active_popup = None;
@@ -1463,6 +1498,25 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
             }
 
             let mod_string = state.modifier_picker_state.to_mod_string();
+
+            // Check if we're editing a combo keycode part
+            if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
+                let new_combo = match part {
+                    key_editor::ComboEditPart::Hold => combo_type.with_hold(&mod_string),
+                    key_editor::ComboEditPart::Tap => combo_type.with_tap(&mod_string),
+                };
+                let new_keycode = new_combo.to_keycode();
+                
+                if let Some(key) = state.get_selected_key_mut() {
+                    key.keycode = new_keycode.clone();
+                    state.mark_dirty();
+                    state.set_status(format!("Updated: {}", new_keycode));
+                }
+                
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.modifier_picker_state.reset();
+                return Ok(false);
+            }
 
             match &state.pending_keycode.keycode_type {
                 Some(ParameterizedKeycodeType::ModTap) => {

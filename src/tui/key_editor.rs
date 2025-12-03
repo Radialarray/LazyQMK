@@ -5,6 +5,7 @@
 //! - Visual display of current keycode with tap-hold breakdown
 //! - Description field for documentation
 //! - Quick access to reassign, color, and category actions
+//! - Individual editing of hold/tap parts for combo keycodes (H/T keys)
 
 use crate::keycode_db::KeycodeDb;
 use crate::models::{KeyDefinition, Position};
@@ -28,6 +29,123 @@ pub enum KeyEditorMode {
     EditDescription,
 }
 
+/// What part of a combo keycode is being edited
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComboEditPart {
+    /// Editing the hold action (layer for LT, modifier for mod-tap)
+    Hold,
+    /// Editing the tap action (keycode)
+    Tap,
+}
+
+/// Type of combo keycode being edited
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ComboKeycodeType {
+    /// Layer-Tap: LT(layer, keycode)
+    LayerTap {
+        /// Layer reference (number or @uuid)
+        layer: String,
+        /// Keycode sent on tap
+        tap_key: String,
+    },
+    /// Mod-Tap with named modifier: LCTL_T(keycode), etc.
+    ModTapNamed {
+        /// Modifier prefix (LCTL_T, RALT_T, etc.)
+        prefix: String,
+        /// Keycode sent on tap
+        tap_key: String,
+    },
+    /// Mod-Tap with custom modifier: MT(modifier, keycode)
+    ModTapCustom {
+        /// Custom modifier string (MOD_LCTL, etc.)
+        modifier: String,
+        /// Keycode sent on tap
+        tap_key: String,
+    },
+    /// Layer-Mod: LM(layer, modifier)
+    LayerMod {
+        /// Layer reference (number or @uuid)
+        layer: String,
+        /// Modifier applied when held
+        modifier: String,
+    },
+    /// Modifier combo: LCG(keycode), MEH(keycode), etc.
+    ModCombo {
+        /// Modifier combo prefix (LCG, MEH, HYPR, etc.)
+        prefix: String,
+        /// Base keycode to modify
+        base_key: String,
+    },
+}
+
+impl ComboKeycodeType {
+    /// Reconstruct the keycode string from this type
+    #[must_use]
+    pub fn to_keycode(&self) -> String {
+        match self {
+            Self::LayerTap { layer, tap_key } => format!("LT({}, {})", layer, tap_key),
+            Self::ModTapNamed { prefix, tap_key } => format!("{}({})", prefix, tap_key),
+            Self::ModTapCustom { modifier, tap_key } => format!("MT({}, {})", modifier, tap_key),
+            Self::LayerMod { layer, modifier } => format!("LM({}, {})", layer, modifier),
+            Self::ModCombo { prefix, base_key } => format!("{}({})", prefix, base_key),
+        }
+    }
+    
+    /// Update the hold part and return the new keycode
+    #[must_use]
+    pub fn with_hold(&self, new_hold: &str) -> Self {
+        match self {
+            Self::LayerTap { tap_key, .. } => Self::LayerTap { 
+                layer: new_hold.to_string(), 
+                tap_key: tap_key.clone() 
+            },
+            Self::ModTapNamed { tap_key, .. } => Self::ModTapNamed { 
+                prefix: new_hold.to_string(), 
+                tap_key: tap_key.clone() 
+            },
+            Self::ModTapCustom { tap_key, .. } => Self::ModTapCustom { 
+                modifier: new_hold.to_string(), 
+                tap_key: tap_key.clone() 
+            },
+            Self::LayerMod { modifier, .. } => Self::LayerMod { 
+                layer: new_hold.to_string(), 
+                modifier: modifier.clone() 
+            },
+            Self::ModCombo { base_key, .. } => Self::ModCombo { 
+                prefix: new_hold.to_string(), 
+                base_key: base_key.clone() 
+            },
+        }
+    }
+    
+    /// Update the tap part and return the new keycode
+    #[must_use]
+    pub fn with_tap(&self, new_tap: &str) -> Self {
+        match self {
+            Self::LayerTap { layer, .. } => Self::LayerTap { 
+                layer: layer.clone(), 
+                tap_key: new_tap.to_string() 
+            },
+            Self::ModTapNamed { prefix, .. } => Self::ModTapNamed { 
+                prefix: prefix.clone(), 
+                tap_key: new_tap.to_string() 
+            },
+            Self::ModTapCustom { modifier, .. } => Self::ModTapCustom { 
+                modifier: modifier.clone(), 
+                tap_key: new_tap.to_string() 
+            },
+            Self::LayerMod { layer, .. } => Self::LayerMod { 
+                layer: layer.clone(), 
+                modifier: new_tap.to_string() 
+            },
+            Self::ModCombo { prefix, .. } => Self::ModCombo { 
+                prefix: prefix.clone(), 
+                base_key: new_tap.to_string() 
+            },
+        }
+    }
+}
+
 /// State for the key editor dialog
 #[derive(Debug, Clone)]
 pub struct KeyEditorState {
@@ -43,6 +161,8 @@ pub struct KeyEditorState {
     pub cursor_position: usize,
     /// Original description (for cancel/restore)
     pub original_description: Option<String>,
+    /// When editing a combo keycode part, which part and the parsed type
+    pub combo_edit: Option<(ComboEditPart, ComboKeycodeType)>,
 }
 
 impl Default for KeyEditorState {
@@ -62,6 +182,7 @@ impl KeyEditorState {
             description_buffer: String::new(),
             cursor_position: 0,
             original_description: None,
+            combo_edit: None,
         }
     }
 
@@ -73,6 +194,7 @@ impl KeyEditorState {
         self.description_buffer = key.description.clone().unwrap_or_default();
         self.cursor_position = self.description_buffer.len();
         self.original_description = key.description.clone();
+        self.combo_edit = None;
     }
 
     /// Start editing the description
@@ -219,6 +341,59 @@ pub fn parse_keycode_with_db(db: &KeycodeDb, keycode: &str) -> Option<ParsedKeyc
     }
 
     None
+}
+
+/// Parse a keycode into a ComboKeycodeType for editing individual parts.
+/// Returns None if the keycode is not a combo type (not editable in parts).
+#[must_use]
+pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycodeType> {
+    let parsed = parse_keycode_with_db(db, keycode)?;
+    
+    match parsed.category.as_str() {
+        "mod_tap" => {
+            // Check if it's MT() with custom modifier or a named mod-tap like LCTL_T()
+            let prefix = keycode.split('(').next()?;
+            if prefix == "MT" {
+                // MT(modifier, keycode)
+                let modifier = parsed.params.first().cloned().unwrap_or_default();
+                let tap_key = parsed.params.get(1).cloned().unwrap_or_default();
+                Some(ComboKeycodeType::ModTapCustom { modifier, tap_key })
+            } else {
+                // Named mod-tap like LCTL_T, LSFT_T, etc.
+                let tap_key = parsed.params.first().cloned().unwrap_or_default();
+                Some(ComboKeycodeType::ModTapNamed { 
+                    prefix: prefix.to_string(), 
+                    tap_key 
+                })
+            }
+        }
+        "mod_combo" => {
+            // Modifier combo like LCG(), MEH(), etc.
+            let prefix = keycode.split('(').next()?;
+            let base_key = parsed.params.first().cloned().unwrap_or_default();
+            Some(ComboKeycodeType::ModCombo { 
+                prefix: prefix.to_string(), 
+                base_key 
+            })
+        }
+        "layers" => {
+            let prefix = keycode.split('(').next()?;
+            match prefix {
+                "LT" => {
+                    let layer = parsed.params.first().cloned().unwrap_or_default();
+                    let tap_key = parsed.params.get(1).cloned().unwrap_or_default();
+                    Some(ComboKeycodeType::LayerTap { layer, tap_key })
+                }
+                "LM" => {
+                    let layer = parsed.params.first().cloned().unwrap_or_default();
+                    let modifier = parsed.params.get(1).cloned().unwrap_or_default();
+                    Some(ComboKeycodeType::LayerMod { layer, modifier })
+                }
+                _ => None, // MO, TG, TO etc. are not combo types
+            }
+        }
+        _ => None,
+    }
 }
 
 /// Parse a keycode and return display information for the key editor.
@@ -424,6 +599,9 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         );
     f.render_widget(description_display, chunks[2]);
 
+    // Check if this is a combo keycode (for showing H/T options)
+    let is_combo = parse_combo_keycode(&state.keycode_db, &key.keycode).is_some();
+
     // Actions bar
     let actions = if editor_state.is_editing() {
         Line::from(vec![
@@ -431,6 +609,20 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
             Span::styled(": Save  ", Style::default().fg(theme.text_muted)),
             Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
             Span::styled(": Cancel", Style::default().fg(theme.text_muted)),
+        ])
+    } else if is_combo {
+        // Show H/T options for combo keycodes
+        Line::from(vec![
+            Span::styled("H", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(": Hold  ", Style::default().fg(theme.text_muted)),
+            Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
+            Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+            Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
+            Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+            Span::styled(": Close", Style::default().fg(theme.text_muted)),
         ])
     } else {
         Line::from(vec![
@@ -509,7 +701,8 @@ pub fn handle_input(
                 state.set_status("Key editor closed");
             }
             KeyCode::Enter => {
-                // Open keycode picker to reassign
+                // Open keycode picker to reassign entirely
+                state.key_editor_state.combo_edit = None; // Clear any combo edit state
                 state.active_popup = Some(PopupType::KeycodePicker);
                 state.set_status("Select new keycode");
             }
@@ -523,6 +716,59 @@ pub fn handle_input(
                 state.color_picker_context = Some(ColorPickerContext::IndividualKey);
                 state.active_popup = Some(PopupType::ColorPicker);
                 state.set_status("Select color for key");
+            }
+            KeyCode::Char('h' | 'H') => {
+                // Edit hold part of combo keycode
+                if let Some(current_key) = state.get_selected_key() {
+                    if let Some(combo_type) = parse_combo_keycode(&state.keycode_db, &current_key.keycode) {
+                        state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
+                        
+                        // Open appropriate picker based on combo type
+                        match &combo_type {
+                            ComboKeycodeType::LayerTap { .. } | ComboKeycodeType::LayerMod { .. } => {
+                                state.layer_picker_state.reset();
+                                state.active_popup = Some(PopupType::LayerPicker);
+                                state.set_status("Select layer for hold action");
+                            }
+                            ComboKeycodeType::ModTapNamed { .. } | ComboKeycodeType::ModTapCustom { .. } => {
+                                state.modifier_picker_state.reset();
+                                state.active_popup = Some(PopupType::ModifierPicker);
+                                state.set_status("Select modifier for hold action");
+                            }
+                            ComboKeycodeType::ModCombo { .. } => {
+                                state.modifier_picker_state.reset();
+                                state.active_popup = Some(PopupType::ModifierPicker);
+                                state.set_status("Select modifier combo");
+                            }
+                        }
+                    } else {
+                        state.set_status("This keycode doesn't have a hold action to edit");
+                    }
+                }
+            }
+            KeyCode::Char('t' | 'T') => {
+                // Edit tap part of combo keycode
+                if let Some(current_key) = state.get_selected_key() {
+                    if let Some(combo_type) = parse_combo_keycode(&state.keycode_db, &current_key.keycode) {
+                        state.key_editor_state.combo_edit = Some((ComboEditPart::Tap, combo_type.clone()));
+                        
+                        // Open keycode picker for tap action (or modifier picker for LM)
+                        match &combo_type {
+                            ComboKeycodeType::LayerMod { .. } => {
+                                state.active_popup = Some(PopupType::ModifierPicker);
+                                state.modifier_picker_state.reset();
+                                state.set_status("Select modifier for layer-mod");
+                            }
+                            _ => {
+                                state.active_popup = Some(PopupType::KeycodePicker);
+                                state.keycode_picker_state = super::keycode_picker::KeycodePickerState::new();
+                                state.set_status("Select tap keycode");
+                            }
+                        }
+                    } else {
+                        state.set_status("This keycode doesn't have a tap action to edit");
+                    }
+                }
             }
             _ => {}
         }

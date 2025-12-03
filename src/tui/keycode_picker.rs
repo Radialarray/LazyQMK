@@ -12,6 +12,7 @@ use ratatui::{
 
 use crate::keycode_db::{KeycodeDb, ParamType};
 use super::{AppState, LayerPickerState, ParameterizedKeycodeType, PendingKeycodeState, PopupType};
+use super::key_editor::ComboEditPart;
 
 /// Which pane has focus in the keycode picker
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -390,9 +391,17 @@ fn handle_keycodes_input(
 ) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
-            state.active_popup = None;
-            state.keycode_picker_state.reset();
-            state.set_status("Cancelled");
+            // If we were editing a combo part, go back to key editor
+            if state.key_editor_state.combo_edit.is_some() {
+                state.key_editor_state.combo_edit = None;
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.keycode_picker_state.reset();
+                state.set_status("Cancelled - back to key editor");
+            } else {
+                state.active_popup = None;
+                state.keycode_picker_state.reset();
+                state.set_status("Cancelled");
+            }
             Ok(false)
         }
         // Switch back to sidebar
@@ -416,6 +425,26 @@ fn handle_keycodes_input(
                 .map(|kc| kc.code.clone());
 
             if let Some(keycode) = selected_keycode_opt {
+                // Check if we're editing a combo keycode part
+                if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
+                    // Updating part of a combo keycode
+                    let new_combo = match part {
+                        ComboEditPart::Hold => combo_type.with_hold(&keycode),
+                        ComboEditPart::Tap => combo_type.with_tap(&keycode),
+                    };
+                    let new_keycode = new_combo.to_keycode();
+                    
+                    if let Some(selected_key) = state.get_selected_key_mut() {
+                        selected_key.keycode = new_keycode.clone();
+                        state.mark_dirty();
+                        state.set_status(format!("Updated: {}", new_keycode));
+                    }
+                    
+                    state.active_popup = Some(PopupType::KeyEditor);
+                    state.keycode_picker_state.reset();
+                    return Ok(false);
+                }
+                
                 // Check if this keycode has parameters defined in the database
                 // Clone the params to avoid borrow conflicts
                 let params_opt = state.keycode_db.get_params(&keycode).map(|p| p.to_vec());
