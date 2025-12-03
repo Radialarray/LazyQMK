@@ -3626,11 +3626,12 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                             ManagerMode::CreatingName { .. } => {
                                 // Create new layer
                                 use crate::models::layer::Layer;
-                                use crate::models::RgbColor;
+                                use crate::models::ColorPalette;
                                 let new_index = state.layout.layers.len();
                                 
-                                // Use a default color (gray) for new layers
-                                let default_color = RgbColor::new(128, 128, 128);
+                                // Use the color palette's default layer color (Gray-500)
+                                let palette = ColorPalette::load().unwrap_or_default();
+                                let default_color = palette.default_layer_color();
                                 
                                 match Layer::new(new_index as u8, &input, default_color) {
                                     Ok(mut new_layer) => {

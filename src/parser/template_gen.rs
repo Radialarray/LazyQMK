@@ -385,7 +385,7 @@ fn atomic_write(path: &Path, content: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, KeyDefinition, Layer, LayoutMetadata, Position, RgbColor};
+    use crate::models::{Category, ColorPalette, KeyDefinition, Layer, LayoutMetadata, Position, RgbColor};
     use crate::parser::layout::parse_markdown_layout_str;
     use chrono::Utc;
 
@@ -406,7 +406,7 @@ mod tests {
             id: "test-layer-0".to_string(),
             number: 0,
             name: "Base".to_string(),
-            default_color: RgbColor::new(128, 128, 128),
+            default_color: ColorPalette::load().unwrap_or_default().default_layer_color(),
             category_id: None,
             keys: vec![],
             layer_colors_enabled: true,

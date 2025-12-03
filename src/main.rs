@@ -200,11 +200,16 @@ fn create_default_layer(
     mapping: &models::VisualLayoutMapping,
 ) -> Result<models::Layer> {
     use models::layer::KeyDefinition;
+    use models::ColorPalette;
+
+    // Use the color palette's default layer color (Gray-500)
+    let palette = ColorPalette::load().unwrap_or_default();
+    let default_color = palette.default_layer_color();
 
     let mut layer = models::Layer::new(
         number,
         name.to_string(),
-        models::RgbColor::new(128, 128, 128), // Default gray color
+        default_color,
     )?;
 
     // Add KC_TRNS for each visual position in the mapping
