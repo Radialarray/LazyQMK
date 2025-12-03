@@ -1,6 +1,6 @@
 [package]
 name = "keyboard_tui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Keyboard TUI Contributors"]
 description = "Terminal-based keyboard layout editor for mechanical keyboards"
