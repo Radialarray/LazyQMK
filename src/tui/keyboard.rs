@@ -1,4 +1,10 @@
 //! Keyboard widget for rendering the visual keyboard layout
+//!
+//! Key rendering with support for:
+//! - Simple keycodes (KC_A, KC_SPC, etc.)
+//! - Tap-hold keycodes (LT, MT, LM, SH_T) with dual-line display
+//! - Color type indicators in border (i=individual, k=category, L=layer, d=default)
+//! - RGB color borders based on the color priority system
 
 use ratatui::{
     layout::Rect,
@@ -12,6 +18,31 @@ use super::AppState;
 
 /// Keyboard widget renders the visual keyboard layout
 pub struct KeyboardWidget;
+
+/// Parsed representation of a tap-hold keycode
+#[derive(Debug, Clone)]
+pub struct TapHoldKeycode {
+    /// The hold action (e.g., "L1" for layer 1, "CTL" for Ctrl)
+    pub hold: String,
+    /// The tap action (e.g., "A" for KC_A)
+    pub tap: String,
+    /// The type of tap-hold (for display purposes)
+    #[allow(dead_code)]
+    pub kind: TapHoldKind,
+}
+
+/// Types of tap-hold keycodes
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TapHoldKind {
+    /// LT(layer, keycode) - Layer on hold, keycode on tap
+    LayerTap,
+    /// MT(mod, keycode) - Modifier on hold, keycode on tap
+    ModTap,
+    /// LM(layer, mod) - Layer + modifier on hold
+    LayerMod,
+    /// SH_T(keycode) - Swap hands on hold, keycode on tap
+    SwapHandsTap,
+}
 
 impl KeyboardWidget {
     /// Render the keyboard widget
@@ -45,9 +76,9 @@ impl KeyboardWidget {
         };
 
         // Each key needs: 7 chars width + 2 for borders = 9 total width
-        // Each key needs: 3 lines height (1 content + 2 borders)
+        // Each key needs: 4 lines height (2 content + 2 borders) to support tap-hold display
         let key_width = 9;
-        let key_height = 3;
+        let key_height = 4;
 
         // Render each key as an individual block
         for key in &layer.keys {
@@ -73,7 +104,7 @@ impl KeyboardWidget {
             };
 
             // Skip if key area is too small
-            if key_area.width < 7 || key_area.height < 3 {
+            if key_area.width < 7 || key_area.height < 4 {
                 continue;
             }
 
@@ -83,12 +114,21 @@ impl KeyboardWidget {
             // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
             let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
                 if !current_layer.layer_colors_enabled {
-                    // Layer colors disabled - show neutral gray with "-" indicator
-                    (Color::DarkGray, "-")
+                    // Layer colors disabled - use theme text_muted for visible border
+                    (theme.text_muted, "-")
                 } else {
                     // Use resolve_display_color which considers inactive_key_behavior
                     let (rgb, is_key_specific) = state.layout.resolve_display_color(state.current_layer, key);
-                    let color = Color::Rgb(rgb.r, rgb.g, rgb.b);
+                    
+                    // Check if the color is too dark to be visible (e.g., black from "Off" behavior)
+                    // If brightness is below threshold, use theme.text_muted for visibility
+                    let brightness = (rgb.r as u16 + rgb.g as u16 + rgb.b as u16) / 3;
+                    let color = if brightness < 30 {
+                        // Color too dark for TUI visibility, use muted theme color
+                        theme.text_muted
+                    } else {
+                        Color::Rgb(rgb.r, rgb.g, rgb.b)
+                    };
                     
                     let indicator = if is_key_specific {
                         if key.color_override.is_some() {
@@ -104,49 +144,365 @@ impl KeyboardWidget {
                     (color, indicator)
                 }
             } else {
-                (Color::DarkGray, "-")
+                // Fallback - use theme text_muted for visible border
+                (theme.text_muted, "-")
             };
 
-            // Format keycode for display
-            let display = Self::format_keycode(&key.keycode);
-
-            // Create key content: keycode on left, indicator on right
-            let content = Line::from(vec![
-                Span::styled(
-                    format!("{:<3}", display),
-                    Style::default().fg(theme.text),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    color_indicator,
-                    Style::default().fg(key_color).add_modifier(Modifier::BOLD),
-                ),
-            ]);
-
-            // Create the key block with colored border
-            let key_block = if is_selected {
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))
-                    .style(Style::default().bg(theme.accent).fg(theme.background))
+            // Parse keycode to determine if it's a tap-hold type
+            let tap_hold = Self::parse_tap_hold_keycode(&key.keycode, state);
+            
+            // Build content lines based on keycode type
+            let content: Vec<Line> = if let Some(th) = &tap_hold {
+                // Tap-hold keycode: show hold on top, tap on bottom
+                vec![
+                    Line::from(vec![
+                        Span::styled(
+                            format!("▼{:<5}", Self::truncate(&th.hold, 5)),
+                            Style::default().fg(theme.text_muted),
+                        ),
+                    ]),
+                    Line::from(vec![
+                        Span::styled(
+                            format!(" {:<5}", Self::truncate(&th.tap, 5)),
+                            Style::default().fg(theme.text),
+                        ),
+                    ]),
+                ]
             } else {
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(key_color))
+                // Simple keycode: center vertically with two lines
+                let display = Self::format_simple_keycode(&key.keycode);
+                vec![
+                    Line::from(""), // Empty first line for vertical centering
+                    Line::from(vec![
+                        Span::styled(
+                            format!(" {:<5}", Self::truncate(&display, 5)),
+                            Style::default().fg(theme.text),
+                        ),
+                    ]),
+                ]
             };
 
-            let key_paragraph = Paragraph::new(content).block(key_block);
-
-            f.render_widget(key_paragraph, key_area);
+            // Render the key with custom border that includes color indicator
+            Self::render_key_with_indicator(
+                f,
+                key_area,
+                &content,
+                color_indicator,
+                key_color,
+                is_selected,
+                theme,
+            );
         }
     }
 
-    /// Format keycode for compact display (first 3-4 chars)
-    fn format_keycode(keycode: &str) -> String {
+    /// Render a key with the color indicator embedded in the top border
+    fn render_key_with_indicator(
+        f: &mut Frame,
+        area: Rect,
+        content: &[Line],
+        indicator: &str,
+        border_color: Color,
+        is_selected: bool,
+        theme: &super::Theme,
+    ) {
+        // Determine colors based on selection state
+        let (border_style, content_bg, content_fg) = if is_selected {
+            (
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                Some(theme.accent),
+                theme.background,
+            )
+        } else {
+            (
+                Style::default().fg(border_color),
+                None,
+                theme.text,
+            )
+        };
+
+        // Draw the custom border with indicator in top-right corner
+        let buf = f.buffer_mut();
+        
+        // Top border with indicator in right corner: ┌──────i┐
+        let top_y = area.y;
+        let left_x = area.x;
+        let right_x = area.x + area.width.saturating_sub(1);
+        
+        // Draw corners
+        buf.get_mut(left_x, top_y).set_char('┌').set_style(border_style);
+        buf.get_mut(right_x, top_y).set_char('┐').set_style(border_style);
+        buf.get_mut(left_x, area.y + area.height.saturating_sub(1)).set_char('└').set_style(border_style);
+        buf.get_mut(right_x, area.y + area.height.saturating_sub(1)).set_char('┘').set_style(border_style);
+        
+        // Top border with indicator in right corner (just before ┐)
+        let top_width = area.width.saturating_sub(2) as usize;
+        if top_width > 0 {
+            // Indicator goes in the rightmost position of the top border
+            let indicator_pos = top_width.saturating_sub(1);
+            
+            for i in 0..top_width {
+                let x = left_x + 1 + i as u16;
+                if i == indicator_pos {
+                    // Draw the indicator character with the border color
+                    let indicator_style = if is_selected {
+                        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(border_color).add_modifier(Modifier::BOLD)
+                    };
+                    buf.get_mut(x, top_y)
+                        .set_char(indicator.chars().next().unwrap_or('─'))
+                        .set_style(indicator_style);
+                } else {
+                    buf.get_mut(x, top_y).set_char('─').set_style(border_style);
+                }
+            }
+        }
+        
+        // Bottom border
+        for i in 1..area.width.saturating_sub(1) {
+            buf.get_mut(left_x + i, area.y + area.height.saturating_sub(1))
+                .set_char('─')
+                .set_style(border_style);
+        }
+        
+        // Left and right borders
+        for row in 1..area.height.saturating_sub(1) {
+            buf.get_mut(left_x, area.y + row).set_char('│').set_style(border_style);
+            buf.get_mut(right_x, area.y + row).set_char('│').set_style(border_style);
+        }
+        
+        // Fill content area background if selected
+        if let Some(bg) = content_bg {
+            for row in 1..area.height.saturating_sub(1) {
+                for col in 1..area.width.saturating_sub(1) {
+                    buf.get_mut(area.x + col, area.y + row)
+                        .set_bg(bg);
+                }
+            }
+        }
+        
+        // Render content lines
+        let content_area = Rect {
+            x: area.x + 1,
+            y: area.y + 1,
+            width: area.width.saturating_sub(2),
+            height: area.height.saturating_sub(2),
+        };
+        
+        for (i, line) in content.iter().enumerate() {
+            if i >= content_area.height as usize {
+                break;
+            }
+            let y = content_area.y + i as u16;
+            
+            // Render each span in the line
+            let mut x = content_area.x;
+            for span in &line.spans {
+                for ch in span.content.chars() {
+                    if x >= content_area.x + content_area.width {
+                        break;
+                    }
+                    let mut style = span.style;
+                    if is_selected {
+                        style = style.fg(content_fg);
+                        if let Some(bg) = content_bg {
+                            style = style.bg(bg);
+                        }
+                    }
+                    buf.get_mut(x, y).set_char(ch).set_style(style);
+                    x += 1;
+                }
+            }
+        }
+    }
+
+    /// Parse a keycode to extract tap-hold components if applicable
+    fn parse_tap_hold_keycode(keycode: &str, state: &AppState) -> Option<TapHoldKeycode> {
+        // LT(layer, keycode) - Layer Tap
+        if keycode.starts_with("LT(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((layer_part, tap_part)) = inner.split_once(',') {
+                let layer_part = layer_part.trim();
+                let tap_part = tap_part.trim();
+                
+                // Resolve layer reference (@uuid or numeric)
+                let layer_display = Self::resolve_layer_display(layer_part, state);
+                let tap_display = Self::format_simple_keycode(tap_part);
+                
+                return Some(TapHoldKeycode {
+                    hold: format!("L{}", layer_display),
+                    tap: tap_display,
+                    kind: TapHoldKind::LayerTap,
+                });
+            }
+        }
+        
+        // MT(mod, keycode) - Mod Tap
+        if keycode.starts_with("MT(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((mod_part, tap_part)) = inner.split_once(',') {
+                let mod_part = mod_part.trim();
+                let tap_part = tap_part.trim();
+                
+                let mod_display = Self::format_modifier(mod_part);
+                let tap_display = Self::format_simple_keycode(tap_part);
+                
+                return Some(TapHoldKeycode {
+                    hold: mod_display,
+                    tap: tap_display,
+                    kind: TapHoldKind::ModTap,
+                });
+            }
+        }
+        
+        // Also handle shorthand mod-tap like LCTL_T(kc), LSFT_T(kc), etc.
+        let mod_tap_prefixes = [
+            ("LCTL_T(", "CTL"),
+            ("RCTL_T(", "CTL"),
+            ("LSFT_T(", "SFT"),
+            ("RSFT_T(", "SFT"),
+            ("LALT_T(", "ALT"),
+            ("RALT_T(", "ALT"),
+            ("LGUI_T(", "GUI"),
+            ("RGUI_T(", "GUI"),
+            ("LCAG_T(", "CAG"),
+            ("RCAG_T(", "CAG"),
+            ("MEH_T(", "MEH"),
+            ("HYPR_T(", "HYP"),
+            ("ALL_T(", "ALL"),
+        ];
+        
+        for (prefix, mod_name) in mod_tap_prefixes {
+            if keycode.starts_with(prefix) && keycode.ends_with(')') {
+                let tap_part = &keycode[prefix.len()..keycode.len() - 1];
+                let tap_display = Self::format_simple_keycode(tap_part);
+                
+                return Some(TapHoldKeycode {
+                    hold: mod_name.to_string(),
+                    tap: tap_display,
+                    kind: TapHoldKind::ModTap,
+                });
+            }
+        }
+        
+        // LM(layer, mod) - Layer Mod
+        if keycode.starts_with("LM(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((layer_part, mod_part)) = inner.split_once(',') {
+                let layer_part = layer_part.trim();
+                let mod_part = mod_part.trim();
+                
+                let layer_display = Self::resolve_layer_display(layer_part, state);
+                let mod_display = Self::format_modifier(mod_part);
+                
+                return Some(TapHoldKeycode {
+                    hold: format!("L{}+", layer_display),
+                    tap: mod_display,
+                    kind: TapHoldKind::LayerMod,
+                });
+            }
+        }
+        
+        // SH_T(keycode) - Swap Hands Tap
+        if keycode.starts_with("SH_T(") && keycode.ends_with(')') {
+            let tap_part = &keycode[5..keycode.len() - 1];
+            let tap_display = Self::format_simple_keycode(tap_part);
+            
+            return Some(TapHoldKeycode {
+                hold: "SWAP".to_string(),
+                tap: tap_display,
+                kind: TapHoldKind::SwapHandsTap,
+            });
+        }
+        
+        None
+    }
+    
+    /// Resolve layer reference to display string
+    fn resolve_layer_display(layer_ref: &str, state: &AppState) -> String {
+        // If it's a @uuid reference, find the layer number
+        if layer_ref.starts_with('@') {
+            let uuid = &layer_ref[1..];
+            for (i, layer) in state.layout.layers.iter().enumerate() {
+                if layer.id == uuid {
+                    return i.to_string();
+                }
+            }
+        }
+        // Otherwise assume it's already a number or return as-is
+        layer_ref.to_string()
+    }
+    
+    /// Format modifier for compact display
+    fn format_modifier(mod_str: &str) -> String {
+        // Handle combined modifiers like "MOD_LCTL | MOD_LSFT"
+        let mut result = String::new();
+        
+        if mod_str.contains("LCTL") || mod_str.contains("RCTL") {
+            result.push('C');
+        }
+        if mod_str.contains("LSFT") || mod_str.contains("RSFT") {
+            result.push('S');
+        }
+        if mod_str.contains("LALT") || mod_str.contains("RALT") {
+            result.push('A');
+        }
+        if mod_str.contains("LGUI") || mod_str.contains("RGUI") {
+            result.push('G');
+        }
+        
+        if result.is_empty() {
+            // Fallback: take first 3 chars
+            mod_str.chars().take(3).collect()
+        } else {
+            result
+        }
+    }
+
+    /// Format a simple keycode for compact display (removes KC_ prefix)
+    fn format_simple_keycode(keycode: &str) -> String {
         // Remove KC_ prefix if present
         let display = keycode.strip_prefix("KC_").unwrap_or(keycode);
+        display.to_string()
+    }
+    
+    /// Truncate a string to a maximum length
+    fn truncate(s: &str, max_len: usize) -> String {
+        if s.len() <= max_len {
+            s.to_string()
+        } else {
+            s.chars().take(max_len).collect()
+        }
+    }
+}
 
-        // Take first 3 characters
-        display.chars().take(3).collect()
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_simple_keycode() {
+        assert_eq!(KeyboardWidget::format_simple_keycode("KC_A"), "A");
+        assert_eq!(KeyboardWidget::format_simple_keycode("KC_SPC"), "SPC");
+        assert_eq!(KeyboardWidget::format_simple_keycode("KC_ENTER"), "ENTER");
+        assert_eq!(KeyboardWidget::format_simple_keycode("MO(1)"), "MO(1)");
+    }
+
+    #[test]
+    fn test_format_modifier() {
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL"), "C");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LSFT"), "S");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LALT"), "A");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LGUI"), "G");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT"), "CS");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"), "CSA");
+        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"), "CSAG");
+    }
+
+    #[test]
+    fn test_truncate() {
+        assert_eq!(KeyboardWidget::truncate("ABC", 5), "ABC");
+        assert_eq!(KeyboardWidget::truncate("ABCDEF", 5), "ABCDE");
+        assert_eq!(KeyboardWidget::truncate("", 5), "");
     }
 }
