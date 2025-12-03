@@ -1179,6 +1179,10 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
 
     match action {
         metadata_editor::MetadataEditorAction::Confirm => {
+            // Check if name changed before applying (need to do this before apply mutates state)
+            let name_changed = state.metadata_editor_state.name_changed();
+            let new_name = state.metadata_editor_state.name.clone();
+
             // Validate and apply changes
             match state
                 .metadata_editor_state
@@ -1186,8 +1190,49 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
             {
                 Ok(()) => {
                     state.mark_dirty();
+                    
+                    // If name changed and we have a source file, rename it
+                    if name_changed {
+                        if let Some(ref old_path) = state.source_path {
+                            if old_path.exists() {
+                                // Build new filename from new name (sanitized)
+                                let sanitized_name = new_name
+                                    .replace('/', "_")
+                                    .replace('\\', "_")
+                                    .replace(':', "_")
+                                    .replace(' ', "_");
+                                
+                                if let Some(parent) = old_path.parent() {
+                                    let new_path = parent.join(format!("{}.md", sanitized_name));
+                                    
+                                    // Only rename if the new path is different
+                                    if new_path != *old_path {
+                                        match std::fs::rename(old_path, &new_path) {
+                                            Ok(()) => {
+                                                state.source_path = Some(new_path);
+                                                state.set_status(format!("Layout renamed to '{}'", new_name));
+                                            }
+                                            Err(e) => {
+                                                state.set_error(format!("Failed to rename file: {}", e));
+                                            }
+                                        }
+                                    } else {
+                                        state.set_status("Metadata updated");
+                                    }
+                                } else {
+                                    state.set_status("Metadata updated");
+                                }
+                            } else {
+                                state.set_status("Metadata updated (file will be renamed on save)");
+                            }
+                        } else {
+                            state.set_status("Metadata updated");
+                        }
+                    } else {
+                        state.set_status("Metadata updated");
+                    }
+                    
                     state.active_popup = None;
-                    state.set_status("Metadata updated");
                 }
                 Err(err) => {
                     state.set_error(format!("Validation failed: {err}"));

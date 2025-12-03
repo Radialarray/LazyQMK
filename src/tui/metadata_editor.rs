@@ -63,7 +63,7 @@ impl MetadataField {
     #[must_use]
     pub const fn help_text(&self) -> &'static str {
         match self {
-            Self::Name => "Layout name (max 100 characters)",
+            Self::Name => "Layout name (max 100 characters) - changing this will rename the file",
             Self::Description => "Long description of the layout",
             Self::Author => "Creator name",
             Self::Tags => "Comma-separated keywords (lowercase, hyphens only)",
@@ -84,6 +84,8 @@ pub struct MetadataEditorState {
     pub author: String,
     /// Tags field value (comma-separated)
     pub tags_input: String,
+    /// Original name when editor was opened (for detecting renames)
+    pub original_name: String,
 }
 
 impl MetadataEditorState {
@@ -96,6 +98,7 @@ impl MetadataEditorState {
             description: metadata.description.clone(),
             author: metadata.author.clone(),
             tags_input: metadata.tags.join(", "),
+            original_name: metadata.name.clone(),
         }
     }
 
@@ -171,6 +174,12 @@ impl MetadataEditorState {
 
         Ok(())
     }
+
+    /// Check if the name was changed from the original.
+    #[must_use]
+    pub fn name_changed(&self) -> bool {
+        self.name != self.original_name
+    }
 }
 
 impl Default for MetadataEditorState {
@@ -181,6 +190,7 @@ impl Default for MetadataEditorState {
             description: String::new(),
             author: String::new(),
             tags_input: String::new(),
+            original_name: String::new(),
         }
     }
 }
