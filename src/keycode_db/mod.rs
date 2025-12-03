@@ -98,6 +98,34 @@ pub struct KeycodeDb {
     patterns: Vec<(String, Regex)>,
 }
 
+/// Type of tap-hold keycode
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TapHoldType {
+    /// LT(layer, keycode) - Layer Tap
+    LayerTap,
+    /// MT(mod, keycode) - Custom Mod Tap
+    ModTap,
+    /// Named mod-tap like LCTL_T(keycode)
+    ModTapNamed,
+    /// LM(layer, mod) - Layer Mod
+    LayerMod,
+    /// SH_T(keycode) - Swap Hands Tap
+    SwapHands,
+}
+
+/// Information about a parsed tap-hold keycode
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TapHoldInfo {
+    /// Type of tap-hold
+    pub tap_hold_type: TapHoldType,
+    /// The prefix (e.g., "LT", "MT", "LCTL_T")
+    pub prefix: String,
+    /// First argument (layer for LT/LM, modifier for MT, keycode for others)
+    pub arg1: String,
+    /// Second argument if any (keycode for LT/MT, modifier for LM)
+    pub arg2: Option<String>,
+}
+
 #[allow(dead_code)]
 impl KeycodeDb {
     /// Loads the keycode database from embedded category files.
@@ -343,6 +371,112 @@ impl KeycodeDb {
     pub fn get_prefix(code: &str) -> Option<&str> {
         code.strip_suffix("()")
     }
+
+    /// Get display abbreviation for a mod-tap prefix.
+    /// 
+    /// Returns a short display name suitable for showing on a key.
+    /// E.g., "LCTL_T" -> "CTL", "MEH_T" -> "MEH", "LGUI_T" -> "GUI"
+    #[must_use]
+    pub fn get_mod_tap_display(&self, prefix: &str) -> Option<&'static str> {
+        // Map mod-tap prefixes to their short display names
+        // This uses static strings to match the KeycodeDb patterns
+        match prefix {
+            "LCTL_T" | "RCTL_T" | "CTL_T" => Some("CTL"),
+            "LSFT_T" | "RSFT_T" | "SFT_T" => Some("SFT"),
+            "LALT_T" | "RALT_T" | "ALT_T" | "LOPT_T" | "ROPT_T" | "OPT_T" => Some("ALT"),
+            "LGUI_T" | "RGUI_T" | "GUI_T" | "LCMD_T" | "RCMD_T" | "CMD_T" | "LWIN_T" | "RWIN_T" | "WIN_T" => Some("GUI"),
+            "LSG_T" | "RSG_T" | "SGUI_T" => Some("S+G"),
+            "LCA_T" | "RCA_T" => Some("C+A"),
+            "LCS_T" | "RCS_T" => Some("C+S"),
+            "LCAG_T" | "RCAG_T" => Some("CAG"),
+            "LSA_T" | "RSA_T" | "SAGR_T" => Some("S+A"),
+            "LSAG_T" | "RSAG_T" => Some("SAG"),
+            "MEH_T" => Some("MEH"),
+            "HYPR_T" | "ALL_T" => Some("HYP"),
+            _ => None,
+        }
+    }
+
+    /// Parse a keycode to extract tap-hold information if applicable.
+    /// 
+    /// Returns `Some(TapHoldInfo)` if the keycode is a tap-hold type,
+    /// `None` otherwise.
+    #[must_use]
+    pub fn parse_tap_hold(&self, keycode: &str) -> Option<TapHoldInfo> {
+        // LT(layer, keycode) - Layer Tap
+        if keycode.starts_with("LT(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((layer, tap)) = inner.split_once(',') {
+                return Some(TapHoldInfo {
+                    tap_hold_type: TapHoldType::LayerTap,
+                    prefix: "LT".to_string(),
+                    arg1: layer.trim().to_string(),
+                    arg2: Some(tap.trim().to_string()),
+                });
+            }
+        }
+
+        // MT(mod, keycode) - Custom Mod Tap
+        if keycode.starts_with("MT(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((modifier, tap)) = inner.split_once(',') {
+                return Some(TapHoldInfo {
+                    tap_hold_type: TapHoldType::ModTap,
+                    prefix: "MT".to_string(),
+                    arg1: modifier.trim().to_string(),
+                    arg2: Some(tap.trim().to_string()),
+                });
+            }
+        }
+
+        // LM(layer, mod) - Layer Mod
+        if keycode.starts_with("LM(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            if let Some((layer, modifier)) = inner.split_once(',') {
+                return Some(TapHoldInfo {
+                    tap_hold_type: TapHoldType::LayerMod,
+                    prefix: "LM".to_string(),
+                    arg1: layer.trim().to_string(),
+                    arg2: Some(modifier.trim().to_string()),
+                });
+            }
+        }
+
+        // SH_T(keycode) - Swap Hands Tap
+        if keycode.starts_with("SH_T(") && keycode.ends_with(')') {
+            let tap = &keycode[5..keycode.len() - 1];
+            return Some(TapHoldInfo {
+                tap_hold_type: TapHoldType::SwapHands,
+                prefix: "SH_T".to_string(),
+                arg1: tap.trim().to_string(),
+                arg2: None,
+            });
+        }
+
+        // Check mod-tap category keycodes (LCTL_T, LSFT_T, etc.)
+        for kc in self.get_category_keycodes("mod_tap") {
+            // Skip MT() which we already handled
+            if kc.code == "MT()" {
+                continue;
+            }
+            
+            // Get the prefix without ()
+            if let Some(prefix) = kc.code.strip_suffix("()") {
+                let full_prefix = format!("{}(", prefix);
+                if keycode.starts_with(&full_prefix) && keycode.ends_with(')') {
+                    let tap = &keycode[full_prefix.len()..keycode.len() - 1];
+                    return Some(TapHoldInfo {
+                        tap_hold_type: TapHoldType::ModTapNamed,
+                        prefix: prefix.to_string(),
+                        arg1: tap.trim().to_string(),
+                        arg2: None,
+                    });
+                }
+            }
+        }
+
+        None
+    }
 }
 
 #[cfg(test)]
@@ -557,5 +691,83 @@ mod tests {
         assert_eq!(KeycodeDb::get_prefix("LCTL_T()"), Some("LCTL_T"));
         assert_eq!(KeycodeDb::get_prefix("MO()"), Some("MO"));
         assert_eq!(KeycodeDb::get_prefix("KC_A"), None);
+    }
+
+    #[test]
+    fn test_get_mod_tap_display() {
+        let db = get_test_db();
+        // Basic modifiers
+        assert_eq!(db.get_mod_tap_display("LCTL_T"), Some("CTL"));
+        assert_eq!(db.get_mod_tap_display("RCTL_T"), Some("CTL"));
+        assert_eq!(db.get_mod_tap_display("LSFT_T"), Some("SFT"));
+        assert_eq!(db.get_mod_tap_display("LALT_T"), Some("ALT"));
+        assert_eq!(db.get_mod_tap_display("LGUI_T"), Some("GUI"));
+        // Combo modifiers
+        assert_eq!(db.get_mod_tap_display("MEH_T"), Some("MEH"));
+        assert_eq!(db.get_mod_tap_display("HYPR_T"), Some("HYP"));
+        assert_eq!(db.get_mod_tap_display("LCAG_T"), Some("CAG"));
+        // Aliases
+        assert_eq!(db.get_mod_tap_display("CMD_T"), Some("GUI"));
+        assert_eq!(db.get_mod_tap_display("OPT_T"), Some("ALT"));
+        // Not a mod-tap
+        assert_eq!(db.get_mod_tap_display("KC_A"), None);
+    }
+
+    #[test]
+    fn test_parse_tap_hold_layer_tap() {
+        let db = get_test_db();
+        let info = db.parse_tap_hold("LT(1, KC_A)").unwrap();
+        assert_eq!(info.tap_hold_type, TapHoldType::LayerTap);
+        assert_eq!(info.prefix, "LT");
+        assert_eq!(info.arg1, "1");
+        assert_eq!(info.arg2, Some("KC_A".to_string()));
+    }
+
+    #[test]
+    fn test_parse_tap_hold_mod_tap() {
+        let db = get_test_db();
+        let info = db.parse_tap_hold("MT(MOD_LCTL, KC_A)").unwrap();
+        assert_eq!(info.tap_hold_type, TapHoldType::ModTap);
+        assert_eq!(info.prefix, "MT");
+        assert_eq!(info.arg1, "MOD_LCTL");
+        assert_eq!(info.arg2, Some("KC_A".to_string()));
+    }
+
+    #[test]
+    fn test_parse_tap_hold_mod_tap_named() {
+        let db = get_test_db();
+        let info = db.parse_tap_hold("LCTL_T(KC_A)").unwrap();
+        assert_eq!(info.tap_hold_type, TapHoldType::ModTapNamed);
+        assert_eq!(info.prefix, "LCTL_T");
+        assert_eq!(info.arg1, "KC_A");
+        assert_eq!(info.arg2, None);
+    }
+
+    #[test]
+    fn test_parse_tap_hold_layer_mod() {
+        let db = get_test_db();
+        let info = db.parse_tap_hold("LM(1, MOD_LCTL)").unwrap();
+        assert_eq!(info.tap_hold_type, TapHoldType::LayerMod);
+        assert_eq!(info.prefix, "LM");
+        assert_eq!(info.arg1, "1");
+        assert_eq!(info.arg2, Some("MOD_LCTL".to_string()));
+    }
+
+    #[test]
+    fn test_parse_tap_hold_swap_hands() {
+        let db = get_test_db();
+        let info = db.parse_tap_hold("SH_T(KC_A)").unwrap();
+        assert_eq!(info.tap_hold_type, TapHoldType::SwapHands);
+        assert_eq!(info.prefix, "SH_T");
+        assert_eq!(info.arg1, "KC_A");
+        assert_eq!(info.arg2, None);
+    }
+
+    #[test]
+    fn test_parse_tap_hold_not_tap_hold() {
+        let db = get_test_db();
+        assert!(db.parse_tap_hold("KC_A").is_none());
+        assert!(db.parse_tap_hold("MO(1)").is_none());
+        assert!(db.parse_tap_hold("TG(2)").is_none());
     }
 }
