@@ -600,7 +600,9 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     f.render_widget(description_display, chunks[2]);
 
     // Check if this is a combo keycode (for showing H/T options)
-    let is_combo = parse_combo_keycode(&state.keycode_db, &key.keycode).is_some();
+    let combo_type = parse_combo_keycode(&state.keycode_db, &key.keycode);
+    let is_combo = combo_type.is_some();
+    let is_mod_combo = matches!(combo_type, Some(ComboKeycodeType::ModCombo { .. }));
 
     // Actions bar
     let actions = if editor_state.is_editing() {
@@ -612,18 +614,32 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         ])
     } else if is_combo {
         // Show H/T options for combo keycodes
-        Line::from(vec![
-            Span::styled("H", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
-            Span::styled(": Hold  ", Style::default().fg(theme.text_muted)),
-            Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
-            Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
-            Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-            Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
-            Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-            Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
-            Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
-            Span::styled(": Close", Style::default().fg(theme.text_muted)),
-        ])
+        if is_mod_combo {
+            // ModCombo only supports T (can't edit the modifier prefix separately)
+            Line::from(vec![
+                Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
+                Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+                Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+                Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
+                Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+                Span::styled(": Close", Style::default().fg(theme.text_muted)),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled("H", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(": Hold  ", Style::default().fg(theme.text_muted)),
+                Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
+                Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+                Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+                Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
+                Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+                Span::styled(": Close", Style::default().fg(theme.text_muted)),
+            ])
+        }
     } else {
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
@@ -721,24 +737,24 @@ pub fn handle_input(
                 // Edit hold part of combo keycode
                 if let Some(current_key) = state.get_selected_key() {
                     if let Some(combo_type) = parse_combo_keycode(&state.keycode_db, &current_key.keycode) {
-                        state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
-                        
                         // Open appropriate picker based on combo type
                         match &combo_type {
                             ComboKeycodeType::LayerTap { .. } | ComboKeycodeType::LayerMod { .. } => {
+                                state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.layer_picker_state.reset();
                                 state.active_popup = Some(PopupType::LayerPicker);
                                 state.set_status("Select layer for hold action");
                             }
                             ComboKeycodeType::ModTapNamed { .. } | ComboKeycodeType::ModTapCustom { .. } => {
+                                state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.modifier_picker_state.reset();
                                 state.active_popup = Some(PopupType::ModifierPicker);
                                 state.set_status("Select modifier for hold action");
                             }
                             ComboKeycodeType::ModCombo { .. } => {
-                                state.modifier_picker_state.reset();
-                                state.active_popup = Some(PopupType::ModifierPicker);
-                                state.set_status("Select modifier combo");
+                                // ModCombo prefixes (MEH, HYPR, LCG, etc.) are fixed combos
+                                // Can't edit them individually - use T to change the key, or reassign
+                                state.set_status("Use T to change the key, or reassign for different modifier");
                             }
                         }
                     } else {

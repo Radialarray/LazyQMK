@@ -100,6 +100,9 @@ pub enum ParameterizedKeycodeType {
     /// Simple mod-tap like LCTL_T(kc), LSFT_T(kc) - modifier is fixed, only need tap keycode
     /// param1 stores the prefix (e.g., "LCTL_T", "LGUI_T")
     SimpleModTap,
+    /// Single modifier keycode like OSM(mod) - only needs modifier selection
+    /// param1 stores the prefix (e.g., "OSM")
+    SingleMod,
 }
 
 /// State for building parameterized keycodes through multi-stage picker flow
@@ -159,6 +162,12 @@ impl PendingKeycodeState {
                 let prefix = self.param1.as_ref()?;
                 let keycode = self.param2.as_ref()?;
                 Some(format!("{}({})", prefix, keycode))
+            }
+            Some(ParameterizedKeycodeType::SingleMod) => {
+                // param1 is the prefix (e.g., "OSM"), param2 is the modifier
+                let prefix = self.param1.as_ref()?;
+                let modifier = self.param2.as_ref()?;
+                Some(format!("{}({})", prefix, modifier))
             }
             None => None,
         }
@@ -1529,6 +1538,22 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                 }
                 Some(ParameterizedKeycodeType::LayerMod) => {
                     // LM: Store modifier as param2, build and assign
+                    state.pending_keycode.param2 = Some(mod_string);
+                    
+                    if let Some(final_keycode) = state.pending_keycode.build_keycode() {
+                        if let Some(key) = state.get_selected_key_mut() {
+                            key.keycode = final_keycode.clone();
+                            state.mark_dirty();
+                            state.set_status(format!("Assigned: {}", final_keycode));
+                        }
+                    }
+                    
+                    state.pending_keycode.reset();
+                    state.modifier_picker_state.reset();
+                    state.active_popup = None;
+                }
+                Some(ParameterizedKeycodeType::SingleMod) => {
+                    // OSM and similar: Store modifier as param2, build and assign
                     state.pending_keycode.param2 = Some(mod_string);
                     
                     if let Some(final_keycode) = state.pending_keycode.build_keycode() {
