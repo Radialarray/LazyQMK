@@ -681,10 +681,12 @@ fn handle_parameterized_keycode(
     let keycode_type = determine_keycode_type(prefix, params);
     state.pending_keycode.keycode_type = Some(keycode_type.clone());
 
-    // For keycodes with a fixed prefix (like LCTL_T, LCG), store it
+    // For keycodes with a fixed prefix, store it in param1
     if matches!(
         keycode_type,
-        ParameterizedKeycodeType::SimpleModTap | ParameterizedKeycodeType::SwapHandsTap
+        ParameterizedKeycodeType::SimpleModTap 
+            | ParameterizedKeycodeType::SwapHandsTap
+            | ParameterizedKeycodeType::SingleMod
     ) {
         state.pending_keycode.param1 = Some(prefix.to_string());
     }
@@ -748,8 +750,8 @@ fn determine_keycode_type(
         // One param: Keycode (mod-tap or modifier wrapper)
         (1, Some(ParamType::Keycode)) => ParameterizedKeycodeType::SimpleModTap,
         // One param: Layer only (MO, TG, TO, etc.) - handled separately via layer_picker
-        // One param: Modifier only (OSM) - for now use ModTap flow
-        (1, Some(ParamType::Modifier)) => ParameterizedKeycodeType::ModTap,
+        // One param: Modifier only (OSM) - single modifier keycode
+        (1, Some(ParamType::Modifier)) => ParameterizedKeycodeType::SingleMod,
         // Single layer param - shouldn't happen here as it's handled by layer_picker
         (1, Some(ParamType::Layer)) => ParameterizedKeycodeType::LayerTap,
         // Fallback
