@@ -485,6 +485,18 @@ fn handle_keycodes_input(
                     return Ok(false);
                 }
 
+                // Check if this is a modifier wrapper keycode (LCTL(), LCG(), MEH(), etc.)
+                // These wrap a keycode with modifier(s) - e.g., LCG(KC_Q) = Ctrl+Cmd+Q
+                if let Some(prefix) = get_modifier_wrapper_prefix(&keycode) {
+                    state.pending_keycode = PendingKeycodeState::new();
+                    state.pending_keycode.keycode_type = Some(ParameterizedKeycodeType::SimpleModTap);
+                    state.pending_keycode.param1 = Some(prefix.clone());
+                    state.active_popup = Some(PopupType::TapKeycodePicker);
+                    state.keycode_picker_state = KeycodePickerState::new();
+                    state.set_status(format!("Select keycode to wrap with {}", prefix));
+                    return Ok(false);
+                }
+
                 // Regular keycode - assign directly
                 if let Some(selected_key) = state.get_selected_key_mut() {
                     selected_key.keycode = keycode.clone();
@@ -740,6 +752,58 @@ fn get_simple_mod_tap_prefix(keycode: &str) -> Option<String> {
 
     // Check if keycode matches pattern PREFIX_T() or PREFIX()
     for prefix in SIMPLE_MOD_TAP_PREFIXES {
+        let pattern = format!("{}()", prefix);
+        if keycode == pattern {
+            return Some(prefix.to_string());
+        }
+    }
+    
+    None
+}
+
+/// Check if a keycode is a modifier wrapper (e.g., LCTL(), LCG(), MEH()) that wraps another keycode.
+/// Returns the prefix (e.g., "LCTL", "LCG") if it is, None otherwise.
+fn get_modifier_wrapper_prefix(keycode: &str) -> Option<String> {
+    // List of all modifier wrapper prefixes (these wrap a keycode with modifiers)
+    // Unlike mod-tap, these don't have dual function - they just add modifiers to a key
+    const MODIFIER_WRAPPER_PREFIXES: &[&str] = &[
+        // Single modifiers (left)
+        "LCTL", "C",
+        "LSFT", "S",
+        "LALT", "A", "LOPT",
+        "LGUI", "G", "LCMD", "LWIN",
+        // Single modifiers (right)
+        "RCTL",
+        "RSFT",
+        "RALT", "ROPT", "ALGR",
+        "RGUI", "RCMD", "RWIN",
+        // Combo modifiers (left)
+        "LCS",   // Ctrl+Shift
+        "LCA",   // Ctrl+Alt
+        "LCG",   // Ctrl+GUI
+        "LSA",   // Shift+Alt
+        "LSG",   // Shift+GUI
+        "LAG",   // Alt+GUI
+        "LCSG",  // Ctrl+Shift+GUI
+        "LCAG",  // Ctrl+Alt+GUI
+        "LSAG",  // Shift+Alt+GUI
+        // Combo modifiers (right)
+        "RCS",
+        "RCA",
+        "RCG",
+        "RSA",
+        "RSG",
+        "RAG",
+        "RCSG",
+        "RCAG",
+        "RSAG",
+        // Special combos
+        "MEH",   // Ctrl+Shift+Alt
+        "HYPR",  // Ctrl+Shift+Alt+GUI
+    ];
+
+    // Check if keycode matches pattern PREFIX()
+    for prefix in MODIFIER_WRAPPER_PREFIXES {
         let pattern = format!("{}()", prefix);
         if keycode == pattern {
             return Some(prefix.to_string());

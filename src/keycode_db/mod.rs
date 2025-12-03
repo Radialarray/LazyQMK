@@ -139,10 +139,10 @@ impl KeycodeDb {
         self.keycodes.get(*idx)
     }
 
-    /// Searches for keycodes by fuzzy matching the code or name.
+    /// Searches for keycodes by fuzzy matching the code, name, or description.
     ///
     /// Returns keycodes where the query appears as a substring (case-insensitive)
-    /// in either the code or name. Results are sorted by relevance.
+    /// in the code, name, or description. Results are sorted by relevance.
     ///
     /// # Examples
     ///
@@ -166,6 +166,11 @@ impl KeycodeDb {
             .filter_map(|keycode| {
                 let code_lower = keycode.code.to_lowercase();
                 let name_lower = keycode.name.to_lowercase();
+                let desc_lower = keycode
+                    .description
+                    .as_ref()
+                    .map(|d| d.to_lowercase())
+                    .unwrap_or_default();
 
                 // Exact match (highest priority)
                 if code_lower == query_lower || name_lower == query_lower {
@@ -177,9 +182,14 @@ impl KeycodeDb {
                     return Some((keycode, 50));
                 }
 
-                // Contains query (lower priority)
+                // Contains query in code or name (medium priority)
                 if code_lower.contains(&query_lower) || name_lower.contains(&query_lower) {
                     return Some((keycode, 10));
+                }
+
+                // Contains query in description (lower priority)
+                if desc_lower.contains(&query_lower) {
+                    return Some((keycode, 5));
                 }
 
                 None
