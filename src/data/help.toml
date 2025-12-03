@@ -1,0 +1,689 @@
+# Keyboard TUI Help Definitions
+# This file defines all keybindings grouped by context
+# Used by help overlay, status bar hints, and picker help text
+
+[meta]
+version = "1.0"
+app_name = "Keyboard Layout Editor"
+
+# =============================================================================
+# MAIN VIEW - Default keyboard editing context
+# =============================================================================
+
+[contexts.main]
+name = "Main View"
+description = "Default keyboard editing view"
+
+[[contexts.main.bindings]]
+keys = ["↑", "↓", "←", "→"]
+alt_keys = ["h", "j", "k", "l"]
+action = "Navigate keys"
+hint = "Navigate"
+priority = 1
+
+[[contexts.main.bindings]]
+keys = ["Home", "End"]
+action = "Jump to first/last key"
+priority = 10
+
+[[contexts.main.bindings]]
+keys = ["Tab"]
+action = "Next layer"
+hint = "Layer"
+priority = 2
+
+[[contexts.main.bindings]]
+keys = ["Shift+Tab"]
+action = "Previous layer"
+priority = 11
+
+[[contexts.main.bindings]]
+keys = ["Enter"]
+action = "Open keycode picker"
+hint = "Keycode"
+priority = 3
+
+[[contexts.main.bindings]]
+keys = ["x", "Delete"]
+action = "Clear key (KC_TRNS)"
+priority = 12
+
+[[contexts.main.bindings]]
+keys = ["Shift+C"]
+action = "Set key color"
+hint = "Color"
+priority = 4
+
+[[contexts.main.bindings]]
+keys = ["c"]
+action = "Set layer color"
+priority = 13
+
+[[contexts.main.bindings]]
+keys = ["v"]
+action = "Toggle layer colors"
+priority = 14
+
+[[contexts.main.bindings]]
+keys = ["Alt+V"]
+action = "Toggle all layer colors"
+priority = 15
+
+[[contexts.main.bindings]]
+keys = ["Shift+N"]
+action = "Layer manager"
+hint = "Layers"
+priority = 5
+
+[[contexts.main.bindings]]
+keys = ["Shift+K"]
+action = "Assign category to key"
+priority = 16
+
+[[contexts.main.bindings]]
+keys = ["Shift+L"]
+action = "Assign category to layer"
+priority = 17
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+T"]
+action = "Category manager"
+priority = 18
+
+[[contexts.main.bindings]]
+keys = ["y", "Ctrl+C"]
+action = "Copy key"
+hint = "Copy"
+priority = 6
+
+[[contexts.main.bindings]]
+keys = ["d", "Ctrl+X"]
+action = "Cut key"
+priority = 19
+
+[[contexts.main.bindings]]
+keys = ["p", "Ctrl+V"]
+action = "Paste key"
+priority = 20
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+Z"]
+action = "Undo paste"
+priority = 21
+
+[[contexts.main.bindings]]
+keys = ["Shift+V"]
+action = "Selection mode"
+priority = 22
+
+[[contexts.main.bindings]]
+keys = ["Shift+R"]
+action = "Rectangle select"
+priority = 23
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+S"]
+action = "Save layout"
+hint = "Save"
+priority = 7
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+E"]
+action = "Edit metadata"
+priority = 24
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+G"]
+action = "Generate firmware"
+priority = 25
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+B"]
+action = "Build firmware"
+hint = "Build"
+priority = 8
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+L"]
+action = "View build log"
+priority = 26
+
+[[contexts.main.bindings]]
+keys = ["Shift+S"]
+action = "Settings"
+hint = "Settings"
+priority = 9
+
+[[contexts.main.bindings]]
+keys = ["t"]
+action = "Browse templates"
+priority = 27
+
+[[contexts.main.bindings]]
+keys = ["Shift+T"]
+action = "Save as template"
+priority = 28
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+W"]
+action = "Setup wizard"
+priority = 29
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+Y"]
+action = "Switch layout variant"
+priority = 30
+
+[[contexts.main.bindings]]
+keys = ["?"]
+action = "Toggle help"
+hint = "Help"
+priority = 100
+
+[[contexts.main.bindings]]
+keys = ["Ctrl+Q"]
+action = "Quit"
+priority = 101
+
+[[contexts.main.bindings]]
+keys = ["Esc"]
+action = "Cancel/close dialog"
+priority = 102
+
+# =============================================================================
+# KEYCODE PICKER
+# =============================================================================
+
+[contexts.keycode_picker]
+name = "Keycode Picker"
+description = "Select keycode for a key"
+
+[[contexts.keycode_picker.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.keycode_picker.bindings]]
+keys = ["Tab", "←", "→"]
+action = "Switch sidebar/list"
+hint = "Switch"
+priority = 2
+
+[[contexts.keycode_picker.bindings]]
+keys = ["Type"]
+action = "Search keycodes"
+hint = "Search"
+priority = 3
+
+[[contexts.keycode_picker.bindings]]
+keys = ["Enter"]
+action = "Apply keycode"
+hint = "Apply"
+priority = 4
+
+[[contexts.keycode_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 5
+
+[[contexts.keycode_picker.bindings]]
+keys = ["0-9"]
+action = "Jump to category"
+priority = 10
+
+[[contexts.keycode_picker.bindings]]
+keys = ["PgUp", "PgDn"]
+action = "Scroll by page"
+priority = 11
+
+[[contexts.keycode_picker.bindings]]
+keys = ["Home", "End"]
+action = "Jump to top/bottom"
+priority = 12
+
+# =============================================================================
+# COLOR PICKER - PALETTE MODE
+# =============================================================================
+
+[contexts.color_picker_palette]
+name = "Color Picker (Palette)"
+description = "Select color from palette"
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["←", "→", "↑", "↓"]
+action = "Navigate colors/shades"
+hint = "Navigate"
+priority = 1
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["Tab"]
+action = "Switch color/shade"
+hint = "Switch"
+priority = 2
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["c"]
+action = "Custom RGB mode"
+hint = "Custom"
+priority = 3
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["x", "Delete"]
+action = "Clear/reset color"
+hint = "Clear"
+priority = 4
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["Enter"]
+action = "Apply color"
+hint = "Apply"
+priority = 5
+
+[[contexts.color_picker_palette.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 6
+
+# =============================================================================
+# COLOR PICKER - CUSTOM RGB MODE
+# =============================================================================
+
+[contexts.color_picker_rgb]
+name = "Color Picker (Custom RGB)"
+description = "Enter custom RGB values"
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["Tab"]
+action = "Switch R/G/B channel"
+hint = "Channel"
+priority = 1
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["←", "→"]
+action = "Adjust ±1"
+hint = "Fine"
+priority = 2
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["↑", "↓"]
+action = "Adjust ±10"
+hint = "Coarse"
+priority = 3
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["p"]
+action = "Palette mode"
+hint = "Palette"
+priority = 4
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["x", "Delete"]
+action = "Clear/reset color"
+hint = "Clear"
+priority = 5
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["Enter"]
+action = "Apply color"
+hint = "Apply"
+priority = 6
+
+[[contexts.color_picker_rgb.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 7
+
+# =============================================================================
+# LAYER MANAGER
+# =============================================================================
+
+[contexts.layer_manager]
+name = "Layer Manager"
+description = "Manage layout layers"
+
+[[contexts.layer_manager.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate layers"
+hint = "Navigate"
+priority = 1
+
+[[contexts.layer_manager.bindings]]
+keys = ["n"]
+action = "New layer"
+hint = "New"
+priority = 2
+
+[[contexts.layer_manager.bindings]]
+keys = ["D"]
+action = "Duplicate layer"
+hint = "Duplicate"
+priority = 3
+
+[[contexts.layer_manager.bindings]]
+keys = ["r"]
+action = "Rename layer"
+hint = "Rename"
+priority = 4
+
+[[contexts.layer_manager.bindings]]
+keys = ["c"]
+action = "Copy to layer"
+priority = 10
+
+[[contexts.layer_manager.bindings]]
+keys = ["s"]
+action = "Swap with layer"
+priority = 11
+
+[[contexts.layer_manager.bindings]]
+keys = ["v"]
+action = "Toggle colors"
+priority = 12
+
+[[contexts.layer_manager.bindings]]
+keys = ["d"]
+action = "Delete layer"
+hint = "Delete"
+priority = 5
+
+[[contexts.layer_manager.bindings]]
+keys = ["Shift+↑", "Shift+↓"]
+action = "Reorder layers"
+priority = 13
+
+[[contexts.layer_manager.bindings]]
+keys = ["Enter"]
+action = "Go to layer"
+hint = "Select"
+priority = 6
+
+[[contexts.layer_manager.bindings]]
+keys = ["Esc"]
+action = "Close"
+hint = "Close"
+priority = 7
+
+# =============================================================================
+# CATEGORY MANAGER
+# =============================================================================
+
+[contexts.category_manager]
+name = "Category Manager"
+description = "Manage key categories"
+
+[[contexts.category_manager.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.category_manager.bindings]]
+keys = ["n"]
+action = "New category"
+hint = "New"
+priority = 2
+
+[[contexts.category_manager.bindings]]
+keys = ["r"]
+action = "Rename"
+hint = "Rename"
+priority = 3
+
+[[contexts.category_manager.bindings]]
+keys = ["c"]
+action = "Change color"
+hint = "Color"
+priority = 4
+
+[[contexts.category_manager.bindings]]
+keys = ["d"]
+action = "Delete"
+hint = "Delete"
+priority = 5
+
+[[contexts.category_manager.bindings]]
+keys = ["Esc"]
+action = "Close"
+hint = "Close"
+priority = 6
+
+# =============================================================================
+# SETTINGS MANAGER
+# =============================================================================
+
+[contexts.settings_manager]
+name = "Settings Manager"
+description = "Configure tap-hold and other settings"
+
+[[contexts.settings_manager.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate settings"
+hint = "Navigate"
+priority = 1
+
+[[contexts.settings_manager.bindings]]
+keys = ["Enter"]
+action = "Edit setting"
+hint = "Edit"
+priority = 2
+
+[[contexts.settings_manager.bindings]]
+keys = ["Esc"]
+action = "Close"
+hint = "Close"
+priority = 3
+
+# =============================================================================
+# METADATA EDITOR
+# =============================================================================
+
+[contexts.metadata_editor]
+name = "Metadata Editor"
+description = "Edit layout name, description, author, tags"
+
+[[contexts.metadata_editor.bindings]]
+keys = ["Tab"]
+action = "Next field"
+hint = "Next"
+priority = 1
+
+[[contexts.metadata_editor.bindings]]
+keys = ["Shift+Tab"]
+action = "Previous field"
+hint = "Prev"
+priority = 2
+
+[[contexts.metadata_editor.bindings]]
+keys = ["Enter"]
+action = "Save"
+hint = "Save"
+priority = 3
+
+[[contexts.metadata_editor.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 4
+
+# =============================================================================
+# MODIFIER PICKER
+# =============================================================================
+
+[contexts.modifier_picker]
+name = "Modifier Picker"
+description = "Select modifier keys for mod-tap"
+
+[[contexts.modifier_picker.bindings]]
+keys = ["↑", "↓", "←", "→"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.modifier_picker.bindings]]
+keys = ["Space"]
+action = "Toggle modifier"
+hint = "Toggle"
+priority = 2
+
+[[contexts.modifier_picker.bindings]]
+keys = ["1-8"]
+action = "Toggle by number"
+priority = 10
+
+[[contexts.modifier_picker.bindings]]
+keys = ["m"]
+action = "Meh preset"
+hint = "Meh"
+priority = 3
+
+[[contexts.modifier_picker.bindings]]
+keys = ["h"]
+action = "Hyper preset"
+hint = "Hyper"
+priority = 4
+
+[[contexts.modifier_picker.bindings]]
+keys = ["Enter"]
+action = "Confirm"
+hint = "Confirm"
+priority = 5
+
+[[contexts.modifier_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 6
+
+# =============================================================================
+# LAYER PICKER
+# =============================================================================
+
+[contexts.layer_picker]
+name = "Layer Picker"
+description = "Select target layer for layer-switching keycodes"
+
+[[contexts.layer_picker.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.layer_picker.bindings]]
+keys = ["Enter"]
+action = "Select"
+hint = "Select"
+priority = 2
+
+[[contexts.layer_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+# =============================================================================
+# BUILD LOG
+# =============================================================================
+
+[contexts.build_log]
+name = "Build Log"
+description = "View firmware build output"
+
+[[contexts.build_log.bindings]]
+keys = ["↑", "↓"]
+action = "Scroll"
+hint = "Scroll"
+priority = 1
+
+[[contexts.build_log.bindings]]
+keys = ["PgUp", "PgDn"]
+action = "Scroll page"
+priority = 10
+
+[[contexts.build_log.bindings]]
+keys = ["Home", "End"]
+action = "Top/Bottom"
+priority = 11
+
+[[contexts.build_log.bindings]]
+keys = ["Ctrl+C"]
+action = "Copy to clipboard"
+hint = "Copy"
+priority = 2
+
+[[contexts.build_log.bindings]]
+keys = ["Esc"]
+action = "Close"
+hint = "Close"
+priority = 3
+
+# =============================================================================
+# HELP OVERLAY
+# =============================================================================
+
+[contexts.help]
+name = "Help"
+description = "Help overlay"
+
+[[contexts.help.bindings]]
+keys = ["↑", "↓"]
+action = "Scroll"
+hint = "Scroll"
+priority = 1
+
+[[contexts.help.bindings]]
+keys = ["PgUp", "PgDn"]
+action = "Scroll page"
+priority = 10
+
+[[contexts.help.bindings]]
+keys = ["Home", "End"]
+action = "Top/Bottom"
+priority = 11
+
+[[contexts.help.bindings]]
+keys = ["?", "Esc"]
+action = "Close help"
+hint = "Close"
+priority = 2
+
+# =============================================================================
+# SELECTION MODE
+# =============================================================================
+
+[contexts.selection]
+name = "Selection Mode"
+description = "Multi-key selection for copy/cut"
+
+[[contexts.selection.bindings]]
+keys = ["↑", "↓", "←", "→"]
+action = "Move cursor"
+hint = "Move"
+priority = 1
+
+[[contexts.selection.bindings]]
+keys = ["Space"]
+action = "Toggle selection"
+hint = "Select"
+priority = 2
+
+[[contexts.selection.bindings]]
+keys = ["y"]
+action = "Copy selected"
+hint = "Copy"
+priority = 3
+
+[[contexts.selection.bindings]]
+keys = ["d"]
+action = "Cut selected"
+hint = "Cut"
+priority = 4
+
+[[contexts.selection.bindings]]
+keys = ["Esc"]
+action = "Exit selection"
+hint = "Exit"
+priority = 5

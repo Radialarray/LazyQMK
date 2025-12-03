@@ -2,12 +2,13 @@
 
 use ratatui::{
     layout::Rect,
-    style::Style,
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
+use super::help_registry::{self, HelpRegistry};
 use super::{AppState, Theme};
 
 /// Status bar widget
@@ -16,9 +17,6 @@ pub struct StatusBar;
 impl StatusBar {
     /// Render the status bar with contextual help
     pub fn render(f: &mut Frame, area: Rect, state: &AppState, theme: &Theme) {
-        // Determine contextual help message based on active popup or mode
-        let help_message = Self::get_contextual_help(state);
-
         // Build status indicator if build is active
         let build_status_line = if let Some(build_state) = &state.build_state {
             let status = &build_state.status;
@@ -53,13 +51,23 @@ impl StatusBar {
             ])
         });
 
+        // Determine if we should show hints (no active status/error message)
+        let show_hints = state.status_message.is_empty() 
+            && state.error_message.is_none()
+            && state.active_popup.is_none();
+
         let mut status_text = if let Some(error) = &state.error_message {
             vec![Line::from(vec![
                 Span::styled("ERROR: ", Style::default().fg(theme.error)),
                 Span::raw(error),
             ])]
-        } else {
+        } else if !state.status_message.is_empty() {
             vec![Line::from(state.status_message.as_str())]
+        } else if show_hints {
+            // Show contextual hints when no status message
+            vec![Self::get_hints_line(state, theme)]
+        } else {
+            vec![Line::from("")]
         };
 
         // Add clipboard preview if present
@@ -74,7 +82,8 @@ impl StatusBar {
             status_text.push(Line::from(""));
         }
 
-        // Add help line
+        // Add help line (contextual based on popup/mode)
+        let help_message = Self::get_contextual_help(state);
         status_text.push(Line::from(vec![
             Span::styled("Help: ", Style::default().fg(theme.primary)),
             Span::raw(help_message),
@@ -86,16 +95,77 @@ impl StatusBar {
         f.render_widget(status, area);
     }
 
+    /// Get a line of contextual hints from the help registry
+    fn get_hints_line(state: &AppState, theme: &Theme) -> Line<'static> {
+        let context_name = Self::get_current_context(state);
+        let registry = HelpRegistry::default();
+        let hints = registry.format_status_bar_hints(context_name, 8);
+
+        if hints.is_empty() {
+            return Line::from("");
+        }
+
+        let mut spans: Vec<Span<'static>> = Vec::new();
+        for (i, (key, action)) in hints.into_iter().enumerate() {
+            if i > 0 {
+                spans.push(Span::raw("  "));
+            }
+            spans.push(Span::styled(
+                key,
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(" "));
+            spans.push(Span::styled(action, Style::default().fg(theme.text_muted)));
+        }
+
+        Line::from(spans)
+    }
+
+    /// Get the current context name based on application state
+    fn get_current_context(state: &AppState) -> &'static str {
+        use super::PopupType;
+
+        match &state.active_popup {
+            Some(PopupType::KeycodePicker) | Some(PopupType::TapKeycodePicker) => {
+                help_registry::contexts::KEYCODE_PICKER
+            }
+            Some(PopupType::ColorPicker) => {
+                // Check color picker mode
+                if state.color_picker_state.mode == super::color_picker::ColorPickerMode::Palette {
+                    help_registry::contexts::COLOR_PICKER_PALETTE
+                } else {
+                    help_registry::contexts::COLOR_PICKER_RGB
+                }
+            }
+            Some(PopupType::CategoryManager) => help_registry::contexts::CATEGORY_MANAGER,
+            Some(PopupType::LayerManager) => help_registry::contexts::LAYER_MANAGER,
+            Some(PopupType::LayerPicker) => help_registry::contexts::LAYER_PICKER,
+            Some(PopupType::HelpOverlay) => help_registry::contexts::HELP,
+            Some(PopupType::BuildLog) => help_registry::contexts::BUILD_LOG,
+            Some(PopupType::MetadataEditor) => help_registry::contexts::METADATA_EDITOR,
+            Some(PopupType::SettingsManager) => help_registry::contexts::SETTINGS_MANAGER,
+            Some(PopupType::ModifierPicker) => help_registry::contexts::MODIFIER_PICKER,
+            _ => {
+                // Check for selection mode
+                if state.selection_mode.is_some() {
+                    help_registry::contexts::SELECTION
+                } else {
+                    help_registry::contexts::MAIN
+                }
+            }
+        }
+    }
+
     /// Get contextual help message based on current application state
-    const fn get_contextual_help(state: &AppState) -> &'static str {
+    fn get_contextual_help(state: &AppState) -> &'static str {
         use super::PopupType;
 
         match &state.active_popup {
             Some(PopupType::KeycodePicker) => {
-                "↑↓: Navigate | Enter: Select | Esc: Cancel | 1-8: Filter category | Type: Search"
+                "↑↓: Navigate | Enter: Select | Esc: Cancel | Tab: Switch | Type: Search"
             }
             Some(PopupType::ColorPicker) => {
-                "↑↓: Change channel | ←→: Adjust value | Enter: Apply | Esc: Cancel"
+                "←→↑↓: Navigate | Tab: Switch | Enter: Apply | Esc: Cancel"
             }
             Some(PopupType::CategoryPicker) => "↑↓: Navigate | Enter: Select | Esc: Cancel",
             Some(PopupType::CategoryManager) => {
@@ -113,7 +183,7 @@ impl StatusBar {
             Some(PopupType::TemplateSaveDialog) => {
                 "Tab: Next field | Enter: Save | Esc: Cancel | Type: Edit"
             }
-            Some(PopupType::HelpOverlay) => "↑↓: Scroll | Home/End: Jump | Esc: Close",
+            Some(PopupType::HelpOverlay) => "↑↓: Scroll | Home/End: Jump | ?: Close",
             Some(PopupType::BuildLog) => "↑↓: Scroll | Home/End: Jump | Esc: Close",
             Some(PopupType::MetadataEditor) => {
                 "Tab: Next field | Enter: Save | Esc: Cancel | Type: Edit"
@@ -134,7 +204,11 @@ impl StatusBar {
             }
             None => {
                 // Main keyboard editing mode
-                "↑↓←→/hjkl: Navigate | Enter: Edit key | x/Del: Clear | Tab: Layer | Ctrl+S: Save | Ctrl+Q: Quit | ?: Help"
+                if state.selection_mode.is_some() {
+                    "↑↓←→: Move | Space: Toggle | y: Copy | d: Cut | Esc: Exit"
+                } else {
+                    "↑↓←→: Navigate | Enter: Edit | Shift+C: Color | Shift+N: Layers | ?: Help"
+                }
             }
         }
     }
