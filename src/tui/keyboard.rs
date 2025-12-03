@@ -14,6 +14,7 @@ use ratatui::{
     Frame,
 };
 
+use crate::keycode_db::TapHoldType;
 use super::AppState;
 
 /// Keyboard widget renders the visual keyboard layout
@@ -354,106 +355,69 @@ impl KeyboardWidget {
         }
     }
 
-    /// Parse a keycode to extract tap-hold components if applicable
+    /// Parse a keycode to extract tap-hold components if applicable.
+    /// 
+    /// Uses the keycode database to dynamically detect mod-tap prefixes
+    /// rather than maintaining a hardcoded list.
     fn parse_tap_hold_keycode(keycode: &str, state: &AppState) -> Option<TapHoldKeycode> {
-        // LT(layer, keycode) - Layer Tap
-        if keycode.starts_with("LT(") && keycode.ends_with(')') {
-            let inner = &keycode[3..keycode.len() - 1];
-            if let Some((layer_part, tap_part)) = inner.split_once(',') {
-                let layer_part = layer_part.trim();
-                let tap_part = tap_part.trim();
-                
-                // Resolve layer reference (@uuid or numeric)
-                let layer_display = Self::resolve_layer_display(layer_part, state);
-                let tap_display = Self::format_simple_keycode(tap_part);
-                
-                return Some(TapHoldKeycode {
+        // Use the keycode database to parse tap-hold keycodes
+        let info = state.keycode_db.parse_tap_hold(keycode)?;
+        
+        match info.tap_hold_type {
+            TapHoldType::LayerTap => {
+                // LT(layer, keycode) - Layer Tap
+                let layer_display = Self::resolve_layer_display(&info.arg1, state);
+                let tap_display = Self::format_simple_keycode(info.arg2.as_deref().unwrap_or(""));
+                Some(TapHoldKeycode {
                     hold: format!("L{}", layer_display),
                     tap: tap_display,
                     kind: TapHoldKind::LayerTap,
-                });
+                })
             }
-        }
-        
-        // MT(mod, keycode) - Mod Tap
-        if keycode.starts_with("MT(") && keycode.ends_with(')') {
-            let inner = &keycode[3..keycode.len() - 1];
-            if let Some((mod_part, tap_part)) = inner.split_once(',') {
-                let mod_part = mod_part.trim();
-                let tap_part = tap_part.trim();
-                
-                let mod_display = Self::format_modifier(mod_part);
-                let tap_display = Self::format_simple_keycode(tap_part);
-                
-                return Some(TapHoldKeycode {
+            TapHoldType::ModTap => {
+                // MT(mod, keycode) - Custom Mod Tap
+                let mod_display = Self::format_modifier(&info.arg1);
+                let tap_display = Self::format_simple_keycode(info.arg2.as_deref().unwrap_or(""));
+                Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
                     kind: TapHoldKind::ModTap,
-                });
+                })
             }
-        }
-        
-        // Also handle shorthand mod-tap like LCTL_T(kc), LSFT_T(kc), etc.
-        let mod_tap_prefixes = [
-            ("LCTL_T(", "CTL"),
-            ("RCTL_T(", "CTL"),
-            ("LSFT_T(", "SFT"),
-            ("RSFT_T(", "SFT"),
-            ("LALT_T(", "ALT"),
-            ("RALT_T(", "ALT"),
-            ("LGUI_T(", "GUI"),
-            ("RGUI_T(", "GUI"),
-            ("LCAG_T(", "CAG"),
-            ("RCAG_T(", "CAG"),
-            ("MEH_T(", "MEH"),
-            ("HYPR_T(", "HYP"),
-            ("ALL_T(", "ALL"),
-        ];
-        
-        for (prefix, mod_name) in mod_tap_prefixes {
-            if keycode.starts_with(prefix) && keycode.ends_with(')') {
-                let tap_part = &keycode[prefix.len()..keycode.len() - 1];
-                let tap_display = Self::format_simple_keycode(tap_part);
-                
-                return Some(TapHoldKeycode {
-                    hold: mod_name.to_string(),
+            TapHoldType::ModTapNamed => {
+                // Named mod-tap like LCTL_T(keycode)
+                // Use keycode_db to get the display name for the prefix
+                let mod_display = state.keycode_db
+                    .get_mod_tap_display(&info.prefix)
+                    .unwrap_or("MOD")
+                    .to_string();
+                let tap_display = Self::format_simple_keycode(&info.arg1);
+                Some(TapHoldKeycode {
+                    hold: mod_display,
                     tap: tap_display,
                     kind: TapHoldKind::ModTap,
-                });
+                })
             }
-        }
-        
-        // LM(layer, mod) - Layer Mod
-        if keycode.starts_with("LM(") && keycode.ends_with(')') {
-            let inner = &keycode[3..keycode.len() - 1];
-            if let Some((layer_part, mod_part)) = inner.split_once(',') {
-                let layer_part = layer_part.trim();
-                let mod_part = mod_part.trim();
-                
-                let layer_display = Self::resolve_layer_display(layer_part, state);
-                let mod_display = Self::format_modifier(mod_part);
-                
-                return Some(TapHoldKeycode {
+            TapHoldType::LayerMod => {
+                // LM(layer, mod) - Layer Mod
+                let layer_display = Self::resolve_layer_display(&info.arg1, state);
+                let mod_display = Self::format_modifier(info.arg2.as_deref().unwrap_or(""));
+                Some(TapHoldKeycode {
                     hold: format!("L{}+", layer_display),
                     tap: mod_display,
                     kind: TapHoldKind::LayerMod,
-                });
+                })
+            }
+            TapHoldType::SwapHands => {
+                // SH_T(keycode) - Swap Hands Tap
+                let tap_display = Self::format_simple_keycode(&info.arg1);
+                Some(TapHoldKeycode {
+                    hold: "SWAP".to_string(),
+                    tap: tap_display,
+                    kind: TapHoldKind::SwapHandsTap,
+                })
             }
         }
-        
-        // SH_T(keycode) - Swap Hands Tap
-        if keycode.starts_with("SH_T(") && keycode.ends_with(')') {
-            let tap_part = &keycode[5..keycode.len() - 1];
-            let tap_display = Self::format_simple_keycode(tap_part);
-            
-            return Some(TapHoldKeycode {
-                hold: "SWAP".to_string(),
-                tap: tap_display,
-                kind: TapHoldKind::SwapHandsTap,
-            });
-        }
-        
-        None
     }
     
     /// Resolve layer reference to display string
