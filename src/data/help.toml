@@ -671,22 +671,28 @@ hint = "Select"
 priority = 2
 
 [[contexts.selection.bindings]]
+keys = ["Shift+R"]
+action = "Rectangle select (move to expand)"
+hint = "Rect"
+priority = 3
+
+[[contexts.selection.bindings]]
 keys = ["y"]
 action = "Copy selected"
 hint = "Copy"
-priority = 3
+priority = 4
 
 [[contexts.selection.bindings]]
 keys = ["d"]
 action = "Cut selected"
 hint = "Cut"
-priority = 4
+priority = 5
 
 [[contexts.selection.bindings]]
 keys = ["Esc"]
 action = "Exit selection"
 hint = "Exit"
-priority = 5
+priority = 6
 
 # =============================================================================
 # TEMPLATE BROWSER
