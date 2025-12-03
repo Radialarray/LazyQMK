@@ -380,15 +380,23 @@ fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Re
 
 /// Parses a single table row into key definitions.
 fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
-    // Split by pipes and trim
+    // Split by pipes and trim, keeping empty cells to preserve column indices
+    // This is critical for split keyboards where gaps between halves are empty cells
     let cells: Vec<&str> = line
         .split('|')
         .map(str::trim)
-        .filter(|s| !s.is_empty())
         .collect();
 
+    // Skip leading empty element from split (line starts with '|')
+    // and trailing empty element (line ends with '|')
+    let cells = if cells.len() >= 2 {
+        &cells[1..cells.len() - 1]
+    } else {
+        &cells[..]
+    };
+
     for (col, cell) in cells.iter().enumerate() {
-        // Skip empty cells
+        // Skip empty cells (gaps in split keyboards) but preserve column index
         if cell.is_empty() {
             continue;
         }
@@ -775,5 +783,86 @@ version: "1.0"
             println!("Category: {} - {} - {:?}", cat.id, cat.name, cat.color);
         }
         assert_eq!(layout.categories.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_split_keyboard_with_gap() {
+        use crate::models::Position;
+
+        // Test that split keyboards with empty gap columns preserve correct key positions
+        // This is critical: the gap between left and right halves must not shift columns
+        let content = r#"---
+name: "Split Layout Test"
+description: "Tests gap handling"
+author: "test"
+created: "2024-01-15T10:30:00Z"
+modified: "2024-01-20T15:45:00Z"
+tags: []
+is_template: false
+version: "1.0"
+---
+
+# Split Layout
+
+## Layer 0: Base
+**Color**: #808080
+
+| C0   | C1   |      | C3   | C4   |
+|------|------|------|------|------|
+| KC_A | KC_B |      | KC_C | KC_D |
+| KC_E | KC_F |      | KC_G | KC_H |
+
+"#;
+
+        let layout = parse_markdown_layout_str(content).unwrap();
+        assert_eq!(layout.layers.len(), 1);
+
+        let layer = &layout.layers[0];
+        // Should have 8 keys: 4 on left (cols 0,1), 4 on right (cols 3,4)
+        assert_eq!(layer.keys.len(), 8);
+
+        // Verify left side keys are at columns 0 and 1
+        let key_a = layer
+            .get_key(Position::new(0, 0))
+            .expect("KC_A should be at row 0, col 0");
+        assert_eq!(key_a.keycode, "KC_A");
+
+        let key_b = layer
+            .get_key(Position::new(0, 1))
+            .expect("KC_B should be at row 0, col 1");
+        assert_eq!(key_b.keycode, "KC_B");
+
+        // Verify right side keys are at columns 3 and 4 (NOT 2 and 3!)
+        // This is the critical test - the gap at column 2 must be preserved
+        let key_c = layer
+            .get_key(Position::new(0, 3))
+            .expect("KC_C should be at row 0, col 3");
+        assert_eq!(key_c.keycode, "KC_C");
+
+        let key_d = layer
+            .get_key(Position::new(0, 4))
+            .expect("KC_D should be at row 0, col 4");
+        assert_eq!(key_d.keycode, "KC_D");
+
+        // Verify second row maintains the same column structure
+        let key_g = layer
+            .get_key(Position::new(1, 3))
+            .expect("KC_G should be at row 1, col 3");
+        assert_eq!(key_g.keycode, "KC_G");
+
+        let key_h = layer
+            .get_key(Position::new(1, 4))
+            .expect("KC_H should be at row 1, col 4");
+        assert_eq!(key_h.keycode, "KC_H");
+
+        // Verify there's no key at the gap column
+        assert!(
+            layer.get_key(Position::new(0, 2)).is_none(),
+            "Column 2 should be empty (gap)"
+        );
+        assert!(
+            layer.get_key(Position::new(1, 2)).is_none(),
+            "Column 2 should be empty (gap)"
+        );
     }
 }
