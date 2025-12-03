@@ -454,7 +454,7 @@ impl<'a> FirmwareValidator<'a> {
 ///
 /// Returns a vector of warning messages for any deprecated options found.
 #[allow(dead_code)]
-pub fn check_deprecated_options(
+#[must_use] pub fn check_deprecated_options(
     qmk_path: &std::path::Path,
     keyboard: &str,
 ) -> Vec<String> {

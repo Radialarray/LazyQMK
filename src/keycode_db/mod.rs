@@ -105,11 +105,11 @@ pub enum TapHoldType {
     LayerTap,
     /// MT(mod, keycode) - Custom Mod Tap
     ModTap,
-    /// Named mod-tap like LCTL_T(keycode)
+    /// Named mod-tap like `LCTL_T(keycode)`
     ModTapNamed,
     /// LM(layer, mod) - Layer Mod
     LayerMod,
-    /// SH_T(keycode) - Swap Hands Tap
+    /// `SH_T(keycode)` - Swap Hands Tap
     SwapHands,
 }
 
@@ -118,7 +118,7 @@ pub enum TapHoldType {
 pub struct TapHoldInfo {
     /// Type of tap-hold
     pub tap_hold_type: TapHoldType,
-    /// The prefix (e.g., "LT", "MT", "LCTL_T")
+    /// The prefix (e.g., "LT", "MT", "`LCTL_T`")
     pub prefix: String,
     /// First argument (layer for LT/LM, modifier for MT, keycode for others)
     pub arg1: String,
@@ -366,7 +366,7 @@ impl KeycodeDb {
     }
 
     /// Get the prefix (code without parentheses) for a parameterized keycode.
-    /// E.g., "LCG()" -> "LCG", "LCTL_T()" -> "LCTL_T"
+    /// E.g., "`LCG()`" -> "LCG", "`LCTL_T()`" -> "`LCTL_T`"
     #[must_use]
     pub fn get_prefix(code: &str) -> Option<&str> {
         code.strip_suffix("()")
@@ -375,7 +375,7 @@ impl KeycodeDb {
     /// Get display abbreviation for a mod-tap prefix.
     /// 
     /// Returns a short display name suitable for showing on a key.
-    /// E.g., "LCTL_T" -> "CTL", "MEH_T" -> "MEH", "LGUI_T" -> "GUI"
+    /// E.g., "`LCTL_T`" -> "CTL", "`MEH_T`" -> "MEH", "`LGUI_T`" -> "GUI"
     #[must_use]
     pub fn get_mod_tap_display(&self, prefix: &str) -> Option<&'static str> {
         // Map mod-tap prefixes to their short display names
@@ -462,7 +462,7 @@ impl KeycodeDb {
             
             // Get the prefix without ()
             if let Some(prefix) = kc.code.strip_suffix("()") {
-                let full_prefix = format!("{}(", prefix);
+                let full_prefix = format!("{prefix}(");
                 if keycode.starts_with(&full_prefix) && keycode.ends_with(')') {
                     let tap = &keycode[full_prefix.len()..keycode.len() - 1];
                     return Some(TapHoldInfo {
@@ -503,10 +503,10 @@ impl KeycodeDb {
         false
     }
 
-    /// Parse a layer keycode to extract (prefix, layer_ref, suffix).
+    /// Parse a layer keycode to extract (prefix, `layer_ref`, suffix).
     /// 
     /// For simple keycodes like MO(1), returns ("MO", "1", "")
-    /// For compound keycodes like LT(1, KC_A), returns ("LT", "1", ", KC_A)")
+    /// For compound keycodes like LT(1, `KC_A`), returns ("LT", "1", ", `KC_A`)")
     #[must_use]
     pub fn parse_layer_keycode(&self, keycode: &str) -> Option<(String, String, String)> {
         // Try to match against layers category keycodes
@@ -517,7 +517,7 @@ impl KeycodeDb {
             
             // Get the prefix from the code (e.g., "MO" from "MO()")
             let prefix = kc.code.strip_suffix("()")?;
-            let prefix_with_paren = format!("{}(", prefix);
+            let prefix_with_paren = format!("{prefix}(");
             
             if keycode.starts_with(&prefix_with_paren) && keycode.ends_with(')') {
                 let inner = &keycode[prefix_with_paren.len()..keycode.len() - 1];

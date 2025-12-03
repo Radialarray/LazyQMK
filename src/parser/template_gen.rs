@@ -49,10 +49,10 @@ pub fn generate_markdown(layout: &Layout) -> Result<String> {
     // Generate categories section if any exist
     if !layout.categories.is_empty() {
         // Add separator only if descriptions weren't written
-        if !has_key_descriptions(layout) {
-            output.push_str("---\n\n");
-        } else {
+        if has_key_descriptions(layout) {
             output.push('\n');
+        } else {
+            output.push_str("---\n\n");
         }
         output.push_str(&generate_categories(layout));
     }
@@ -248,7 +248,7 @@ fn generate_key_descriptions(layout: &Layout) -> Option<String> {
     let mut output = String::from("## Key Descriptions\n\n");
 
     for (layer_idx, row, col, description) in descriptions {
-        output.push_str(&format!("- {}:{}:{}: {}\n", layer_idx, row, col, description));
+        output.push_str(&format!("- {layer_idx}:{row}:{col}: {description}\n"));
     }
 
     Some(output)
@@ -295,7 +295,7 @@ fn generate_settings(layout: &Layout) -> Option<String> {
             output.push_str(&format!("**RGB Timeout**: {} sec\n", timeout_ms / 1000));
         } else {
             // Milliseconds
-            output.push_str(&format!("**RGB Timeout**: {}ms\n", timeout_ms));
+            output.push_str(&format!("**RGB Timeout**: {timeout_ms}ms\n"));
         }
     }
 
@@ -322,7 +322,7 @@ fn generate_settings(layout: &Layout) -> Option<String> {
 
         if ths.quick_tap_term != default_tap_hold.quick_tap_term {
             match ths.quick_tap_term {
-                Some(term) => output.push_str(&format!("**Quick Tap Term**: {}ms\n", term)),
+                Some(term) => output.push_str(&format!("**Quick Tap Term**: {term}ms\n")),
                 None => output.push_str("**Quick Tap Term**: Auto\n"),
             }
         }
@@ -347,7 +347,7 @@ fn generate_settings(layout: &Layout) -> Option<String> {
 
         if ths.flow_tap_term != default_tap_hold.flow_tap_term {
             match ths.flow_tap_term {
-                Some(term) => output.push_str(&format!("**Flow Tap Term**: {}ms\n", term)),
+                Some(term) => output.push_str(&format!("**Flow Tap Term**: {term}ms\n")),
                 None => output.push_str("**Flow Tap Term**: Disabled\n"),
             }
         }

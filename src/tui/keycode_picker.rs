@@ -162,7 +162,7 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
             ];
 
             if let Some(desc) = &keycode.description {
-                spans.push(Span::styled(format!(" - {}", desc), desc_style));
+                spans.push(Span::styled(format!(" - {desc}"), desc_style));
             }
 
             ListItem::new(Line::from(spans))
@@ -174,9 +174,7 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
         "All".to_string()
     } else {
         categories
-            .get(category_index - 1)
-            .map(|c| c.name.clone())
-            .unwrap_or_else(|| "Unknown".to_string())
+            .get(category_index - 1).map_or_else(|| "Unknown".to_string(), |c| c.name.clone())
     };
 
     let list_border_color = if focus == PickerFocus::Keycodes {
@@ -437,7 +435,7 @@ fn handle_keycodes_input(
                     if let Some(selected_key) = state.get_selected_key_mut() {
                         selected_key.keycode = new_keycode.clone();
                         state.mark_dirty();
-                        state.set_status(format!("Updated: {}", new_keycode));
+                        state.set_status(format!("Updated: {new_keycode}"));
                     }
                     
                     state.active_popup = Some(PopupType::KeyEditor);
@@ -447,7 +445,7 @@ fn handle_keycodes_input(
                 
                 // Check if this keycode has parameters defined in the database
                 // Clone the params to avoid borrow conflicts
-                let params_opt = state.keycode_db.get_params(&keycode).map(|p| p.to_vec());
+                let params_opt = state.keycode_db.get_params(&keycode).map(Vec::from);
                 if let Some(params) = params_opt {
                     if let Some(prefix) = KeycodeDb::get_prefix(&keycode) {
                         return handle_parameterized_keycode(state, prefix, &params);
@@ -517,7 +515,7 @@ fn handle_keycodes_input(
 }
 
 /// Get filtered keycodes based on current search and category
-pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
+#[must_use] pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
     let categories = state.keycode_db.categories();
     let category_index = state.keycode_picker_state.category_index;
     
@@ -536,7 +534,7 @@ pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::Keycod
     }
 }
 
-/// Handle navigation-only input for keycode picker (used by TapKeycodePicker)
+/// Handle navigation-only input for keycode picker (used by `TapKeycodePicker`)
 /// This handles all input except Enter (which is handled by caller)
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
@@ -725,7 +723,7 @@ fn handle_parameterized_keycode(
     Ok(false)
 }
 
-/// Determine the ParameterizedKeycodeType based on prefix and params pattern
+/// Determine the `ParameterizedKeycodeType` based on prefix and params pattern
 fn determine_keycode_type(
     prefix: &str,
     params: &[crate::keycode_db::KeycodeParam],

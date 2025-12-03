@@ -147,7 +147,7 @@ impl VisualLayoutMapping {
 
     /// Gets the total number of keys in the mapping.
     #[must_use]
-    pub fn key_count(&self) -> usize {
+    pub const fn key_count(&self) -> usize {
         // Use layout_to_matrix as the canonical key count
         self.layout_to_matrix.len()
     }
@@ -240,11 +240,7 @@ impl VisualLayoutMapping {
 
         for pos in self.visual_to_matrix.keys() {
             if pos.row == row {
-                let distance = if pos.col >= target_col {
-                    pos.col - target_col
-                } else {
-                    target_col - pos.col
-                };
+                let distance = pos.col.abs_diff(target_col);
 
                 if distance < best_distance {
                     best_distance = distance;

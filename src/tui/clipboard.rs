@@ -44,7 +44,7 @@ pub struct KeyClipboard {
     content: Option<ClipboardContent>,
     /// Stored multi-key data for paste operation
     multi_content: Option<MultiKeyContent>,
-    /// Source position for cut operation (layer_index, position)
+    /// Source position for cut operation (`layer_index`, position)
     /// Used for visual feedback (dimming the cut source)
     cut_source: Option<(usize, Position)>,
     /// Multiple cut sources for multi-key cut
@@ -56,7 +56,7 @@ pub struct KeyClipboard {
 impl KeyClipboard {
     /// Create a new empty clipboard.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             content: None,
             multi_content: None,
@@ -89,9 +89,9 @@ impl KeyClipboard {
         });
 
         if has_extras {
-            format!("Copied: {} (with color/category)", keycode)
+            format!("Copied: {keycode} (with color/category)")
         } else {
-            format!("Copied: {}", keycode)
+            format!("Copied: {keycode}")
         }
     }
 
@@ -119,7 +119,7 @@ impl KeyClipboard {
 
         self.cut_source = Some((layer_index, position));
 
-        format!("Cut: {} - press p to paste, Esc to cancel", keycode)
+        format!("Cut: {keycode} - press p to paste, Esc to cancel")
     }
 
     /// Copy multiple keys to the clipboard.
@@ -134,7 +134,7 @@ impl KeyClipboard {
         let count = keys.len();
         self.multi_content = Some(MultiKeyContent { keys, anchor });
 
-        format!("Copied {} keys", count)
+        format!("Copied {count} keys")
     }
 
     /// Cut multiple keys to the clipboard.
@@ -155,48 +155,48 @@ impl KeyClipboard {
         self.multi_content = Some(MultiKeyContent { keys, anchor });
         self.multi_cut_sources = positions.into_iter().map(|p| (layer_index, p)).collect();
 
-        format!("Cut {} keys - press p to paste, Esc to cancel", count)
+        format!("Cut {count} keys - press p to paste, Esc to cancel")
     }
 
     /// Check if there is content to paste (single or multi).
     #[must_use]
-    pub fn has_content(&self) -> bool {
+    pub const fn has_content(&self) -> bool {
         self.content.is_some() || self.multi_content.is_some()
     }
 
     /// Check if this is a single-key clipboard.
     #[must_use]
-    pub fn is_single(&self) -> bool {
+    pub const fn is_single(&self) -> bool {
         self.content.is_some()
     }
 
     /// Check if this is a multi-key clipboard.
     #[must_use]
-    pub fn is_multi(&self) -> bool {
+    pub const fn is_multi(&self) -> bool {
         self.multi_content.is_some()
     }
 
     /// Check if this is a cut operation (vs copy).
     #[must_use]
-    pub fn is_cut(&self) -> bool {
+    pub const fn is_cut(&self) -> bool {
         self.cut_source.is_some() || !self.multi_cut_sources.is_empty()
     }
 
     /// Get the clipboard content for pasting (single key).
     #[must_use]
-    pub fn get_content(&self) -> Option<&ClipboardContent> {
+    pub const fn get_content(&self) -> Option<&ClipboardContent> {
         self.content.as_ref()
     }
 
     /// Get the multi-key clipboard content for pasting.
     #[must_use]
-    pub fn get_multi_content(&self) -> Option<&MultiKeyContent> {
+    pub const fn get_multi_content(&self) -> Option<&MultiKeyContent> {
         self.multi_content.as_ref()
     }
 
     /// Get the cut source position (if this was a single-key cut operation).
     #[must_use]
-    pub fn get_cut_source(&self) -> Option<(usize, Position)> {
+    pub const fn get_cut_source(&self) -> Option<(usize, Position)> {
         self.cut_source
     }
 
@@ -262,18 +262,18 @@ impl KeyClipboard {
 
     /// Get the undo state (if any).
     #[must_use]
-    pub fn get_undo(&self) -> Option<&UndoState> {
+    pub const fn get_undo(&self) -> Option<&UndoState> {
         self.undo_state.as_ref()
     }
 
     /// Take the undo state (consuming it).
-    pub fn take_undo(&mut self) -> Option<UndoState> {
+    pub const fn take_undo(&mut self) -> Option<UndoState> {
         self.undo_state.take()
     }
 
     /// Check if undo is available.
     #[must_use]
-    pub fn can_undo(&self) -> bool {
+    pub const fn can_undo(&self) -> bool {
         self.undo_state.is_some()
     }
 }

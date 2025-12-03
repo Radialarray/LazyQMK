@@ -85,7 +85,7 @@ impl HelpOverlayState {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![
             Span::styled(
-                format!("═══ {} ═══", title),
+                format!("═══ {title} ═══"),
                 Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -95,7 +95,24 @@ impl HelpOverlayState {
     /// Add a subsection header (for "In X:" labels)
     fn add_subsection_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
         lines.push(Line::from(vec![
-            Span::styled(format!("  {}:", title), Style::default().fg(theme.text_muted)),
+            Span::styled(format!("  {title}:"), Style::default().fg(theme.text_muted)),
+        ]));
+    }
+
+    /// Add a subsection header using context name from registry
+    fn add_context_subsection(
+        lines: &mut Vec<Line<'static>>,
+        registry: &HelpRegistry,
+        context_name: &str,
+        fallback_title: &str,
+        theme: &Theme,
+    ) {
+        // Use context.name field if available, otherwise use fallback
+        let title = registry
+            .get_context(context_name)
+            .map_or(fallback_title, |ctx| ctx.name.as_str());
+        lines.push(Line::from(vec![
+            Span::styled(format!("  In {title}:"), Style::default().fg(theme.text_muted)),
         ]));
     }
 
@@ -109,13 +126,13 @@ impl HelpOverlayState {
     ) {
         let bindings = registry.get_bindings(context_name);
         for binding in bindings {
-            let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-            // Pad keys to align actions
-            let padded_keys = format!("{:<18}", keys);
+            // Use format_binding_for_help from registry for consistent formatting
+            let (keys, action) = HelpRegistry::format_binding_for_help(binding);
+            let padded_keys = format!("{keys:<18}");
             lines.push(Line::from(vec![
                 Span::raw("  "),
                 Span::styled(padded_keys, key_style),
-                Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                Span::styled(action, Style::default().fg(theme.text)),
             ]));
         }
     }
@@ -128,6 +145,11 @@ impl HelpOverlayState {
         let key_style = Style::default().fg(theme.success);
         let info_style = Style::default().fg(theme.warning);
 
+        // Use app_name from registry metadata for dynamic header
+        let app_name = registry.app_name();
+        let header_text = format!("{app_name} - Help");
+        let padded_header = format!("{header_text:^65}");
+
         // Header
         lines.push(Line::from(vec![
             Span::styled(
@@ -137,7 +159,7 @@ impl HelpOverlayState {
         ]));
         lines.push(Line::from(vec![
             Span::styled(
-                "                  Keyboard Layout Editor - Help                  ",
+                padded_header,
                 Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -158,7 +180,7 @@ impl HelpOverlayState {
                 // Only show navigation-related bindings
                 if binding.action.contains("Navigate") || binding.action.contains("Jump") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -178,7 +200,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("layer") || binding.action.contains("Layer") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -189,7 +211,7 @@ impl HelpOverlayState {
         }
         
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In layer manager", theme);
+        Self::add_context_subsection(&mut lines, &registry, contexts::LAYER_MANAGER, "layer manager", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::LAYER_MANAGER, theme, key_style);
 
         // =====================================================================
@@ -202,7 +224,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("keycode") || binding.action.contains("Clear key") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -213,15 +235,15 @@ impl HelpOverlayState {
         }
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In keycode picker", theme);
+        Self::add_context_subsection(&mut lines, &registry, contexts::KEYCODE_PICKER, "keycode picker", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::KEYCODE_PICKER, theme, key_style);
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "Parameterized keycodes (multi-stage)", theme);
+        Self::add_context_subsection(&mut lines, &registry, contexts::PARAMETERIZED_KEYCODES, "parameterized keycodes", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::PARAMETERIZED_KEYCODES, theme, info_style);
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In modifier picker", theme);
+        Self::add_context_subsection(&mut lines, &registry, contexts::MODIFIER_PICKER, "modifier picker", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::MODIFIER_PICKER, theme, key_style);
 
         // =====================================================================
@@ -256,7 +278,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("color") || binding.action.contains("Color") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -288,7 +310,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("ategory") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -312,7 +334,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action == "Settings" {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -340,7 +362,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("emplate") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -359,7 +381,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("Save") || binding.action.contains("metadata") || binding.action == "Quit" {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -378,7 +400,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("irmware") || binding.action.contains("build") || binding.action.contains("Generate") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -401,7 +423,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("wizard") || binding.action.contains("variant") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -420,7 +442,7 @@ impl HelpOverlayState {
             for binding in &ctx.bindings {
                 if binding.action.contains("help") || binding.action.contains("Help") || binding.action.contains("Cancel") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{:<18}", keys);
+                    let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(padded_keys, key_style),
@@ -443,12 +465,21 @@ impl HelpOverlayState {
             }
         }
 
-        // Footer
+        // Footer - show version and context count from registry
+        let version = registry.version();
+        let context_count = registry.get_context_info().len();
+        
         lines.push(Line::from(""));
         lines.push(Line::from(vec![
             Span::styled(
                 "═══════════════════════════════════════════════════════════════",
                 Style::default().fg(theme.primary),
+            ),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("  Help format v{version} • {context_count} contexts"),
+                Style::default().fg(theme.text_muted),
             ),
         ]));
         lines.push(Line::from(vec![

@@ -39,7 +39,7 @@ pub struct Shade {
 }
 
 impl Shade {
-    /// Convert this shade to an RgbColor.
+    /// Convert this shade to an `RgbColor`.
     #[must_use]
     pub const fn to_rgb(&self) -> RgbColor {
         RgbColor::new(self.r, self.g, self.b)
@@ -62,7 +62,7 @@ impl PaletteColor {
     
     /// Get the number of shades.
     #[must_use]
-    pub fn shade_count(&self) -> usize {
+    pub const fn shade_count(&self) -> usize {
         self.shades.len()
     }
 }
@@ -108,7 +108,7 @@ impl ColorPalette {
     #[must_use]
     pub fn default_layer_color(&self) -> RgbColor {
         self.get_shade("Gray", 500)
-            .map(|s| s.to_rgb())
+            .map(Shade::to_rgb)
             .unwrap_or_else(|| RgbColor::new(107, 114, 128))
     }
     
@@ -120,7 +120,7 @@ impl ColorPalette {
     
     /// Get the number of base colors.
     #[must_use]
-    pub fn color_count(&self) -> usize {
+    pub const fn color_count(&self) -> usize {
         self.colors.len()
     }
     
@@ -132,8 +132,8 @@ impl ColorPalette {
     
     /// Get the number of rows for display.
     #[must_use]
-    pub fn rows(&self) -> usize {
-        (self.colors.len() + self.columns() - 1) / self.columns()
+    pub const fn rows(&self) -> usize {
+        self.colors.len().div_ceil(self.columns())
     }
 }
 

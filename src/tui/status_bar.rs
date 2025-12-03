@@ -39,8 +39,15 @@ impl StatusBar {
 
         // Build clipboard preview line
         let clipboard_preview = state.clipboard.get_preview().map(|preview| {
+            // Show clipboard type indicator using is_single()
+            let type_indicator = if state.clipboard.is_single() {
+                "Single"
+            } else {
+                "Multi"
+            };
             Line::from(vec![
                 Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
+                Span::styled(format!("[{type_indicator}] "), Style::default().fg(theme.text_muted)),
                 Span::styled(preview, Style::default().fg(theme.accent)),
                 if state.clipboard.can_undo() {
                     Span::styled(" | Ctrl+Z: Undo", Style::default().fg(theme.text_muted))
@@ -170,7 +177,7 @@ impl StatusBar {
         use super::PopupType;
 
         match &state.active_popup {
-            Some(PopupType::KeycodePicker) | Some(PopupType::TapKeycodePicker) => {
+            Some(PopupType::KeycodePicker | PopupType::TapKeycodePicker) => {
                 help_registry::contexts::KEYCODE_PICKER
             }
             Some(PopupType::ColorPicker) => {
@@ -182,13 +189,19 @@ impl StatusBar {
                 }
             }
             Some(PopupType::CategoryManager) => help_registry::contexts::CATEGORY_MANAGER,
+            Some(PopupType::CategoryPicker) => help_registry::contexts::CATEGORY_PICKER,
             Some(PopupType::LayerManager) => help_registry::contexts::LAYER_MANAGER,
             Some(PopupType::LayerPicker) => help_registry::contexts::LAYER_PICKER,
+            Some(PopupType::LayoutPicker) => help_registry::contexts::LAYOUT_PICKER,
             Some(PopupType::HelpOverlay) => help_registry::contexts::HELP,
             Some(PopupType::BuildLog) => help_registry::contexts::BUILD_LOG,
             Some(PopupType::MetadataEditor) => help_registry::contexts::METADATA_EDITOR,
             Some(PopupType::SettingsManager) => help_registry::contexts::SETTINGS_MANAGER,
             Some(PopupType::ModifierPicker) => help_registry::contexts::MODIFIER_PICKER,
+            Some(PopupType::TemplateBrowser) => help_registry::contexts::TEMPLATE_BROWSER,
+            Some(PopupType::TemplateSaveDialog) => help_registry::contexts::TEMPLATE_SAVE,
+            Some(PopupType::SetupWizard) => help_registry::contexts::SETUP_WIZARD,
+            Some(PopupType::UnsavedChangesPrompt) => help_registry::contexts::UNSAVED_PROMPT,
             _ => {
                 // Check for selection mode
                 if state.selection_mode.is_some() {
@@ -201,7 +214,7 @@ impl StatusBar {
     }
 
     /// Get contextual help message based on current application state
-    fn get_contextual_help(state: &AppState) -> &'static str {
+    const fn get_contextual_help(state: &AppState) -> &'static str {
         use super::PopupType;
 
         match &state.active_popup {

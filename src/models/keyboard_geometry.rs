@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 pub struct KeyGeometry {
     /// Electrical matrix position (row, col)
     pub matrix_position: (u8, u8),
-    /// Physical LED index from rgb_matrix.layout (for RGB colors)
+    /// Physical LED index from `rgb_matrix.layout` (for RGB colors)
     pub led_index: u8,
     /// Layout array index from info.json (for keymap generation)
     pub layout_index: u8,

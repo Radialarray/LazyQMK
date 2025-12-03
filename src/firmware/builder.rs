@@ -228,7 +228,7 @@ impl Default for BuildState {
 
 /// Runs the QMK build process in a background thread.
 ///
-/// The keyboard parameter may include variant subdirectories (e.g., "keebart/corne_choc_pro/standard").
+/// The keyboard parameter may include variant subdirectories (e.g., "`keebart/corne_choc_pro/standard`").
 /// QMK's build system will use the variant-specific keyboard.json for configuration.
 fn run_build(
     sender: Sender<BuildMessage>,

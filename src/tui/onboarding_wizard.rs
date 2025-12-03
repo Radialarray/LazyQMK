@@ -331,8 +331,8 @@ impl OnboardingWizardState {
                 // Pre-populate layout name from keyboard if not already set
                 if !self.inputs.contains_key("layout_name") {
                     let keyboard = self.inputs.get("keyboard").unwrap();
-                    let default_name = keyboard.split('/').last().unwrap_or(keyboard);
-                    self.input_buffer = format!("{}_layout", default_name);
+                    let default_name = keyboard.split('/').next_back().unwrap_or(keyboard);
+                    self.input_buffer = format!("{default_name}_layout");
                 }
                 
                 self.current_step = WizardStep::LayoutName;
@@ -454,7 +454,7 @@ impl OnboardingWizardState {
     ///
     /// This is used when opening the wizard from the TUI with Ctrl+W
     /// to allow editing the current configuration.
-    pub fn from_config(config: &Config) -> Self {
+    #[must_use] pub fn from_config(config: &Config) -> Self {
         let mut wizard = Self::new();
 
         // Pre-populate QMK path

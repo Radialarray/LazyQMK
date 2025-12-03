@@ -27,7 +27,7 @@ pub struct Binding {
     pub priority: u32,
 }
 
-fn default_priority() -> u32 {
+const fn default_priority() -> u32 {
     50
 }
 
@@ -123,7 +123,7 @@ impl HelpRegistry {
     }
 
     /// Format a binding for display in help overlay
-    /// Returns (keys_string, action_string)
+    /// Returns (`keys_string`, `action_string`)
     #[must_use]
     pub fn format_binding_for_help(binding: &Binding) -> (String, String) {
         let keys = if binding.alt_keys.is_empty() {
@@ -142,9 +142,29 @@ impl HelpRegistry {
             .into_iter()
             .take(max_hints)
             .map(|b| {
-                let key = b.keys.first().map(|s| s.as_str()).unwrap_or("");
-                let hint = b.hint.as_ref().map(|s| s.as_str()).unwrap_or(&b.action);
+                let key = b.keys.first().map_or("", std::string::String::as_str);
+                let hint = b.hint.as_deref().unwrap_or(&b.action);
                 (key.to_string(), hint.to_string())
+            })
+            .collect()
+    }
+
+    /// Get help file version from metadata.
+    #[must_use]
+    pub fn version(&self) -> &str {
+        &self.meta.version
+    }
+
+    /// Get information about all available contexts.
+    /// Returns a list of (`context_key`, `context_name`, description) tuples.
+    #[must_use]
+    pub fn get_context_info(&self) -> Vec<(&str, &str, &str)> {
+        self.context_names()
+            .into_iter()
+            .filter_map(|key| {
+                self.contexts.get(key).map(|ctx| {
+                    (key.as_str(), ctx.name.as_str(), ctx.description.as_str())
+                })
             })
             .collect()
     }

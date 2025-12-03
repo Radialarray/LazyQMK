@@ -27,11 +27,11 @@ pub enum InactiveKeyBehavior {
 impl InactiveKeyBehavior {
     /// Returns all available behavior options.
     #[must_use]
-    pub const fn all() -> &'static [InactiveKeyBehavior] {
+    pub const fn all() -> &'static [Self] {
         &[
-            InactiveKeyBehavior::ShowColor,
-            InactiveKeyBehavior::Off,
-            InactiveKeyBehavior::Dim,
+            Self::ShowColor,
+            Self::Off,
+            Self::Dim,
         ]
     }
 
@@ -66,7 +66,7 @@ impl InactiveKeyBehavior {
 /// press another key before releasing the first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum HoldDecisionMode {
-    /// Only timing-based: hold if key held longer than tapping_term.
+    /// Only timing-based: hold if key held longer than `tapping_term`.
     /// Most conservative, requires deliberate holds.
     #[default]
     Default,
@@ -85,11 +85,11 @@ pub enum HoldDecisionMode {
 impl HoldDecisionMode {
     /// Returns all available modes.
     #[must_use]
-    pub const fn all() -> &'static [HoldDecisionMode] {
+    pub const fn all() -> &'static [Self] {
         &[
-            HoldDecisionMode::Default,
-            HoldDecisionMode::PermissiveHold,
-            HoldDecisionMode::HoldOnOtherKeyPress,
+            Self::Default,
+            Self::PermissiveHold,
+            Self::HoldOnOtherKeyPress,
         ]
     }
 
@@ -150,13 +150,13 @@ pub enum TapHoldPreset {
 impl TapHoldPreset {
     /// Returns all available presets.
     #[must_use]
-    pub const fn all() -> &'static [TapHoldPreset] {
+    pub const fn all() -> &'static [Self] {
         &[
-            TapHoldPreset::Default,
-            TapHoldPreset::HomeRowMods,
-            TapHoldPreset::Responsive,
-            TapHoldPreset::Deliberate,
-            TapHoldPreset::Custom,
+            Self::Default,
+            Self::HomeRowMods,
+            Self::Responsive,
+            Self::Deliberate,
+            Self::Custom,
         ]
     }
 
@@ -197,7 +197,7 @@ impl TapHoldPreset {
                 tapping_toggle: 5,
                 flow_tap_term: Some(150),
                 chordal_hold: true,
-                preset: TapHoldPreset::HomeRowMods,
+                preset: Self::HomeRowMods,
             },
             Self::Responsive => TapHoldSettings {
                 tapping_term: 150,
@@ -207,7 +207,7 @@ impl TapHoldPreset {
                 tapping_toggle: 5,
                 flow_tap_term: None,
                 chordal_hold: false,
-                preset: TapHoldPreset::Responsive,
+                preset: Self::Responsive,
             },
             Self::Deliberate => TapHoldSettings {
                 tapping_term: 250,
@@ -217,7 +217,7 @@ impl TapHoldPreset {
                 tapping_toggle: 5,
                 flow_tap_term: None,
                 chordal_hold: false,
-                preset: TapHoldPreset::Deliberate,
+                preset: Self::Deliberate,
             },
             Self::Custom => TapHoldSettings::default(),
         }
@@ -238,7 +238,7 @@ pub struct TapHoldSettings {
 
     /// Time window for tap-then-hold to trigger auto-repeat instead of hold.
     /// If you tap and then hold within this time, it repeats the tap action.
-    /// None = same as tapping_term (QMK default behavior).
+    /// None = same as `tapping_term` (QMK default behavior).
     /// Range: 0-500ms
     pub quick_tap_term: Option<u16>,
 
@@ -251,7 +251,7 @@ pub struct TapHoldSettings {
     /// Useful for home-row mods to avoid accidental modifiers.
     pub retro_tapping: bool,
 
-    /// Number of taps required to toggle layer with TT() keys.
+    /// Number of taps required to toggle layer with `TT()` keys.
     /// Range: 1-10, Default: 5
     pub tapping_toggle: u8,
 
@@ -297,21 +297,21 @@ impl TapHoldSettings {
 
     /// Applies a preset, updating all values.
     pub fn apply_preset(&mut self, preset: TapHoldPreset) {
-        *self = preset.settings();
+        *self = Self::from_preset(preset);
     }
 
     /// Marks settings as custom (called when any value is manually changed).
-    pub fn mark_custom(&mut self) {
+    pub const fn mark_custom(&mut self) {
         self.preset = TapHoldPreset::Custom;
     }
 
-    /// Checks if tapping_term differs from QMK default.
+    /// Checks if `tapping_term` differs from QMK default.
     #[must_use]
     pub const fn has_custom_tapping_term(&self) -> bool {
         self.tapping_term != 200
     }
 
-    /// Checks if quick_tap_term is explicitly set.
+    /// Checks if `quick_tap_term` is explicitly set.
     #[must_use]
     pub const fn has_custom_quick_tap_term(&self) -> bool {
         self.quick_tap_term.is_some()
@@ -377,7 +377,7 @@ pub struct LayoutMetadata {
     pub is_template: bool,
     /// Schema version (e.g., "1.0")
     pub version: String,
-    /// QMK layout variant (e.g., "LAYOUT_split_3x6_3_ex2")
+    /// QMK layout variant (e.g., "`LAYOUT_split_3x6_3_ex2`")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_variant: Option<String>,
 }
@@ -679,7 +679,7 @@ impl Layout {
         RgbColor::default()
     }
 
-    /// Resolves the color for a key, respecting the layer's colors_enabled flag.
+    /// Resolves the color for a key, respecting the layer's `colors_enabled` flag.
     ///
     /// When `colors_enabled = false` for a layer:
     /// - Individual key color overrides still work (priority 1)
@@ -725,7 +725,7 @@ impl Layout {
         Some(RgbColor::default())
     }
 
-    /// Resolves the color for a key for display, respecting inactive_key_behavior.
+    /// Resolves the color for a key for display, respecting `inactive_key_behavior`.
     ///
     /// This method considers the `inactive_key_behavior` setting for keys that
     /// don't have an individual color or key category. Keys that would normally
@@ -736,9 +736,9 @@ impl Layout {
     /// - `Off`: Show black (RGB 0, 0, 0)
     /// - `Dim`: Show the layer color at 50% brightness
     ///
-    /// Returns a tuple of (color, is_key_specific) where:
+    /// Returns a tuple of (color, `is_key_specific`) where:
     /// - color: The RGB color to display
-    /// - is_key_specific: true if color came from individual override or key category
+    /// - `is_key_specific`: true if color came from individual override or key category
     #[must_use]
     pub fn resolve_display_color(&self, layer_idx: usize, key: &KeyDefinition) -> (RgbColor, bool) {
         // 1. Individual key color override (highest priority, key-specific)
@@ -810,8 +810,8 @@ impl Layout {
         let (prefix, layer_ref, suffix) = keycode_db.parse_layer_keycode(keycode)?;
 
         // Check if it's a layer ID reference (starts with @)
-        let layer_index = if layer_ref.starts_with('@') {
-            let layer_id = &layer_ref[1..]; // Remove @ prefix
+        let layer_index = if let Some(layer_id) = layer_ref.strip_prefix('@') {
+            // Remove @ prefix
             self.get_layer_index_by_id(layer_id)?
         } else {
             // It's already a number, try to parse it
@@ -819,20 +819,20 @@ impl Layout {
         };
 
         if suffix.is_empty() {
-            Some(format!("{}({})", prefix, layer_index))
+            Some(format!("{prefix}({layer_index})"))
         } else {
-            Some(format!("{}({}{}", prefix, layer_index, suffix))
+            Some(format!("{prefix}({layer_index}{suffix}"))
         }
     }
 
     /// Creates a layer keycode with a reference to a layer by ID.
-    /// Example: create_layer_keycode("MO", "abc-123", None) -> "MO(@abc-123)"
-    /// Example: create_layer_keycode("LT", "abc-123", Some("KC_SPC")) -> "LT(@abc-123, KC_SPC)"
+    /// Example: `create_layer_keycode("MO`", "abc-123", None) -> "MO(@abc-123)"
+    /// Example: `create_layer_keycode("LT`", "abc-123", `Some("KC_SPC`")) -> "LT(@abc-123, `KC_SPC`)"
     #[must_use]
     pub fn create_layer_keycode(prefix: &str, layer_id: &str, extra: Option<&str>) -> String {
         match extra {
-            Some(e) => format!("{}(@{}, {})", prefix, layer_id, e),
-            None => format!("{}(@{})", prefix, layer_id),
+            Some(e) => format!("{prefix}(@{layer_id}, {e})"),
+            None => format!("{prefix}(@{layer_id})"),
         }
     }
 

@@ -143,8 +143,8 @@ fn generate_layer_id() -> String {
     Uuid::new_v4().to_string()
 }
 
-/// Default value for layer_colors_enabled (true)
-fn default_layer_colors_enabled() -> bool {
+/// Default value for `layer_colors_enabled` (true)
+const fn default_layer_colors_enabled() -> bool {
     true
 }
 
@@ -230,12 +230,12 @@ impl Layer {
     }
 
     /// Toggles layer-level RGB colors on/off.
-    pub fn toggle_layer_colors(&mut self) {
+    pub const fn toggle_layer_colors(&mut self) {
         self.layer_colors_enabled = !self.layer_colors_enabled;
     }
 
     /// Sets whether layer-level RGB colors are enabled.
-    pub fn set_layer_colors_enabled(&mut self, enabled: bool) {
+    pub const fn set_layer_colors_enabled(&mut self, enabled: bool) {
         self.layer_colors_enabled = enabled;
     }
 }

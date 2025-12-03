@@ -115,9 +115,9 @@ impl ColorPickerState {
 
         for (ci, palette_color) in self.palette.colors.iter().enumerate() {
             for (si, shade) in palette_color.shades.iter().enumerate() {
-                let dr = (shade.r as i32 - target.r as i32).abs() as u32;
-                let dg = (shade.g as i32 - target.g as i32).abs() as u32;
-                let db = (shade.b as i32 - target.b as i32).abs() as u32;
+                let dr = (i32::from(shade.r) - i32::from(target.r)).abs() as u32;
+                let dg = (i32::from(shade.g) - i32::from(target.g)).abs() as u32;
+                let db = (i32::from(shade.b) - i32::from(target.b)).abs() as u32;
                 let distance = dr * dr + dg * dg + db * db;
                 
                 if distance < best_distance {
@@ -141,7 +141,7 @@ impl ColorPickerState {
     /// Sync RGB values from current palette selection
     pub fn sync_from_palette(&mut self) {
         if let Some(color) = self.palette.color_at(self.selected_color) {
-            if let Some(shade) = color.shades.get(self.selected_shade) {
+            if let Some(shade) = color.shade_at(self.selected_shade) {
                 self.r = shade.r;
                 self.g = shade.g;
                 self.b = shade.b;
@@ -153,11 +153,11 @@ impl ColorPickerState {
     #[must_use]
     pub fn get_selected_shade(&self) -> Option<&crate::models::Shade> {
         self.palette.color_at(self.selected_color)
-            .and_then(|c| c.shades.get(self.selected_shade))
+            .and_then(|c| c.shade_at(self.selected_shade))
     }
 
     /// Switch to next RGB channel (Red -> Green -> Blue -> Red)
-    pub fn next_channel(&mut self) {
+    pub const fn next_channel(&mut self) {
         self.active_channel = match self.active_channel {
             RgbChannel::Red => RgbChannel::Green,
             RgbChannel::Green => RgbChannel::Blue,
@@ -166,7 +166,7 @@ impl ColorPickerState {
     }
 
     /// Switch to previous RGB channel (Red -> Blue -> Green -> Red)
-    pub fn previous_channel(&mut self) {
+    pub const fn previous_channel(&mut self) {
         self.active_channel = match self.active_channel {
             RgbChannel::Red => RgbChannel::Blue,
             RgbChannel::Green => RgbChannel::Red,
@@ -175,7 +175,7 @@ impl ColorPickerState {
     }
 
     /// Increase the active channel value
-    pub fn increase_value(&mut self, amount: u8) {
+    pub const fn increase_value(&mut self, amount: u8) {
         match self.active_channel {
             RgbChannel::Red => self.r = self.r.saturating_add(amount),
             RgbChannel::Green => self.g = self.g.saturating_add(amount),
@@ -184,7 +184,7 @@ impl ColorPickerState {
     }
 
     /// Decrease the active channel value
-    pub fn decrease_value(&mut self, amount: u8) {
+    pub const fn decrease_value(&mut self, amount: u8) {
         match self.active_channel {
             RgbChannel::Red => self.r = self.r.saturating_sub(amount),
             RgbChannel::Green => self.g = self.g.saturating_sub(amount),
@@ -225,7 +225,7 @@ impl ColorPickerState {
     }
 
     /// Move focus between colors and shades
-    pub fn toggle_palette_focus(&mut self) {
+    pub const fn toggle_palette_focus(&mut self) {
         self.palette_focus = match self.palette_focus {
             PaletteFocus::Colors => PaletteFocus::Shades,
             PaletteFocus::Shades => PaletteFocus::Colors,
@@ -378,8 +378,7 @@ fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState,
                 
                 // Get the primary shade color for the dot
                 let shade = color.primary_shade()
-                    .map(|s| Color::Rgb(s.r, s.g, s.b))
-                    .unwrap_or(Color::White);
+                    .map_or(Color::White, |s| Color::Rgb(s.r, s.g, s.b));
                 
                 // Build the display: colored dot + name
                 let dot = "●";
@@ -465,7 +464,7 @@ fn render_shade_bar(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, 
                     width: chunks[i].width,
                     height: 1,
                 };
-                let label_content = format!("{}{}", indicator, label);
+                let label_content = format!("{indicator}{label}");
                 let label_para = Paragraph::new(label_content).style(text_style);
                 f.render_widget(label_para, label_area);
             }
@@ -488,8 +487,8 @@ fn render_preview(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, th
         .style(Style::default().bg(preview_color));
     f.render_widget(preview, chunks[0]);
 
-    // Hex code and color name
-    let hex = picker_state.get_color().to_hex();
+    // Hex code and color name - use pre-computed hex from Shade when available
+    let hex = picker_state.get_selected_shade().map_or_else(|| picker_state.get_color().to_hex(), |s| s.hex.clone());
     let color_name = picker_state.palette.color_at(picker_state.selected_color)
         .map(|c| format!("{}-{}", c.name, 
             picker_state.get_selected_shade()
@@ -672,7 +671,7 @@ fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::R
             clear_color(state);
             Ok(false)
         }
-        KeyCode::Char('c') | KeyCode::Char('C') => {
+        KeyCode::Char('c' | 'C') => {
             // Switch to custom RGB mode
             state.color_picker_state.mode = ColorPickerMode::CustomRgb;
             Ok(false)
@@ -743,7 +742,7 @@ fn handle_rgb_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
             clear_color(state);
             Ok(false)
         }
-        KeyCode::Char('p') | KeyCode::Char('P') => {
+        KeyCode::Char('p' | 'P') => {
             // Switch to palette mode
             state.color_picker_state.mode = ColorPickerMode::Palette;
             Ok(false)

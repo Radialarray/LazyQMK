@@ -1,6 +1,6 @@
 //! Modifier picker dialog for selecting QMK modifiers
 //!
-//! Used for MT() and LM() keycodes that require modifier selection.
+//! Used for `MT()` and `LM()` keycodes that require modifier selection.
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -36,50 +36,52 @@ pub enum QmkModifier {
 
 impl QmkModifier {
     /// All modifiers in display order (left side first, then right side)
-    pub const ALL: [QmkModifier; 8] = [
-        QmkModifier::LCtrl,
-        QmkModifier::LShift,
-        QmkModifier::LAlt,
-        QmkModifier::LGui,
-        QmkModifier::RCtrl,
-        QmkModifier::RShift,
-        QmkModifier::RAlt,
-        QmkModifier::RGui,
+    pub const ALL: [Self; 8] = [
+        Self::LCtrl,
+        Self::LShift,
+        Self::LAlt,
+        Self::LGui,
+        Self::RCtrl,
+        Self::RShift,
+        Self::RAlt,
+        Self::RGui,
     ];
 
     /// Get the QMK macro name for this modifier
-    pub const fn qmk_name(&self) -> &'static str {
+    #[must_use] pub const fn qmk_name(&self) -> &'static str {
         match self {
-            QmkModifier::LCtrl => "MOD_LCTL",
-            QmkModifier::LShift => "MOD_LSFT",
-            QmkModifier::LAlt => "MOD_LALT",
-            QmkModifier::LGui => "MOD_LGUI",
-            QmkModifier::RCtrl => "MOD_RCTL",
-            QmkModifier::RShift => "MOD_RSFT",
-            QmkModifier::RAlt => "MOD_RALT",
-            QmkModifier::RGui => "MOD_RGUI",
+            Self::LCtrl => "MOD_LCTL",
+            Self::LShift => "MOD_LSFT",
+            Self::LAlt => "MOD_LALT",
+            Self::LGui => "MOD_LGUI",
+            Self::RCtrl => "MOD_RCTL",
+            Self::RShift => "MOD_RSFT",
+            Self::RAlt => "MOD_RALT",
+            Self::RGui => "MOD_RGUI",
         }
     }
 
     /// Get display name
-    pub const fn display_name(&self) -> &'static str {
+    #[must_use] pub const fn display_name(&self) -> &'static str {
         match self {
-            QmkModifier::LCtrl => "Ctrl",
-            QmkModifier::LShift => "Shift",
-            QmkModifier::LAlt => "Alt",
-            QmkModifier::LGui => "GUI",
-            QmkModifier::RCtrl => "Ctrl",
-            QmkModifier::RShift => "Shift",
-            QmkModifier::RAlt => "Alt",
-            QmkModifier::RGui => "GUI",
+            Self::LCtrl => "Ctrl",
+            Self::LShift => "Shift",
+            Self::LAlt => "Alt",
+            Self::LGui => "GUI",
+            Self::RCtrl => "Ctrl",
+            Self::RShift => "Shift",
+            Self::RAlt => "Alt",
+            Self::RGui => "GUI",
         }
     }
 
-    /// Check if this is a left-side modifier
-    pub const fn is_left(&self) -> bool {
+    /// Check if this is a left-side modifier.
+    /// Note: Kept for API completeness - useful for modifier display logic.
+    #[allow(dead_code)]
+    #[must_use] pub const fn is_left(&self) -> bool {
         matches!(
             self,
-            QmkModifier::LCtrl | QmkModifier::LShift | QmkModifier::LAlt | QmkModifier::LGui
+            Self::LCtrl | Self::LShift | Self::LAlt | Self::LGui
         )
     }
 }
@@ -95,12 +97,12 @@ pub enum ModifierPreset {
 
 impl ModifierPreset {
     /// Get the modifier bits for this preset
-    pub const fn bits(&self) -> u8 {
+    #[must_use] pub const fn bits(&self) -> u8 {
         match self {
-            ModifierPreset::Meh => {
+            Self::Meh => {
                 QmkModifier::LCtrl as u8 | QmkModifier::LShift as u8 | QmkModifier::LAlt as u8
             }
-            ModifierPreset::Hyper => {
+            Self::Hyper => {
                 QmkModifier::LCtrl as u8
                     | QmkModifier::LShift as u8
                     | QmkModifier::LAlt as u8
@@ -110,10 +112,10 @@ impl ModifierPreset {
     }
 
     /// Get display name
-    pub const fn display_name(&self) -> &'static str {
+    #[must_use] pub const fn display_name(&self) -> &'static str {
         match self {
-            ModifierPreset::Meh => "Meh (C+S+A)",
-            ModifierPreset::Hyper => "Hyper (C+S+A+G)",
+            Self::Meh => "Meh (C+S+A)",
+            Self::Hyper => "Hyper (C+S+A+G)",
         }
     }
 }
@@ -144,18 +146,18 @@ impl ModifierPickerState {
     }
 
     /// Reset to initial state
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.selected_mods = 0;
         self.focus = 0;
     }
 
     /// Toggle a modifier by its bit value
-    pub fn toggle_mod(&mut self, mod_bit: u8) {
+    pub const fn toggle_mod(&mut self, mod_bit: u8) {
         self.selected_mods ^= mod_bit;
     }
 
     /// Check if a modifier is selected
-    pub const fn is_selected(&self, mod_bit: u8) -> bool {
+    #[must_use] pub const fn is_selected(&self, mod_bit: u8) -> bool {
         (self.selected_mods & mod_bit) != 0
     }
 
@@ -183,7 +185,7 @@ impl ModifierPickerState {
     }
 
     /// Move focus up
-    pub fn focus_up(&mut self) {
+    pub const fn focus_up(&mut self) {
         // Layout: 
         // 0-3: left column (LCtrl, LShift, LAlt, LGui)
         // 4-7: right column (RCtrl, RShift, RAlt, RGui)
@@ -200,7 +202,7 @@ impl ModifierPickerState {
     }
 
     /// Move focus down
-    pub fn focus_down(&mut self) {
+    pub const fn focus_down(&mut self) {
         match self.focus {
             0..=2 => self.focus += 1,
             3 => self.focus = 8,    // LGui -> Meh
@@ -213,7 +215,7 @@ impl ModifierPickerState {
     }
 
     /// Move focus left
-    pub fn focus_left(&mut self) {
+    pub const fn focus_left(&mut self) {
         match self.focus {
             4..=7 => self.focus -= 4,  // Right column -> Left column
             9 => self.focus = 8,       // Hyper -> Meh
@@ -222,7 +224,7 @@ impl ModifierPickerState {
     }
 
     /// Move focus right
-    pub fn focus_right(&mut self) {
+    pub const fn focus_right(&mut self) {
         match self.focus {
             0..=3 => self.focus += 4,  // Left column -> Right column
             8 => self.focus = 9,       // Meh -> Hyper
@@ -231,7 +233,7 @@ impl ModifierPickerState {
     }
 
     /// Convert selected modifiers to QMK modifier string
-    /// e.g., "MOD_LCTL | MOD_LSFT"
+    /// e.g., "`MOD_LCTL` | `MOD_LSFT`"
     #[must_use]
     pub fn to_mod_string(&self) -> String {
         if self.selected_mods == 0 {
@@ -249,7 +251,7 @@ impl ModifierPickerState {
     }
 
     /// Check if any modifier is selected
-    pub const fn has_selection(&self) -> bool {
+    #[must_use] pub const fn has_selection(&self) -> bool {
         self.selected_mods != 0
     }
 }

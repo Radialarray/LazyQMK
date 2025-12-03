@@ -1,8 +1,8 @@
 //! Keyboard widget for rendering the visual keyboard layout
 //!
 //! Key rendering with support for:
-//! - Simple keycodes (KC_A, KC_SPC, etc.)
-//! - Tap-hold keycodes (LT, MT, LM, SH_T) with dual-line display
+//! - Simple keycodes (`KC_A`, `KC_SPC`, etc.)
+//! - Tap-hold keycodes (LT, MT, LM, `SH_T`) with dual-line display
 //! - Color type indicators in border (i=individual, k=category, L=layer, d=default)
 //! - RGB color borders based on the color priority system
 
@@ -25,7 +25,7 @@ pub struct KeyboardWidget;
 pub struct TapHoldKeycode {
     /// The hold action (e.g., "L1" for layer 1, "CTL" for Ctrl)
     pub hold: String,
-    /// The tap action (e.g., "A" for KC_A)
+    /// The tap action (e.g., "A" for `KC_A`)
     pub tap: String,
     /// The type of tap-hold (for display purposes)
     #[allow(dead_code)]
@@ -33,7 +33,7 @@ pub struct TapHoldKeycode {
 }
 
 /// Types of tap-hold keycodes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TapHoldKind {
     /// LT(layer, keycode) - Layer on hold, keycode on tap
     LayerTap,
@@ -41,7 +41,7 @@ pub enum TapHoldKind {
     ModTap,
     /// LM(layer, mod) - Layer + modifier on hold
     LayerMod,
-    /// SH_T(keycode) - Swap hands on hold, keycode on tap
+    /// `SH_T(keycode)` - Swap hands on hold, keycode on tap
     SwapHandsTap,
 }
 
@@ -120,8 +120,7 @@ impl KeyboardWidget {
 
             // Check if this key should flash (paste feedback)
             let is_flashing = state.flash_highlight
-                .map(|(layer, pos, _)| layer == state.current_layer && pos == key.position)
-                .unwrap_or(false);
+                .is_some_and(|(layer, pos, _)| layer == state.current_layer && pos == key.position);
 
             // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
             let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
@@ -134,7 +133,7 @@ impl KeyboardWidget {
                     
                     // Check if the color is too dark to be visible (e.g., black from "Off" behavior)
                     // If brightness is below threshold, use theme.text_muted for visibility
-                    let brightness = (rgb.r as u16 + rgb.g as u16 + rgb.b as u16) / 3;
+                    let brightness = (u16::from(rgb.r) + u16::from(rgb.g) + u16::from(rgb.b)) / 3;
                     let color = if brightness < 30 {
                         // Color too dark for TUI visibility, use muted theme color
                         theme.text_muted
@@ -369,7 +368,7 @@ impl KeyboardWidget {
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
                 let tap_display = Self::format_simple_keycode(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
-                    hold: format!("L{}", layer_display),
+                    hold: format!("L{layer_display}"),
                     tap: tap_display,
                     kind: TapHoldKind::LayerTap,
                 })
@@ -403,7 +402,7 @@ impl KeyboardWidget {
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
                 let mod_display = Self::format_modifier(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
-                    hold: format!("L{}+", layer_display),
+                    hold: format!("L{layer_display}+"),
                     tap: mod_display,
                     kind: TapHoldKind::LayerMod,
                 })
@@ -423,8 +422,7 @@ impl KeyboardWidget {
     /// Resolve layer reference to display string
     fn resolve_layer_display(layer_ref: &str, state: &AppState) -> String {
         // If it's a @uuid reference, find the layer number
-        if layer_ref.starts_with('@') {
-            let uuid = &layer_ref[1..];
+        if let Some(uuid) = layer_ref.strip_prefix('@') {
             for (i, layer) in state.layout.layers.iter().enumerate() {
                 if layer.id == uuid {
                     return i.to_string();

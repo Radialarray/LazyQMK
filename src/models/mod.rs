@@ -13,7 +13,7 @@ pub mod visual_layout_mapping;
 
 // Re-export all model types
 pub use category::Category;
-pub use color_palette::{ColorPalette, PaletteColor, Shade};
+pub use color_palette::{ColorPalette, Shade};
 pub use keyboard_geometry::{KeyGeometry, KeyboardGeometry};
 pub use layer::{KeyDefinition, Layer, Position};
 pub use layout::{HoldDecisionMode, InactiveKeyBehavior, Layout, LayoutMetadata, TapHoldPreset, TapHoldSettings};

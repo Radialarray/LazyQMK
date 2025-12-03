@@ -1,6 +1,6 @@
 //! Key editor dialog for viewing and editing individual key properties.
 //!
-//! This dialog opens when pressing Enter on an already-assigned key (not KC_NO/KC_TRNS).
+//! This dialog opens when pressing Enter on an already-assigned key (not `KC_NO/KC_TRNS`).
 //! It provides:
 //! - Visual display of current keycode with tap-hold breakdown
 //! - Description field for documentation
@@ -48,16 +48,16 @@ pub enum ComboKeycodeType {
         /// Keycode sent on tap
         tap_key: String,
     },
-    /// Mod-Tap with named modifier: LCTL_T(keycode), etc.
+    /// Mod-Tap with named modifier: `LCTL_T(keycode)`, etc.
     ModTapNamed {
-        /// Modifier prefix (LCTL_T, RALT_T, etc.)
+        /// Modifier prefix (`LCTL_T`, `RALT_T`, etc.)
         prefix: String,
         /// Keycode sent on tap
         tap_key: String,
     },
     /// Mod-Tap with custom modifier: MT(modifier, keycode)
     ModTapCustom {
-        /// Custom modifier string (MOD_LCTL, etc.)
+        /// Custom modifier string (`MOD_LCTL`, etc.)
         modifier: String,
         /// Keycode sent on tap
         tap_key: String,
@@ -83,11 +83,11 @@ impl ComboKeycodeType {
     #[must_use]
     pub fn to_keycode(&self) -> String {
         match self {
-            Self::LayerTap { layer, tap_key } => format!("LT({}, {})", layer, tap_key),
-            Self::ModTapNamed { prefix, tap_key } => format!("{}({})", prefix, tap_key),
-            Self::ModTapCustom { modifier, tap_key } => format!("MT({}, {})", modifier, tap_key),
-            Self::LayerMod { layer, modifier } => format!("LM({}, {})", layer, modifier),
-            Self::ModCombo { prefix, base_key } => format!("{}({})", prefix, base_key),
+            Self::LayerTap { layer, tap_key } => format!("LT({layer}, {tap_key})"),
+            Self::ModTapNamed { prefix, tap_key } => format!("{prefix}({tap_key})"),
+            Self::ModTapCustom { modifier, tap_key } => format!("MT({modifier}, {tap_key})"),
+            Self::LayerMod { layer, modifier } => format!("LM({layer}, {modifier})"),
+            Self::ModCombo { prefix, base_key } => format!("{prefix}({base_key})"),
         }
     }
     
@@ -153,7 +153,7 @@ pub struct KeyEditorState {
     pub position: Position,
     /// Layer index of the key being edited
     pub layer_idx: usize,
-    /// Current mode (View or EditDescription)
+    /// Current mode (View or `EditDescription`)
     pub mode: KeyEditorMode,
     /// Buffer for editing description
     pub description_buffer: String,
@@ -198,7 +198,7 @@ impl KeyEditorState {
     }
 
     /// Start editing the description
-    pub fn start_edit_description(&mut self) {
+    pub const fn start_edit_description(&mut self) {
         self.mode = KeyEditorMode::EditDescription;
         self.cursor_position = self.description_buffer.len();
     }
@@ -256,26 +256,26 @@ impl KeyEditorState {
     }
 
     /// Move cursor left
-    pub fn cursor_left(&mut self) {
+    pub const fn cursor_left(&mut self) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
         }
     }
 
     /// Move cursor right
-    pub fn cursor_right(&mut self) {
+    pub const fn cursor_right(&mut self) {
         if self.cursor_position < self.description_buffer.len() {
             self.cursor_position += 1;
         }
     }
 
     /// Move cursor to start
-    pub fn cursor_home(&mut self) {
+    pub const fn cursor_home(&mut self) {
         self.cursor_position = 0;
     }
 
     /// Move cursor to end
-    pub fn cursor_end(&mut self) {
+    pub const fn cursor_end(&mut self) {
         self.cursor_position = self.description_buffer.len();
     }
 
@@ -294,7 +294,7 @@ impl KeyEditorState {
 /// Parsed keycode information from the database
 #[derive(Debug, Clone)]
 pub struct ParsedKeycode {
-    /// The category of the keycode (mod_tap, mod_combo, layers, etc.)
+    /// The category of the keycode (`mod_tap`, `mod_combo`, layers, etc.)
     pub category: String,
     /// Human-readable name from the database
     pub name: String,
@@ -321,7 +321,7 @@ pub fn parse_keycode_with_db(db: &KeycodeDb, keycode: &str) -> Option<ParsedKeyc
     // For parameterized keycodes, extract prefix and look up template
     if let Some(paren_pos) = keycode.find('(') {
         let prefix = &keycode[..paren_pos];
-        let template = format!("{}()", prefix);
+        let template = format!("{prefix}()");
         
         if let Some(def) = db.get(&template) {
             // Extract parameters from the keycode
@@ -343,7 +343,7 @@ pub fn parse_keycode_with_db(db: &KeycodeDb, keycode: &str) -> Option<ParsedKeyc
     None
 }
 
-/// Parse a keycode into a ComboKeycodeType for editing individual parts.
+/// Parse a keycode into a `ComboKeycodeType` for editing individual parts.
 /// Returns None if the keycode is not a combo type (not editable in parts).
 #[must_use]
 pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycodeType> {
@@ -397,7 +397,7 @@ pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycode
 }
 
 /// Parse a keycode and return display information for the key editor.
-/// Returns (line1_label, line1_value, line2_label, line2_value) for display.
+/// Returns (`line1_label`, `line1_value`, `line2_label`, `line2_value`) for display.
 #[must_use]
 pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, String, String, String)> {
     let parsed = parse_keycode_with_db(db, keycode)?;
@@ -427,7 +427,7 @@ pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, S
                     // Layer-Tap: Hold for layer, tap for keycode
                     let layer = parsed.params.first().cloned().unwrap_or_default();
                     let tap_key = parsed.params.get(1).cloned().unwrap_or_default();
-                    Some(("Hold".to_string(), format!("Layer {}", layer), "Tap".to_string(), tap_key))
+                    Some(("Hold".to_string(), format!("Layer {layer}"), "Tap".to_string(), tap_key))
                 }
                 "LM" => {
                     // Layer-Mod: Layer + modifier
@@ -440,6 +440,14 @@ pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, S
         }
         _ => None,
     }
+}
+
+/// Get the database description for a keycode (if available).
+/// This provides helpful context about what the keycode does.
+#[must_use]
+pub fn get_keycode_description(db: &KeycodeDb, keycode: &str) -> Option<String> {
+    parse_keycode_with_db(db, keycode)
+        .and_then(|parsed| parsed.description)
 }
 
 /// Check if a keycode is "assigned" (not empty or transparent)
@@ -539,22 +547,28 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     let tap_hold_content = if let Some((label1, val1, label2, val2)) = get_keycode_breakdown(&state.keycode_db, &key.keycode) {
         vec![
             Line::from(vec![
-                Span::styled(format!("{}: ", label1), Style::default().fg(theme.text_muted)),
+                Span::styled(format!("{label1}: "), Style::default().fg(theme.text_muted)),
                 Span::styled(val1, Style::default().fg(theme.accent)),
             ]),
             Line::from(vec![
-                Span::styled(format!("{}: ", label2), Style::default().fg(theme.text_muted)),
+                Span::styled(format!("{label2}: "), Style::default().fg(theme.text_muted)),
                 Span::styled(val2, Style::default().fg(theme.success)),
             ]),
         ]
     } else {
-        // Simple keycode, no breakdown needed
-        vec![
-            Line::from(Span::styled(
-                "(Simple keycode - no hold/tap or modifier)",
+        // Simple keycode - show database description if available
+        let description = get_keycode_description(&state.keycode_db, &key.keycode);
+        if let Some(desc) = description {
+            vec![Line::from(Span::styled(
+                desc,
                 Style::default().fg(theme.text_muted),
-            )),
-        ]
+            ))]
+        } else {
+            vec![Line::from(Span::styled(
+                "(Simple keycode)",
+                Style::default().fg(theme.text_muted),
+            ))]
+        }
     };
 
     let tap_hold_display = Paragraph::new(tap_hold_content)
@@ -572,7 +586,7 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         // Show cursor in edit mode
         let before_cursor = &editor_state.description_buffer[..editor_state.cursor_position];
         let after_cursor = &editor_state.description_buffer[editor_state.cursor_position..];
-        format!("{}█{}", before_cursor, after_cursor)
+        format!("{before_cursor}█{after_cursor}")
     } else if editor_state.description_buffer.is_empty() {
         "(No description - press D to add)".to_string()
     } else {
@@ -769,17 +783,14 @@ pub fn handle_input(
                         state.key_editor_state.combo_edit = Some((ComboEditPart::Tap, combo_type.clone()));
                         
                         // Open keycode picker for tap action (or modifier picker for LM)
-                        match &combo_type {
-                            ComboKeycodeType::LayerMod { .. } => {
-                                state.active_popup = Some(PopupType::ModifierPicker);
-                                state.modifier_picker_state.reset();
-                                state.set_status("Select modifier for layer-mod");
-                            }
-                            _ => {
-                                state.active_popup = Some(PopupType::KeycodePicker);
-                                state.keycode_picker_state = super::keycode_picker::KeycodePickerState::new();
-                                state.set_status("Select tap keycode");
-                            }
+                        if let ComboKeycodeType::LayerMod { .. } = &combo_type {
+                            state.active_popup = Some(PopupType::ModifierPicker);
+                            state.modifier_picker_state.reset();
+                            state.set_status("Select modifier for layer-mod");
+                        } else {
+                            state.active_popup = Some(PopupType::KeycodePicker);
+                            state.keycode_picker_state = super::keycode_picker::KeycodePickerState::new();
+                            state.set_status("Select tap keycode");
                         }
                     } else {
                         state.set_status("This keycode doesn't have a tap action to edit");

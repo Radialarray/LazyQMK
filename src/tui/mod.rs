@@ -95,10 +95,10 @@ pub enum ParameterizedKeycodeType {
     ModTap,
     /// LM(layer, mod) - Layer with modifier active
     LayerMod,
-    /// SH_T(kc) - Hold to swap hands, tap for keycode
+    /// `SH_T(kc)` - Hold to swap hands, tap for keycode
     SwapHandsTap,
-    /// Simple mod-tap like LCTL_T(kc), LSFT_T(kc) - modifier is fixed, only need tap keycode
-    /// param1 stores the prefix (e.g., "LCTL_T", "LGUI_T")
+    /// Simple mod-tap like `LCTL_T(kc)`, `LSFT_T(kc)` - modifier is fixed, only need tap keycode
+    /// param1 stores the prefix (e.g., "`LCTL_T`", "`LGUI_T`")
     SimpleModTap,
     /// Single modifier keycode like OSM(mod) - only needs modifier selection
     /// param1 stores the prefix (e.g., "OSM")
@@ -141,33 +141,33 @@ impl PendingKeycodeState {
             Some(ParameterizedKeycodeType::LayerTap) => {
                 let layer = self.param1.as_ref()?;
                 let keycode = self.param2.as_ref()?;
-                Some(format!("LT({}, {})", layer, keycode))
+                Some(format!("LT({layer}, {keycode})"))
             }
             Some(ParameterizedKeycodeType::ModTap) => {
                 let modifier = self.param1.as_ref()?;
                 let keycode = self.param2.as_ref()?;
-                Some(format!("MT({}, {})", modifier, keycode))
+                Some(format!("MT({modifier}, {keycode})"))
             }
             Some(ParameterizedKeycodeType::LayerMod) => {
                 let layer = self.param1.as_ref()?;
                 let modifier = self.param2.as_ref()?;
-                Some(format!("LM({}, {})", layer, modifier))
+                Some(format!("LM({layer}, {modifier})"))
             }
             Some(ParameterizedKeycodeType::SwapHandsTap) => {
                 let keycode = self.param1.as_ref()?;
-                Some(format!("SH_T({})", keycode))
+                Some(format!("SH_T({keycode})"))
             }
             Some(ParameterizedKeycodeType::SimpleModTap) => {
                 // param1 is the prefix (e.g., "LCTL_T"), param2 is the tap keycode
                 let prefix = self.param1.as_ref()?;
                 let keycode = self.param2.as_ref()?;
-                Some(format!("{}({})", prefix, keycode))
+                Some(format!("{prefix}({keycode})"))
             }
             Some(ParameterizedKeycodeType::SingleMod) => {
                 // param1 is the prefix (e.g., "OSM"), param2 is the modifier
                 let prefix = self.param1.as_ref()?;
                 let modifier = self.param2.as_ref()?;
-                Some(format!("{}({})", prefix, modifier))
+                Some(format!("{prefix}({modifier})"))
             }
             None => None,
         }
@@ -383,7 +383,7 @@ pub struct AppState {
     pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
-    /// Flash highlight position (for paste feedback) - (layer, position, remaining_frames)
+    /// Flash highlight position (for paste feedback) - (layer, position, `remaining_frames`)
     pub flash_highlight: Option<(usize, Position, u8)>,
     /// Visual selection mode for multi-key operations
     pub selection_mode: Option<SelectionMode>,
@@ -419,7 +419,7 @@ impl AppState {
     /// - `"keebart/corne_choc_pro/standard"` → `"keebart/corne_choc_pro"`
     /// - `"keebart/corne_choc_pro"` → `"keebart/corne_choc_pro"`
     /// - `"crkbd"` → `"crkbd"`
-    pub fn extract_base_keyboard(keyboard_path: &str) -> String {
+    #[must_use] pub fn extract_base_keyboard(keyboard_path: &str) -> String {
         let keyboard_parts: Vec<&str> = keyboard_path.split('/').collect();
         if keyboard_parts.len() > 2 
             && ["standard", "mini", "normal", "full", "compact"].contains(&keyboard_parts[keyboard_parts.len() - 1]) {
@@ -560,7 +560,7 @@ impl AppState {
 
         // Get the key count for the selected layout to determine variant
         let layout_def = info.layouts.get(layout_name)
-            .context(format!("Layout '{}' not found in keyboard info.json", layout_name))?;
+            .context(format!("Layout '{layout_name}' not found in keyboard info.json"))?;
         let key_count = layout_def.layout.len();
 
         // Determine keyboard variant first so we can look for RGB matrix config
@@ -608,7 +608,7 @@ impl AppState {
     ///
     /// This ensures that:
     /// - All key positions in the geometry have corresponding keys in each layer
-    /// - Keys are added as KC_NO for new positions
+    /// - Keys are added as `KC_NO` for new positions
     /// - Existing keys at valid positions are preserved
     ///
     /// Call this after loading a layout to ensure keys match the geometry.
@@ -1117,7 +1117,7 @@ fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<
                 
                 match arboard::Clipboard::new().and_then(|mut clipboard| clipboard.set_text(log_text)) {
                     Ok(()) => state.set_status("Build log copied to clipboard"),
-                    Err(e) => state.set_error(&format!("Failed to copy to clipboard: {}", e)),
+                    Err(e) => state.set_error(&format!("Failed to copy to clipboard: {e}")),
                 }
             } else {
                 state.set_error("No build log available");
@@ -1218,23 +1218,20 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
                             if old_path.exists() {
                                 // Build new filename from new name (sanitized)
                                 let sanitized_name = new_name
-                                    .replace('/', "_")
-                                    .replace('\\', "_")
-                                    .replace(':', "_")
-                                    .replace(' ', "_");
+                                    .replace(['/', '\\', ':', ' '], "_");
                                 
                                 if let Some(parent) = old_path.parent() {
-                                    let new_path = parent.join(format!("{}.md", sanitized_name));
+                                    let new_path = parent.join(format!("{sanitized_name}.md"));
                                     
                                     // Only rename if the new path is different
                                     if new_path != *old_path {
                                         match std::fs::rename(old_path, &new_path) {
                                             Ok(()) => {
                                                 state.source_path = Some(new_path);
-                                                state.set_status(format!("Layout renamed to '{}'", new_name));
+                                                state.set_status(format!("Layout renamed to '{new_name}'"));
                                             }
                                             Err(e) => {
-                                                state.set_error(format!("Failed to rename file: {}", e));
+                                                state.set_error(format!("Failed to rename file: {e}"));
                                             }
                                         }
                                     } else {
@@ -1361,7 +1358,7 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                     if let Some(key) = state.get_selected_key_mut() {
                         key.keycode = new_keycode.clone();
                         state.mark_dirty();
-                        state.set_status(format!("Updated: {}", new_keycode));
+                        state.set_status(format!("Updated: {new_keycode}"));
                     }
                     
                     state.active_popup = Some(PopupType::KeyEditor);
@@ -1395,7 +1392,7 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = keycode.clone();
                             state.mark_dirty();
-                            state.set_status(format!("Assigned: {}", keycode));
+                            state.set_status(format!("Assigned: {keycode}"));
                         }
                     }
                 }
@@ -1409,7 +1406,7 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
     }
 }
 
-/// Handle input for tap keycode picker (second stage of LT/MT/SH_T)
+/// Handle input for tap keycode picker (second stage of `LT/MT/SH_T`)
 fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
@@ -1441,7 +1438,7 @@ fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = final_keycode.clone();
                             state.mark_dirty();
-                            state.set_status(format!("Assigned: {}", final_keycode));
+                            state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
                     
@@ -1519,7 +1516,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                 if let Some(key) = state.get_selected_key_mut() {
                     key.keycode = new_keycode.clone();
                     state.mark_dirty();
-                    state.set_status(format!("Updated: {}", new_keycode));
+                    state.set_status(format!("Updated: {new_keycode}"));
                 }
                 
                 state.active_popup = Some(PopupType::KeyEditor);
@@ -1544,7 +1541,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = final_keycode.clone();
                             state.mark_dirty();
-                            state.set_status(format!("Assigned: {}", final_keycode));
+                            state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
                     
@@ -1560,7 +1557,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = final_keycode.clone();
                             state.mark_dirty();
-                            state.set_status(format!("Assigned: {}", final_keycode));
+                            state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
                     
@@ -1742,7 +1739,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                         SettingItem::TappingToggle => {
                             state.settings_manager_state.start_editing_numeric(
                                 *setting,
-                                state.layout.tap_hold_settings.tapping_toggle as u16,
+                                u16::from(state.layout.tap_hold_settings.tapping_toggle),
                                 1,
                                 10,
                             );
@@ -1798,7 +1795,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                     state.set_status("Select keyboard - Type to filter, Enter to select");
                                 }
                                 Err(e) => {
-                                    state.set_error(format!("Failed to scan keyboards: {}", e));
+                                    state.set_error(format!("Failed to scan keyboards: {e}"));
                                 }
                             }
                         }
@@ -2066,9 +2063,9 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                         };
                         state.config.build.output_format = format.to_string();
                         if let Err(e) = state.config.save() {
-                            state.set_status(format!("Failed to save config: {}", e));
+                            state.set_status(format!("Failed to save config: {e}"));
                         } else {
-                            state.set_status(format!("Output format set to: {}", format));
+                            state.set_status(format!("Output format set to: {format}"));
                         }
                         state.settings_manager_state.cancel();
                     }
@@ -2114,7 +2111,7 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
         SettingItem::TappingTerm => {
             state.layout.tap_hold_settings.tapping_term = value;
             state.layout.tap_hold_settings.mark_custom();
-            state.set_status(format!("Tapping term set to: {}ms", value));
+            state.set_status(format!("Tapping term set to: {value}ms"));
         }
         SettingItem::QuickTapTerm => {
             state.layout.tap_hold_settings.quick_tap_term = if value == 0 { None } else { Some(value) };
@@ -2122,14 +2119,14 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             let display = if value == 0 {
                 "Auto".to_string()
             } else {
-                format!("{}ms", value)
+                format!("{value}ms")
             };
-            state.set_status(format!("Quick tap term set to: {}", display));
+            state.set_status(format!("Quick tap term set to: {display}"));
         }
         SettingItem::TappingToggle => {
             state.layout.tap_hold_settings.tapping_toggle = value as u8;
             state.layout.tap_hold_settings.mark_custom();
-            state.set_status(format!("Tapping toggle set to: {} taps", value));
+            state.set_status(format!("Tapping toggle set to: {value} taps"));
         }
         SettingItem::FlowTapTerm => {
             state.layout.tap_hold_settings.flow_tap_term = if value == 0 { None } else { Some(value) };
@@ -2137,9 +2134,9 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             let display = if value == 0 {
                 "Disabled".to_string()
             } else {
-                format!("{}ms", value)
+                format!("{value}ms")
             };
-            state.set_status(format!("Flow tap term set to: {}", display));
+            state.set_status(format!("Flow tap term set to: {display}"));
         }
         SettingItem::RgbTimeout => {
             // value is in seconds, convert to milliseconds for storage
@@ -2149,9 +2146,9 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             } else if value >= 60 && value % 60 == 0 {
                 format!("{} min", value / 60)
             } else {
-                format!("{} sec", value)
+                format!("{value} sec")
             };
-            state.set_status(format!("RGB timeout set to: {}", display));
+            state.set_status(format!("RGB timeout set to: {display}"));
         }
         _ => {}
     }
@@ -2166,21 +2163,21 @@ fn apply_boolean_setting(state: &mut AppState, setting: settings_manager::Settin
             state.layout.tap_hold_settings.retro_tapping = value;
             state.layout.tap_hold_settings.mark_custom();
             let display = if value { "On" } else { "Off" };
-            state.set_status(format!("Retro tapping set to: {}", display));
+            state.set_status(format!("Retro tapping set to: {display}"));
         }
         SettingItem::ChordalHold => {
             state.layout.tap_hold_settings.chordal_hold = value;
             state.layout.tap_hold_settings.mark_custom();
             let display = if value { "On" } else { "Off" };
-            state.set_status(format!("Chordal hold set to: {}", display));
+            state.set_status(format!("Chordal hold set to: {display}"));
         }
         SettingItem::ShowHelpOnStartup => {
             state.config.ui.show_help_on_startup = value;
             if let Err(e) = state.config.save() {
-                state.set_status(format!("Failed to save config: {}", e));
+                state.set_status(format!("Failed to save config: {e}"));
             } else {
                 let display = if value { "On" } else { "Off" };
-                state.set_status(format!("Show help on startup set to: {}", display));
+                state.set_status(format!("Show help on startup set to: {display}"));
             }
         }
         _ => {}
@@ -2193,12 +2190,12 @@ fn apply_string_setting(state: &mut AppState, setting: settings_manager::Setting
 
     match setting {
         SettingItem::KeymapName => {
-            let keymap = if value.is_empty() { "default".to_string() } else { value.clone() };
+            let keymap = if value.is_empty() { "default".to_string() } else { value };
             state.config.build.keymap = keymap.clone();
             if let Err(e) = state.config.save() {
-                state.set_status(format!("Failed to save config: {}", e));
+                state.set_status(format!("Failed to save config: {e}"));
             } else {
-                state.set_status(format!("Keymap name set to: {}", keymap));
+                state.set_status(format!("Keymap name set to: {keymap}"));
             }
         }
         _ => {}
@@ -2214,7 +2211,7 @@ fn apply_path_setting(state: &mut AppState, setting: settings_manager::SettingIt
         SettingItem::QmkFirmwarePath => {
             state.config.paths.qmk_firmware = if value.is_empty() { None } else { Some(std::path::PathBuf::from(&value)) };
             if let Err(e) = state.config.save() {
-                state.set_status(format!("Failed to save config: {}", e));
+                state.set_status(format!("Failed to save config: {e}"));
             } else {
                 state.set_status(format!("QMK firmware path set to: {}", if value.is_empty() { "(not set)" } else { &value }));
             }
@@ -2222,9 +2219,9 @@ fn apply_path_setting(state: &mut AppState, setting: settings_manager::SettingIt
         SettingItem::OutputDir => {
             state.config.build.output_dir = std::path::PathBuf::from(&value);
             if let Err(e) = state.config.save() {
-                state.set_status(format!("Failed to save config: {}", e));
+                state.set_status(format!("Failed to save config: {e}"));
             } else {
-                state.set_status(format!("Output directory set to: {}", value));
+                state.set_status(format!("Output directory set to: {value}"));
             }
         }
         _ => {}
@@ -2609,7 +2606,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 state.selected_keys.clear();
                 state.selection_mode = None;
                 state.mark_dirty();
-                state.set_status(format!("Cleared {} keys", count));
+                state.set_status(format!("Cleared {count} keys"));
             } else if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = "KC_TRNS".to_string();
                 state.mark_dirty();
@@ -2757,8 +2754,15 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
 
         // Paste key (p or Ctrl+V)
         (KeyCode::Char('p'), KeyModifiers::NONE) | (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
+            // Check if clipboard has content
+            if !state.clipboard.has_content() {
+                state.set_error("Nothing to paste");
+                return Ok(false);
+            }
+            
             // Check for multi-key paste first
-            if let Some(multi) = state.clipboard.get_multi_content().cloned() {
+            if state.clipboard.is_multi() {
+                if let Some(multi) = state.clipboard.get_multi_content().cloned() {
                 // Calculate target positions relative to current position
                 // The anchor is the reference point, we need to shift all keys
                 let anchor = multi.anchor;
@@ -2840,7 +2844,8 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 state.flash_highlight = Some((state.current_layer, current, 5));
                 
                 state.mark_dirty();
-                state.set_status(format!("Pasted {} keys", paste_count));
+                state.set_status(format!("Pasted {paste_count} keys"));
+                }
             } else if let Some(content) = state.clipboard.get_content().cloned() {
                 // Single key paste (original logic)
                 // Get cut source before modifying clipboard
@@ -2891,19 +2896,27 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
 
         // Undo last paste operation (Ctrl+Z)
         (KeyCode::Char('z'), KeyModifiers::CONTROL) => {
-            if let Some(undo) = state.clipboard.take_undo() {
-                // Restore original keys
-                for (pos, content) in undo.original_keys {
-                    if let Some(layer) = state.layout.layers.get_mut(undo.layer_index) {
-                        if let Some(key) = layer.keys.iter_mut().find(|k| k.position == pos) {
-                            key.keycode = content.keycode;
-                            key.color_override = content.color_override;
-                            key.category_id = content.category_id;
+            // Use get_undo() to peek at undo info before taking it
+            if let Some(undo_info) = state.clipboard.get_undo() {
+                let key_count = undo_info.original_keys.len();
+                let layer_idx = undo_info.layer_index;
+                let description = undo_info.description.clone();
+                
+                // Now take and apply the undo
+                if let Some(undo) = state.clipboard.take_undo() {
+                    // Restore original keys
+                    for (pos, content) in undo.original_keys {
+                        if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
+                            if let Some(key) = layer.keys.iter_mut().find(|k| k.position == pos) {
+                                key.keycode = content.keycode;
+                                key.color_override = content.color_override;
+                                key.category_id = content.category_id;
+                            }
                         }
                     }
+                    state.mark_dirty();
+                    state.set_status(format!("Undone {key_count} key(s): {description}"));
                 }
-                state.mark_dirty();
-                state.set_status("Undone paste operation");
             } else {
                 state.set_error("Nothing to undo");
             }
@@ -2914,19 +2927,13 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
         (KeyCode::Enter, _) => {
             // Check if key is assigned (read-only first)
             let key_info = state.get_selected_key().map(|key| {
-                (key.position, key_editor::is_key_assigned(&key.keycode), key.description.clone())
+                (key.clone(), key_editor::is_key_assigned(&key.keycode))
             });
             
-            if let Some((position, is_assigned, description)) = key_info {
+            if let Some((key, is_assigned)) = key_info {
                 if is_assigned {
-                    // Key is assigned - open key editor
-                    // Re-initialize editor state with copied data
-                    state.key_editor_state.position = position;
-                    state.key_editor_state.layer_idx = state.current_layer;
-                    state.key_editor_state.mode = key_editor::KeyEditorMode::View;
-                    state.key_editor_state.description_buffer = description.clone().unwrap_or_default();
-                    state.key_editor_state.cursor_position = state.key_editor_state.description_buffer.len();
-                    state.key_editor_state.original_description = description;
+                    // Key is assigned - open key editor using init_for_key
+                    state.key_editor_state.init_for_key(&key, state.current_layer);
                     state.active_popup = Some(PopupType::KeyEditor);
                     state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
                 } else {
@@ -3145,7 +3152,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Escape - cancel selection mode or cut operation
+        // Escape - cancel selection mode, cut operation, or clear clipboard
         (KeyCode::Esc, _) => {
             if state.selection_mode.is_some() {
                 state.selection_mode = None;
@@ -3154,6 +3161,10 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             } else if state.clipboard.is_cut() {
                 state.clipboard.cancel_cut();
                 state.set_status("Cut cancelled");
+            } else if state.clipboard.has_content() {
+                // Clear clipboard if there's content but no active cut
+                state.clipboard.clear();
+                state.set_status("Clipboard cleared");
             }
             Ok(false)
         }
@@ -3243,7 +3254,7 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
         .determine_keyboard_variant(&qmk_path, &base_keyboard, key_count)
         .unwrap_or_else(|e| {
             // Log warning but fall back to configured keyboard path
-            eprintln!("Warning: Could not determine variant: {}", e);
+            eprintln!("Warning: Could not determine variant: {e}");
             state.config.build.keyboard.clone()
         });
 
@@ -3554,9 +3565,9 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                     if let Some(enabled) = state.layout.toggle_layer_colors(selected_idx) {
                         state.mark_dirty();
                         state.set_status(if enabled {
-                            format!("Layer {} colors enabled", selected_idx)
+                            format!("Layer {selected_idx} colors enabled")
                         } else {
-                            format!("Layer {} colors disabled", selected_idx)
+                            format!("Layer {selected_idx} colors disabled")
                         });
                     }
                     Ok(false)
@@ -3647,10 +3658,10 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                         state.layer_manager_state.selected = new_index;
                                         state.mark_dirty();
                                         state.layer_manager_state.cancel();
-                                        state.set_status(format!("Layer '{}' created", input));
+                                        state.set_status(format!("Layer '{input}' created"));
                                     }
                                     Err(e) => {
-                                        state.set_error(format!("Failed to create layer: {}", e));
+                                        state.set_error(format!("Failed to create layer: {e}"));
                                     }
                                 }
                             }
@@ -3661,7 +3672,7 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                     layer.name = input.clone();
                                     state.mark_dirty();
                                     state.layer_manager_state.cancel();
-                                    state.set_status(format!("Layer renamed to '{}'", input));
+                                    state.set_status(format!("Layer renamed to '{input}'"));
                                 }
                             }
                             ManagerMode::Duplicating { source_index, .. } => {
@@ -3689,10 +3700,10 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                             state.layer_manager_state.selected = new_index;
                                             state.mark_dirty();
                                             state.layer_manager_state.cancel();
-                                            state.set_status(format!("Duplicated as '{}'", input));
+                                            state.set_status(format!("Duplicated as '{input}'"));
                                         }
                                         Err(e) => {
-                                            state.set_error(format!("Failed to duplicate layer: {}", e));
+                                            state.set_error(format!("Failed to duplicate layer: {e}"));
                                         }
                                     }
                                 }
@@ -3791,7 +3802,7 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                             }
                             state.mark_dirty();
                             state.layer_manager_state.cancel();
-                            state.set_status(format!("Copied layer {} to layer {}", source_index, target_selected));
+                            state.set_status(format!("Copied layer {source_index} to layer {target_selected}"));
                         }
                     }
                     Ok(false)
@@ -3860,7 +3871,7 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                     
                     state.mark_dirty();
                     state.layer_manager_state.cancel();
-                    state.set_status(format!("Swapped layers {} and {}", source_index, target_selected));
+                    state.set_status(format!("Swapped layers {source_index} and {target_selected}"));
                     Ok(false)
                 }
                 _ => Ok(false),

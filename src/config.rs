@@ -116,7 +116,7 @@ impl BuildConfig {
             "standard"
         };
 
-        let variant_path = format!("{}/{}", base_keyboard, variant);
+        let variant_path = format!("{base_keyboard}/{variant}");
         let variant_dir = qmk_path.join("keyboards").join(&variant_path);
 
         // Validate the variant directory exists

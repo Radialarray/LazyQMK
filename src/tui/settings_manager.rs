@@ -38,17 +38,19 @@ pub enum SettingGroup {
 
 impl SettingGroup {
     /// Returns all groups in display order.
+    /// Note: Kept for API completeness - useful for iterating over all groups.
+    #[allow(dead_code)]
     #[must_use]
-    pub const fn all() -> &'static [SettingGroup] {
+    pub const fn all() -> &'static [Self] {
         &[
             // Global settings first
-            SettingGroup::Paths,
-            SettingGroup::Build,
-            SettingGroup::Ui,
+            Self::Paths,
+            Self::Build,
+            Self::Ui,
             // Per-layout settings
-            SettingGroup::General,
-            SettingGroup::Rgb,
-            SettingGroup::TapHold,
+            Self::General,
+            Self::Rgb,
+            Self::TapHold,
         ]
     }
 
@@ -114,7 +116,7 @@ pub enum SettingItem {
     HoldMode,
     /// Whether to send tap on release after tapping term
     RetroTapping,
-    /// Number of taps to toggle layer with TT()
+    /// Number of taps to toggle layer with `TT()`
     TappingToggle,
     /// Flow tap timing for home-row mod optimization
     FlowTapTerm,
@@ -125,31 +127,31 @@ pub enum SettingItem {
 impl SettingItem {
     /// Returns all settings in a single flat list.
     #[must_use]
-    pub const fn all() -> &'static [SettingItem] {
+    pub const fn all() -> &'static [Self] {
         &[
             // Paths (Global)
-            SettingItem::QmkFirmwarePath,
+            Self::QmkFirmwarePath,
             // Build (Global)
-            SettingItem::Keyboard,
-            SettingItem::LayoutVariant,
-            SettingItem::KeymapName,
-            SettingItem::OutputFormat,
-            SettingItem::OutputDir,
+            Self::Keyboard,
+            Self::LayoutVariant,
+            Self::KeymapName,
+            Self::OutputFormat,
+            Self::OutputDir,
             // UI (Global)
-            SettingItem::ShowHelpOnStartup,
+            Self::ShowHelpOnStartup,
             // General (Per-Layout)
-            SettingItem::InactiveKeyBehavior,
+            Self::InactiveKeyBehavior,
             // RGB (Per-Layout)
-            SettingItem::RgbTimeout,
+            Self::RgbTimeout,
             // Tap-Hold (Per-Layout)
-            SettingItem::TapHoldPreset,
-            SettingItem::TappingTerm,
-            SettingItem::QuickTapTerm,
-            SettingItem::HoldMode,
-            SettingItem::RetroTapping,
-            SettingItem::TappingToggle,
-            SettingItem::FlowTapTerm,
-            SettingItem::ChordalHold,
+            Self::TapHoldPreset,
+            Self::TappingTerm,
+            Self::QuickTapTerm,
+            Self::HoldMode,
+            Self::RetroTapping,
+            Self::TappingToggle,
+            Self::FlowTapTerm,
+            Self::ChordalHold,
         ]
     }
 
@@ -254,7 +256,7 @@ pub enum ManagerMode {
         /// Currently highlighted option index
         selected_option: usize,
     },
-    /// Editing a numeric value (tapping_term, quick_tap_term, etc.)
+    /// Editing a numeric value (`tapping_term`, `quick_tap_term`, etc.)
     EditingNumeric {
         /// Which setting is being edited
         setting: SettingItem,
@@ -265,7 +267,7 @@ pub enum ManagerMode {
         /// Maximum allowed value
         max: u16,
     },
-    /// Toggling a boolean value (retro_tapping, chordal_hold)
+    /// Toggling a boolean value (`retro_tapping`, `chordal_hold`)
     TogglingBoolean {
         /// Which setting is being toggled
         setting: SettingItem,
@@ -319,7 +321,7 @@ impl SettingsManagerState {
     }
 
     /// Move selection up
-    pub fn select_previous(&mut self, setting_count: usize) {
+    pub const fn select_previous(&mut self, setting_count: usize) {
         if setting_count > 0 {
             if self.selected > 0 {
                 self.selected -= 1;
@@ -330,7 +332,7 @@ impl SettingsManagerState {
     }
 
     /// Move selection down
-    pub fn select_next(&mut self, setting_count: usize) {
+    pub const fn select_next(&mut self, setting_count: usize) {
         if setting_count > 0 {
             self.selected = (self.selected + 1) % setting_count;
         }
@@ -382,7 +384,7 @@ impl SettingsManagerState {
     }
 
     /// Move option selection up (for enum selectors)
-    pub fn option_previous(&mut self, option_count: usize) {
+    pub const fn option_previous(&mut self, option_count: usize) {
         match &mut self.mode {
             ManagerMode::SelectingInactiveKeyBehavior { selected_option }
             | ManagerMode::SelectingTapHoldPreset { selected_option }
@@ -402,7 +404,7 @@ impl SettingsManagerState {
     }
 
     /// Move option selection down (for enum selectors)
-    pub fn option_next(&mut self, option_count: usize) {
+    pub const fn option_next(&mut self, option_count: usize) {
         match &mut self.mode {
             ManagerMode::SelectingInactiveKeyBehavior { selected_option }
             | ManagerMode::SelectingTapHoldPreset { selected_option }
@@ -419,7 +421,7 @@ impl SettingsManagerState {
 
     /// Get the currently selected option index
     #[must_use]
-    pub fn get_selected_option(&self) -> Option<usize> {
+    pub const fn get_selected_option(&self) -> Option<usize> {
         match &self.mode {
             ManagerMode::SelectingInactiveKeyBehavior { selected_option }
             | ManagerMode::SelectingTapHoldPreset { selected_option }
@@ -486,7 +488,7 @@ impl SettingsManagerState {
 
     /// Get the current boolean value being toggled
     #[must_use]
-    pub fn get_boolean_value(&self) -> Option<bool> {
+    pub const fn get_boolean_value(&self) -> Option<bool> {
         if let ManagerMode::TogglingBoolean { value, .. } = &self.mode {
             Some(*value)
         } else {
@@ -550,7 +552,7 @@ impl SettingsManagerState {
 
     /// Get the selected output format index
     #[must_use]
-    pub fn get_output_format_selected(&self) -> Option<usize> {
+    pub const fn get_output_format_selected(&self) -> Option<usize> {
         if let ManagerMode::SelectingOutputFormat { selected_option } = &self.mode {
             Some(*selected_option)
         } else {
@@ -563,7 +565,9 @@ impl SettingsManagerState {
         self.mode = ManagerMode::Browsing;
     }
 
-    /// Check if we're in browsing mode
+    /// Check if we're in browsing mode.
+    /// Note: Kept for API completeness - pattern matching on mode is preferred in practice.
+    #[allow(dead_code)]
     #[must_use]
     pub const fn is_browsing(&self) -> bool {
         matches!(self.mode, ManagerMode::Browsing)
@@ -710,8 +714,16 @@ fn render_settings_list(
             "  "
         };
 
+        // Show indicator for global settings (stored in config.toml)
+        let scope_indicator = if setting.is_global() {
+            Span::styled("[G] ", Style::default().fg(theme.text_muted))
+        } else {
+            Span::styled("[L] ", Style::default().fg(theme.text_muted))
+        };
+
         let content = Line::from(vec![
             Span::styled(marker, Style::default().fg(theme.primary)),
+            scope_indicator,
             Span::styled(setting.display_name(), style),
             Span::styled(": ", Style::default().fg(theme.text_muted)),
             Span::styled(value, Style::default().fg(theme.success)),
@@ -730,8 +742,7 @@ fn render_settings_list(
     // Show description of selected setting
     let selected_setting = settings.get(state.selected);
     let description = selected_setting
-        .map(SettingItem::description)
-        .unwrap_or("");
+        .map_or("", SettingItem::description);
 
     // Render help text
     let help_text = vec![
@@ -770,9 +781,7 @@ fn get_setting_value_display(
         SettingItem::QmkFirmwarePath => config
             .paths
             .qmk_firmware
-            .as_ref()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "<not set>".to_string()),
+            .as_ref().map_or_else(|| "<not set>".to_string(), |p| p.display().to_string()),
         // Global: Build
         SettingItem::Keyboard => config.build.keyboard.clone(),
         SettingItem::LayoutVariant => config.build.layout.clone(),
@@ -799,14 +808,14 @@ fn get_setting_value_display(
             } else if rgb_timeout_ms >= 1000 && rgb_timeout_ms % 1000 == 0 {
                 format!("{} sec", rgb_timeout_ms / 1000)
             } else {
-                format!("{}ms", rgb_timeout_ms)
+                format!("{rgb_timeout_ms}ms")
             }
         }
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),
         SettingItem::QuickTapTerm => match tap_hold.quick_tap_term {
-            Some(term) => format!("{}ms", term),
+            Some(term) => format!("{term}ms"),
             None => "Auto".to_string(),
         },
         SettingItem::HoldMode => tap_hold.hold_mode.display_name().to_string(),
@@ -820,7 +829,7 @@ fn get_setting_value_display(
         }
         SettingItem::TappingToggle => format!("{} taps", tap_hold.tapping_toggle),
         SettingItem::FlowTapTerm => match tap_hold.flow_tap_term {
-            Some(term) => format!("{}ms", term),
+            Some(term) => format!("{term}ms"),
             None => "Disabled".to_string(),
         },
         SettingItem::ChordalHold => {
@@ -999,7 +1008,7 @@ fn render_numeric_editor(
     f.render_widget(title_text, chunks[0]);
 
     // Input field with cursor
-    let display_value = format!("{}▌", value);
+    let display_value = format!("{value}▌");
     let input_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
@@ -1014,7 +1023,7 @@ fn render_numeric_editor(
         Line::from(setting.description()),
         Line::from(""),
         Line::from(Span::styled(
-            format!("Range: {} to {}", min, max),
+            format!("Range: {min} to {max}"),
             Style::default().fg(theme.text_muted),
         )),
     ];
@@ -1077,7 +1086,7 @@ fn render_string_editor(
     f.render_widget(title_text, chunks[0]);
 
     // Input field with cursor
-    let display_value = format!("{}▌", value);
+    let display_value = format!("{value}▌");
     let input_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
@@ -1226,7 +1235,7 @@ fn render_path_editor(
     f.render_widget(title_text, chunks[0]);
 
     // Input field with cursor
-    let display_value = format!("{}▌", value);
+    let display_value = format!("{value}▌");
     let input_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))

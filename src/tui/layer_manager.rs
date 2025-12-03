@@ -84,7 +84,7 @@ impl LayerManagerState {
     }
 
     /// Move selection up
-    pub fn select_previous(&mut self, layer_count: usize) {
+    pub const fn select_previous(&mut self, layer_count: usize) {
         if layer_count > 0 {
             if self.selected > 0 {
                 self.selected -= 1;
@@ -95,7 +95,7 @@ impl LayerManagerState {
     }
 
     /// Move selection down
-    pub fn select_next(&mut self, layer_count: usize) {
+    pub const fn select_next(&mut self, layer_count: usize) {
         if layer_count > 0 {
             self.selected = (self.selected + 1) % layer_count;
         }
@@ -164,7 +164,7 @@ impl LayerManagerState {
     }
 
     /// Navigate in copy-to or swap mode
-    pub fn select_target_previous(&mut self, layer_count: usize) {
+    pub const fn select_target_previous(&mut self, layer_count: usize) {
         match &mut self.mode {
             ManagerMode::CopyingTo { source_index, target_selected }
             | ManagerMode::Swapping { source_index, target_selected } => {
@@ -185,7 +185,7 @@ impl LayerManagerState {
     }
 
     /// Navigate in copy-to or swap mode
-    pub fn select_target_next(&mut self, layer_count: usize) {
+    pub const fn select_target_next(&mut self, layer_count: usize) {
         match &mut self.mode {
             ManagerMode::CopyingTo { source_index, target_selected }
             | ManagerMode::Swapping { source_index, target_selected } => {
@@ -225,7 +225,7 @@ impl LayerManagerState {
     }
 
     /// Get mutable reference to current input text
-    pub fn get_input_mut(&mut self) -> Option<&mut String> {
+    pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
             ManagerMode::CreatingName { input }
             | ManagerMode::Renaming { input, .. }
@@ -395,7 +395,7 @@ fn render_layer_list(
 
             let content = Line::from(vec![
                 color_box,
-                Span::styled(format!("Layer {}: ", i), Style::default().fg(theme.text_muted)),
+                Span::styled(format!("Layer {i}: "), Style::default().fg(theme.text_muted)),
                 Span::styled(&layer.name, style),
                 colors_indicator,
             ]);
@@ -531,7 +531,7 @@ fn render_delete_confirmation(
     let info = Line::from(vec![
         Span::raw("Layer "),
         Span::styled(
-            format!("{}", layer_index),
+            format!("{layer_index}"),
             Style::default().fg(theme.accent),
         ),
         Span::raw(": "),
@@ -598,7 +598,7 @@ fn render_layer_picker(
 
     // Source info
     let source_name = layers.get(source_index).map_or("?", |l| l.name.as_str());
-    let info = Paragraph::new(format!("From Layer {}: {}", source_index, source_name))
+    let info = Paragraph::new(format!("From Layer {source_index}: {source_name}"))
         .alignment(Alignment::Center)
         .style(Style::default().fg(theme.text));
     f.render_widget(info, chunks[0]);
@@ -621,7 +621,7 @@ fn render_layer_picker(
             let prefix = if is_selected { "→ " } else { "  " };
             let content = Line::from(vec![
                 Span::raw(prefix),
-                Span::styled(format!("Layer {}: ", i), Style::default().fg(theme.text_muted)),
+                Span::styled(format!("Layer {i}: "), Style::default().fg(theme.text_muted)),
                 Span::styled(&layer.name, style),
             ]);
 
@@ -630,7 +630,7 @@ fn render_layer_picker(
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(format!("Select Target - {}", title)))
+        .block(Block::default().borders(Borders::ALL).title(format!("Select Target - {title}")))
         .highlight_style(Style::default().bg(theme.surface));
 
     f.render_widget(list, chunks[1]);

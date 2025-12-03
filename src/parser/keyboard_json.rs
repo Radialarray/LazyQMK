@@ -82,7 +82,7 @@ pub struct RgbMatrixConfig {
     pub layout: Vec<RgbLedEntry>,
 }
 
-/// RGB LED entry from rgb_matrix.layout array
+/// RGB LED entry from `rgb_matrix.layout` array
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RgbLedEntry {
     /// Matrix position [row, col] for this LED
@@ -196,7 +196,7 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 /// Parses a QMK info.json file by keyboard name.
 ///
 /// This helper supports both base keyboard paths (e.g., "crkbd") and
-/// variant paths (e.g., "keebart/corne_choc_pro/standard"). If the
+/// variant paths (e.g., "`keebart/corne_choc_pro/standard`"). If the
 /// variant directory does not contain its own `info.json`, it falls back
 /// to the base keyboard directory so keyboards that store `info.json`
 /// only at the root still work.
@@ -205,7 +205,7 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 ///
 /// * `qmk_path` - Path to QMK firmware root directory
 /// * `keyboard` - Keyboard name (e.g., "crkbd", "ferris/sweep",
-///   "keebart/corne_choc_pro/standard")
+///   "`keebart/corne_choc_pro/standard`")
 ///
 /// # Returns
 ///
@@ -245,12 +245,12 @@ pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkIn
 /// # Arguments
 ///
 /// * `qmk_path` - Path to QMK firmware root directory
-/// * `keyboard` - Full keyboard path including variant (e.g., "keebart/corne_choc_pro/standard")
+/// * `keyboard` - Full keyboard path including variant (e.g., "`keebart/corne_choc_pro/standard`")
 ///
 /// # Returns
 ///
 /// Parsed variant keyboard.json structure, or None if not found
-pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
+#[must_use] pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
     let keyboards_dir = qmk_path.join("keyboards");
     let keyboard_json_path = keyboards_dir.join(keyboard).join("keyboard.json");
 
@@ -273,7 +273,7 @@ pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<Va
 ///
 /// # Returns
 ///
-/// HashMap from (row, col) to LED index
+/// `HashMap` from (row, col) to LED index
 #[must_use]
 pub fn build_matrix_to_led_map(rgb_config: &RgbMatrixConfig) -> HashMap<(u8, u8), u8> {
     let mut map = HashMap::new();
@@ -379,7 +379,7 @@ pub fn build_keyboard_geometry(
 
 /// Builds `KeyboardGeometry` from QMK info.json layout definition with optional RGB matrix mapping.
 ///
-/// When `matrix_to_led` is provided (from parsing the variant's keyboard.json rgb_matrix section),
+/// When `matrix_to_led` is provided (from parsing the variant's keyboard.json `rgb_matrix` section),
 /// it uses the physical LED wiring order instead of the layout array order. This is critical for
 /// keyboards with serpentine LED wiring where the physical LED order doesn't match the logical
 /// key order.

@@ -2,7 +2,7 @@
 //!
 //! When a user selects a layer keycode (MO, TG, TO, etc.), this dialog
 //! allows them to pick which layer the keycode should reference.
-//! The selected layer is stored as a UUID reference (@layer_id) rather
+//! The selected layer is stored as a UUID reference (@`layer_id`) rather
 //! than a numeric index, making it stable across layer reordering.
 
 use ratatui::{
@@ -24,7 +24,7 @@ pub struct LayerPickerState {
     pub selected: usize,
     /// The keycode prefix (e.g., "MO", "TG", "TO")
     pub keycode_prefix: String,
-    /// Extra parameter for compound keycodes (e.g., "KC_SPC" for LT)
+    /// Extra parameter for compound keycodes (e.g., "`KC_SPC`" for LT)
     pub extra_param: Option<String>,
 }
 
@@ -54,7 +54,10 @@ impl LayerPickerState {
         }
     }
 
-    /// Initialize with a keycode prefix and extra parameter (for LT, LM)
+    /// Initialize with a keycode prefix and extra parameter (for LT, LM).
+    /// Note: Currently the flow sets `extra_param` after layer selection,
+    /// but this method is kept for API consistency and potential future use.
+    #[allow(dead_code)]
     pub fn with_prefix_and_extra(prefix: impl Into<String>, extra: impl Into<String>) -> Self {
         Self {
             selected: 0,
@@ -71,7 +74,7 @@ impl LayerPickerState {
     }
 
     /// Move selection up
-    pub fn select_previous(&mut self, layer_count: usize) {
+    pub const fn select_previous(&mut self, layer_count: usize) {
         if layer_count > 0 {
             if self.selected > 0 {
                 self.selected -= 1;
@@ -82,7 +85,7 @@ impl LayerPickerState {
     }
 
     /// Move selection down
-    pub fn select_next(&mut self, layer_count: usize) {
+    pub const fn select_next(&mut self, layer_count: usize) {
         if layer_count > 0 {
             self.selected = (self.selected + 1) % layer_count;
         }
@@ -133,7 +136,7 @@ pub fn render_layer_picker(f: &mut Frame, state: &LayerPickerState, layers: &[La
         .borders(Borders::ALL)
         .style(Style::default().bg(theme.background));
     
-    let preview_text = Paragraph::new(format!("Preview: {}", preview))
+    let preview_text = Paragraph::new(format!("Preview: {preview}"))
         .block(title_block)
         .style(Style::default().fg(theme.text));
     f.render_widget(preview_text, chunks[0]);
@@ -145,7 +148,7 @@ pub fn render_layer_picker(f: &mut Frame, state: &LayerPickerState, layers: &[La
         .map(|(idx, layer)| {
             let content = Line::from(vec![
                 Span::styled(
-                    format!("Layer {}: ", idx),
+                    format!("Layer {idx}: "),
                     Style::default().fg(theme.text_muted),
                 ),
                 Span::styled(
