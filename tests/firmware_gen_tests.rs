@@ -2,7 +2,7 @@
 //!
 //! Tests the complete flow:
 //! 1. Validation of layouts before generation
-//! 2. Generation of keymap.c and vial.json files
+//! 2. Generation of keymap.c and config.h files
 //! 3. File writing with atomic operations
 //! 4. Coordinate system transformations (visual -> matrix -> LED)
 
@@ -123,7 +123,7 @@ fn test_generation_with_parameterized_keycodes() {
     
     assert!(result.is_ok(), "Generation with parameterized keycodes should succeed");
     
-    let (keymap_path, _, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should be able to read keymap.c");
     
     // LT with @uuid should be resolved to index
@@ -377,14 +377,10 @@ fn test_generation_creates_files() {
         result.err()
     );
 
-    let (keymap_path, vial_path, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     assert!(
         PathBuf::from(&keymap_path).exists(),
         "keymap.c should be created"
-    );
-    assert!(
-        PathBuf::from(&vial_path).exists(),
-        "vial.json should be created"
     );
 }
 
@@ -404,7 +400,7 @@ fn test_generation_keymap_c_structure() {
     let result = generator.generate();
     assert!(result.is_ok(), "Generation should succeed");
 
-    let (keymap_path, _, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should be able to read keymap.c");
 
     // Assert - Check for expected C code structure
@@ -440,45 +436,12 @@ fn test_generation_keymap_c_structure() {
     );
 }
 
+/// DEPRECATED: vial.json is no longer generated since migration to standard QMK
 #[test]
+#[ignore]
 fn test_generation_vial_json_structure() {
-    // Arrange
-    let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let layout = create_test_layout();
-    let geometry = create_test_geometry();
-    let mapping = create_test_mapping();
-    let config = create_test_config(&temp_dir);
-
-    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-
-    // Act
-    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
-    let result = generator.generate();
-    assert!(result.is_ok(), "Generation should succeed");
-
-    let (_, vial_path, _) = result.unwrap();
-    let content = fs::read_to_string(&vial_path).expect("Should be able to read vial.json");
-
-    // Assert - Check for valid JSON structure
-    let json: serde_json::Value =
-        serde_json::from_str(&content).expect("vial.json should be valid JSON");
-
-    assert!(json.get("name").is_some(), "Should have name field");
-    assert!(json.get("layouts").is_some(), "Should have layouts field");
-    assert!(
-        json.get("layouts").unwrap().get("keymap").is_some(),
-        "Should have keymap layout definition"
-    );
-
-    // Check layout array has correct number of keys (6 keys in our test layout)
-    let layout_array = json["layouts"]["keymap"]
-        .as_array()
-        .expect("Layout should be an array");
-    assert_eq!(
-        layout_array.len(),
-        6,
-        "Should have 6 keys in layout definition"
-    );
+    // This test is deprecated - vial.json is no longer generated
+    // Kept for reference
 }
 
 #[test]
@@ -497,7 +460,7 @@ fn test_generation_led_ordering() {
     let result = generator.generate();
     assert!(result.is_ok(), "Generation should succeed");
 
-    let (keymap_path, _, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should be able to read keymap.c");
 
     // Assert - Keys should be ordered by LED index (0, 1, 2, 3, 4, 5)
@@ -548,7 +511,7 @@ fn test_generation_with_categories() {
     // Assert
     assert!(result.is_ok(), "Generation with categories should succeed");
 
-    let (keymap_path, _, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should be able to read keymap.c");
 
     // Categories don't affect C code generation, but should not cause errors
@@ -577,14 +540,11 @@ fn test_generation_atomic_write() {
     );
 
     // Assert - Files should exist and be readable
-    let (keymap_path, vial_path, _) = result2.unwrap();
+    let (keymap_path, _) = result2.unwrap();
     let keymap_content =
         fs::read_to_string(&keymap_path).expect("Should read keymap.c after overwrite");
-    let vial_content =
-        fs::read_to_string(&vial_path).expect("Should read vial.json after overwrite");
 
     assert!(!keymap_content.is_empty(), "keymap.c should not be empty");
-    assert!(!vial_content.is_empty(), "vial.json should not be empty");
 }
 
 #[test]
@@ -618,27 +578,17 @@ fn test_full_pipeline_validation_to_generation() {
         result.err()
     );
 
-    let (keymap_path, vial_path, _) = result.unwrap();
+    let (keymap_path, _) = result.unwrap();
     assert!(
         PathBuf::from(&keymap_path).exists(),
         "keymap.c should exist"
     );
-    assert!(PathBuf::from(&vial_path).exists(), "vial.json should exist");
 
     // Verify file contents are non-empty and valid
     let keymap_content = fs::read_to_string(&keymap_path).unwrap();
-    let vial_content = fs::read_to_string(&vial_path).unwrap();
 
     assert!(
         keymap_content.len() > 100,
         "keymap.c should have substantial content"
     );
-    assert!(
-        vial_content.len() > 50,
-        "vial.json should have substantial content"
-    );
-
-    // Verify vial.json is valid JSON
-    let _: serde_json::Value =
-        serde_json::from_str(&vial_content).expect("vial.json should be valid JSON");
 }

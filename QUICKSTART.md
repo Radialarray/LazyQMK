@@ -1,6 +1,6 @@
 # Keyboard Configurator - Quick Start Guide
 
-A terminal-based keyboard layout editor for mechanical keyboards with QMK firmware support.
+A terminal-based keyboard layout editor for mechanical keyboards with standard QMK firmware support.
 
 ## Installation
 
@@ -10,7 +10,7 @@ git clone https://github.com/Radialarray/Keyboard-Configurator.git
 cd keyboard-configurator
 
 # Initialize QMK submodule
-git submodule update --init --recursive vial-qmk-keebart
+git submodule update --init --recursive qmk_firmware
 
 # Build in release mode
 cargo build --release
@@ -104,7 +104,7 @@ Categories help organize keys by function (navigation, symbols, modifiers, etc.)
 ### 5. Firmware Generation
 
 **Generate firmware files:**
-1. Press `Ctrl+G` to generate `keymap.c` and `vial.json`
+1. Press `Ctrl+G` to generate `keymap.c` and `config.h`
 2. Files are generated based on your configuration
 
 **Build firmware:**
@@ -153,7 +153,7 @@ Categories help organize keys by function (navigation, symbols, modifiers, etc.)
 - `Ctrl+Q` - Quit
 
 ### Firmware
-- `Ctrl+G` - Generate firmware files
+- `Ctrl+G` - Generate firmware files (keymap.c and config.h)
 - `Ctrl+B` - Build firmware in background
 - `Ctrl+L` - View build log
 

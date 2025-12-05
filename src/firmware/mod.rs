@@ -1,7 +1,7 @@
 //! Firmware generation and compilation.
 //!
-//! This module handles generating keymap.c and vial.json files,
-//! as well as background compilation of QMK firmware.
+//! This module handles generating keymap.c and config.h files,
+//! as well as background compilation of QMK firmware using `qmk compile`.
 
 pub mod builder;
 pub mod generator;
