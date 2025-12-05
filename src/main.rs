@@ -540,30 +540,37 @@ fn main() -> Result<()> {
         // Check for errors
         result?;
     } else {
-        // No file argument provided - check if config exists
-        match config::Config::load() {
-            Ok(config) => {
-                // Config exists - show layout picker
-                println!("No layout file specified.");
-                println!();
-                run_layout_picker(&config)?;
-            }
-            Err(_) => {
-                // No config exists or config invalid - suggest running wizard
-                println!("Welcome! It looks like this is your first time running Keyboard TUI.");
-                println!();
-                println!("To get started, you need to configure the application.");
-                println!("Run the setup wizard:");
-                println!();
-                println!("  keyboard_tui --init");
-                println!();
-                println!("Or, if you already have a layout file:");
-                println!();
-                println!("  keyboard_tui path/to/layout.md");
-                println!();
-                println!("For more information, run:");
-                println!();
-                println!("  keyboard_tui --help");
+        // No file argument provided - check if config exists and is properly configured
+        if !config::Config::exists() {
+            // No config file exists - automatically run the onboarding wizard
+            println!("Welcome! It looks like this is your first time running Keyboard TUI.");
+            println!();
+            println!("Starting the setup wizard...");
+            println!();
+            run_onboarding_wizard()?;
+        } else {
+            // Config file exists - try to load it
+            match config::Config::load() {
+                Ok(config) if config.is_configured() => {
+                    // Config exists and is properly configured - show layout picker
+                    println!("No layout file specified.");
+                    println!();
+                    run_layout_picker(&config)?;
+                }
+                Ok(_) => {
+                    // Config exists but is not properly configured (missing QMK path)
+                    println!("Configuration is incomplete. Starting the setup wizard...");
+                    println!();
+                    run_onboarding_wizard()?;
+                }
+                Err(e) => {
+                    // Config file exists but failed to load (corrupted, etc.)
+                    eprintln!("Warning: Failed to load config: {e}");
+                    eprintln!();
+                    println!("Starting the setup wizard to create a new configuration...");
+                    println!();
+                    run_onboarding_wizard()?;
+                }
             }
         }
     }

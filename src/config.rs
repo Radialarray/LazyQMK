@@ -183,6 +183,25 @@ impl Config {
         }
     }
 
+    /// Checks if the config file exists on disk.
+    ///
+    /// Returns true if config.toml exists, false otherwise.
+    #[must_use]
+    pub fn exists() -> bool {
+        Self::config_file_path()
+            .map(|path| path.exists())
+            .unwrap_or(false)
+    }
+
+    /// Checks if the configuration has been properly set up.
+    ///
+    /// A config is considered "configured" if the QMK firmware path is set.
+    /// This is used to detect first-run scenarios where the wizard should be shown.
+    #[must_use]
+    pub fn is_configured(&self) -> bool {
+        self.paths.qmk_firmware.is_some()
+    }
+
     /// Gets the platform-specific config directory path.
     ///
     /// - Linux: `~/.config/KeyboardConfigurator/`
@@ -354,6 +373,20 @@ mod tests {
         assert_eq!(config.build.keymap, "default");
         assert_eq!(config.build.output_format, "uf2");
         assert!(config.ui.show_help_on_startup);
+        // New config should not be considered configured
+        assert!(!config.is_configured());
+    }
+
+    #[test]
+    fn test_config_is_configured() {
+        let mut config = Config::new();
+        
+        // Without QMK path, config is not configured
+        assert!(!config.is_configured());
+        
+        // With QMK path set, config is configured
+        config.paths.qmk_firmware = Some(PathBuf::from("/some/path"));
+        assert!(config.is_configured());
     }
 
     #[test]
