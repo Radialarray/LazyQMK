@@ -107,6 +107,15 @@ impl WizardStep {
     }
 }
 
+/// Focus state for keyboard selection step
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyboardSelectionFocus {
+    /// Focus is on the filter input field
+    FilterInput,
+    /// Focus is on the keyboard list
+    List,
+}
+
 /// Onboarding wizard state
 #[derive(Debug, Clone)]
 pub struct OnboardingWizardState {
@@ -122,6 +131,8 @@ pub struct OnboardingWizardState {
     pub keyboard_filter: String,
     /// Selected keyboard index in list
     pub keyboard_selected_index: usize,
+    /// Focus state for keyboard selection (filter input vs list)
+    pub keyboard_selection_focus: KeyboardSelectionFocus,
     /// List of available layouts (populated after keyboard is selected)
     pub available_layouts: Vec<String>,
     /// Selected layout index in list
@@ -145,6 +156,7 @@ impl OnboardingWizardState {
             available_keyboards: Vec::new(),
             keyboard_filter: String::new(),
             keyboard_selected_index: 0,
+            keyboard_selection_focus: KeyboardSelectionFocus::FilterInput,
             available_layouts: Vec::new(),
             layout_selected_index: 0,
             error_message: None,
@@ -177,6 +189,7 @@ impl OnboardingWizardState {
             available_keyboards: keyboards,
             keyboard_filter: String::new(),
             keyboard_selected_index: 0,
+            keyboard_selection_focus: KeyboardSelectionFocus::FilterInput,
             available_layouts: Vec::new(),
             layout_selected_index: 0,
             error_message: None,
@@ -215,6 +228,7 @@ impl OnboardingWizardState {
             available_keyboards: keyboards,
             keyboard_filter: String::new(),
             keyboard_selected_index: 0,
+            keyboard_selection_focus: KeyboardSelectionFocus::FilterInput,
             available_layouts: Vec::new(),
             layout_selected_index: 0,
             error_message: None,
@@ -439,13 +453,8 @@ impl OnboardingWizardState {
                 .context("Failed to set QMK path")?;
         }
 
-        if let Some(keyboard) = self.inputs.get("keyboard") {
-            config.set_keyboard(keyboard.clone());
-        }
-
-        if let Some(layout) = self.inputs.get("layout") {
-            config.set_layout(layout.clone());
-        }
+        // Note: keyboard and layout are now stored per-layout in metadata, not in config
+        // The wizard collects these for creating a new layout template
 
         if let Some(output_path) = self.inputs.get("output_path") {
             config.build.output_dir = PathBuf::from(output_path);
@@ -467,15 +476,8 @@ impl OnboardingWizardState {
             wizard.input_buffer = qmk_path.display().to_string();
         }
 
-        // Pre-populate keyboard
-        if !config.build.keyboard.is_empty() {
-            wizard.inputs.insert("keyboard".to_string(), config.build.keyboard.clone());
-        }
-
-        // Pre-populate layout
-        if !config.build.layout.is_empty() {
-            wizard.inputs.insert("layout".to_string(), config.build.layout.clone());
-        }
+        // Note: keyboard and layout are now per-layout in metadata, not in config
+        // The wizard is for initial setup only
 
         // Pre-populate output path
         wizard.inputs.insert("output_path".to_string(), config.build.output_dir.display().to_string());
@@ -615,13 +617,26 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         .constraints([
             Constraint::Length(3), // Filter input
             Constraint::Min(5),    // Keyboard list
+            Constraint::Length(2), // Help text
         ])
         .split(area);
 
-    // Render filter input
+    // Render filter input with focus indicator
+    let filter_focused = state.keyboard_selection_focus == KeyboardSelectionFocus::FilterInput;
+    let filter_title = if filter_focused {
+        "Search [FOCUSED - Type to filter]"
+    } else {
+        "Search"
+    };
+    let filter_border_style = if filter_focused {
+        Style::default().fg(theme.accent)
+    } else {
+        Style::default().fg(theme.primary)
+    };
+    
     let filter_input = Paragraph::new(format!("Filter: {}_", state.keyboard_filter))
-        .style(Style::default().fg(theme.accent))
-        .block(Block::default().borders(Borders::ALL).title("Search").style(Style::default().fg(theme.primary).bg(theme.background)));
+        .style(Style::default().fg(if filter_focused { theme.accent } else { theme.text }))
+        .block(Block::default().borders(Borders::ALL).title(filter_title).style(filter_border_style.bg(theme.background)));
     f.render_widget(filter_input, chunks[0]);
 
     // Get filtered keyboards
@@ -642,12 +657,29 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         })
         .collect();
 
-    let list = List::new(keyboards)
-        .block(Block::default().borders(Borders::ALL).title(format!(
+    // List with focus indicator
+    let list_focused = state.keyboard_selection_focus == KeyboardSelectionFocus::List;
+    let list_title = if list_focused {
+        format!(
+            "Keyboards [FOCUSED] ({} of {} total)",
+            filtered_keyboards.len(),
+            state.available_keyboards.len()
+        )
+    } else {
+        format!(
             "Available Keyboards ({} of {} total)",
             filtered_keyboards.len(),
             state.available_keyboards.len()
-        )).style(Style::default().fg(theme.primary).bg(theme.background)))
+        )
+    };
+    let list_border_style = if list_focused {
+        Style::default().fg(theme.accent)
+    } else {
+        Style::default().fg(theme.primary)
+    };
+
+    let list = List::new(keyboards)
+        .block(Block::default().borders(Borders::ALL).title(list_title).style(list_border_style.bg(theme.background)))
         .highlight_style(
             Style::default()
                 .fg(theme.accent)
@@ -655,6 +687,17 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
         );
 
     f.render_widget(list, chunks[1]);
+
+    // Help text
+    let help_text = if filter_focused {
+        "Tab: Switch to list | Enter: Select (if 1 result) | Esc: Clear filter or back"
+    } else {
+        "↑↓/jk: Navigate | Enter: Select | Tab: Back to filter | Esc: Back to filter"
+    };
+    let help = Paragraph::new(help_text)
+        .style(Style::default().fg(theme.text_muted))
+        .alignment(Alignment::Center);
+    f.render_widget(help, chunks[2]);
 }
 
 fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
@@ -832,46 +875,72 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
             }
             _ => {}
         },
-        WizardStep::KeyboardSelection => match key.code {
-            KeyCode::Up | KeyCode::Char('k') => {
-                if state.keyboard_selected_index > 0 {
-                    state.keyboard_selected_index -= 1;
+        WizardStep::KeyboardSelection => match state.keyboard_selection_focus {
+            KeyboardSelectionFocus::FilterInput => match key.code {
+                KeyCode::Tab => {
+                    // Switch focus to list
+                    state.keyboard_selection_focus = KeyboardSelectionFocus::List;
                 }
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                let filtered_count = state.get_filtered_keyboards().len();
-                if state.keyboard_selected_index < filtered_count.saturating_sub(1) {
-                    state.keyboard_selected_index += 1;
+                KeyCode::Enter => {
+                    // Enter from filter: if only one result, select it; otherwise switch to list
+                    let filtered = state.get_filtered_keyboards();
+                    if filtered.len() == 1 {
+                        state.next_step()?;
+                    } else if !filtered.is_empty() {
+                        state.keyboard_selection_focus = KeyboardSelectionFocus::List;
+                    }
                 }
-            }
-            KeyCode::Enter => {
-                state.next_step()?;
-            }
-            KeyCode::Char(c) => {
-                // Add character to filter
-                state.keyboard_filter.push(c);
-                // Reset selection to first item when filter changes
-                state.keyboard_selected_index = 0;
-            }
-            KeyCode::Backspace => {
-                // Remove character from filter
-                state.keyboard_filter.pop();
-                // Reset selection to first item when filter changes
-                state.keyboard_selected_index = 0;
-            }
-            KeyCode::Esc => {
-                // If filter is active, clear it
-                if !state.keyboard_filter.is_empty() {
-                    state.keyboard_filter.clear();
+                KeyCode::Char(c) => {
+                    // Add character to filter
+                    state.keyboard_filter.push(c);
+                    // Reset selection to first item when filter changes
                     state.keyboard_selected_index = 0;
-                } else if state.keyboard_change_only {
-                    // In keyboard_change_only mode, Esc exits the wizard
-                    return Ok(true);
-                } else {
-                    state.previous_step();
                 }
-            }
-            _ => {}
+                KeyCode::Backspace => {
+                    // Remove character from filter
+                    state.keyboard_filter.pop();
+                    // Reset selection to first item when filter changes
+                    state.keyboard_selected_index = 0;
+                }
+                KeyCode::Esc => {
+                    // If filter is active, clear it
+                    if !state.keyboard_filter.is_empty() {
+                        state.keyboard_filter.clear();
+                        state.keyboard_selected_index = 0;
+                    } else if state.keyboard_change_only {
+                        // In keyboard_change_only mode, Esc exits the wizard
+                        return Ok(true);
+                    } else {
+                        state.previous_step();
+                    }
+                }
+                _ => {}
+            },
+            KeyboardSelectionFocus::List => match key.code {
+                KeyCode::Tab => {
+                    // Switch focus back to filter
+                    state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if state.keyboard_selected_index > 0 {
+                        state.keyboard_selected_index -= 1;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let filtered_count = state.get_filtered_keyboards().len();
+                    if state.keyboard_selected_index < filtered_count.saturating_sub(1) {
+                        state.keyboard_selected_index += 1;
+                    }
+                }
+                KeyCode::Enter => {
+                    state.next_step()?;
+                }
+                KeyCode::Esc => {
+                    // Esc from list: switch back to filter
+                    state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
+                }
+                _ => {}
+            },
         },
         WizardStep::LayoutSelection => match key.code {
             KeyCode::Up | KeyCode::Char('k') => {

@@ -144,7 +144,10 @@ fn create_test_layout() -> Layout {
         tags: vec!["test".to_string()],
         is_template: false,
         version: "1.0.0".to_string(),
-        layout_variant: None,
+        layout_variant: Some("LAYOUT_test".to_string()),
+        keyboard: Some("test_kb".to_string()),
+        keymap_name: Some("test_keymap".to_string()),
+        output_format: Some("uf2".to_string()),
     };
 
     // Create a simple 2x3 layout (6 keys)
@@ -192,8 +195,10 @@ fn create_test_layout() -> Layout {
         metadata,
         layers: vec![layer0, layer1],
         categories: vec![],
-        inactive_key_behavior: keyboard_configurator::models::InactiveKeyBehavior::default(),
+        uncolored_key_behavior: keyboard_configurator::models::UncoloredKeyBehavior::default(),
         tap_hold_settings: keyboard_configurator::models::TapHoldSettings::default(),
+        rgb_enabled: true,
+        rgb_brightness: keyboard_configurator::models::RgbBrightness::default(),
         rgb_timeout_ms: 0,
     }
 }
@@ -284,10 +289,6 @@ fn create_test_config(temp_dir: &TempDir) -> Config {
             qmk_firmware: Some(qmk_path),
         },
         build: BuildConfig {
-            keyboard: "test_kb".to_string(),
-            layout: "LAYOUT_test".to_string(),
-            keymap: "test_keymap".to_string(),
-            output_format: "uf2".to_string(),
             output_dir: temp_dir.path().to_path_buf(),
         },
         ui: Default::default(),

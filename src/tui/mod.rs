@@ -564,7 +564,9 @@ impl AppState {
             .context("QMK firmware path not configured")?;
 
         // Get the base keyboard name (without any variant subdirectory)
-        let base_keyboard = Self::extract_base_keyboard(&self.config.build.keyboard);
+        let keyboard = self.layout.metadata.keyboard.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Keyboard not set in layout metadata"))?;
+        let base_keyboard = Self::extract_base_keyboard(keyboard);
         
         let info = parse_keyboard_info_json(qmk_path, &base_keyboard)
             .context("Failed to parse keyboard info.json")?;
@@ -592,14 +594,11 @@ impl AppState {
         // Build new visual layout mapping
         let new_mapping = VisualLayoutMapping::build(&new_geometry);
 
-        // Update config to persist layout choice
-        self.config.build.layout = layout_name.to_string();
-
-        // Update keyboard variant (already determined above for RGB matrix lookup)
-        self.config.build.keyboard = variant_path;
-
         // Store the layout variant in the layout metadata for persistence
         self.layout.metadata.layout_variant = Some(layout_name.to_string());
+
+        // Update keyboard variant (already determined above for RGB matrix lookup)
+        self.layout.metadata.keyboard = Some(variant_path);
 
         // Update AppState with new geometry and mapping
         self.geometry = new_geometry;
@@ -848,10 +847,11 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             state.help_overlay_state.render(f, f.size(), &state.theme);
         }
         PopupType::LayoutPicker => {
+            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
             config_dialogs::render_layout_picker(
                 f,
                 &state.layout_picker_state,
-                &state.config.build.keyboard,
+                keyboard,
                 &state.theme,
             );
         }
@@ -866,10 +866,13 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 f,
                 f.size(),
                 &state.settings_manager_state,
-                state.layout.inactive_key_behavior,
-                &state.layout.tap_hold_settings,
+                state.layout.rgb_enabled,
+                state.layout.rgb_brightness,
                 state.layout.rgb_timeout_ms,
+                state.layout.uncolored_key_behavior,
+                &state.layout.tap_hold_settings,
                 &state.config,
+                &state.layout,
                 &state.theme,
             );
         }
@@ -1608,25 +1611,24 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                 if state.wizard_state.is_complete {
                     // Check if this was a keyboard-only change
                     if state.wizard_state.keyboard_change_only {
-                        // Only update keyboard and layout fields
+                        // Only update keyboard and layout fields in layout metadata
                         if let Some(keyboard) = state.wizard_state.inputs.get("keyboard") {
-                            state.config.build.keyboard = keyboard.clone();
+                            state.layout.metadata.keyboard = Some(keyboard.clone());
                         }
-                        if let Some(layout) = state.wizard_state.inputs.get("layout") {
-                            state.config.build.layout = layout.clone();
+                        if let Some(layout_variant) = state.wizard_state.inputs.get("layout") {
+                            state.layout.metadata.layout_variant = Some(layout_variant.clone());
                         }
                         
-                        // Save the config
-                        if let Err(e) = state.config.save() {
-                            state.set_error(format!("Failed to save configuration: {e}"));
-                        } else {
-                            // Rebuild geometry for new keyboard/layout
-                            let layout_name = state.config.build.layout.clone();
+                        // Mark layout as modified
+                        state.layout.metadata.touch();
+                        
+                        // Rebuild geometry for new keyboard/layout
+                        if let Some(layout_name) = state.layout.metadata.layout_variant.clone() {
                             match state.rebuild_geometry(&layout_name) {
                                 Ok(()) => {
+                                    let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("unknown");
                                     state.set_status(format!(
-                                        "Keyboard changed to: {}",
-                                        state.config.build.keyboard
+                                        "Keyboard changed to: {keyboard}"
                                     ));
                                 }
                                 Err(e) => {
@@ -1684,7 +1686,7 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
 /// Handle input for settings manager
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
+    use crate::models::{HoldDecisionMode, TapHoldPreset};
     use settings_manager::{ManagerMode, SettingItem};
 
     match &state.settings_manager_state.mode.clone() {
@@ -1709,12 +1711,13 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                  let settings = SettingItem::all();
                  if let Some(setting) = settings.get(state.settings_manager_state.selected) {
                      match setting {
-                         SettingItem::InactiveKeyBehavior => {
-                             state
-                                 .settings_manager_state
-                                 .start_selecting_inactive_behavior(
-                                    state.layout.inactive_key_behavior,
-                                );
+                        SettingItem::UncoloredKeyBehavior => {
+                            state.settings_manager_state.start_editing_numeric(
+                                *setting,
+                                state.layout.uncolored_key_behavior.as_percent() as u16,
+                                0,
+                                100, // 0=Off, 1-99=Dim, 100=Full
+                            );
                         }
                         SettingItem::TapHoldPreset => {
                             state
@@ -1770,6 +1773,21 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                 state.layout.tap_hold_settings.chordal_hold,
                             );
                         }
+                        // RGB Settings
+                        SettingItem::RgbEnabled => {
+                            state.settings_manager_state.start_toggling_boolean(
+                                *setting,
+                                state.layout.rgb_enabled,
+                            );
+                        }
+                        SettingItem::RgbBrightness => {
+                            state.settings_manager_state.start_editing_numeric(
+                                *setting,
+                                u16::from(state.layout.rgb_brightness.as_percent()),
+                                0,
+                                100, // 0-100%
+                            );
+                        }
                         SettingItem::RgbTimeout => {
                             // RGB timeout is stored as ms but we edit in seconds for usability
                             // Max 10 minutes = 600000ms, stored as u32 but edited as u16 seconds
@@ -1781,6 +1799,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                 600, // Max 10 minutes in seconds
                             );
                         }
+
                         // Global settings
                         SettingItem::QmkFirmwarePath => {
                             state.settings_manager_state.start_editing_path(
@@ -1825,8 +1844,9 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                                 return Ok(false);
                             };
 
-                            // Extract base keyboard path
-                            let base_keyboard = AppState::extract_base_keyboard(&state.config.build.keyboard);
+                            // Extract base keyboard path from layout metadata
+                            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
+                            let base_keyboard = AppState::extract_base_keyboard(keyboard);
 
                             if let Err(e) = state
                                 .layout_picker_state
@@ -1840,14 +1860,15 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
                         }
                         SettingItem::KeymapName => {
+                            let keymap = state.layout.metadata.keymap_name.clone().unwrap_or_default();
                             state.settings_manager_state.start_editing_string(
                                 *setting,
-                                state.config.build.keymap.clone(),
+                                keymap,
                             );
                         }
                         SettingItem::OutputFormat => {
-                            let current_format = &state.config.build.output_format;
-                            let selected = match current_format.as_str() {
+                            let current_format = state.layout.metadata.output_format.as_deref().unwrap_or("uf2");
+                            let selected = match current_format {
                                 "hex" => 1,
                                 "bin" => 2,
                                 _ => 0, // uf2
@@ -1873,38 +1894,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
             }
             _ => Ok(false),
         },
-        ManagerMode::SelectingInactiveKeyBehavior { .. } => match key.code {
-            KeyCode::Esc => {
-                state.settings_manager_state.cancel();
-                state.set_status("Cancelled");
-                Ok(false)
-             }
-             KeyCode::Up | KeyCode::Char('k') => {
-                 let count = InactiveKeyBehavior::all().len();
-                 state.settings_manager_state.option_previous(count);
-                 Ok(false)
-             }
-             KeyCode::Down | KeyCode::Char('j') => {
-                 let count = InactiveKeyBehavior::all().len();
-                 state.settings_manager_state.option_next(count);
-                 Ok(false)
-             }
-             KeyCode::Enter => {
-                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                     if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
-                         state.layout.inactive_key_behavior = behavior;
-                         state.mark_dirty();
-                         state.settings_manager_state.cancel();
-                         state.set_status(format!(
-                             "Inactive key behavior set to: {}",
-                             behavior.display_name()
-                        ));
-                    }
-                }
-                Ok(false)
-            }
-            _ => Ok(false),
-        },
+
         ManagerMode::SelectingTapHoldPreset { .. } => match key.code {
             KeyCode::Esc => {
                 state.settings_manager_state.cancel();
@@ -2074,12 +2064,9 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                              2 => "bin",
                              _ => "uf2",
                          };
-                         state.config.build.output_format = format.to_string();
-                         if let Err(e) = state.config.save() {
-                             state.set_status(format!("Failed to save config: {e}"));
-                        } else {
-                            state.set_status(format!("Output format set to: {format}"));
-                        }
+                         state.layout.metadata.output_format = Some(format.to_string());
+                         state.layout.metadata.touch();
+                         state.set_status(format!("Output format set to: {format}"));
                         state.settings_manager_state.cancel();
                     }
                     Ok(false)
@@ -2118,6 +2105,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
 
 /// Apply a numeric setting value
 fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: u16) {
+    use crate::models::{RgbBrightness, UncoloredKeyBehavior};
     use settings_manager::SettingItem;
 
     match setting {
@@ -2151,6 +2139,20 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             };
             state.set_status(format!("Flow tap term set to: {display}"));
         }
+        SettingItem::RgbBrightness => {
+            state.layout.rgb_brightness = RgbBrightness::from(value as u8);
+            state.set_status(format!("RGB brightness set to: {value}%"));
+        }
+        SettingItem::UncoloredKeyBehavior => {
+            state.layout.uncolored_key_behavior = UncoloredKeyBehavior::from(value as u8);
+            let description = match value {
+                0 => "Off (Black)",
+                100 => "Show Color",
+                n => return state.set_status(format!("Uncolored key brightness set to: {n}% (Dimmed)")),
+            };
+            state.set_status(format!("Uncolored key brightness set to: {description}"));
+        }
+
         SettingItem::RgbTimeout => {
             // value is in seconds, convert to milliseconds for storage
             state.layout.rgb_timeout_ms = u32::from(value) * 1000;
@@ -2184,6 +2186,11 @@ fn apply_boolean_setting(state: &mut AppState, setting: settings_manager::Settin
             let display = if value { "On" } else { "Off" };
             state.set_status(format!("Chordal hold set to: {display}"));
         }
+        SettingItem::RgbEnabled => {
+            state.layout.rgb_enabled = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("RGB master switch set to: {display}"));
+        }
         SettingItem::ShowHelpOnStartup => {
             state.config.ui.show_help_on_startup = value;
             if let Err(e) = state.config.save() {
@@ -2204,12 +2211,9 @@ fn apply_string_setting(state: &mut AppState, setting: settings_manager::Setting
     match setting {
         SettingItem::KeymapName => {
             let keymap = if value.is_empty() { "default".to_string() } else { value };
-            state.config.build.keymap = keymap.clone();
-            if let Err(e) = state.config.save() {
-                state.set_status(format!("Failed to save config: {e}"));
-            } else {
-                state.set_status(format!("Keymap name set to: {keymap}"));
-            }
+            state.layout.metadata.keymap_name = Some(keymap.clone());
+            state.layout.metadata.touch();
+            state.set_status(format!("Keymap name set to: {keymap}"));
         }
         _ => {}
     }
@@ -3020,7 +3024,8 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             };
 
             // Extract base keyboard path (remove variant subdirectory if present)
-            let base_keyboard = AppState::extract_base_keyboard(&state.config.build.keyboard);
+            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
+            let base_keyboard = AppState::extract_base_keyboard(keyboard);
 
             if let Err(e) = state
                 .layout_picker_state
@@ -3222,7 +3227,8 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
     // Determine correct keyboard variant path for building
     // This ensures we target the specific variant (e.g. "keebart/corne_choc_pro/standard")
     // so that QMK loads the correct configuration (including RGB settings)
-    let base_keyboard = AppState::extract_base_keyboard(&state.config.build.keyboard);
+    let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
+    let base_keyboard = AppState::extract_base_keyboard(keyboard);
     let key_count = state.geometry.keys.len();
     
     let build_keyboard = state.config.build
@@ -3230,14 +3236,15 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
         .unwrap_or_else(|e| {
             // Log warning but fall back to configured keyboard path
             eprintln!("Warning: Could not determine variant: {e}");
-            state.config.build.keyboard.clone()
+            keyboard.to_string()
         });
 
     // Start the build
+    let keymap = state.layout.metadata.keymap_name.clone().unwrap_or_else(|| "default".to_string());
     build_state.start_build(
         qmk_path,
         build_keyboard,
-        state.config.build.keymap.clone(),
+        keymap,
     )?;
 
     state.set_status("Build started - check status with Ctrl+L");

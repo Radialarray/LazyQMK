@@ -16,17 +16,12 @@ pub struct PathConfig {
 }
 
 /// Firmware build configuration.
+///
+/// Note: keyboard, layout_variant, keymap_name, and output_format have been moved
+/// to per-layout .md file metadata. Only global build settings remain here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildConfig {
-    /// Target keyboard (e.g., "crkbd" or "`keebart/corne_choc_pro/standard`")
-    pub keyboard: String,
-    /// Layout variant (e.g., "`LAYOUT_split_3x6_3`")
-    pub layout: String,
-    /// Keymap name (e.g., "default")
-    pub keymap: String,
-    /// Output format: "uf2", "hex", or "bin"
-    pub output_format: String,
-    /// Build output directory
+    /// Build output directory (where all firmware files go)
     pub output_dir: PathBuf,
 }
 
@@ -36,10 +31,6 @@ impl Default for BuildConfig {
         let output_dir = Self::default_output_dir().unwrap_or_else(|_| PathBuf::from(".build"));
         
         Self {
-            keyboard: "crkbd".to_string(),
-            layout: "LAYOUT_split_3x6_3".to_string(),
-            keymap: "default".to_string(),
-            output_format: "uf2".to_string(),
             output_dir,
         }
     }
@@ -98,22 +89,14 @@ impl BuildConfig {
         // - Higher key count typically maps to "standard" variant
         // - Lower key count typically maps to "mini" variant
         
-        let variant = if self.layout.contains("_ex2") {
-            // For layouts with encoder support, use key count to determine variant
-            if layout_key_count >= 44 {
-                "standard"
-            } else {
-                "mini"
-            }
-        } else if self.layout.contains("3x6") {
-            // 3x6 layouts typically use standard variant
+        // Since layout field is removed, use key count heuristics
+        // Common patterns:
+        // - 44+ keys: typically "standard" variant
+        // - Less than 44 keys: typically "mini" variant
+        let variant = if layout_key_count >= 44 {
             "standard"
-        } else if self.layout.contains("3x5") {
-            // 3x5 layouts typically use mini variant
-            "mini"
         } else {
-            // Default to standard for unknown layouts
-            "standard"
+            "mini"
         };
 
         let variant_path = format!("{base_keyboard}/{variant}");
@@ -366,15 +349,9 @@ impl Config {
             }
         }
 
-        // Validate output format
-        match self.build.output_format.as_str() {
-            "uf2" | "hex" | "bin" => {}
-            _ => anyhow::bail!(
-                "Invalid output format '{}'. Must be 'uf2', 'hex', or 'bin'",
-                self.build.output_format
-            ),
-        }
-
+        // Keyboard-specific settings (keyboard, layout, keymap, output_format)
+        // are now stored in layout metadata, not in config.toml
+        
         Ok(())
     }
 
@@ -382,26 +359,6 @@ impl Config {
     #[allow(dead_code)]
     pub fn set_qmk_firmware_path(&mut self, path: PathBuf) -> Result<()> {
         self.paths.qmk_firmware = Some(path);
-        self.validate()?;
-        Ok(())
-    }
-
-    /// Sets the keyboard name.
-    #[allow(dead_code)]
-    pub fn set_keyboard(&mut self, keyboard: String) {
-        self.build.keyboard = keyboard;
-    }
-
-    /// Sets the layout variant.
-    #[allow(dead_code)]
-    pub fn set_layout(&mut self, layout: String) {
-        self.build.layout = layout;
-    }
-
-    /// Sets the output format.
-    #[allow(dead_code)]
-    pub fn set_output_format(&mut self, format: String) -> Result<()> {
-        self.build.output_format = format;
         self.validate()?;
         Ok(())
     }
@@ -423,13 +380,10 @@ mod tests {
     fn test_config_new() {
         let config = Config::new();
         assert_eq!(config.paths.qmk_firmware, None);
-        assert_eq!(config.build.keyboard, "crkbd");
-        assert_eq!(config.build.layout, "LAYOUT_split_3x6_3");
-        assert_eq!(config.build.keymap, "default");
-        assert_eq!(config.build.output_format, "uf2");
         assert!(config.ui.show_help_on_startup);
         // New config should not be considered configured
         assert!(!config.is_configured());
+        // Note: keyboard, layout, keymap, and output_format are now per-layout in metadata
     }
 
     #[test]
@@ -445,21 +399,10 @@ mod tests {
     }
 
     #[test]
-    fn test_config_validate_output_format() {
-        let mut config = Config::new();
+    fn test_config_validate() {
+        let config = Config::new();
         assert!(config.validate().is_ok());
-
-        config.build.output_format = "invalid".to_string();
-        assert!(config.validate().is_err());
-
-        config.build.output_format = "uf2".to_string();
-        assert!(config.validate().is_ok());
-
-        config.build.output_format = "hex".to_string();
-        assert!(config.validate().is_ok());
-
-        config.build.output_format = "bin".to_string();
-        assert!(config.validate().is_ok());
+        // Note: output_format validation is now per-layout in metadata
     }
 
     #[test]
@@ -488,9 +431,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_file = temp_dir.path().join("config.toml");
 
-        let mut config = Config::new();
-        config.build.keyboard = "test_keyboard".to_string();
-        config.build.layout = "TEST_LAYOUT".to_string();
+        let config = Config::new();
 
         // Manually save to temp location for testing
         let content = toml::to_string_pretty(&config).unwrap();
@@ -500,33 +441,13 @@ mod tests {
         let content = fs::read_to_string(&config_file).unwrap();
         let loaded: Config = toml::from_str(&content).unwrap();
 
-        assert_eq!(loaded.build.keyboard, "test_keyboard");
-        assert_eq!(loaded.build.layout, "TEST_LAYOUT");
+        // Verify basic fields are preserved
+        assert_eq!(loaded.ui.show_help_on_startup, config.ui.show_help_on_startup);
+        // Note: keyboard and layout are now per-layout in metadata
     }
 
-    #[test]
-    fn test_config_set_keyboard() {
-        let mut config = Config::new();
-        config.set_keyboard("my_keyboard".to_string());
-        assert_eq!(config.build.keyboard, "my_keyboard");
-    }
-
-    #[test]
-    fn test_config_set_layout() {
-        let mut config = Config::new();
-        config.set_layout("MY_LAYOUT".to_string());
-        assert_eq!(config.build.layout, "MY_LAYOUT");
-    }
-
-    #[test]
-    fn test_config_set_output_format() {
-        let mut config = Config::new();
-
-        assert!(config.set_output_format("hex".to_string()).is_ok());
-        assert_eq!(config.build.output_format, "hex");
-
-        assert!(config.set_output_format("invalid".to_string()).is_err());
-    }
+    // Note: set_keyboard, set_layout, and set_output_format methods removed
+    // These settings are now per-layout in metadata, not global config
 
     #[test]
     fn test_determine_keyboard_variant_no_variants() {
@@ -559,11 +480,11 @@ mod tests {
         fs::create_dir_all(&standard_dir).unwrap();
         fs::write(standard_dir.join("keyboard.json"), "{}").unwrap();
 
-        let mut build_config = BuildConfig::default();
-        build_config.layout = "LAYOUT_split_3x6_3".to_string();
+        let build_config = BuildConfig::default();
 
+        // Use 44 keys which maps to "standard" variant
         let result = build_config
-            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42)
+            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 44)
             .unwrap();
 
         assert_eq!(result, "keebart/corne_choc_pro/standard");
@@ -581,8 +502,7 @@ mod tests {
         fs::create_dir_all(&mini_dir).unwrap();
         fs::write(mini_dir.join("keyboard.json"), "{}").unwrap();
 
-        let mut build_config = BuildConfig::default();
-        build_config.layout = "LAYOUT_split_3x5_3".to_string();
+        let build_config = BuildConfig::default();
 
         let result = build_config
             .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 36)
@@ -603,8 +523,7 @@ mod tests {
         fs::create_dir_all(&standard_dir).unwrap();
         fs::write(standard_dir.join("keyboard.json"), "{}").unwrap();
 
-        let mut build_config = BuildConfig::default();
-        build_config.layout = "LAYOUT_split_3x6_3_ex2".to_string();
+        let build_config = BuildConfig::default();
 
         let result = build_config
             .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 44)
@@ -625,8 +544,7 @@ mod tests {
         fs::create_dir_all(&mini_dir).unwrap();
         fs::write(mini_dir.join("keyboard.json"), "{}").unwrap();
 
-        let mut build_config = BuildConfig::default();
-        build_config.layout = "LAYOUT_split_3x5_3_ex2".to_string();
+        let build_config = BuildConfig::default();
 
         let result = build_config
             .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 38)
@@ -645,8 +563,7 @@ mod tests {
         // Create base keyboard directory but no variant subdirectories
         fs::create_dir_all(&keyboard_dir).unwrap();
 
-        let mut build_config = BuildConfig::default();
-        build_config.layout = "LAYOUT_split_3x6_3".to_string();
+        let build_config = BuildConfig::default();
 
         let result = build_config
             .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42);
@@ -667,11 +584,11 @@ mod tests {
          fs::create_dir_all(&standard_dir).unwrap();
          fs::write(standard_dir.join("info.json"), "{}").unwrap();
 
-         let mut build_config = BuildConfig::default();
-         build_config.layout = "LAYOUT_split_3x6_3".to_string();
+         let build_config = BuildConfig::default();
 
+         // Use 44 keys which maps to "standard" variant
          let result = build_config
-             .determine_keyboard_variant(&qmk_path, "test_keyboard", 42)
+             .determine_keyboard_variant(&qmk_path, "test_keyboard", 44)
              .unwrap();
 
          assert_eq!(result, "test_keyboard/standard");

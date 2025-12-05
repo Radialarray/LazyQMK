@@ -111,9 +111,11 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         metadata,
         layers: Vec::new(),
         categories: Vec::new(),
-        inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
-        tap_hold_settings: crate::models::TapHoldSettings::default(),
+        rgb_enabled: true,
+        rgb_brightness: crate::models::RgbBrightness::default(),
         rgb_timeout_ms: 0,
+        uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+        tap_hold_settings: crate::models::TapHoldSettings::default(),
     };
 
     // Parse content (layers and categories)
@@ -502,7 +504,7 @@ fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
 /// Parses the settings section.
 #[allow(clippy::cognitive_complexity, clippy::unnecessary_wraps)]
 fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
-    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
+    use crate::models::{HoldDecisionMode, TapHoldPreset};
 
     let mut line_num = start_line + 1; // Skip "## Settings" header
 
@@ -524,18 +526,52 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
         }
 
         // Parse setting: **Setting Name**: value
-        if line.starts_with("**Inactive Key Behavior**:") {
+        // Support both old and new names for backwards compatibility
+        if line.starts_with("**Inactive Key Behavior**:") 
+            || line.starts_with("**Uncolored Key Behavior**:") 
+            || line.starts_with("**Uncolored Key Brightness**:") {
             let value = line
                 .strip_prefix("**Inactive Key Behavior**:")
+                .or_else(|| line.strip_prefix("**Uncolored Key Behavior**:"))
+                .or_else(|| line.strip_prefix("**Uncolored Key Brightness**:"))
                 .unwrap()
                 .trim()
                 .to_lowercase();
 
-            layout.inactive_key_behavior = match value.as_str() {
-                "off" | "black" => InactiveKeyBehavior::Off,
-                "dim" | "dim (50%)" | "50%" => InactiveKeyBehavior::Dim,
-                _ => InactiveKeyBehavior::ShowColor, // Default for "show color" or any other value
-            };
+            // Parse as percentage (legacy format support)
+            let percent = if value.contains('%') {
+                value.trim_end_matches('%').trim().parse::<u8>().unwrap_or(100)
+            } else {
+                match value.as_str() {
+                    "off" | "black" | "off (black)" => 0,
+                    "show color" | "full" => 100,
+                    _ => value.parse::<u8>().unwrap_or(100),
+                }
+            }.min(100);
+            layout.uncolored_key_behavior = crate::models::UncoloredKeyBehavior::from(percent);
+        }
+        
+        // Parse RGB Master Switch
+        if line.starts_with("**RGB Enabled**:") || line.starts_with("**RGB Master Switch**:") {
+            let value = line
+                .strip_prefix("**RGB Enabled**:")
+                .or_else(|| line.strip_prefix("**RGB Master Switch**:"))
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_enabled = matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+        
+        // Parse RGB Brightness
+        if line.starts_with("**RGB Brightness**:") {
+            let value = line
+                .strip_prefix("**RGB Brightness**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches('%');
+            if let Ok(percent) = value.parse::<u8>() {
+                layout.rgb_brightness = crate::models::RgbBrightness::from(percent);
+            }
         }
 
         // === Tap-Hold Settings ===

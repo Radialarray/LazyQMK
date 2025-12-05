@@ -136,14 +136,17 @@ impl KeyboardWidget {
                     // Use resolve_display_color which considers inactive_key_behavior
                     let (rgb, is_key_specific) = state.layout.resolve_display_color(state.current_layer, key);
                     
-                    // Check if the color is too dark to be visible (e.g., black from "Off" behavior)
+                    // Apply RGB settings (brightness and master switch)
+                    let final_rgb = state.layout.apply_rgb_settings(rgb);
+                    
+                    // Check if the color is too dark to be visible (e.g., black from "Off" behavior or master switch)
                     // If brightness is below threshold, use theme.text_muted for visibility
-                    let brightness = (u16::from(rgb.r) + u16::from(rgb.g) + u16::from(rgb.b)) / 3;
+                    let brightness = (u16::from(final_rgb.r) + u16::from(final_rgb.g) + u16::from(final_rgb.b)) / 3;
                     let color = if brightness < 30 {
                         // Color too dark for TUI visibility, use muted theme color
                         theme.text_muted
                     } else {
-                        Color::Rgb(rgb.r, rgb.g, rgb.b)
+                        Color::Rgb(final_rgb.r, final_rgb.g, final_rgb.b)
                     };
                     
                     let indicator = if is_key_specific {

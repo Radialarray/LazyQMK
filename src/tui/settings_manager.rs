@@ -12,7 +12,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset, TapHoldSettings};
+use crate::models::{HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior};
 
 use super::Theme;
 
@@ -97,13 +97,15 @@ pub enum SettingItem {
     /// Display help on startup
     ShowHelpOnStartup,
 
-    // === General Settings (Per-Layout) ===
-    /// Behavior for keys without color on current layer
-    InactiveKeyBehavior,
-
     // === RGB Settings (Per-Layout) ===
+    /// Master switch for all RGB LEDs
+    RgbEnabled,
+    /// Global RGB brightness (0-100%)
+    RgbBrightness,
     /// RGB Matrix timeout (auto-off after inactivity)
     RgbTimeout,
+    /// Brightness for keys without individual/category colors (0-100%)
+    UncoloredKeyBehavior,
 
     // === Tap-Hold Settings (Per-Layout) ===
     /// Preset for common tap-hold configurations
@@ -139,10 +141,11 @@ impl SettingItem {
             Self::OutputDir,
             // UI (Global)
             Self::ShowHelpOnStartup,
-            // General (Per-Layout)
-            Self::InactiveKeyBehavior,
             // RGB (Per-Layout)
+            Self::RgbEnabled,
+            Self::RgbBrightness,
             Self::RgbTimeout,
+            Self::UncoloredKeyBehavior,
             // Tap-Hold (Per-Layout)
             Self::TapHoldPreset,
             Self::TappingTerm,
@@ -166,8 +169,7 @@ impl SettingItem {
             | Self::OutputFormat
             | Self::OutputDir => SettingGroup::Build,
             Self::ShowHelpOnStartup => SettingGroup::Ui,
-            Self::InactiveKeyBehavior => SettingGroup::General,
-            Self::RgbTimeout => SettingGroup::Rgb,
+            Self::RgbEnabled | Self::RgbBrightness | Self::RgbTimeout | Self::UncoloredKeyBehavior => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
             | Self::QuickTapTerm
@@ -190,8 +192,10 @@ impl SettingItem {
             Self::OutputFormat => "Output Format",
             Self::OutputDir => "Output Directory",
             Self::ShowHelpOnStartup => "Show Help on Startup",
-            Self::InactiveKeyBehavior => "Inactive Key Behavior",
+            Self::RgbEnabled => "RGB Master Switch",
+            Self::RgbBrightness => "RGB Brightness",
             Self::RgbTimeout => "RGB Timeout",
+            Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
             Self::TapHoldPreset => "Preset",
             Self::TappingTerm => "Tapping Term",
             Self::QuickTapTerm => "Quick Tap Term",
@@ -214,10 +218,10 @@ impl SettingItem {
             Self::OutputFormat => "Firmware output format: uf2, hex, or bin",
             Self::OutputDir => "Directory where built firmware will be saved",
             Self::ShowHelpOnStartup => "Display help overlay when application starts",
-            Self::InactiveKeyBehavior => {
-                "How to display keys without a color on the current layer"
-            }
+            Self::RgbEnabled => "Turn all RGB LEDs on or off",
+            Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
             Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
+            Self::UncoloredKeyBehavior => "Brightness for keys without individual/category colors (0=Off, 100=Full)",
             Self::TapHoldPreset => "Quick configuration preset for common use cases",
             Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
             Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
@@ -241,11 +245,6 @@ impl SettingItem {
 pub enum ManagerMode {
     /// Browsing settings (default mode)
     Browsing,
-    /// Selecting a value for inactive key behavior
-    SelectingInactiveKeyBehavior {
-        /// Currently highlighted option index
-        selected_option: usize,
-    },
     /// Selecting a tap-hold preset
     SelectingTapHoldPreset {
         /// Currently highlighted option index
@@ -338,14 +337,8 @@ impl SettingsManagerState {
         }
     }
 
-    /// Start selecting inactive key behavior
-    pub fn start_selecting_inactive_behavior(&mut self, current: InactiveKeyBehavior) {
-        let selected_option = InactiveKeyBehavior::all()
-            .iter()
-            .position(|&b| b == current)
-            .unwrap_or(0);
-        self.mode = ManagerMode::SelectingInactiveKeyBehavior { selected_option };
-    }
+    /// Start selecting uncolored key behavior
+    // Removed: UncoloredKeyBehavior is now a simple percentage, not a selector
 
     /// Start selecting tap-hold preset
     pub fn start_selecting_tap_hold_preset(&mut self, current: TapHoldPreset) {
@@ -386,8 +379,7 @@ impl SettingsManagerState {
     /// Move option selection up (for enum selectors)
     pub const fn option_previous(&mut self, option_count: usize) {
         match &mut self.mode {
-            ManagerMode::SelectingInactiveKeyBehavior { selected_option }
-            | ManagerMode::SelectingTapHoldPreset { selected_option }
+            ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option } => {
                 if *selected_option > 0 {
@@ -406,8 +398,7 @@ impl SettingsManagerState {
     /// Move option selection down (for enum selectors)
     pub const fn option_next(&mut self, option_count: usize) {
         match &mut self.mode {
-            ManagerMode::SelectingInactiveKeyBehavior { selected_option }
-            | ManagerMode::SelectingTapHoldPreset { selected_option }
+            ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option } => {
                 *selected_option = (*selected_option + 1) % option_count;
@@ -423,8 +414,7 @@ impl SettingsManagerState {
     #[must_use]
     pub const fn get_selected_option(&self) -> Option<usize> {
         match &self.mode {
-            ManagerMode::SelectingInactiveKeyBehavior { selected_option }
-            | ManagerMode::SelectingTapHoldPreset { selected_option }
+            ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option } => Some(*selected_option),
             _ => None,
         }
@@ -585,10 +575,13 @@ pub fn render_settings_manager(
     f: &mut Frame,
     area: Rect,
     state: &SettingsManagerState,
-    inactive_key_behavior: InactiveKeyBehavior,
-    tap_hold_settings: &TapHoldSettings,
+    rgb_enabled: bool,
+    rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
+    uncolored_key_behavior: UncoloredKeyBehavior,
+    tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
+    layout: &crate::models::Layout,
     theme: &Theme,
 ) {
     // Center the dialog (80% width, 80% height)
@@ -625,10 +618,7 @@ pub fn render_settings_manager(
 
     match &state.mode {
         ManagerMode::Browsing => {
-            render_settings_list(f, inner_area, state, inactive_key_behavior, tap_hold_settings, rgb_timeout_ms, config, theme);
-        }
-        ManagerMode::SelectingInactiveKeyBehavior { selected_option } => {
-            render_inactive_behavior_selector(f, inner_area, *selected_option, theme);
+            render_settings_list(f, inner_area, state, rgb_enabled, rgb_brightness, rgb_timeout_ms, uncolored_key_behavior, tap_hold_settings, config, layout, theme);
         }
         ManagerMode::SelectingTapHoldPreset { selected_option } => {
             render_tap_hold_preset_selector(f, inner_area, *selected_option, theme);
@@ -659,10 +649,13 @@ fn render_settings_list(
     f: &mut Frame,
     area: Rect,
     state: &SettingsManagerState,
-    inactive_key_behavior: InactiveKeyBehavior,
-    tap_hold_settings: &TapHoldSettings,
+    rgb_enabled: bool,
+    rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
+    uncolored_key_behavior: UncoloredKeyBehavior,
+    tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
+    layout: &crate::models::Layout,
     theme: &Theme,
 ) {
     // Split area for list and help text
@@ -706,7 +699,7 @@ fn render_settings_list(
         };
 
         // Get current value for this setting
-        let value = get_setting_value_display(*setting, inactive_key_behavior, tap_hold_settings, rgb_timeout_ms, config);
+        let value = get_setting_value_display(*setting, rgb_enabled, rgb_brightness, rgb_timeout_ms, uncolored_key_behavior, tap_hold_settings, config, Some(layout));
 
         let marker = if display_index == state.selected {
             "▶ "
@@ -771,10 +764,13 @@ fn render_settings_list(
 /// Get display string for a setting value
 fn get_setting_value_display(
     setting: SettingItem,
-    inactive_key_behavior: InactiveKeyBehavior,
-    tap_hold: &TapHoldSettings,
+    rgb_enabled: bool,
+    rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
+    uncolored_key_behavior: UncoloredKeyBehavior,
+    tap_hold: &TapHoldSettings,
     config: &crate::config::Config,
+    layout: Option<&crate::models::Layout>,
 ) -> String {
     match setting {
         // Global: Paths
@@ -782,11 +778,19 @@ fn get_setting_value_display(
             .paths
             .qmk_firmware
             .as_ref().map_or_else(|| "<not set>".to_string(), |p| p.display().to_string()),
-        // Global: Build
-        SettingItem::Keyboard => config.build.keyboard.clone(),
-        SettingItem::LayoutVariant => config.build.layout.clone(),
-        SettingItem::KeymapName => config.build.keymap.clone(),
-        SettingItem::OutputFormat => config.build.output_format.clone(),
+        // Per-Layout: Build settings (now in layout metadata)
+        SettingItem::Keyboard => layout.as_ref()
+            .and_then(|l| l.metadata.keyboard.clone())
+            .unwrap_or_else(|| "<not set>".to_string()),
+        SettingItem::LayoutVariant => layout.as_ref()
+            .and_then(|l| l.metadata.layout_variant.clone())
+            .unwrap_or_else(|| "<not set>".to_string()),
+        SettingItem::KeymapName => layout.as_ref()
+            .and_then(|l| l.metadata.keymap_name.clone())
+            .unwrap_or_else(|| "<not set>".to_string()),
+        SettingItem::OutputFormat => layout.as_ref()
+            .and_then(|l| l.metadata.output_format.clone())
+            .unwrap_or_else(|| "<not set>".to_string()),
         SettingItem::OutputDir => config.build.output_dir.display().to_string(),
         // Global: UI
         SettingItem::ShowHelpOnStartup => {
@@ -797,9 +801,11 @@ fn get_setting_value_display(
             }
             .to_string()
         }
-        // Per-Layout: General
-        SettingItem::InactiveKeyBehavior => inactive_key_behavior.display_name().to_string(),
         // Per-Layout: RGB
+        SettingItem::RgbEnabled => {
+            if rgb_enabled { "On" } else { "Off" }.to_string()
+        }
+        SettingItem::RgbBrightness => format!("{}%", rgb_brightness.as_percent()),
         SettingItem::RgbTimeout => {
             if rgb_timeout_ms == 0 {
                 "Disabled".to_string()
@@ -811,6 +817,7 @@ fn get_setting_value_display(
                 format!("{rgb_timeout_ms}ms")
             }
         }
+        SettingItem::UncoloredKeyBehavior => format!("{}%", uncolored_key_behavior.as_percent()),
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),
@@ -844,26 +851,7 @@ fn get_setting_value_display(
 }
 
 /// Render inactive behavior selector
-fn render_inactive_behavior_selector(
-    f: &mut Frame,
-    area: Rect,
-    selected: usize,
-    theme: &Theme,
-) {
-    let options = InactiveKeyBehavior::all();
-    render_enum_selector(
-        f,
-        area,
-        "Inactive Key Behavior",
-        options
-            .iter()
-            .map(|o| (o.display_name(), o.description()))
-            .collect::<Vec<_>>()
-            .as_slice(),
-        selected,
-        theme,
-    );
-}
+// Removed: UncoloredKeyBehavior is now a simple percentage, not a selector
 
 /// Render tap-hold preset selector
 fn render_tap_hold_preset_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
@@ -900,11 +888,11 @@ fn render_hold_mode_selector(f: &mut Frame, area: Rect, selected: usize, theme: 
 }
 
 /// Generic enum selector renderer
-fn render_enum_selector(
+fn render_enum_selector<S1: AsRef<str>, S2: AsRef<str>>(
     f: &mut Frame,
     area: Rect,
     title: &str,
-    options: &[(&str, &str)],
+    options: &[(S1, S2)],
     selected: usize,
     theme: &Theme,
 ) {
@@ -942,9 +930,9 @@ fn render_enum_selector(
 
             let content = Line::from(vec![
                 Span::styled(marker, Style::default().fg(theme.primary)),
-                Span::styled(*name, style),
+                Span::styled(name.as_ref(), style),
                 Span::styled(" - ", Style::default().fg(theme.text_muted)),
-                Span::styled(*desc, Style::default().fg(theme.text_muted)),
+                Span::styled(desc.as_ref(), Style::default().fg(theme.text_muted)),
             ]);
 
             ListItem::new(content)
