@@ -156,13 +156,14 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {\n");
 
         // Generate encoder bindings for each layer
-        // We use RGB controls as sensible defaults that work on most keyboards
+        // We use RGB Matrix controls as sensible defaults (RM_* keycodes)
+        // These work with RGB_MATRIX_ENABLE, which is the modern QMK approach
         for (layer_idx, _layer) in self.layout.layers.iter().enumerate() {
             code.push_str(&format!("    [{layer_idx}] = {{\n"));
-            code.push_str("        ENCODER_CCW_CW(RGB_MOD, RGB_RMOD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_HUI, RGB_HUD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_VAI, RGB_VAD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_SAI, RGB_SAD),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_NEXT, RM_PREV),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_HUEU, RM_HUED),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_VALU, RM_VALD),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_SATU, RM_SATD),\n");
             code.push_str("    }");
             
             if layer_idx < self.layout.layers.len() - 1 {
@@ -705,7 +706,7 @@ mod tests {
         // Verify encoder_map is included
         assert!(keymap_c.contains("#ifdef ENCODER_MAP_ENABLE"));
         assert!(keymap_c.contains("const uint16_t PROGMEM encoder_map[]"));
-        assert!(keymap_c.contains("ENCODER_CCW_CW(RGB_MOD, RGB_RMOD)"));
+        assert!(keymap_c.contains("ENCODER_CCW_CW(RM_NEXT, RM_PREV)"));
         assert!(keymap_c.contains("#endif"));
 
         // Verify RGB matrix base color table is included for RGB keyboards
