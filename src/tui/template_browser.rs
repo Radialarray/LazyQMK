@@ -229,7 +229,12 @@ impl Default for TemplateBrowserState {
 
 /// Renders the template browser popup.
 #[allow(clippy::too_many_lines)]
-pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect, theme: &crate::tui::theme::Theme) {
+pub fn render(
+    f: &mut Frame,
+    state: &TemplateBrowserState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     // Center the popup (60% width, 80% height)
     let popup_width = (f32::from(area.width) * 0.6) as u16;
     let popup_height = (f32::from(area.height) * 0.8) as u16;
@@ -243,8 +248,7 @@ pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect, theme: &c
     f.render_widget(Clear, popup_area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, popup_area);
 
     // Split into title, search, list, and details sections

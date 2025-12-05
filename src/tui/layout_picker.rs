@@ -238,36 +238,36 @@ pub enum PickerAction {
 /// Returns Some(action) if user made a choice, None otherwise.
 pub fn handle_input(state: &mut LayoutPickerState, key: KeyEvent) -> Result<Option<PickerAction>> {
     match key.code {
-         KeyCode::Up | KeyCode::Char('k') => {
-             if state.create_new {
-                 // Move from "Create New" to last layout
-                 if !state.layouts.is_empty() {
-                     state.create_new = false;
-                     state.selected = state.layouts.len() - 1;
-                 }
-             } else if state.selected > 0 {
-                 state.selected -= 1;
-             } else {
-                 // Wrap to "Create New"
-                 state.create_new = true;
-             }
-             Ok(None)
-         }
-         KeyCode::Down | KeyCode::Char('j') => {
-             if state.create_new {
-                 // Move from "Create New" to first layout
-                 if !state.layouts.is_empty() {
-                     state.create_new = false;
-                     state.selected = 0;
-                 }
-             } else if state.selected < state.layouts.len() - 1 {
-                 state.selected += 1;
-             } else {
-                 // Wrap to "Create New"
-                 state.create_new = true;
-             }
-             Ok(None)
-         }
+        KeyCode::Up | KeyCode::Char('k') => {
+            if state.create_new {
+                // Move from "Create New" to last layout
+                if !state.layouts.is_empty() {
+                    state.create_new = false;
+                    state.selected = state.layouts.len() - 1;
+                }
+            } else if state.selected > 0 {
+                state.selected -= 1;
+            } else {
+                // Wrap to "Create New"
+                state.create_new = true;
+            }
+            Ok(None)
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if state.create_new {
+                // Move from "Create New" to first layout
+                if !state.layouts.is_empty() {
+                    state.create_new = false;
+                    state.selected = 0;
+                }
+            } else if state.selected < state.layouts.len() - 1 {
+                state.selected += 1;
+            } else {
+                // Wrap to "Create New"
+                state.create_new = true;
+            }
+            Ok(None)
+        }
         KeyCode::Enter => {
             // User made a selection
             if state.create_new {

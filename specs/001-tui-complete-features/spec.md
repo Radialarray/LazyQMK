@@ -168,11 +168,11 @@ Users can edit layout metadata including name, description, author, creation dat
 
 **Why this priority**: Metadata improves organization and searchability but doesn't affect core editing functionality. This is a nice-to-have feature for better file management.
 
-**Independent Test**: Can be tested by pressing Ctrl+E to open metadata editor, modifying name and description fields, adding tags as comma-separated values, confirming changes, and verifying metadata appears in YAML frontmatter when file is saved.
+**Independent Test**: Can be tested by pressing Shift+E to open metadata editor, modifying name and description fields, adding tags as comma-separated values, confirming changes, and verifying metadata appears in YAML frontmatter when file is saved.
 
 **Acceptance Scenarios**:
 
-1. **Given** user presses Ctrl+E, **When** metadata editor opens, **Then** form displays current values for name, description, author, and tags
+1. **Given** user presses Shift+E, **When** metadata editor opens, **Then** form displays current values for name, description, author, and tags
 2. **Given** metadata editor is open, **When** user modifies fields, **Then** Tab switches between fields and Backspace deletes characters
 3. **Given** metadata editor is open, **When** user enters tags, **Then** comma-separated format is supported for multiple tags
 4. **Given** user confirms metadata changes, **When** Enter is pressed, **Then** metadata is updated, modified timestamp refreshes, and dirty flag is set

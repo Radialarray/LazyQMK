@@ -957,7 +957,7 @@ Event Received
 
 **File Operations:**
 - `Ctrl+S` - Save
-- `Ctrl+E` - Edit metadata
+- `Shift+E` - Edit metadata
 - `Ctrl+V` - Validate
 - `Ctrl+W` - Setup wizard
 

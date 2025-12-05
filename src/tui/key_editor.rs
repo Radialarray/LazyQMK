@@ -17,7 +17,7 @@ use ratatui::{
     Frame,
 };
 
-use super::{AppState, PopupType, ColorPickerContext};
+use super::{AppState, ColorPickerContext, PopupType};
 
 /// Mode of the key editor dialog
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -90,57 +90,57 @@ impl ComboKeycodeType {
             Self::ModCombo { prefix, base_key } => format!("{prefix}({base_key})"),
         }
     }
-    
+
     /// Update the hold part and return the new keycode
     #[must_use]
     pub fn with_hold(&self, new_hold: &str) -> Self {
         match self {
-            Self::LayerTap { tap_key, .. } => Self::LayerTap { 
-                layer: new_hold.to_string(), 
-                tap_key: tap_key.clone() 
+            Self::LayerTap { tap_key, .. } => Self::LayerTap {
+                layer: new_hold.to_string(),
+                tap_key: tap_key.clone(),
             },
-            Self::ModTapNamed { tap_key, .. } => Self::ModTapNamed { 
-                prefix: new_hold.to_string(), 
-                tap_key: tap_key.clone() 
+            Self::ModTapNamed { tap_key, .. } => Self::ModTapNamed {
+                prefix: new_hold.to_string(),
+                tap_key: tap_key.clone(),
             },
-            Self::ModTapCustom { tap_key, .. } => Self::ModTapCustom { 
-                modifier: new_hold.to_string(), 
-                tap_key: tap_key.clone() 
+            Self::ModTapCustom { tap_key, .. } => Self::ModTapCustom {
+                modifier: new_hold.to_string(),
+                tap_key: tap_key.clone(),
             },
-            Self::LayerMod { modifier, .. } => Self::LayerMod { 
-                layer: new_hold.to_string(), 
-                modifier: modifier.clone() 
+            Self::LayerMod { modifier, .. } => Self::LayerMod {
+                layer: new_hold.to_string(),
+                modifier: modifier.clone(),
             },
-            Self::ModCombo { base_key, .. } => Self::ModCombo { 
-                prefix: new_hold.to_string(), 
-                base_key: base_key.clone() 
+            Self::ModCombo { base_key, .. } => Self::ModCombo {
+                prefix: new_hold.to_string(),
+                base_key: base_key.clone(),
             },
         }
     }
-    
+
     /// Update the tap part and return the new keycode
     #[must_use]
     pub fn with_tap(&self, new_tap: &str) -> Self {
         match self {
-            Self::LayerTap { layer, .. } => Self::LayerTap { 
-                layer: layer.clone(), 
-                tap_key: new_tap.to_string() 
+            Self::LayerTap { layer, .. } => Self::LayerTap {
+                layer: layer.clone(),
+                tap_key: new_tap.to_string(),
             },
-            Self::ModTapNamed { prefix, .. } => Self::ModTapNamed { 
-                prefix: prefix.clone(), 
-                tap_key: new_tap.to_string() 
+            Self::ModTapNamed { prefix, .. } => Self::ModTapNamed {
+                prefix: prefix.clone(),
+                tap_key: new_tap.to_string(),
             },
-            Self::ModTapCustom { modifier, .. } => Self::ModTapCustom { 
-                modifier: modifier.clone(), 
-                tap_key: new_tap.to_string() 
+            Self::ModTapCustom { modifier, .. } => Self::ModTapCustom {
+                modifier: modifier.clone(),
+                tap_key: new_tap.to_string(),
             },
-            Self::LayerMod { layer, .. } => Self::LayerMod { 
-                layer: layer.clone(), 
-                modifier: new_tap.to_string() 
+            Self::LayerMod { layer, .. } => Self::LayerMod {
+                layer: layer.clone(),
+                modifier: new_tap.to_string(),
             },
-            Self::ModCombo { prefix, .. } => Self::ModCombo { 
-                prefix: prefix.clone(), 
-                base_key: new_tap.to_string() 
+            Self::ModCombo { prefix, .. } => Self::ModCombo {
+                prefix: prefix.clone(),
+                base_key: new_tap.to_string(),
             },
         }
     }
@@ -322,14 +322,11 @@ pub fn parse_keycode_with_db(db: &KeycodeDb, keycode: &str) -> Option<ParsedKeyc
     if let Some(paren_pos) = keycode.find('(') {
         let prefix = &keycode[..paren_pos];
         let template = format!("{prefix}()");
-        
+
         if let Some(def) = db.get(&template) {
             // Extract parameters from the keycode
             let inner = &keycode[paren_pos + 1..keycode.len() - 1];
-            let params: Vec<String> = inner
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .collect();
+            let params: Vec<String> = inner.split(',').map(|s| s.trim().to_string()).collect();
 
             return Some(ParsedKeycode {
                 category: def.category.clone(),
@@ -348,7 +345,7 @@ pub fn parse_keycode_with_db(db: &KeycodeDb, keycode: &str) -> Option<ParsedKeyc
 #[must_use]
 pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycodeType> {
     let parsed = parse_keycode_with_db(db, keycode)?;
-    
+
     match parsed.category.as_str() {
         "mod_tap" => {
             // Check if it's MT() with custom modifier or a named mod-tap like LCTL_T()
@@ -361,9 +358,9 @@ pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycode
             } else {
                 // Named mod-tap like LCTL_T, LSFT_T, etc.
                 let tap_key = parsed.params.first().cloned().unwrap_or_default();
-                Some(ComboKeycodeType::ModTapNamed { 
-                    prefix: prefix.to_string(), 
-                    tap_key 
+                Some(ComboKeycodeType::ModTapNamed {
+                    prefix: prefix.to_string(),
+                    tap_key,
                 })
             }
         }
@@ -371,9 +368,9 @@ pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycode
             // Modifier combo like LCG(), MEH(), etc.
             let prefix = keycode.split('(').next()?;
             let base_key = parsed.params.first().cloned().unwrap_or_default();
-            Some(ComboKeycodeType::ModCombo { 
-                prefix: prefix.to_string(), 
-                base_key 
+            Some(ComboKeycodeType::ModCombo {
+                prefix: prefix.to_string(),
+                base_key,
             })
         }
         "layers" => {
@@ -399,9 +396,12 @@ pub fn parse_combo_keycode(db: &KeycodeDb, keycode: &str) -> Option<ComboKeycode
 /// Parse a keycode and return display information for the key editor.
 /// Returns (`line1_label`, `line1_value`, `line2_label`, `line2_value`) for display.
 #[must_use]
-pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, String, String, String)> {
+pub fn get_keycode_breakdown(
+    db: &KeycodeDb,
+    keycode: &str,
+) -> Option<(String, String, String, String)> {
     let parsed = parse_keycode_with_db(db, keycode)?;
-    
+
     match parsed.category.as_str() {
         "mod_tap" => {
             // Mod-tap: Hold for modifier, tap for keycode
@@ -419,7 +419,12 @@ pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, S
             // Modifier wrapper: Modifier + base key
             let mod_desc = parsed.name.clone();
             let base_key = parsed.params.first().cloned().unwrap_or_default();
-            Some(("Modifier".to_string(), mod_desc, "Key".to_string(), base_key))
+            Some((
+                "Modifier".to_string(),
+                mod_desc,
+                "Key".to_string(),
+                base_key,
+            ))
         }
         "layers" => {
             match keycode.split('(').next()? {
@@ -427,7 +432,12 @@ pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, S
                     // Layer-Tap: Hold for layer, tap for keycode
                     let layer = parsed.params.first().cloned().unwrap_or_default();
                     let tap_key = parsed.params.get(1).cloned().unwrap_or_default();
-                    Some(("Hold".to_string(), format!("Layer {layer}"), "Tap".to_string(), tap_key))
+                    Some((
+                        "Hold".to_string(),
+                        format!("Layer {layer}"),
+                        "Tap".to_string(),
+                        tap_key,
+                    ))
                 }
                 "LM" => {
                     // Layer-Mod: Layer + modifier
@@ -446,8 +456,7 @@ pub fn get_keycode_breakdown(db: &KeycodeDb, keycode: &str) -> Option<(String, S
 /// This provides helpful context about what the keycode does.
 #[must_use]
 pub fn get_keycode_description(db: &KeycodeDb, keycode: &str) -> Option<String> {
-    parse_keycode_with_db(db, keycode)
-        .and_then(|parsed| parsed.description)
+    parse_keycode_with_db(db, keycode).and_then(|parsed| parsed.description)
 }
 
 /// Check if a keycode is "assigned" (not empty or transparent)
@@ -485,9 +494,16 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     let editor_state = &state.key_editor_state;
 
     // Get the key being edited
-    let key = state.layout.layers
+    let key = state
+        .layout
+        .layers
         .get(editor_state.layer_idx)
-        .and_then(|layer| layer.keys.iter().find(|k| k.position == editor_state.position));
+        .and_then(|layer| {
+            layer
+                .keys
+                .iter()
+                .find(|k| k.position == editor_state.position)
+        });
 
     let Some(key) = key else {
         return;
@@ -497,16 +513,13 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     // Main container with title
     let title = format!(
         " Key Editor - Layer {} ({}, {}) ",
-        editor_state.layer_idx,
-        editor_state.position.row,
-        editor_state.position.col
+        editor_state.layer_idx, editor_state.position.row, editor_state.position.col
     );
 
     let block = Block::default()
@@ -532,20 +545,28 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     // Keycode display - get color from the key
     let keycode_color = state.layout.resolve_key_color(editor_state.layer_idx, key);
     let keycode_style = Style::default()
-        .fg(Color::Rgb(keycode_color.r, keycode_color.g, keycode_color.b))
+        .fg(Color::Rgb(
+            keycode_color.r,
+            keycode_color.g,
+            keycode_color.b,
+        ))
         .add_modifier(Modifier::BOLD);
 
-    let keycode_display = Paragraph::new(vec![
-        Line::from(vec![
-            Span::styled("Keycode: ", Style::default().fg(theme.text_muted)),
-            Span::styled(&key.keycode, keycode_style),
-        ]),
-    ])
-    .block(Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(theme.inactive)));
+    let keycode_display = Paragraph::new(vec![Line::from(vec![
+        Span::styled("Keycode: ", Style::default().fg(theme.text_muted)),
+        Span::styled(&key.keycode, keycode_style),
+    ])])
+    .block(
+        Block::default()
+            .borders(Borders::BOTTOM)
+            .border_style(Style::default().fg(theme.inactive)),
+    );
     f.render_widget(keycode_display, chunks[0]);
 
     // Keycode breakdown using the database
-    let tap_hold_content = if let Some((label1, val1, label2, val2)) = get_keycode_breakdown(&state.keycode_db, &key.keycode) {
+    let tap_hold_content = if let Some((label1, val1, label2, val2)) =
+        get_keycode_breakdown(&state.keycode_db, &key.keycode)
+    {
         vec![
             Line::from(vec![
                 Span::styled(format!("{label1}: "), Style::default().fg(theme.text_muted)),
@@ -572,8 +593,11 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         }
     };
 
-    let tap_hold_display = Paragraph::new(tap_hold_content)
-        .block(Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(theme.inactive)));
+    let tap_hold_display = Paragraph::new(tap_hold_content).block(
+        Block::default()
+            .borders(Borders::BOTTOM)
+            .border_style(Style::default().fg(theme.inactive)),
+    );
     f.render_widget(tap_hold_display, chunks[1]);
 
     // Description field
@@ -600,18 +624,16 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         " Description "
     };
 
-    let description_display = Paragraph::new(desc_content)
-        .style(desc_style)
-        .block(
-            Block::default()
-                .title(desc_title)
-                .borders(Borders::ALL)
-                .border_style(if editor_state.is_editing() {
-                    Style::default().fg(theme.accent)
-                } else {
-                    Style::default().fg(theme.inactive)
-                }),
-        );
+    let description_display = Paragraph::new(desc_content).style(desc_style).block(
+        Block::default()
+            .title(desc_title)
+            .borders(Borders::ALL)
+            .border_style(if editor_state.is_editing() {
+                Style::default().fg(theme.accent)
+            } else {
+                Style::default().fg(theme.inactive)
+            }),
+    );
     f.render_widget(description_display, chunks[2]);
 
     // Check if this is a combo keycode (for showing H/T options)
@@ -622,9 +644,19 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     // Actions bar
     let actions = if editor_state.is_editing() {
         Line::from(vec![
-            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Save  ", Style::default().fg(theme.text_muted)),
-            Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.warning)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Cancel", Style::default().fg(theme.text_muted)),
         ])
     } else if is_combo {
@@ -632,38 +664,103 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         if is_mod_combo {
             // ModCombo only supports T (can't edit the modifier prefix separately)
             Line::from(vec![
-                Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "T",
+                    Style::default()
+                        .fg(theme.success)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
-                Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Enter",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
-                Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "D",
+                    Style::default()
+                        .fg(theme.primary)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
-                Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Esc",
+                    Style::default()
+                        .fg(theme.warning)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Close", Style::default().fg(theme.text_muted)),
             ])
         } else {
             Line::from(vec![
-                Span::styled("H", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "H",
+                    Style::default()
+                        .fg(theme.success)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Hold  ", Style::default().fg(theme.text_muted)),
-                Span::styled("T", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "T",
+                    Style::default()
+                        .fg(theme.success)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
-                Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Enter",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
-                Span::styled("D", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "D",
+                    Style::default()
+                        .fg(theme.primary)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
-                Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Esc",
+                    Style::default()
+                        .fg(theme.warning)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(": Close", Style::default().fg(theme.text_muted)),
             ])
         }
     } else {
         Line::from(vec![
-            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
-            Span::styled("D", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "D",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Description  ", Style::default().fg(theme.text_muted)),
-            Span::styled("C", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "C",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Color  ", Style::default().fg(theme.text_muted)),
-            Span::styled("Esc", Style::default().fg(theme.warning).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.warning)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": Close", Style::default().fg(theme.text_muted)),
         ])
     };
@@ -674,55 +771,52 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
 
 /// Handle input for the key editor
 #[allow(clippy::too_many_lines)]
-pub fn handle_input(
-    state: &mut AppState,
-    key: crossterm::event::KeyEvent,
-) -> anyhow::Result<bool> {
+pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> anyhow::Result<bool> {
     use crossterm::event::KeyCode;
 
     // Check if we're in edit mode first (immutable borrow)
     let is_editing = state.key_editor_state.is_editing();
 
     if is_editing {
-         // Description edit mode
-         match key.code {
-             KeyCode::Esc => {
-                 state.key_editor_state.cancel_edit_description();
-                 state.set_status("Description edit cancelled");
-             }
-             KeyCode::Enter => {
-                 state.key_editor_state.confirm_edit_description();
-                 // Apply the description to the actual key
-                 let description = state.key_editor_state.get_description();
-                 if let Some(key) = state.get_selected_key_mut() {
-                     key.description = description;
-                     state.mark_dirty();
-                     state.set_status("Description saved");
-                 }
-             }
-             KeyCode::Backspace => {
-                 state.key_editor_state.handle_backspace();
-             }
-             KeyCode::Delete => {
-                 state.key_editor_state.handle_delete();
-             }
-             KeyCode::Left | KeyCode::Char('h') => {
-                 state.key_editor_state.cursor_left();
-             }
-             KeyCode::Right | KeyCode::Char('l') => {
-                 state.key_editor_state.cursor_right();
-             }
-             KeyCode::Home => {
-                 state.key_editor_state.cursor_home();
-             }
-             KeyCode::End => {
-                 state.key_editor_state.cursor_end();
-             }
-             KeyCode::Char(c) => {
-                 state.key_editor_state.handle_char(c);
-             }
-             _ => {}
-         }
+        // Description edit mode
+        match key.code {
+            KeyCode::Esc => {
+                state.key_editor_state.cancel_edit_description();
+                state.set_status("Description edit cancelled");
+            }
+            KeyCode::Enter => {
+                state.key_editor_state.confirm_edit_description();
+                // Apply the description to the actual key
+                let description = state.key_editor_state.get_description();
+                if let Some(key) = state.get_selected_key_mut() {
+                    key.description = description;
+                    state.mark_dirty();
+                    state.set_status("Description saved");
+                }
+            }
+            KeyCode::Backspace => {
+                state.key_editor_state.handle_backspace();
+            }
+            KeyCode::Delete => {
+                state.key_editor_state.handle_delete();
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                state.key_editor_state.cursor_left();
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                state.key_editor_state.cursor_right();
+            }
+            KeyCode::Home => {
+                state.key_editor_state.cursor_home();
+            }
+            KeyCode::End => {
+                state.key_editor_state.cursor_end();
+            }
+            KeyCode::Char(c) => {
+                state.key_editor_state.handle_char(c);
+            }
+            _ => {}
+        }
     } else {
         // View mode
         match key.code {
@@ -752,17 +846,23 @@ pub fn handle_input(
             KeyCode::Char('h' | 'H') => {
                 // Edit hold part of combo keycode
                 if let Some(current_key) = state.get_selected_key() {
-                    if let Some(combo_type) = parse_combo_keycode(&state.keycode_db, &current_key.keycode) {
+                    if let Some(combo_type) =
+                        parse_combo_keycode(&state.keycode_db, &current_key.keycode)
+                    {
                         // Open appropriate picker based on combo type
                         match &combo_type {
-                            ComboKeycodeType::LayerTap { .. } | ComboKeycodeType::LayerMod { .. } => {
-                                state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
+                            ComboKeycodeType::LayerTap { .. }
+                            | ComboKeycodeType::LayerMod { .. } => {
+                                state.key_editor_state.combo_edit =
+                                    Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.layer_picker_state.reset();
                                 state.active_popup = Some(PopupType::LayerPicker);
                                 state.set_status("Select layer for hold action");
                             }
-                            ComboKeycodeType::ModTapNamed { .. } | ComboKeycodeType::ModTapCustom { .. } => {
-                                state.key_editor_state.combo_edit = Some((ComboEditPart::Hold, combo_type.clone()));
+                            ComboKeycodeType::ModTapNamed { .. }
+                            | ComboKeycodeType::ModTapCustom { .. } => {
+                                state.key_editor_state.combo_edit =
+                                    Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.modifier_picker_state.reset();
                                 state.active_popup = Some(PopupType::ModifierPicker);
                                 state.set_status("Select modifier for hold action");
@@ -770,7 +870,9 @@ pub fn handle_input(
                             ComboKeycodeType::ModCombo { .. } => {
                                 // ModCombo prefixes (MEH, HYPR, LCG, etc.) are fixed combos
                                 // Can't edit them individually - use T to change the key, or reassign
-                                state.set_status("Use T to change the key, or reassign for different modifier");
+                                state.set_status(
+                                    "Use T to change the key, or reassign for different modifier",
+                                );
                             }
                         }
                     } else {
@@ -781,9 +883,12 @@ pub fn handle_input(
             KeyCode::Char('t' | 'T') => {
                 // Edit tap part of combo keycode
                 if let Some(current_key) = state.get_selected_key() {
-                    if let Some(combo_type) = parse_combo_keycode(&state.keycode_db, &current_key.keycode) {
-                        state.key_editor_state.combo_edit = Some((ComboEditPart::Tap, combo_type.clone()));
-                        
+                    if let Some(combo_type) =
+                        parse_combo_keycode(&state.keycode_db, &current_key.keycode)
+                    {
+                        state.key_editor_state.combo_edit =
+                            Some((ComboEditPart::Tap, combo_type.clone()));
+
                         // Open keycode picker for tap action (or modifier picker for LM)
                         if let ComboKeycodeType::LayerMod { .. } = &combo_type {
                             state.active_popup = Some(PopupType::ModifierPicker);
@@ -791,7 +896,8 @@ pub fn handle_input(
                             state.set_status("Select modifier for layer-mod");
                         } else {
                             state.active_popup = Some(PopupType::KeycodePicker);
-                            state.keycode_picker_state = super::keycode_picker::KeycodePickerState::new();
+                            state.keycode_picker_state =
+                                super::keycode_picker::KeycodePickerState::new();
                             state.set_status("Select tap keycode");
                         }
                     } else {
@@ -824,7 +930,7 @@ mod tests {
     #[test]
     fn test_parse_keycode_with_db_simple() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = parse_keycode_with_db(&db, "KC_A");
         assert!(result.is_some());
         let parsed = result.unwrap();
@@ -835,7 +941,7 @@ mod tests {
     #[test]
     fn test_parse_keycode_with_db_mod_combo() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = parse_keycode_with_db(&db, "LCG(KC_Q)");
         assert!(result.is_some());
         let parsed = result.unwrap();
@@ -847,7 +953,7 @@ mod tests {
     #[test]
     fn test_parse_keycode_with_db_mod_tap() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = parse_keycode_with_db(&db, "LCTL_T(KC_A)");
         assert!(result.is_some());
         let parsed = result.unwrap();
@@ -859,7 +965,7 @@ mod tests {
     #[test]
     fn test_parse_keycode_with_db_layer_tap() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = parse_keycode_with_db(&db, "LT(1, KC_SPC)");
         assert!(result.is_some());
         let parsed = result.unwrap();
@@ -871,7 +977,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_mod_tap() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = get_keycode_breakdown(&db, "LCTL_T(KC_A)");
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -884,7 +990,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_mod_combo() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = get_keycode_breakdown(&db, "LCG(KC_Q)");
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -897,7 +1003,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_layer_tap() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = get_keycode_breakdown(&db, "LT(2, KC_SPC)");
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -910,7 +1016,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_simple_keycode() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         // Simple keycodes should return None (no breakdown needed)
         let result = get_keycode_breakdown(&db, "KC_A");
         assert!(result.is_none());
@@ -919,7 +1025,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_layer_mod() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = get_keycode_breakdown(&db, "LM(1, MOD_LSFT)");
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -932,7 +1038,7 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_custom_mod_tap() {
         let db = KeycodeDb::load().expect("Failed to load keycode database");
-        
+
         let result = get_keycode_breakdown(&db, "MT(MOD_LCTL, KC_A)");
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();

@@ -50,16 +50,18 @@ impl PaletteColor {
     /// Get the "primary" shade (500 level, or middle shade).
     #[must_use]
     pub fn primary_shade(&self) -> Option<&Shade> {
-        self.shades.iter().find(|s| s.level == 500)
+        self.shades
+            .iter()
+            .find(|s| s.level == 500)
             .or_else(|| self.shades.get(self.shades.len() / 2))
     }
-    
+
     /// Get a shade by index (0-8).
     #[must_use]
     pub fn shade_at(&self, index: usize) -> Option<&Shade> {
         self.shades.get(index)
     }
-    
+
     /// Get the number of shades.
     #[must_use]
     pub const fn shade_count(&self) -> usize {
@@ -77,16 +79,18 @@ impl ColorPalette {
         let palette: Self = serde_json::from_str(json_data)?;
         Ok(palette)
     }
-    
+
     /// Get a color by name (case-insensitive).
     #[must_use]
     pub fn get_color(&self, name: &str) -> Option<&PaletteColor> {
         let name_lower = name.to_lowercase();
-        self.colors.iter().find(|c| c.name.to_lowercase() == name_lower)
+        self.colors
+            .iter()
+            .find(|c| c.name.to_lowercase() == name_lower)
     }
-    
+
     /// Get a specific shade by color name and level.
-    /// 
+    ///
     /// # Example
     /// ```no_run
     /// use keyboard_configurator::models::ColorPalette;
@@ -96,12 +100,13 @@ impl ColorPalette {
     #[must_use]
     pub fn get_shade(&self, color_name: &str, level: u16) -> Option<&Shade> {
         self.get_color(color_name)?
-            .shades.iter()
+            .shades
+            .iter()
             .find(|s| s.level == level)
     }
-    
+
     /// Get the default layer color (Gray-500).
-    /// 
+    ///
     /// This is the standard gray used for layers that don't have
     /// a custom color assigned. Returns (107, 114, 128) if palette
     /// loads correctly, or a fallback gray if not.
@@ -111,25 +116,25 @@ impl ColorPalette {
             .map(Shade::to_rgb)
             .unwrap_or_else(|| RgbColor::new(107, 114, 128))
     }
-    
+
     /// Get a color by index.
     #[must_use]
     pub fn color_at(&self, index: usize) -> Option<&PaletteColor> {
         self.colors.get(index)
     }
-    
+
     /// Get the number of base colors.
     #[must_use]
     pub const fn color_count(&self) -> usize {
         self.colors.len()
     }
-    
+
     /// Get the number of columns for display (4 colors per row).
     #[must_use]
     pub const fn columns(&self) -> usize {
         4
     }
-    
+
     /// Get the number of rows for display.
     #[must_use]
     pub const fn rows(&self) -> usize {
@@ -156,12 +161,12 @@ mod tests {
     #[test]
     fn test_palette_colors() {
         let palette = ColorPalette::load().expect("Failed to load palette");
-        
+
         // Check first color is Red
         let red = palette.color_at(0).expect("Red should exist");
         assert_eq!(red.name, "Red");
         assert_eq!(red.shade_count(), 9);
-        
+
         // Check Red-500
         let red_500 = red.primary_shade().expect("Red-500 should exist");
         assert_eq!(red_500.level, 500);
@@ -176,7 +181,7 @@ mod tests {
         let palette = ColorPalette::load().expect("Failed to load palette");
         let blue = palette.color_at(7).expect("Blue should exist");
         let blue_500 = blue.primary_shade().expect("Blue-500 should exist");
-        
+
         let rgb = blue_500.to_rgb();
         assert_eq!(rgb.r, 59);
         assert_eq!(rgb.g, 130);
@@ -193,27 +198,29 @@ mod tests {
     #[test]
     fn test_get_color_by_name() {
         let palette = ColorPalette::load().expect("Failed to load palette");
-        
+
         let gray = palette.get_color("Gray").expect("Gray should exist");
         assert_eq!(gray.name, "Gray");
-        
+
         // Case-insensitive
         let blue = palette.get_color("blue").expect("blue should find Blue");
         assert_eq!(blue.name, "Blue");
-        
+
         assert!(palette.get_color("nonexistent").is_none());
     }
 
     #[test]
     fn test_get_shade() {
         let palette = ColorPalette::load().expect("Failed to load palette");
-        
-        let gray_500 = palette.get_shade("Gray", 500).expect("Gray-500 should exist");
+
+        let gray_500 = palette
+            .get_shade("Gray", 500)
+            .expect("Gray-500 should exist");
         assert_eq!(gray_500.level, 500);
         assert_eq!(gray_500.r, 107);
         assert_eq!(gray_500.g, 114);
         assert_eq!(gray_500.b, 128);
-        
+
         assert!(palette.get_shade("Gray", 999).is_none());
         assert!(palette.get_shade("nonexistent", 500).is_none());
     }
@@ -222,7 +229,7 @@ mod tests {
     fn test_default_layer_color() {
         let palette = ColorPalette::load().expect("Failed to load palette");
         let default = palette.default_layer_color();
-        
+
         // Should be Gray-500
         assert_eq!(default.r, 107);
         assert_eq!(default.g, 114);

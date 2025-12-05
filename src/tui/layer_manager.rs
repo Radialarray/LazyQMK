@@ -166,8 +166,14 @@ impl LayerManagerState {
     /// Navigate in copy-to or swap mode
     pub const fn select_target_previous(&mut self, layer_count: usize) {
         match &mut self.mode {
-            ManagerMode::CopyingTo { source_index, target_selected }
-            | ManagerMode::Swapping { source_index, target_selected } => {
+            ManagerMode::CopyingTo {
+                source_index,
+                target_selected,
+            }
+            | ManagerMode::Swapping {
+                source_index,
+                target_selected,
+            } => {
                 // Skip the source layer when navigating
                 loop {
                     if *target_selected > 0 {
@@ -187,8 +193,14 @@ impl LayerManagerState {
     /// Navigate in copy-to or swap mode
     pub const fn select_target_next(&mut self, layer_count: usize) {
         match &mut self.mode {
-            ManagerMode::CopyingTo { source_index, target_selected }
-            | ManagerMode::Swapping { source_index, target_selected } => {
+            ManagerMode::CopyingTo {
+                source_index,
+                target_selected,
+            }
+            | ManagerMode::Swapping {
+                source_index,
+                target_selected,
+            } => {
                 // Skip the source layer when navigating
                 loop {
                     *target_selected = (*target_selected + 1) % layer_count;
@@ -312,7 +324,10 @@ pub fn render_layer_manager(
                 render_delete_confirmation(f, inner_area, *layer_index, layer, layers.len(), theme);
             }
         }
-        ManagerMode::Duplicating { source_index, input } => {
+        ManagerMode::Duplicating {
+            source_index,
+            input,
+        } => {
             if let Some(layer) = layers.get(*source_index) {
                 render_name_input(
                     f,
@@ -324,7 +339,10 @@ pub fn render_layer_manager(
                 );
             }
         }
-        ManagerMode::CopyingTo { source_index, target_selected } => {
+        ManagerMode::CopyingTo {
+            source_index,
+            target_selected,
+        } => {
             render_layer_picker(
                 f,
                 inner_area,
@@ -335,7 +353,10 @@ pub fn render_layer_manager(
                 theme,
             );
         }
-        ManagerMode::Swapping { source_index, target_selected } => {
+        ManagerMode::Swapping {
+            source_index,
+            target_selected,
+        } => {
             render_layer_picker(
                 f,
                 inner_area,
@@ -395,7 +416,10 @@ fn render_layer_list(
 
             let content = Line::from(vec![
                 color_box,
-                Span::styled(format!("Layer {i}: "), Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    format!("Layer {i}: "),
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(&layer.name, style),
                 colors_indicator,
             ]);
@@ -453,7 +477,14 @@ fn render_layer_list(
 }
 
 /// Render name input dialog
-fn render_name_input(f: &mut Frame, area: Rect, title: &str, input: &str, prompt: &str, theme: &Theme) {
+fn render_name_input(
+    f: &mut Frame,
+    area: Rect,
+    title: &str,
+    input: &str,
+    prompt: &str,
+    theme: &Theme,
+) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
@@ -530,10 +561,7 @@ fn render_delete_confirmation(
     // Layer info
     let info = Line::from(vec![
         Span::raw("Layer "),
-        Span::styled(
-            format!("{layer_index}"),
-            Style::default().fg(theme.accent),
-        ),
+        Span::styled(format!("{layer_index}"), Style::default().fg(theme.accent)),
         Span::raw(": "),
         Span::styled(&layer.name, Style::default().fg(theme.accent)),
     ]);
@@ -630,7 +658,11 @@ fn render_layer_picker(
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(format!("Select Target - {title}")))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Select Target - {title}")),
+        )
         .highlight_style(Style::default().bg(theme.surface));
 
     f.render_widget(list, chunks[1]);

@@ -160,11 +160,7 @@ fn test_parse_multiple_keyboards() {
     let qmk_path = get_qmk_path();
 
     // Test a few common keyboards
-    let keyboards = vec![
-        "crkbd",
-        "ferris/sweep",
-        "keebart/corne_choc_pro/standard",
-    ];
+    let keyboards = vec!["crkbd", "ferris/sweep", "keebart/corne_choc_pro/standard"];
 
     for keyboard in keyboards {
         let result = parse_keyboard_info_json(&qmk_path, keyboard);
@@ -235,29 +231,39 @@ fn test_scan_keyboards_finds_crkbd() {
     // crkbd should be in the list (with specific revision paths)
     let has_crkbd = keyboards.iter().any(|k| k.contains("crkbd"));
     assert!(has_crkbd, "crkbd should be found in keyboard scan");
-    
+
     // Should find specific compilable paths, not parent directories
     // e.g., "keebart/corne_choc_pro/standard" not "keebart/corne_choc_pro"
-    let keebart_keyboards: Vec<_> = keyboards.iter()
+    let keebart_keyboards: Vec<_> = keyboards
+        .iter()
         .filter(|k| k.starts_with("keebart/corne_choc_pro/"))
         .collect();
-    
+
     if !keebart_keyboards.is_empty() {
-        println!("Found keebart/corne_choc_pro variants: {:?}", keebart_keyboards);
+        println!(
+            "Found keebart/corne_choc_pro variants: {:?}",
+            keebart_keyboards
+        );
         // Should have standard and/or mini, not the parent directory
         assert!(
-            keebart_keyboards.iter().any(|k| k.ends_with("/standard") || k.ends_with("/mini")),
+            keebart_keyboards
+                .iter()
+                .any(|k| k.ends_with("/standard") || k.ends_with("/mini")),
             "Should find specific variants (standard/mini), not parent directory"
         );
     }
-    
+
     // Check splitkb keyboards - should find revision paths
-    let splitkb_keyboards: Vec<_> = keyboards.iter()
+    let splitkb_keyboards: Vec<_> = keyboards
+        .iter()
         .filter(|k| k.starts_with("splitkb/"))
         .collect();
-    
+
     if !splitkb_keyboards.is_empty() {
-        println!("Sample splitkb keyboards: {:?}", &splitkb_keyboards[..3.min(splitkb_keyboards.len())]);
+        println!(
+            "Sample splitkb keyboards: {:?}",
+            &splitkb_keyboards[..3.min(splitkb_keyboards.len())]
+        );
         // Should include revision numbers like /rev1, /rev2, etc.
         assert!(
             splitkb_keyboards.iter().any(|k| k.contains("/rev")),

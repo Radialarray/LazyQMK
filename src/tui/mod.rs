@@ -59,6 +59,7 @@ use crate::config::Config;
 use crate::firmware::BuildState;
 use crate::keycode_db::KeycodeDb;
 use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
+use crate::shortcuts::{Action, ShortcutRegistry};
 
 // Re-export TUI components
 pub use category_manager::CategoryManagerState;
@@ -430,10 +431,13 @@ impl AppState {
     /// - `"keebart/corne_choc_pro/standard"` → `"keebart/corne_choc_pro"`
     /// - `"keebart/corne_choc_pro"` → `"keebart/corne_choc_pro"`
     /// - `"crkbd"` → `"crkbd"`
-    #[must_use] pub fn extract_base_keyboard(keyboard_path: &str) -> String {
+    #[must_use]
+    pub fn extract_base_keyboard(keyboard_path: &str) -> String {
         let keyboard_parts: Vec<&str> = keyboard_path.split('/').collect();
-        if keyboard_parts.len() > 2 
-            && ["standard", "mini", "normal", "full", "compact"].contains(&keyboard_parts[keyboard_parts.len() - 1]) {
+        if keyboard_parts.len() > 2
+            && ["standard", "mini", "normal", "full", "compact"]
+                .contains(&keyboard_parts[keyboard_parts.len() - 1])
+        {
             // Has variant subdirectory - use parent path
             keyboard_parts[..keyboard_parts.len() - 1].join("/")
         } else {
@@ -458,7 +462,9 @@ impl AppState {
         let theme = Theme::detect();
 
         // Initialize selected position to first valid key position
-        let selected_position = mapping.get_first_position().unwrap_or(Position { row: 0, col: 0 });
+        let selected_position = mapping
+            .get_first_position()
+            .unwrap_or(Position { row: 0, col: 0 });
 
         Ok(Self {
             layout,
@@ -553,7 +559,10 @@ impl AppState {
     /// Result indicating success or error with context
     pub fn rebuild_geometry(&mut self, layout_name: &str) -> Result<()> {
         use crate::models::VisualLayoutMapping;
-        use crate::parser::keyboard_json::{build_keyboard_geometry_with_rgb, build_matrix_to_led_map, parse_keyboard_info_json, parse_variant_keyboard_json};
+        use crate::parser::keyboard_json::{
+            build_keyboard_geometry_with_rgb, build_matrix_to_led_map, parse_keyboard_info_json,
+            parse_variant_keyboard_json,
+        };
 
         // Parse keyboard info.json to get layout definition
         let qmk_path = self
@@ -564,23 +573,33 @@ impl AppState {
             .context("QMK firmware path not configured")?;
 
         // Get the base keyboard name (without any variant subdirectory)
-        let keyboard = self.layout.metadata.keyboard.as_ref()
+        let keyboard = self
+            .layout
+            .metadata
+            .keyboard
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Keyboard not set in layout metadata"))?;
         let base_keyboard = Self::extract_base_keyboard(keyboard);
-        
+
         let info = parse_keyboard_info_json(qmk_path, &base_keyboard)
             .context("Failed to parse keyboard info.json")?;
 
         // Get the key count for the selected layout to determine variant
-        let layout_def = info.layouts.get(layout_name)
-            .context(format!("Layout '{layout_name}' not found in keyboard info.json"))?;
+        let layout_def = info.layouts.get(layout_name).context(format!(
+            "Layout '{layout_name}' not found in keyboard info.json"
+        ))?;
         let key_count = layout_def.layout.len();
 
         // Determine keyboard variant first so we can look for RGB matrix config
-        let variant_path = match self.config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count) {
-            Ok(path) => path,
-            Err(_) => base_keyboard.to_string(),
-        };
+        let variant_path =
+            match self
+                .config
+                .build
+                .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
+            {
+                Ok(path) => path,
+                Err(_) => base_keyboard.to_string(),
+            };
 
         // Try to get RGB matrix mapping from variant keyboard.json
         let matrix_to_led = parse_variant_keyboard_json(qmk_path, &variant_path)
@@ -588,8 +607,13 @@ impl AppState {
             .map(|rgb_config| build_matrix_to_led_map(&rgb_config));
 
         // Build new geometry for selected layout with RGB matrix mapping if available
-        let new_geometry = build_keyboard_geometry_with_rgb(&info, &base_keyboard, layout_name, matrix_to_led.as_ref())
-            .context("Failed to build keyboard geometry")?;
+        let new_geometry = build_keyboard_geometry_with_rgb(
+            &info,
+            &base_keyboard,
+            layout_name,
+            matrix_to_led.as_ref(),
+        )
+        .context("Failed to build keyboard geometry")?;
 
         // Build new visual layout mapping
         let new_mapping = VisualLayoutMapping::build(&new_geometry);
@@ -609,7 +633,10 @@ impl AppState {
         self.adjust_layers_to_geometry()?;
 
         // Reset selection to first valid position
-        self.selected_position = self.mapping.get_first_position().unwrap_or(Position { row: 0, col: 0 });
+        self.selected_position = self
+            .mapping
+            .get_first_position()
+            .unwrap_or(Position { row: 0, col: 0 });
 
         Ok(())
     }
@@ -624,7 +651,7 @@ impl AppState {
     /// Call this after loading a layout to ensure keys match the geometry.
     pub fn adjust_layers_to_geometry(&mut self) -> Result<()> {
         use crate::models::layer::KeyDefinition;
-        
+
         // Get all valid positions from the mapping
         let valid_positions: std::collections::HashSet<Position> = self
             .mapping
@@ -635,12 +662,14 @@ impl AppState {
         // Adjust each layer
         for layer in &mut self.layout.layers {
             // Keep only keys that are still in valid positions
-            layer.keys.retain(|key| valid_positions.contains(&key.position));
+            layer
+                .keys
+                .retain(|key| valid_positions.contains(&key.position));
 
             // Find which positions are missing
-            let existing_positions: std::collections::HashSet<Position> = 
+            let existing_positions: std::collections::HashSet<Position> =
                 layer.keys.iter().map(|k| k.position).collect();
-            
+
             let missing_positions: Vec<Position> = valid_positions
                 .iter()
                 .filter(|pos| !existing_positions.contains(pos))
@@ -882,11 +911,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             keycode_picker::render_keycode_picker(f, state);
         }
         PopupType::ModifierPicker => {
-            modifier_picker::render_modifier_picker(
-                f,
-                &state.modifier_picker_state,
-                &state.theme,
-            );
+            modifier_picker::render_modifier_picker(f, &state.modifier_picker_state, &state.theme);
         }
         PopupType::KeyEditor => {
             key_editor::render_key_editor(f, state);
@@ -902,8 +927,7 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let text = vec![
@@ -936,8 +960,7 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     // Split into fields
@@ -1128,38 +1151,40 @@ fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<
                     .map(|(_, message)| message.as_str())
                     .collect::<Vec<_>>()
                     .join("\n");
-                
-                match arboard::Clipboard::new().and_then(|mut clipboard| clipboard.set_text(log_text)) {
+
+                match arboard::Clipboard::new()
+                    .and_then(|mut clipboard| clipboard.set_text(log_text))
+                {
                     Ok(()) => state.set_status("Build log copied to clipboard"),
                     Err(e) => state.set_error(format!("Failed to copy to clipboard: {e}")),
                 }
             } else {
                 state.set_error("No build log available");
             }
-             Ok(false)
-         }
-         KeyCode::Up | KeyCode::Char('k') => {
-             state.build_log_state.scroll_up();
-             Ok(false)
-         }
-         KeyCode::Down | KeyCode::Char('j') => {
-             if let Some(build_state) = &state.build_state {
-                 let max_lines = build_state.log_lines.len();
-                 state.build_log_state.scroll_down(max_lines, 20); // Approximate visible lines
-             }
-             Ok(false)
-         }
-         KeyCode::Home => {
-             state.build_log_state.scroll_to_top();
-             Ok(false)
-         }
-         KeyCode::End => {
-             if let Some(build_state) = &state.build_state {
-                 let max_lines = build_state.log_lines.len();
-                 state.build_log_state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
-             }
-             Ok(false)
-         }
+            Ok(false)
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            state.build_log_state.scroll_up();
+            Ok(false)
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if let Some(build_state) = &state.build_state {
+                let max_lines = build_state.log_lines.len();
+                state.build_log_state.scroll_down(max_lines, 20); // Approximate visible lines
+            }
+            Ok(false)
+        }
+        KeyCode::Home => {
+            state.build_log_state.scroll_to_top();
+            Ok(false)
+        }
+        KeyCode::End => {
+            if let Some(build_state) = &state.build_state {
+                let max_lines = build_state.log_lines.len();
+                state.build_log_state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
+            }
+            Ok(false)
+        }
         _ => Ok(false),
     }
 }
@@ -1173,26 +1198,26 @@ fn handle_help_overlay_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             state.set_status("Press ? for help");
             Ok(false)
         }
-         // Scroll up
-         KeyCode::Up | KeyCode::Char('k') => {
-             state.help_overlay_state.scroll_up();
-             Ok(false)
-         }
-         // Scroll down
-         KeyCode::Down | KeyCode::Char('j') => {
-             state.help_overlay_state.scroll_down();
-             Ok(false)
-         }
-         // Page up
-         KeyCode::PageUp => {
-             state.help_overlay_state.page_up(20); // Approximate visible height
-             Ok(false)
-         }
-         // Page down
-         KeyCode::PageDown => {
-             state.help_overlay_state.page_down(20); // Approximate visible height
-             Ok(false)
-         }
+        // Scroll up
+        KeyCode::Up | KeyCode::Char('k') => {
+            state.help_overlay_state.scroll_up();
+            Ok(false)
+        }
+        // Scroll down
+        KeyCode::Down | KeyCode::Char('j') => {
+            state.help_overlay_state.scroll_down();
+            Ok(false)
+        }
+        // Page up
+        KeyCode::PageUp => {
+            state.help_overlay_state.page_up(20); // Approximate visible height
+            Ok(false)
+        }
+        // Page down
+        KeyCode::PageDown => {
+            state.help_overlay_state.page_down(20); // Approximate visible height
+            Ok(false)
+        }
         // Home - scroll to top
         KeyCode::Home => {
             state.help_overlay_state.scroll_to_top();
@@ -1225,27 +1250,30 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
             {
                 Ok(()) => {
                     state.mark_dirty();
-                    
+
                     // If name changed and we have a source file, rename it
                     if name_changed {
                         if let Some(ref old_path) = state.source_path {
                             if old_path.exists() {
                                 // Build new filename from new name (sanitized)
-                                let sanitized_name = new_name
-                                    .replace(['/', '\\', ':', ' '], "_");
-                                
+                                let sanitized_name = new_name.replace(['/', '\\', ':', ' '], "_");
+
                                 if let Some(parent) = old_path.parent() {
                                     let new_path = parent.join(format!("{sanitized_name}.md"));
-                                    
+
                                     // Only rename if the new path is different
                                     if new_path != *old_path {
                                         match std::fs::rename(old_path, &new_path) {
                                             Ok(()) => {
                                                 state.source_path = Some(new_path);
-                                                state.set_status(format!("Layout renamed to '{new_name}'"));
+                                                state.set_status(format!(
+                                                    "Layout renamed to '{new_name}'"
+                                                ));
                                             }
                                             Err(e) => {
-                                                state.set_error(format!("Failed to rename file: {e}"));
+                                                state.set_error(format!(
+                                                    "Failed to rename file: {e}"
+                                                ));
                                             }
                                         }
                                     } else {
@@ -1263,7 +1291,7 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
                     } else {
                         state.set_status("Metadata updated");
                     }
-                    
+
                     state.active_popup = None;
                 }
                 Err(err) => {
@@ -1344,23 +1372,23 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             state.layer_picker_state.reset();
             state.set_status("Layer selection cancelled");
             Ok(false)
-         }
-         KeyCode::Up | KeyCode::Char('k') => {
-             let layer_count = state.layout.layers.len();
-             state.layer_picker_state.select_previous(layer_count);
-             Ok(false)
-         }
-         KeyCode::Down | KeyCode::Char('j') => {
-             let layer_count = state.layout.layers.len();
-             state.layer_picker_state.select_next(layer_count);
-             Ok(false)
-         }
-         KeyCode::Enter => {
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            let layer_count = state.layout.layers.len();
+            state.layer_picker_state.select_previous(layer_count);
+            Ok(false)
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            let layer_count = state.layout.layers.len();
+            state.layer_picker_state.select_next(layer_count);
+            Ok(false)
+        }
+        KeyCode::Enter => {
             // Get the selected layer
             let selected_idx = state.layer_picker_state.selected;
             if let Some(layer) = state.layout.layers.get(selected_idx) {
                 let layer_ref = format!("@{}", layer.id);
-                
+
                 // Check if we're editing a combo keycode part
                 if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
                     let new_combo = match part {
@@ -1368,18 +1396,18 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                         key_editor::ComboEditPart::Tap => combo_type.with_tap(&layer_ref),
                     };
                     let new_keycode = new_combo.to_keycode();
-                    
+
                     if let Some(key) = state.get_selected_key_mut() {
                         key.keycode = new_keycode.clone();
                         state.mark_dirty();
                         state.set_status(format!("Updated: {new_keycode}"));
                     }
-                    
+
                     state.active_popup = Some(PopupType::KeyEditor);
                     state.layer_picker_state.reset();
                     return Ok(false);
                 }
-                
+
                 // Check if we're in a parameterized keycode flow
                 match &state.pending_keycode.keycode_type {
                     Some(ParameterizedKeycodeType::LayerTap) => {
@@ -1402,7 +1430,7 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                     _ => {
                         // Regular layer keycode (MO, TG, TO, etc.) - assign directly
                         let keycode = state.layer_picker_state.build_keycode(layer);
-                        
+
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = keycode.clone();
                             state.mark_dirty();
@@ -1411,7 +1439,7 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                     }
                 }
             }
-            
+
             state.active_popup = None;
             state.layer_picker_state.reset();
             Ok(false)
@@ -1446,7 +1474,7 @@ fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -
                             state.pending_keycode.param2 = Some(kc.code.clone());
                         }
                     }
-                    
+
                     // Build and assign the final keycode
                     if let Some(final_keycode) = state.pending_keycode.build_keycode() {
                         if let Some(key) = state.get_selected_key_mut() {
@@ -1455,7 +1483,7 @@ fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -
                             state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
-                    
+
                     // Reset and close
                     state.pending_keycode.reset();
                     state.active_popup = None;
@@ -1489,26 +1517,26 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
             state.active_popup = None;
             state.set_status("Cancelled");
             Ok(false)
-         }
-         KeyCode::Up | KeyCode::Char('k') => {
-             state.modifier_picker_state.focus_up();
-             Ok(false)
-         }
-         KeyCode::Down | KeyCode::Char('j') => {
-             state.modifier_picker_state.focus_down();
-             Ok(false)
-         }
-         KeyCode::Left | KeyCode::Char('h') => {
-             state.modifier_picker_state.focus_left();
-             Ok(false)
-         }
-         KeyCode::Right | KeyCode::Char('l') => {
-             state.modifier_picker_state.focus_right();
-             Ok(false)
-         }
-         KeyCode::Char(' ') => {
-             // Toggle the focused modifier
-             state.modifier_picker_state.toggle_focused();
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            state.modifier_picker_state.focus_up();
+            Ok(false)
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            state.modifier_picker_state.focus_down();
+            Ok(false)
+        }
+        KeyCode::Left | KeyCode::Char('h') => {
+            state.modifier_picker_state.focus_left();
+            Ok(false)
+        }
+        KeyCode::Right | KeyCode::Char('l') => {
+            state.modifier_picker_state.focus_right();
+            Ok(false)
+        }
+        KeyCode::Char(' ') => {
+            // Toggle the focused modifier
+            state.modifier_picker_state.toggle_focused();
             Ok(false)
         }
         KeyCode::Enter => {
@@ -1527,13 +1555,13 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                     key_editor::ComboEditPart::Tap => combo_type.with_tap(&mod_string),
                 };
                 let new_keycode = new_combo.to_keycode();
-                
+
                 if let Some(key) = state.get_selected_key_mut() {
                     key.keycode = new_keycode.clone();
                     state.mark_dirty();
                     state.set_status(format!("Updated: {new_keycode}"));
                 }
-                
+
                 state.active_popup = Some(PopupType::KeyEditor);
                 state.modifier_picker_state.reset();
                 return Ok(false);
@@ -1551,7 +1579,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                 Some(ParameterizedKeycodeType::LayerMod) => {
                     // LM: Store modifier as param2, build and assign
                     state.pending_keycode.param2 = Some(mod_string);
-                    
+
                     if let Some(final_keycode) = state.pending_keycode.build_keycode() {
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = final_keycode.clone();
@@ -1559,7 +1587,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                             state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
-                    
+
                     state.pending_keycode.reset();
                     state.modifier_picker_state.reset();
                     state.active_popup = None;
@@ -1567,7 +1595,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                 Some(ParameterizedKeycodeType::SingleMod) => {
                     // OSM and similar: Store modifier as param2, build and assign
                     state.pending_keycode.param2 = Some(mod_string);
-                    
+
                     if let Some(final_keycode) = state.pending_keycode.build_keycode() {
                         if let Some(key) = state.get_selected_key_mut() {
                             key.keycode = final_keycode.clone();
@@ -1575,7 +1603,7 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
                             state.set_status(format!("Assigned: {final_keycode}"));
                         }
                     }
-                    
+
                     state.pending_keycode.reset();
                     state.modifier_picker_state.reset();
                     state.active_popup = None;
@@ -1618,25 +1646,28 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                         if let Some(layout_variant) = state.wizard_state.inputs.get("layout") {
                             state.layout.metadata.layout_variant = Some(layout_variant.clone());
                         }
-                        
+
                         // Mark layout as modified
                         state.layout.metadata.touch();
-                        
+
                         // Rebuild geometry for new keyboard/layout
                         if let Some(layout_name) = state.layout.metadata.layout_variant.clone() {
                             match state.rebuild_geometry(&layout_name) {
                                 Ok(()) => {
-                                    let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("unknown");
-                                    state.set_status(format!(
-                                        "Keyboard changed to: {keyboard}"
-                                    ));
+                                    let keyboard = state
+                                        .layout
+                                        .metadata
+                                        .keyboard
+                                        .as_deref()
+                                        .unwrap_or("unknown");
+                                    state.set_status(format!("Keyboard changed to: {keyboard}"));
                                 }
                                 Err(e) => {
                                     state.set_error(format!("Failed to rebuild geometry: {e}"));
                                 }
                             }
                         }
-                        
+
                         // Return to settings manager
                         state.active_popup = Some(PopupType::SettingsManager);
                     } else {
@@ -1645,7 +1676,7 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                             Ok(new_config) => {
                                 // Update the app config
                                 state.config = new_config;
-                                
+
                                 // Save the config
                                 if let Err(e) = state.config.save() {
                                     state.set_error(format!("Failed to save configuration: {e}"));
@@ -1670,7 +1701,7 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
                         state.set_status("Setup wizard cancelled");
                     }
                 }
-                
+
                 // Reset wizard state for next time
                 state.wizard_state = onboarding_wizard::OnboardingWizardState::new();
             }
@@ -1695,22 +1726,22 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.active_popup = None;
                 state.set_status("Settings closed");
                 Ok(false)
-             }
-             KeyCode::Up | KeyCode::Char('k') => {
-                 let count = SettingItem::all().len();
-                 state.settings_manager_state.select_previous(count);
-                 Ok(false)
-             }
-             KeyCode::Down | KeyCode::Char('j') => {
-                 let count = SettingItem::all().len();
-                 state.settings_manager_state.select_next(count);
-                 Ok(false)
-             }
-             KeyCode::Enter => {
-                 // Start editing the selected setting
-                 let settings = SettingItem::all();
-                 if let Some(setting) = settings.get(state.settings_manager_state.selected) {
-                     match setting {
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = SettingItem::all().len();
+                state.settings_manager_state.select_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = SettingItem::all().len();
+                state.settings_manager_state.select_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Start editing the selected setting
+                let settings = SettingItem::all();
+                if let Some(setting) = settings.get(state.settings_manager_state.selected) {
+                    match setting {
                         SettingItem::UncoloredKeyBehavior => {
                             state.settings_manager_state.start_editing_numeric(
                                 *setting,
@@ -1761,8 +1792,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             );
                         }
                         SettingItem::FlowTapTerm => {
-                            let current =
-                                state.layout.tap_hold_settings.flow_tap_term.unwrap_or(0);
+                            let current = state.layout.tap_hold_settings.flow_tap_term.unwrap_or(0);
                             state
                                 .settings_manager_state
                                 .start_editing_numeric(*setting, current, 0, 300);
@@ -1775,10 +1805,9 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                         }
                         // RGB Settings
                         SettingItem::RgbEnabled => {
-                            state.settings_manager_state.start_toggling_boolean(
-                                *setting,
-                                state.layout.rgb_enabled,
-                            );
+                            state
+                                .settings_manager_state
+                                .start_toggling_boolean(*setting, state.layout.rgb_enabled);
                         }
                         SettingItem::RgbBrightness => {
                             state.settings_manager_state.start_editing_numeric(
@@ -1804,7 +1833,11 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                         SettingItem::QmkFirmwarePath => {
                             state.settings_manager_state.start_editing_path(
                                 *setting,
-                                state.config.paths.qmk_firmware.clone()
+                                state
+                                    .config
+                                    .paths
+                                    .qmk_firmware
+                                    .clone()
                                     .map(|p| p.to_string_lossy().to_string())
                                     .unwrap_or_default(),
                             );
@@ -1835,7 +1868,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             // Trigger layout variant picker - same as Ctrl+Y
                             // Mark that we came from settings so we return there
                             state.return_to_settings_after_picker = true;
-                            
+
                             // Load available layouts for current keyboard
                             let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
                                 path.clone()
@@ -1860,20 +1893,31 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                             state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
                         }
                         SettingItem::KeymapName => {
-                            let keymap = state.layout.metadata.keymap_name.clone().unwrap_or_default();
-                            state.settings_manager_state.start_editing_string(
-                                *setting,
-                                keymap,
-                            );
+                            let keymap = state
+                                .layout
+                                .metadata
+                                .keymap_name
+                                .clone()
+                                .unwrap_or_default();
+                            state
+                                .settings_manager_state
+                                .start_editing_string(*setting, keymap);
                         }
                         SettingItem::OutputFormat => {
-                            let current_format = state.layout.metadata.output_format.as_deref().unwrap_or("uf2");
+                            let current_format = state
+                                .layout
+                                .metadata
+                                .output_format
+                                .as_deref()
+                                .unwrap_or("uf2");
                             let selected = match current_format {
                                 "hex" => 1,
                                 "bin" => 2,
                                 _ => 0, // uf2
                             };
-                            state.settings_manager_state.start_selecting_output_format(selected);
+                            state
+                                .settings_manager_state
+                                .start_selecting_output_format(selected);
                         }
                         SettingItem::OutputDir => {
                             state.settings_manager_state.start_editing_path(
@@ -1900,26 +1944,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.settings_manager_state.cancel();
                 state.set_status("Cancelled");
                 Ok(false)
-             }
-             KeyCode::Up | KeyCode::Char('k') => {
-                 let count = TapHoldPreset::all().len();
-                 state.settings_manager_state.option_previous(count);
-                 Ok(false)
-             }
-             KeyCode::Down | KeyCode::Char('j') => {
-                 let count = TapHoldPreset::all().len();
-                 state.settings_manager_state.option_next(count);
-                 Ok(false)
-             }
-             KeyCode::Enter => {
-                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                     if let Some(&preset) = TapHoldPreset::all().get(selected_idx) {
-                         state.layout.tap_hold_settings.apply_preset(preset);
-                         state.mark_dirty();
-                         state.settings_manager_state.cancel();
-                         state.set_status(format!(
-                             "Tap-hold preset set to: {}",
-                             preset.display_name()
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = TapHoldPreset::all().len();
+                state.settings_manager_state.option_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = TapHoldPreset::all().len();
+                state.settings_manager_state.option_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                    if let Some(&preset) = TapHoldPreset::all().get(selected_idx) {
+                        state.layout.tap_hold_settings.apply_preset(preset);
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                        state.set_status(format!(
+                            "Tap-hold preset set to: {}",
+                            preset.display_name()
                         ));
                     }
                 }
@@ -1932,26 +1976,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.settings_manager_state.cancel();
                 state.set_status("Cancelled");
                 Ok(false)
-             }
-             KeyCode::Up | KeyCode::Char('k') => {
-                 let count = HoldDecisionMode::all().len();
-                 state.settings_manager_state.option_previous(count);
-                 Ok(false)
-             }
-             KeyCode::Down | KeyCode::Char('j') => {
-                 let count = HoldDecisionMode::all().len();
-                 state.settings_manager_state.option_next(count);
-                 Ok(false)
-             }
-             KeyCode::Enter => {
-                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                     if let Some(&mode) = HoldDecisionMode::all().get(selected_idx) {
-                         state.layout.tap_hold_settings.hold_mode = mode;
-                         state.layout.tap_hold_settings.mark_custom();
-                         state.mark_dirty();
-                         state.settings_manager_state.cancel();
-                         state.set_status(format!("Hold mode set to: {}", mode.display_name()));
-                     }
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = HoldDecisionMode::all().len();
+                state.settings_manager_state.option_previous(count);
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = HoldDecisionMode::all().len();
+                state.settings_manager_state.option_next(count);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                    if let Some(&mode) = HoldDecisionMode::all().get(selected_idx) {
+                        state.layout.tap_hold_settings.hold_mode = mode;
+                        state.layout.tap_hold_settings.mark_custom();
+                        state.mark_dirty();
+                        state.settings_manager_state.cancel();
+                        state.set_status(format!("Hold mode set to: {}", mode.display_name()));
+                    }
                 }
                 Ok(false)
             }
@@ -1964,26 +2008,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     state.settings_manager_state.cancel();
                     state.set_status("Cancelled");
                     Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state.settings_manager_state.increment_numeric(10);
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state.settings_manager_state.decrement_numeric(10);
-                     Ok(false)
-                 }
-                 KeyCode::Char(c) if c.is_ascii_digit() => {
-                     state.settings_manager_state.handle_char_input(c);
-                     Ok(false)
-                 }
-                 KeyCode::Backspace => {
-                     state.settings_manager_state.handle_backspace();
-                     Ok(false)
-                 }
-                 KeyCode::Enter => {
-                     if let Some(value) = state.settings_manager_state.get_numeric_value() {
-                         apply_numeric_setting(state, setting, value);
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    state.settings_manager_state.increment_numeric(10);
+                    Ok(false)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    state.settings_manager_state.decrement_numeric(10);
+                    Ok(false)
+                }
+                KeyCode::Char(c) if c.is_ascii_digit() => {
+                    state.settings_manager_state.handle_char_input(c);
+                    Ok(false)
+                }
+                KeyCode::Backspace => {
+                    state.settings_manager_state.handle_backspace();
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    if let Some(value) = state.settings_manager_state.get_numeric_value() {
+                        apply_numeric_setting(state, setting, value);
                         state.mark_dirty();
                         state.settings_manager_state.cancel();
                     }
@@ -2041,39 +2085,39 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 _ => Ok(false),
             }
         }
-        ManagerMode::SelectingOutputFormat { .. } => {
-            match key.code {
-                KeyCode::Esc => {
-                    state.settings_manager_state.cancel();
-                    state.set_status("Cancelled");
-                    Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state.settings_manager_state.option_previous(3);
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state.settings_manager_state.option_next(3);
-                     Ok(false)
-                 }
-                 KeyCode::Enter => {
-                     if let Some(selected_idx) = state.settings_manager_state.get_output_format_selected() {
-                         let format = match selected_idx {
-                             0 => "uf2",
-                             1 => "hex",
-                             2 => "bin",
-                             _ => "uf2",
-                         };
-                         state.layout.metadata.output_format = Some(format.to_string());
-                         state.layout.metadata.touch();
-                         state.set_status(format!("Output format set to: {format}"));
-                        state.settings_manager_state.cancel();
-                    }
-                    Ok(false)
-                }
-                _ => Ok(false),
+        ManagerMode::SelectingOutputFormat { .. } => match key.code {
+            KeyCode::Esc => {
+                state.settings_manager_state.cancel();
+                state.set_status("Cancelled");
+                Ok(false)
             }
-        }
+            KeyCode::Up | KeyCode::Char('k') => {
+                state.settings_manager_state.option_previous(3);
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                state.settings_manager_state.option_next(3);
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                if let Some(selected_idx) =
+                    state.settings_manager_state.get_output_format_selected()
+                {
+                    let format = match selected_idx {
+                        0 => "uf2",
+                        1 => "hex",
+                        2 => "bin",
+                        _ => "uf2",
+                    };
+                    state.layout.metadata.output_format = Some(format.to_string());
+                    state.layout.metadata.touch();
+                    state.set_status(format!("Output format set to: {format}"));
+                    state.settings_manager_state.cancel();
+                }
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
         ManagerMode::EditingPath { setting, .. } => {
             let setting = *setting;
             match key.code {
@@ -2115,7 +2159,8 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             state.set_status(format!("Tapping term set to: {value}ms"));
         }
         SettingItem::QuickTapTerm => {
-            state.layout.tap_hold_settings.quick_tap_term = if value == 0 { None } else { Some(value) };
+            state.layout.tap_hold_settings.quick_tap_term =
+                if value == 0 { None } else { Some(value) };
             state.layout.tap_hold_settings.mark_custom();
             let display = if value == 0 {
                 "Auto".to_string()
@@ -2130,7 +2175,8 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             state.set_status(format!("Tapping toggle set to: {value} taps"));
         }
         SettingItem::FlowTapTerm => {
-            state.layout.tap_hold_settings.flow_tap_term = if value == 0 { None } else { Some(value) };
+            state.layout.tap_hold_settings.flow_tap_term =
+                if value == 0 { None } else { Some(value) };
             state.layout.tap_hold_settings.mark_custom();
             let display = if value == 0 {
                 "Disabled".to_string()
@@ -2148,7 +2194,10 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
             let description = match value {
                 0 => "Off (Black)",
                 100 => "Show Color",
-                n => return state.set_status(format!("Uncolored key brightness set to: {n}% (Dimmed)")),
+                n => {
+                    return state
+                        .set_status(format!("Uncolored key brightness set to: {n}% (Dimmed)"))
+                }
             };
             state.set_status(format!("Uncolored key brightness set to: {description}"));
         }
@@ -2170,7 +2219,11 @@ fn apply_numeric_setting(state: &mut AppState, setting: settings_manager::Settin
 }
 
 /// Apply a boolean setting value
-fn apply_boolean_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: bool) {
+fn apply_boolean_setting(
+    state: &mut AppState,
+    setting: settings_manager::SettingItem,
+    value: bool,
+) {
     use settings_manager::SettingItem;
 
     match setting {
@@ -2205,12 +2258,20 @@ fn apply_boolean_setting(state: &mut AppState, setting: settings_manager::Settin
 }
 
 /// Apply a string setting value
-fn apply_string_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: String) -> Result<()> {
+fn apply_string_setting(
+    state: &mut AppState,
+    setting: settings_manager::SettingItem,
+    value: String,
+) -> Result<()> {
     use settings_manager::SettingItem;
 
     match setting {
         SettingItem::KeymapName => {
-            let keymap = if value.is_empty() { "default".to_string() } else { value };
+            let keymap = if value.is_empty() {
+                "default".to_string()
+            } else {
+                value
+            };
             state.layout.metadata.keymap_name = Some(keymap.clone());
             state.layout.metadata.touch();
             state.set_status(format!("Keymap name set to: {keymap}"));
@@ -2221,16 +2282,31 @@ fn apply_string_setting(state: &mut AppState, setting: settings_manager::Setting
 }
 
 /// Apply a path setting value
-fn apply_path_setting(state: &mut AppState, setting: settings_manager::SettingItem, value: String) -> Result<()> {
+fn apply_path_setting(
+    state: &mut AppState,
+    setting: settings_manager::SettingItem,
+    value: String,
+) -> Result<()> {
     use settings_manager::SettingItem;
 
     match setting {
         SettingItem::QmkFirmwarePath => {
-            state.config.paths.qmk_firmware = if value.is_empty() { None } else { Some(std::path::PathBuf::from(&value)) };
+            state.config.paths.qmk_firmware = if value.is_empty() {
+                None
+            } else {
+                Some(std::path::PathBuf::from(&value))
+            };
             if let Err(e) = state.config.save() {
                 state.set_status(format!("Failed to save config: {e}"));
             } else {
-                state.set_status(format!("QMK firmware path set to: {}", if value.is_empty() { "(not set)" } else { &value }));
+                state.set_status(format!(
+                    "QMK firmware path set to: {}",
+                    if value.is_empty() {
+                        "(not set)"
+                    } else {
+                        &value
+                    }
+                ));
             }
         }
         SettingItem::OutputDir => {
@@ -2315,26 +2391,26 @@ fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> 
         }
     } else {
         // Navigation mode
-         match key.code {
-             KeyCode::Up | KeyCode::Char('k') => {
-                 browser_state.select_previous();
-                 Ok(false)
-             }
-             KeyCode::Down | KeyCode::Char('j') => {
-                 browser_state.select_next();
-                 Ok(false)
-             }
-             KeyCode::Char('/') => {
-                 browser_state.toggle_search();
-                 state.set_status("Search mode - type to filter templates");
-                 Ok(false)
-             }
-             KeyCode::Enter => {
-                 // Load selected template
-                 match browser_state.load_selected_template() {
-                     Ok(layout) => {
-                         state.layout = layout;
-                         state.source_path = None; // New layout from template
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                browser_state.select_previous();
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                browser_state.select_next();
+                Ok(false)
+            }
+            KeyCode::Char('/') => {
+                browser_state.toggle_search();
+                state.set_status("Search mode - type to filter templates");
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Load selected template
+                match browser_state.load_selected_template() {
+                    Ok(layout) => {
+                        state.layout = layout;
+                        state.source_path = None; // New layout from template
                         state.mark_dirty(); // Mark as dirty since it's unsaved
                         state.active_popup = None;
                         state.set_status("Template loaded");
@@ -2444,12 +2520,16 @@ fn handle_template_save_dialog_input(state: &mut AppState, key: event::KeyEvent)
 }
 
 /// Calculate all positions within a rectangle defined by two corner positions.
-fn calculate_rectangle_selection(start: Position, end: Position, mapping: &VisualLayoutMapping) -> Vec<Position> {
+fn calculate_rectangle_selection(
+    start: Position,
+    end: Position,
+    mapping: &VisualLayoutMapping,
+) -> Vec<Position> {
     let min_row = start.row.min(end.row);
     let max_row = start.row.max(end.row);
     let min_col = start.col.min(end.col);
     let max_col = start.col.max(end.col);
-    
+
     let mut selected = Vec::new();
     for row in min_row..=max_row {
         for col in min_col..=max_col {
@@ -2463,22 +2543,18 @@ fn calculate_rectangle_selection(start: Position, end: Position, mapping: &Visua
     selected
 }
 
-/// Handle input for main UI
-#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match (key.code, key.modifiers) {
-        // Quit
-        (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
+/// Dispatch action to appropriate handler
+fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
+    match action {
+        Action::Quit => {
             if state.dirty {
                 state.active_popup = Some(PopupType::UnsavedChangesPrompt);
                 Ok(false)
             } else {
-                Ok(true) // Quit immediately
+                Ok(true)
             }
         }
-
-        // Save
-        (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
+        Action::Save => {
             if let Some(path) = &state.source_path.clone() {
                 crate::parser::save_markdown_layout(&state.layout, path)?;
                 state.mark_clean();
@@ -2488,79 +2564,148 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-         // Navigation - Arrow keys (with rectangle selection support)
-         (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
-             if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
-                 state.selected_position = new_pos;
-                 // Update rectangle selection if active
-                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                 }
-                 state.clear_error();
-             }
-             Ok(false)
-         }
-         (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
-             if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
-                 state.selected_position = new_pos;
-                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                 }
-                 state.clear_error();
-             }
-             Ok(false)
-         }
-         (KeyCode::Left, _) | (KeyCode::Char('h'), _) => {
-             if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
-                 state.selected_position = new_pos;
-                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                 }
-                 state.clear_error();
-             }
-            Ok(false)
-         }
-
-         // Toggle build log (Ctrl+L) - must come before general navigation patterns
-         (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
-             if state.build_state.is_some() {
-                 if state.build_log_state.visible {
-                     state.active_popup = None;
-                     state.build_log_state.visible = false;
-                 } else {
-                     state.active_popup = Some(PopupType::BuildLog);
-                     state.build_log_state.visible = true;
-                 }
-                 state.set_status("Build log toggled");
-             } else {
-                 state.set_error("No build active");
-             }
-             Ok(false)
-         }
-
-         // Navigation - Right arrow and 'l' key (without modifiers)
-         (KeyCode::Right, _) | (KeyCode::Char('l'), KeyModifiers::NONE) => {
-             if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
-                 state.selected_position = new_pos;
-                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                 }
-                 state.clear_error();
-             }
-             Ok(false)
-         }
-
-        // Layer switching
-        (KeyCode::BackTab, _) => {
-            if state.current_layer > 0 {
-                state.current_layer -= 1;
-                state.set_status(format!("Layer {}", state.current_layer));
-                state.clear_error();
+        Action::ToggleHelp => {
+            if state.active_popup == Some(PopupType::HelpOverlay) {
+                state.active_popup = None;
+            } else {
+                state.active_popup = Some(PopupType::HelpOverlay);
             }
             Ok(false)
         }
-        (KeyCode::Tab, _) => {
+        Action::OpenKeycodePicker => {
+            // Open key editor if key is assigned, keycode picker if empty (Enter key logic)
+            let key_info = state
+                .get_selected_key()
+                .map(|key| (key.clone(), key_editor::is_key_assigned(&key.keycode)));
+            
+            if let Some((key, is_assigned)) = key_info {
+                if is_assigned {
+                    // Key is assigned - open key editor
+                    state.key_editor_state.init_for_key(&key, state.current_layer);
+                    state.active_popup = Some(PopupType::KeyEditor);
+                    state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
+                } else {
+                    // Key is empty (KC_NO, KC_TRNS) - open keycode picker
+                    state.active_popup = Some(PopupType::KeycodePicker);
+                    state.keycode_picker_state = KeycodePickerState::new();
+                    state.set_status("Select keycode - Type to search, Enter to apply");
+                }
+            } else {
+                // No key selected - open keycode picker
+                state.active_popup = Some(PopupType::KeycodePicker);
+                state.keycode_picker_state = KeycodePickerState::new();
+                state.set_status("Select keycode - Type to search, Enter to apply");
+            }
+            Ok(false)
+        }
+        Action::OpenLayerManager => {
+            state.layer_manager_state = LayerManagerState::new();
+            state.active_popup = Some(PopupType::LayerManager);
+            state.set_status("Layer Manager - n: new, d: delete, r: rename");
+            Ok(false)
+        }
+        Action::OpenCategoryManager => {
+            state.category_manager_state = CategoryManagerState::new();
+            state.active_popup = Some(PopupType::CategoryManager);
+            state.set_status("Category Manager - n: new, r: rename, c: color, d: delete");
+            Ok(false)
+        }
+        Action::OpenSettings => {
+            state.settings_manager_state = SettingsManagerState::new();
+            state.active_popup = Some(PopupType::SettingsManager);
+            state.set_status("Settings Manager - Enter: edit, Esc: close");
+            Ok(false)
+        }
+        Action::EditMetadata => {
+            state.metadata_editor_state = MetadataEditorState::new(&state.layout.metadata);
+            state.active_popup = Some(PopupType::MetadataEditor);
+            state.set_status("Edit Metadata - Tab: next field, Enter: save");
+            Ok(false)
+        }
+        Action::SetupWizard => {
+            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
+                path.clone()
+            } else {
+                state.set_error("QMK firmware path not configured");
+                return Ok(false);
+            };
+
+            match onboarding_wizard::OnboardingWizardState::new_for_keyboard_selection(&qmk_path) {
+                Ok(wizard_state) => {
+                    state.wizard_state = wizard_state;
+                    state.active_popup = Some(PopupType::SetupWizard);
+                    state.set_status("Setup Wizard - Follow prompts to configure");
+                }
+                Err(e) => {
+                    state.set_error(format!("Failed to start wizard: {e}"));
+                }
+            }
+            Ok(false)
+        }
+        Action::BuildFirmware => {
+            handle_firmware_build(state)?;
+            Ok(false)
+        }
+        Action::GenerateFirmware => {
+            handle_firmware_generation(state)?;
+            Ok(false)
+        }
+        Action::ViewBuildLog => {
+            if state.build_state.is_some() {
+                if state.build_log_state.visible {
+                    state.active_popup = None;
+                    state.build_log_state.visible = false;
+                } else {
+                    state.active_popup = Some(PopupType::BuildLog);
+                    state.build_log_state.visible = true;
+                }
+                state.set_status("Build log toggled");
+            } else {
+                state.set_error("No build active");
+            }
+            Ok(false)
+        }
+        Action::BrowseTemplates => {
+            state.template_browser_state = TemplateBrowserState::new();
+            if let Err(e) = state.template_browser_state.scan_templates() {
+                state.set_error(format!("Failed to scan templates: {e}"));
+            } else {
+                state.active_popup = Some(PopupType::TemplateBrowser);
+                state.set_status("Template Browser - Enter: load, /: search");
+            }
+            Ok(false)
+        }
+        Action::SaveAsTemplate => {
+            state.template_save_dialog_state =
+                TemplateSaveDialogState::new(state.layout.metadata.name.clone());
+            state.active_popup = Some(PopupType::TemplateSaveDialog);
+            state.set_status("Save as Template - Tab: next field, Enter: save");
+            Ok(false)
+        }
+        Action::SwitchLayoutVariant => {
+            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
+                path.clone()
+            } else {
+                state.set_error("QMK firmware path not configured");
+                return Ok(false);
+            };
+
+            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
+            let base_keyboard = AppState::extract_base_keyboard(keyboard);
+
+            if let Err(e) = state
+                .layout_picker_state
+                .load_layouts(&qmk_path, &base_keyboard)
+            {
+                state.set_error(format!("Failed to load layouts: {e}"));
+                return Ok(false);
+            }
+
+            state.active_popup = Some(PopupType::LayoutPicker);
+            state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
+            Ok(false)
+        }
+        Action::NextLayer => {
             if state.current_layer < state.layout.layers.len() - 1 {
                 state.current_layer += 1;
                 state.set_status(format!("Layer {}", state.current_layer));
@@ -2568,9 +2713,15 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Clear key (x or Delete - but not Ctrl+X which is cut)
-        (KeyCode::Char('x'), KeyModifiers::NONE) | (KeyCode::Delete, _) => {
+        Action::PreviousLayer => {
+            if state.current_layer > 0 {
+                state.current_layer -= 1;
+                state.set_status(format!("Layer {}", state.current_layer));
+                state.clear_error();
+            }
+            Ok(false)
+        }
+        Action::ClearKey => {
             if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
                 // Clear all selected keys
                 let layer = state.current_layer;
@@ -2593,9 +2744,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Enter/exit selection mode (Shift+V for toggle, Space to add/remove current key)
-        (KeyCode::Char('V'), KeyModifiers::SHIFT) => {
+        Action::ToggleSelectionMode => {
             if state.selection_mode.is_some() {
                 // Exit selection mode
                 state.selection_mode = None;
@@ -2606,13 +2755,12 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 state.selection_mode = Some(SelectionMode::Normal);
                 state.selected_keys.clear();
                 state.selected_keys.push(state.selected_position);
-                state.set_status("Selection mode - Space: toggle key, y: copy, d: cut, Esc: cancel");
+                state
+                    .set_status("Selection mode - Space: toggle key, y: copy, d: cut, Esc: cancel");
             }
             Ok(false)
         }
-
-        // Toggle current key in selection (Space in selection mode)
-        (KeyCode::Char(' '), KeyModifiers::NONE) => {
+        Action::ToggleCurrentKey => {
             if state.selection_mode.is_some() {
                 let pos = state.selected_position;
                 if let Some(idx) = state.selected_keys.iter().position(|p| *p == pos) {
@@ -2621,51 +2769,104 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                     state.selected_keys.push(pos);
                 }
                 state.set_status(format!("{} keys selected", state.selected_keys.len()));
-                Ok(false)
-            } else {
-                // Space outside selection mode - no action
-                Ok(false)
             }
+            Ok(false)
         }
-
-        // Rectangle selection start (Shift+R in selection mode or as entry)
-        (KeyCode::Char('R'), KeyModifiers::SHIFT) => {
+        Action::StartRectangleSelect => {
             if state.selection_mode.is_some() {
                 // Start rectangle selection from current position
-                state.selection_mode = Some(SelectionMode::Rectangle { start: state.selected_position });
+                state.selection_mode = Some(SelectionMode::Rectangle {
+                    start: state.selected_position,
+                });
                 state.selected_keys.clear();
                 state.selected_keys.push(state.selected_position);
                 state.set_status("Rectangle select - move to opposite corner, Enter to confirm");
             } else {
                 // Enter rectangle selection mode
-                state.selection_mode = Some(SelectionMode::Rectangle { start: state.selected_position });
+                state.selection_mode = Some(SelectionMode::Rectangle {
+                    start: state.selected_position,
+                });
                 state.selected_keys.clear();
                 state.selected_keys.push(state.selected_position);
                 state.set_status("Rectangle select - move to opposite corner, Enter to confirm");
             }
             Ok(false)
         }
-
-        // Copy key (y or Ctrl+C) - handles both single and multi-selection
-        (KeyCode::Char('y'), KeyModifiers::NONE) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+        Action::NavigateUp => {
+            if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
+                state.selected_position = new_pos;
+                // Update rectangle selection if active
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys =
+                        calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
+                state.clear_error();
+            }
+            Ok(false)
+        }
+        Action::NavigateDown => {
+            if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
+                state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys =
+                        calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
+                state.clear_error();
+            }
+            Ok(false)
+        }
+        Action::NavigateLeft => {
+            if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
+                state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys =
+                        calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
+                state.clear_error();
+            }
+            Ok(false)
+        }
+        Action::NavigateRight => {
+            if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
+                state.selected_position = new_pos;
+                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                    state.selected_keys =
+                        calculate_rectangle_selection(start, new_pos, &state.mapping);
+                }
+                state.clear_error();
+            }
+            Ok(false)
+        }
+        Action::JumpToFirst => {
+            // Not yet implemented
+            Ok(false)
+        }
+        Action::JumpToLast => {
+            // Not yet implemented
+            Ok(false)
+        }
+        Action::CopyKey => {
             if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
                 // Copy all selected keys
                 let layer = state.current_layer;
                 let anchor = state.selected_keys[0];
                 let mut keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
-                
+
                 for pos in &state.selected_keys {
                     if let Some(layer) = state.layout.layers.get(layer) {
                         if let Some(key) = layer.keys.iter().find(|k| k.position == *pos) {
-                            keys.push((*pos, clipboard::ClipboardContent {
-                                keycode: key.keycode.clone(),
-                                color_override: key.color_override,
-                                category_id: key.category_id.clone(),
-                            }));
+                            keys.push((
+                                *pos,
+                                clipboard::ClipboardContent {
+                                    keycode: key.keycode.clone(),
+                                    color_override: key.color_override,
+                                    category_id: key.category_id.clone(),
+                                },
+                            ));
                         }
                     }
                 }
-                
+
                 let msg = state.clipboard.copy_multi(keys, anchor);
                 state.selection_mode = None;
                 state.selected_keys.clear();
@@ -2675,39 +2876,38 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 let keycode = key.keycode.clone();
                 let color_override = key.color_override;
                 let category_id = key.category_id.clone();
-                let msg = state.clipboard.copy(
-                    &keycode,
-                    color_override,
-                    category_id.as_deref(),
-                );
+                let msg = state
+                    .clipboard
+                    .copy(&keycode, color_override, category_id.as_deref());
                 state.set_status(msg);
             } else {
                 state.set_error("No key to copy");
             }
             Ok(false)
         }
-
-        // Cut key (d or Ctrl+X) - handles both single and multi-selection
-        (KeyCode::Char('d'), KeyModifiers::NONE) | (KeyCode::Char('x'), KeyModifiers::CONTROL) => {
+        Action::CutKey => {
             if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
                 // Cut all selected keys
                 let layer = state.current_layer;
                 let anchor = state.selected_keys[0];
                 let positions = state.selected_keys.clone();
                 let mut keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
-                
+
                 for pos in &state.selected_keys {
                     if let Some(layer_ref) = state.layout.layers.get(layer) {
                         if let Some(key) = layer_ref.keys.iter().find(|k| k.position == *pos) {
-                            keys.push((*pos, clipboard::ClipboardContent {
-                                keycode: key.keycode.clone(),
-                                color_override: key.color_override,
-                                category_id: key.category_id.clone(),
-                            }));
+                            keys.push((
+                                *pos,
+                                clipboard::ClipboardContent {
+                                    keycode: key.keycode.clone(),
+                                    color_override: key.color_override,
+                                    category_id: key.category_id.clone(),
+                                },
+                            ));
                         }
                     }
                 }
-                
+
                 let msg = state.clipboard.cut_multi(keys, anchor, layer, positions);
                 state.selection_mode = None;
                 state.selected_keys.clear();
@@ -2730,106 +2930,119 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Paste key (p or Ctrl+V)
-        (KeyCode::Char('p'), KeyModifiers::NONE) | (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
+        Action::PasteKey => {
             // Check if clipboard has content
             if !state.clipboard.has_content() {
                 state.set_error("Nothing to paste");
                 return Ok(false);
             }
-            
+
             // Check for multi-key paste first
             if state.clipboard.is_multi() {
                 if let Some(multi) = state.clipboard.get_multi_content().cloned() {
-                // Calculate target positions relative to current position
-                // The anchor is the reference point, we need to shift all keys
-                let anchor = multi.anchor;
-                let current = state.selected_position;
-                
-                // Calculate offset from anchor to current position
-                let row_offset = current.row as isize - anchor.row as isize;
-                let col_offset = current.col as isize - anchor.col as isize;
-                
-                // Collect valid target positions and save undo state
-                let mut paste_targets: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
-                let mut undo_keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
-                
-                for (pos, content) in &multi.keys {
-                    // Calculate target position
-                    let target_row = pos.row as isize + row_offset;
-                    let target_col = pos.col as isize + col_offset;
-                    
-                    if target_row >= 0 && target_col >= 0 && target_row <= u8::MAX as isize && target_col <= u8::MAX as isize {
-                        let target_pos = Position::new(target_row as u8, target_col as u8);
-                        
-                        // Check if target position is valid
-                        if state.mapping.is_valid_position(target_pos) {
-                            // Save original for undo
-                            if let Some(layer) = state.layout.layers.get(state.current_layer) {
-                                if let Some(key) = layer.keys.iter().find(|k| k.position == target_pos) {
-                                    undo_keys.push((target_pos, clipboard::ClipboardContent {
-                                        keycode: key.keycode.clone(),
-                                        color_override: key.color_override,
-                                        category_id: key.category_id.clone(),
-                                    }));
+                    // Calculate target positions relative to current position
+                    // The anchor is the reference point, we need to shift all keys
+                    let anchor = multi.anchor;
+                    let current = state.selected_position;
+
+                    // Calculate offset from anchor to current position
+                    let row_offset = current.row as isize - anchor.row as isize;
+                    let col_offset = current.col as isize - anchor.col as isize;
+
+                    // Collect valid target positions and save undo state
+                    let mut paste_targets: Vec<(Position, clipboard::ClipboardContent)> =
+                        Vec::new();
+                    let mut undo_keys: Vec<(Position, clipboard::ClipboardContent)> = Vec::new();
+
+                    for (pos, content) in &multi.keys {
+                        // Calculate target position
+                        let target_row = pos.row as isize + row_offset;
+                        let target_col = pos.col as isize + col_offset;
+
+                        if target_row >= 0
+                            && target_col >= 0
+                            && target_row <= u8::MAX as isize
+                            && target_col <= u8::MAX as isize
+                        {
+                            let target_pos = Position::new(target_row as u8, target_col as u8);
+
+                            // Check if target position is valid
+                            if state.mapping.is_valid_position(target_pos) {
+                                // Save original for undo
+                                if let Some(layer) = state.layout.layers.get(state.current_layer) {
+                                    if let Some(key) =
+                                        layer.keys.iter().find(|k| k.position == target_pos)
+                                    {
+                                        undo_keys.push((
+                                            target_pos,
+                                            clipboard::ClipboardContent {
+                                                keycode: key.keycode.clone(),
+                                                color_override: key.color_override,
+                                                category_id: key.category_id.clone(),
+                                            },
+                                        ));
+                                    }
                                 }
+                                paste_targets.push((target_pos, content.clone()));
                             }
-                            paste_targets.push((target_pos, content.clone()));
                         }
                     }
-                }
-                
-                if paste_targets.is_empty() {
-                    state.set_error("No valid positions for paste");
-                    return Ok(false);
-                }
-                
-                // Save undo state
-                state.clipboard.save_undo(
-                    state.current_layer,
-                    undo_keys,
-                    format!("Pasted {} keys", paste_targets.len()),
-                );
-                
-                // Get cut sources before paste
-                let cut_sources: Vec<(usize, Position)> = state.clipboard.get_multi_cut_sources().to_vec();
-                
-                // Apply pastes
-                let paste_count = paste_targets.len();
-                for (target_pos, content) in &paste_targets {
-                    if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
-                        if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *target_pos) {
-                            key.keycode = content.keycode.clone();
-                            key.color_override = content.color_override;
-                            key.category_id = content.category_id.clone();
+
+                    if paste_targets.is_empty() {
+                        state.set_error("No valid positions for paste");
+                        return Ok(false);
+                    }
+
+                    // Save undo state
+                    state.clipboard.save_undo(
+                        state.current_layer,
+                        undo_keys,
+                        format!("Pasted {} keys", paste_targets.len()),
+                    );
+
+                    // Get cut sources before paste
+                    let cut_sources: Vec<(usize, Position)> =
+                        state.clipboard.get_multi_cut_sources().to_vec();
+
+                    // Apply pastes
+                    let paste_count = paste_targets.len();
+                    for (target_pos, content) in &paste_targets {
+                        if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                            if let Some(key) =
+                                layer.keys.iter_mut().find(|k| k.position == *target_pos)
+                            {
+                                key.keycode = content.keycode.clone();
+                                key.color_override = content.color_override;
+                                key.category_id = content.category_id.clone();
+                            }
                         }
                     }
-                }
-                
-                // Clear cut sources if this was a cut operation
-                for (layer_idx, pos) in cut_sources {
-                    if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
-                        if let Some(source_key) = layer.keys.iter_mut().find(|k| k.position == pos) {
-                            source_key.keycode = "KC_TRNS".to_string();
-                            source_key.color_override = None;
-                            source_key.category_id = None;
+
+                    // Clear cut sources if this was a cut operation
+                    for (layer_idx, pos) in cut_sources {
+                        if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
+                            if let Some(source_key) =
+                                layer.keys.iter_mut().find(|k| k.position == pos)
+                            {
+                                source_key.keycode = "KC_TRNS".to_string();
+                                source_key.color_override = None;
+                                source_key.category_id = None;
+                            }
                         }
                     }
-                }
-                state.clipboard.clear_cut_source();
-                
-                // Flash the first pasted key (current position)
-                state.flash_highlight = Some((state.current_layer, current, 5));
-                
-                state.mark_dirty();
-                state.set_status(format!("Pasted {paste_count} keys"));
+                    state.clipboard.clear_cut_source();
+
+                    // Flash the first pasted key (current position)
+                    state.flash_highlight = Some((state.current_layer, current, 5));
+
+                    state.mark_dirty();
+                    state.set_status(format!("Pasted {paste_count} keys"));
                 }
             } else if let Some(content) = state.clipboard.get_content().cloned() {
                 // Single key paste (original logic)
                 // Get cut source before modifying clipboard
                 let cut_source = state.clipboard.get_cut_source();
-                
+
                 // Save undo state before making changes
                 if let Some(key) = state.get_selected_key() {
                     let original = clipboard::ClipboardContent {
@@ -2843,7 +3056,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                         format!("Pasted: {}", content.keycode),
                     );
                 }
-                
+
                 // Apply clipboard content to selected key
                 if let Some(key) = state.get_selected_key_mut() {
                     key.keycode = content.keycode.clone();
@@ -2851,7 +3064,7 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                     key.category_id = content.category_id.clone();
                     state.mark_dirty();
                     state.set_status(format!("Pasted: {}", content.keycode));
-                    
+
                     // Trigger flash highlight (5 frames ~= 250ms at 50ms/frame)
                     state.flash_highlight = Some((state.current_layer, state.selected_position, 5));
                 }
@@ -2859,7 +3072,8 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
                 // If this was a cut operation, clear the source key
                 if let Some((layer_idx, pos)) = cut_source {
                     if let Some(layer) = state.layout.layers.get_mut(layer_idx) {
-                        if let Some(source_key) = layer.keys.iter_mut().find(|k| k.position == pos) {
+                        if let Some(source_key) = layer.keys.iter_mut().find(|k| k.position == pos)
+                        {
                             source_key.keycode = "KC_TRNS".to_string();
                             source_key.color_override = None;
                             source_key.category_id = None;
@@ -2872,15 +3086,13 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Undo last paste operation (Ctrl+Z)
-        (KeyCode::Char('z'), KeyModifiers::CONTROL) => {
+        Action::UndoPaste => {
             // Use get_undo() to peek at undo info before taking it
             if let Some(undo_info) = state.clipboard.get_undo() {
                 let key_count = undo_info.original_keys.len();
                 let layer_idx = undo_info.layer_index;
                 let description = undo_info.description.clone();
-                
+
                 // Now take and apply the undo
                 if let Some(undo) = state.clipboard.take_undo() {
                     // Restore original keys
@@ -2901,35 +3113,29 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Open key editor (if key is assigned) or keycode picker (if empty)
-        (KeyCode::Enter, _) => {
-            // Check if key is assigned (read-only first)
-            let key_info = state.get_selected_key().map(|key| {
-                (key.clone(), key_editor::is_key_assigned(&key.keycode))
-            });
-            
-            if let Some((key, is_assigned)) = key_info {
-                if is_assigned {
-                    // Key is assigned - open key editor using init_for_key
-                    state.key_editor_state.init_for_key(&key, state.current_layer);
-                    state.active_popup = Some(PopupType::KeyEditor);
-                    state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
-                } else {
-                    // Key is empty (KC_NO, KC_TRNS) - open keycode picker directly
-                    state.active_popup = Some(PopupType::KeycodePicker);
-                    state.keycode_picker_state = KeycodePickerState::new();
-                }
+        Action::AssignCategoryToKey => {
+            // Assign category to individual key (Ctrl+K)
+            if state.get_selected_key().is_some() {
+                state.category_picker_state = CategoryPickerState::new();
+                state.category_picker_context = Some(CategoryPickerContext::IndividualKey);
+                state.active_popup = Some(PopupType::CategoryPicker);
+                state.set_status("Select category for key - Enter to apply");
+                Ok(false)
             } else {
-                // No key selected - just open keycode picker
-                state.active_popup = Some(PopupType::KeycodePicker);
-                state.keycode_picker_state = KeycodePickerState::new();
+                state.set_error("No key selected");
+                Ok(false)
             }
+        }
+        Action::AssignCategoryToLayer => {
+            // Assign category to layer (Shift+L or Ctrl+L)
+            state.category_picker_state = CategoryPickerState::new();
+            state.category_picker_context = Some(CategoryPickerContext::Layer);
+            state.active_popup = Some(PopupType::CategoryPicker);
+            state.set_status("Select category for layer - Enter to apply");
             Ok(false)
         }
-
-        // Color picker for individual key (Shift+C)
-        (KeyCode::Char('C'), KeyModifiers::SHIFT) => {
+        Action::SetIndividualKeyColor => {
+            // Set individual key color (Shift+C)
             if let Some(key) = state.get_selected_key() {
                 // Initialize color picker with current key color
                 let current_color = state.layout.resolve_key_color(state.current_layer, key);
@@ -2943,9 +3149,8 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Color picker for layer default color (c key)
-        (KeyCode::Char('c'), _) => {
+        Action::SetLayerColor => {
+            // Set layer default color (c)
             if let Some(layer) = state.layout.layers.get(state.current_layer) {
                 // Initialize color picker with current layer default color
                 state.color_picker_state = ColorPickerState::with_color(layer.default_color);
@@ -2955,24 +3160,10 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Toggle colors for all layers (Alt+V)
-        (KeyCode::Char('v'), KeyModifiers::ALT) => {
-            let enabled = state.layout.toggle_all_layer_colors();
-            state.dirty = true;
-            let status = if enabled {
-                "All layer colors enabled".to_string()
-            } else {
-                "All layer colors disabled".to_string()
-            };
-            state.set_status(status);
-            Ok(false)
-        }
-
-        // Toggle colors for current layer (v key, no modifier)
-        (KeyCode::Char('v'), KeyModifiers::NONE) => {
+        Action::ToggleLayerColors => {
+            // Toggle colors for current layer (v)
             if let Some(enabled) = state.layout.toggle_layer_colors(state.current_layer) {
-                state.dirty = true;
+                state.mark_dirty();
                 let status = if enabled {
                     format!("Layer {} colors enabled", state.current_layer)
                 } else {
@@ -2982,159 +3173,21 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
-
-        // Category picker for individual key (Shift+K)
-        (KeyCode::Char('K'), KeyModifiers::SHIFT) => {
-            if state.get_selected_key().is_some() {
-                state.category_picker_state = CategoryPickerState::new();
-                state.category_picker_context = Some(CategoryPickerContext::IndividualKey);
-                state.active_popup = Some(PopupType::CategoryPicker);
-                state.set_status("Select category for key - Enter to apply");
+        Action::ToggleAllLayerColors => {
+            // Toggle colors for all layers (Alt+V)
+            let enabled = state.layout.toggle_all_layer_colors();
+            state.mark_dirty();
+            let status = if enabled {
+                "All layer colors enabled".to_string()
             } else {
-                state.set_error("No key selected");
-            }
-            Ok(false)
-        }
-
-        // Category picker for layer (Shift+L)
-        (KeyCode::Char('L'), KeyModifiers::SHIFT) => {
-            state.category_picker_state = CategoryPickerState::new();
-            state.category_picker_context = Some(CategoryPickerContext::Layer);
-            state.active_popup = Some(PopupType::CategoryPicker);
-            state.set_status("Select category for layer - Enter to apply");
-            Ok(false)
-        }
-
-        // Category Manager (Ctrl+T)
-        (KeyCode::Char('t'), KeyModifiers::CONTROL) => {
-            state.category_manager_state.reset();
-            state.active_popup = Some(PopupType::CategoryManager);
-            state.set_status("Category Manager - n: New, r: Rename, c: Color, d: Delete");
-            Ok(false)
-        }
-
-        // Layout Picker (Ctrl+Y)
-        (KeyCode::Char('y'), KeyModifiers::CONTROL) => {
-            // Load available layouts for current keyboard
-            let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
-                path.clone()
-            } else {
-                state.set_error("QMK firmware path not configured");
-                return Ok(false);
+                "All layer colors disabled".to_string()
             };
-
-            // Extract base keyboard path (remove variant subdirectory if present)
-            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
-            let base_keyboard = AppState::extract_base_keyboard(keyboard);
-
-            if let Err(e) = state
-                .layout_picker_state
-                .load_layouts(&qmk_path, &base_keyboard)
-            {
-                state.set_error(format!("Failed to load layouts: {e}"));
-                return Ok(false);
-            }
-
-            state.active_popup = Some(PopupType::LayoutPicker);
-            state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
+            state.set_status(status);
             Ok(false)
         }
-
-        // Save as template (Shift+T)
-        (KeyCode::Char('T'), KeyModifiers::SHIFT) => {
-            // Initialize template save dialog with current layout name
-            state.template_save_dialog_state =
-                TemplateSaveDialogState::new(state.layout.metadata.name.clone());
-            state.active_popup = Some(PopupType::TemplateSaveDialog);
-            state.set_status("Save as template - Enter field values");
-            Ok(false)
-        }
-
-        // Layer Manager (Shift+N)
-        (KeyCode::Char('N'), KeyModifiers::SHIFT) => {
-            state.layer_manager_state.reset(state.current_layer);
-            state.active_popup = Some(PopupType::LayerManager);
-            state.set_status("Layer Manager - n: New, r: Rename, v: Toggle Colors, d: Delete");
-            Ok(false)
-        }
-
-        // Settings Manager (Shift+S)
-        (KeyCode::Char('S'), KeyModifiers::SHIFT) => {
-            state.settings_manager_state.reset();
-            state.active_popup = Some(PopupType::SettingsManager);
-            state.set_status("Settings - ↑↓: Navigate, Enter: Change, Esc: Close");
-            Ok(false)
-        }
-
-        // Browse templates (t key)
-        (KeyCode::Char('t'), _) => {
-            // Check for unsaved changes before loading template
-            if state.dirty {
-                // Show warning first
-                state.set_status(
-                    "You have unsaved changes. Press 't' again to open template browser anyway.",
-                );
-                // Mark that we want to open template browser
-                // For now, open directly - T143 will add proper warning
-                state.template_browser_state = TemplateBrowserState::new();
-                if let Err(e) = state.template_browser_state.scan_templates() {
-                    state.set_error(format!("Failed to scan templates: {e}"));
-                    return Ok(false);
-                }
-                state.active_popup = Some(PopupType::TemplateBrowser);
-                state.set_status("Select a template - Enter to load");
-            } else {
-                state.template_browser_state = TemplateBrowserState::new();
-                if let Err(e) = state.template_browser_state.scan_templates() {
-                    state.set_error(format!("Failed to scan templates: {e}"));
-                    return Ok(false);
-                }
-                state.active_popup = Some(PopupType::TemplateBrowser);
-                state.set_status("Select a template - Enter to load");
-            }
-            Ok(false)
-        }
-
-        // Generate firmware (Ctrl+G)
-        (KeyCode::Char('g'), KeyModifiers::CONTROL) => {
-            handle_firmware_generation(state)?;
-            Ok(false)
-        }
-
-        // Build firmware (Ctrl+B)
-        (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
-            handle_firmware_build(state)?;
-            Ok(false)
-        }
-
-        // Help
-        (KeyCode::Char('?'), _) => {
-            state.help_overlay_state = HelpOverlayState::new();
-            state.active_popup = Some(PopupType::HelpOverlay);
-            state.set_status("Use arrow keys to scroll, '?' or Escape to close");
-            Ok(false)
-        }
-
-        // Metadata Editor (Ctrl+E)
-        (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
-            state.metadata_editor_state = MetadataEditorState::new(&state.layout.metadata);
-            state.active_popup = Some(PopupType::MetadataEditor);
-            state.set_status("Edit metadata - Tab to navigate, Enter to save");
-            Ok(false)
-        }
-
-        // Setup Wizard (Ctrl+W)
-        (KeyCode::Char('w'), KeyModifiers::CONTROL) => {
-            // Pre-populate wizard with current config
-            state.wizard_state = onboarding_wizard::OnboardingWizardState::from_config(&state.config);
-            state.active_popup = Some(PopupType::SetupWizard);
-            state.set_status("Setup Wizard - configure QMK path, keyboard, and layout");
-            Ok(false)
-        }
-
-        // Escape - cancel selection mode, cut operation, or clear clipboard
-        (KeyCode::Esc, _) => {
-            if state.selection_mode.is_some() {
+        Action::Cancel => {
+            // Cancel selection/cut/clipboard (Escape)
+            if let Some(_) = state.selection_mode {
                 state.selection_mode = None;
                 state.selected_keys.clear();
                 state.set_status("Selection cancelled");
@@ -3148,8 +3201,23 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             }
             Ok(false)
         }
+        _ => {
+            // Action not yet implemented in dispatcher
+            // Fall back to legacy handler
+            Ok(false)
+        }
+    }
+}
 
-        _ => Ok(false),
+/// Handle input for main UI
+fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    let registry = ShortcutRegistry::new();
+    
+    if let Some(action) = registry.lookup("main", key) {
+        dispatch_action(state, action)
+    } else {
+        // No action mapped - ignore key
+        Ok(false)
     }
 }
 
@@ -3202,7 +3270,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 fn handle_firmware_build(state: &mut AppState) -> Result<()> {
     // Generate firmware files first (keymap.c, config.h)
     handle_firmware_generation(state)?;
-    
+
     // Check that QMK firmware path is configured
     let qmk_path = if let Some(path) = &state.config.paths.qmk_firmware {
         path.clone()
@@ -3230,8 +3298,10 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
     let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
     let base_keyboard = AppState::extract_base_keyboard(keyboard);
     let key_count = state.geometry.keys.len();
-    
-    let build_keyboard = state.config.build
+
+    let build_keyboard = state
+        .config
+        .build
         .determine_keyboard_variant(&qmk_path, &base_keyboard, key_count)
         .unwrap_or_else(|e| {
             // Log warning but fall back to configured keyboard path
@@ -3240,14 +3310,15 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
         });
 
     // Start the build
-    let keymap = state.layout.metadata.keymap_name.clone().unwrap_or_else(|| "default".to_string());
-    build_state.start_build(
-        qmk_path,
-        build_keyboard,
-        keymap,
-    )?;
+    let keymap = state
+        .layout
+        .metadata
+        .keymap_name
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
+    build_state.start_build(qmk_path, build_keyboard, keymap)?;
 
-    state.set_status("Build started - check status with Ctrl+L");
+    state.set_status("Build started - check status with Shift+B");
 
     Ok(())
 }
@@ -3260,24 +3331,24 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
     match &state.category_manager_state.mode.clone() {
         ManagerMode::Browsing => {
             match key.code {
-                 KeyCode::Esc => {
-                     state.active_popup = None;
-                     state.set_status("Category manager closed");
-                     Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state
-                         .category_manager_state
-                         .select_previous(state.layout.categories.len());
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state
-                         .category_manager_state
-                         .select_next(state.layout.categories.len());
-                     Ok(false)
-                 }
-                 KeyCode::Char('n') => {
+                KeyCode::Esc => {
+                    state.active_popup = None;
+                    state.set_status("Category manager closed");
+                    Ok(false)
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    state
+                        .category_manager_state
+                        .select_previous(state.layout.categories.len());
+                    Ok(false)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    state
+                        .category_manager_state
+                        .select_next(state.layout.categories.len());
+                    Ok(false)
+                }
+                KeyCode::Char('n') => {
                     // Start creating new category (T107)
                     state.category_manager_state.start_creating();
                     state.set_status("Enter category name (kebab-case, e.g., 'navigation')");
@@ -3503,29 +3574,29 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                         }
                         state.mark_dirty();
                         state.set_status(format!("Layer moved down to position {}", selected + 1));
-                     }
-                     Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state
-                         .layer_manager_state
-                         .select_previous(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state
-                         .layer_manager_state
-                         .select_next(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Enter => {
-                     // Go to selected layer
-                     state.current_layer = state.layer_manager_state.selected;
-                     state.active_popup = None;
-                     state.set_status(format!("Switched to layer {}", state.current_layer));
-                     Ok(false)
-                 }
-                 KeyCode::Char('n') => {
+                    }
+                    Ok(false)
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    state
+                        .layer_manager_state
+                        .select_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    state
+                        .layer_manager_state
+                        .select_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Go to selected layer
+                    state.current_layer = state.layer_manager_state.selected;
+                    state.active_popup = None;
+                    state.set_status(format!("Switched to layer {}", state.current_layer));
+                    Ok(false)
+                }
+                KeyCode::Char('n') => {
                     // Start creating new layer
                     state.layer_manager_state.start_creating();
                     state.set_status("Enter layer name");
@@ -3581,7 +3652,9 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                     if state.layout.layers.len() <= 1 {
                         state.set_error("Need at least 2 layers to copy");
                     } else {
-                        state.layer_manager_state.start_copy_to(state.layout.layers.len());
+                        state
+                            .layer_manager_state
+                            .start_copy_to(state.layout.layers.len());
                         state.set_status("Select target layer");
                     }
                     Ok(false)
@@ -3591,7 +3664,9 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                     if state.layout.layers.len() <= 1 {
                         state.set_error("Need at least 2 layers to swap");
                     } else {
-                        state.layer_manager_state.start_swapping(state.layout.layers.len());
+                        state
+                            .layer_manager_state
+                            .start_swapping(state.layout.layers.len());
                         state.set_status("Select layer to swap with");
                     }
                     Ok(false)
@@ -3599,7 +3674,9 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                 _ => Ok(false),
             }
         }
-        ManagerMode::CreatingName { .. } | ManagerMode::Renaming { .. } | ManagerMode::Duplicating { .. } => {
+        ManagerMode::CreatingName { .. }
+        | ManagerMode::Renaming { .. }
+        | ManagerMode::Duplicating { .. } => {
             // Handle text input
             match key.code {
                 KeyCode::Esc => {
@@ -3623,21 +3700,24 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                 use crate::models::layer::Layer;
                                 use crate::models::ColorPalette;
                                 let new_index = state.layout.layers.len();
-                                
+
                                 // Use the color palette's default layer color (Gray-500)
                                 let palette = ColorPalette::load().unwrap_or_default();
                                 let default_color = palette.default_layer_color();
-                                
+
                                 match Layer::new(new_index as u8, &input, default_color) {
                                     Ok(mut new_layer) => {
                                         // Copy key positions from first layer (with transparent keycodes)
                                         if let Some(first_layer) = state.layout.layers.first() {
                                             for key in &first_layer.keys {
                                                 use crate::models::layer::KeyDefinition;
-                                                new_layer.add_key(KeyDefinition::new(key.position, "KC_TRNS"));
+                                                new_layer.add_key(KeyDefinition::new(
+                                                    key.position,
+                                                    "KC_TRNS",
+                                                ));
                                             }
                                         }
-                                        
+
                                         state.layout.layers.push(new_layer);
                                         state.layer_manager_state.selected = new_index;
                                         state.mark_dirty();
@@ -3664,22 +3744,25 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                 use crate::models::layer::Layer;
                                 let source_index = *source_index;
                                 let new_index = state.layout.layers.len();
-                                
+
                                 if let Some(source) = state.layout.layers.get(source_index) {
-                                    match Layer::new(new_index as u8, &input, source.default_color) {
+                                    match Layer::new(new_index as u8, &input, source.default_color)
+                                    {
                                         Ok(mut new_layer) => {
                                             // Copy all keys from source
                                             for key in &source.keys {
                                                 use crate::models::layer::KeyDefinition;
-                                                let mut new_key = KeyDefinition::new(key.position, &key.keycode);
+                                                let mut new_key =
+                                                    KeyDefinition::new(key.position, &key.keycode);
                                                 new_key.color_override = key.color_override;
                                                 new_key.category_id = key.category_id.clone();
                                                 new_layer.add_key(new_key);
                                             }
                                             // Copy layer settings
-                                            new_layer.layer_colors_enabled = source.layer_colors_enabled;
+                                            new_layer.layer_colors_enabled =
+                                                source.layer_colors_enabled;
                                             new_layer.category_id = source.category_id.clone();
-                                            
+
                                             state.layout.layers.push(new_layer);
                                             state.layer_manager_state.selected = new_index;
                                             state.mark_dirty();
@@ -3687,7 +3770,9 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                                             state.set_status(format!("Duplicated as '{input}'"));
                                         }
                                         Err(e) => {
-                                            state.set_error(format!("Failed to duplicate layer: {e}"));
+                                            state.set_error(format!(
+                                                "Failed to duplicate layer: {e}"
+                                            ));
                                         }
                                     }
                                 }
@@ -3752,41 +3837,61 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                 _ => Ok(false),
             }
         }
-        ManagerMode::CopyingTo { source_index, target_selected } => {
+        ManagerMode::CopyingTo {
+            source_index,
+            target_selected,
+        } => {
             let source_index = *source_index;
             let target_selected = *target_selected;
             match key.code {
                 KeyCode::Esc => {
                     state.layer_manager_state.cancel();
                     state.set_status("Copy cancelled");
-                     Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state.layer_manager_state.select_target_previous(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state.layer_manager_state.select_target_next(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Enter => {
-                     // Copy all keys from source to target
-                     if let Some(source) = state.layout.layers.get(source_index) {
-                         let keys_to_copy: Vec<_> = source.keys.iter().map(|k| {
-                             (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
-                         }).collect();
-                         
-                         if let Some(target) = state.layout.layers.get_mut(target_selected) {
-                             for (pos, keycode, color, category) in keys_to_copy {
-                                 if let Some(key) = target.keys.iter_mut().find(|k| k.position == pos) {
-                                     key.keycode = keycode;
-                                     key.color_override = color;
+                    Ok(false)
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    state
+                        .layer_manager_state
+                        .select_target_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    state
+                        .layer_manager_state
+                        .select_target_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
+                    // Copy all keys from source to target
+                    if let Some(source) = state.layout.layers.get(source_index) {
+                        let keys_to_copy: Vec<_> = source
+                            .keys
+                            .iter()
+                            .map(|k| {
+                                (
+                                    k.position,
+                                    k.keycode.clone(),
+                                    k.color_override,
+                                    k.category_id.clone(),
+                                )
+                            })
+                            .collect();
+
+                        if let Some(target) = state.layout.layers.get_mut(target_selected) {
+                            for (pos, keycode, color, category) in keys_to_copy {
+                                if let Some(key) =
+                                    target.keys.iter_mut().find(|k| k.position == pos)
+                                {
+                                    key.keycode = keycode;
+                                    key.color_override = color;
                                     key.category_id = category;
                                 }
                             }
                             state.mark_dirty();
                             state.layer_manager_state.cancel();
-                            state.set_status(format!("Copied layer {source_index} to layer {target_selected}"));
+                            state.set_status(format!(
+                                "Copied layer {source_index} to layer {target_selected}"
+                            ));
                         }
                     }
                     Ok(false)
@@ -3794,43 +3899,68 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                 _ => Ok(false),
             }
         }
-        ManagerMode::Swapping { source_index, target_selected } => {
+        ManagerMode::Swapping {
+            source_index,
+            target_selected,
+        } => {
             let source_index = *source_index;
             let target_selected = *target_selected;
             match key.code {
-                 KeyCode::Esc => {
-                     state.layer_manager_state.cancel();
-                     state.set_status("Swap cancelled");
-                     Ok(false)
-                 }
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     state.layer_manager_state.select_target_previous(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     state.layer_manager_state.select_target_next(state.layout.layers.len());
-                     Ok(false)
-                 }
-                 KeyCode::Enter => {
+                KeyCode::Esc => {
+                    state.layer_manager_state.cancel();
+                    state.set_status("Swap cancelled");
+                    Ok(false)
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    state
+                        .layer_manager_state
+                        .select_target_previous(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    state
+                        .layer_manager_state
+                        .select_target_next(state.layout.layers.len());
+                    Ok(false)
+                }
+                KeyCode::Enter => {
                     // Swap all keys between source and target
                     // We need to collect both sets of keys first to avoid borrow issues
                     let source_keys: Vec<_>;
                     let target_keys: Vec<_>;
-                    
+
                     if let (Some(source), Some(target)) = (
                         state.layout.layers.get(source_index),
                         state.layout.layers.get(target_selected),
                     ) {
-                        source_keys = source.keys.iter().map(|k| {
-                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
-                        }).collect();
-                        target_keys = target.keys.iter().map(|k| {
-                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
-                        }).collect();
+                        source_keys = source
+                            .keys
+                            .iter()
+                            .map(|k| {
+                                (
+                                    k.position,
+                                    k.keycode.clone(),
+                                    k.color_override,
+                                    k.category_id.clone(),
+                                )
+                            })
+                            .collect();
+                        target_keys = target
+                            .keys
+                            .iter()
+                            .map(|k| {
+                                (
+                                    k.position,
+                                    k.keycode.clone(),
+                                    k.color_override,
+                                    k.category_id.clone(),
+                                )
+                            })
+                            .collect();
                     } else {
                         return Ok(false);
                     }
-                    
+
                     // Apply target keys to source layer
                     if let Some(source) = state.layout.layers.get_mut(source_index) {
                         for (pos, keycode, color, category) in &target_keys {
@@ -3841,7 +3971,7 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                             }
                         }
                     }
-                    
+
                     // Apply source keys to target layer
                     if let Some(target) = state.layout.layers.get_mut(target_selected) {
                         for (pos, keycode, color, category) in &source_keys {
@@ -3852,10 +3982,12 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                             }
                         }
                     }
-                    
+
                     state.mark_dirty();
                     state.layer_manager_state.cancel();
-                    state.set_status(format!("Swapped layers {source_index} and {target_selected}"));
+                    state.set_status(format!(
+                        "Swapped layers {source_index} and {target_selected}"
+                    ));
                     Ok(false)
                 }
                 _ => Ok(false),

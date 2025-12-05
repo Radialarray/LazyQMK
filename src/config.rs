@@ -29,10 +29,8 @@ impl Default for BuildConfig {
     fn default() -> Self {
         // Use config directory for build output by default
         let output_dir = Self::default_output_dir().unwrap_or_else(|_| PathBuf::from(".build"));
-        
-        Self {
-            output_dir,
-        }
+
+        Self { output_dir }
     }
 }
 
@@ -88,7 +86,7 @@ impl BuildConfig {
         // - "_ex2" suffix often indicates encoder support (e.g., LAYOUT_split_3x6_3_ex2)
         // - Higher key count typically maps to "standard" variant
         // - Lower key count typically maps to "mini" variant
-        
+
         // Since layout field is removed, use key count heuristics
         // Common patterns:
         // - 44+ keys: typically "standard" variant
@@ -203,85 +201,87 @@ impl Config {
         Ok(Self::config_dir()?.join("config.toml"))
     }
 
-     /// Loads configuration from the config file.
-     ///
-     /// If the file doesn't exist, returns default configuration.
-     /// If the QMK path is invalid but the directory was moved, attempts to auto-fix it.
-     pub fn load() -> Result<Self> {
-         let config_path = Self::config_file_path()?;
+    /// Loads configuration from the config file.
+    ///
+    /// If the file doesn't exist, returns default configuration.
+    /// If the QMK path is invalid but the directory was moved, attempts to auto-fix it.
+    pub fn load() -> Result<Self> {
+        let config_path = Self::config_file_path()?;
 
-         if !config_path.exists() {
-             return Ok(Self::new());
-         }
+        if !config_path.exists() {
+            return Ok(Self::new());
+        }
 
-         let content = fs::read_to_string(&config_path).context(format!(
-             "Failed to read config file: {}",
-             config_path.display()
-         ))?;
+        let content = fs::read_to_string(&config_path).context(format!(
+            "Failed to read config file: {}",
+            config_path.display()
+        ))?;
 
-         let mut config: Self = toml::from_str(&content).context(format!(
-             "Failed to parse config file: {}",
-             config_path.display()
-         ))?;
+        let mut config: Self = toml::from_str(&content).context(format!(
+            "Failed to parse config file: {}",
+            config_path.display()
+        ))?;
 
-         // Try to validate; if QMK path is invalid, attempt to auto-fix it
-         if let Err(validation_err) = config.validate() {
-             if let Some(qmk_path) = &config.paths.qmk_firmware {
-                 // Check if this looks like it was a renamed/moved directory
-                 if let Some(fixed_path) = Self::try_fix_qmk_path(qmk_path) {
-                     config.paths.qmk_firmware = Some(fixed_path);
-                     // Try validating again with the fixed path
-                     config.validate()?;
-                     // Successfully fixed - save the corrected config
-                     config.save()?;
-                     return Ok(config);
-                 }
-             }
-             // Couldn't auto-fix, return the original validation error
-             return Err(validation_err);
-         }
+        // Try to validate; if QMK path is invalid, attempt to auto-fix it
+        if let Err(validation_err) = config.validate() {
+            if let Some(qmk_path) = &config.paths.qmk_firmware {
+                // Check if this looks like it was a renamed/moved directory
+                if let Some(fixed_path) = Self::try_fix_qmk_path(qmk_path) {
+                    config.paths.qmk_firmware = Some(fixed_path);
+                    // Try validating again with the fixed path
+                    config.validate()?;
+                    // Successfully fixed - save the corrected config
+                    config.save()?;
+                    return Ok(config);
+                }
+            }
+            // Couldn't auto-fix, return the original validation error
+            return Err(validation_err);
+        }
 
-         Ok(config)
-     }
+        Ok(config)
+    }
 
-      /// Attempts to fix a stale QMK firmware path.
-      ///
-      /// If the path doesn't exist, looks for a directory with similar naming
-      /// in the parent directory (e.g., if keyboard_tui/qmk_firmware doesn't exist,
-      /// looks for keyboard-configurator/qmk_firmware).
-     fn try_fix_qmk_path(old_path: &std::path::Path) -> Option<PathBuf> {
-         // If the path exists, no fix needed
-         if old_path.exists() {
-             return Some(old_path.to_path_buf());
-         }
+    /// Attempts to fix a stale QMK firmware path.
+    ///
+    /// If the path doesn't exist, looks for a directory with similar naming
+    /// in the parent directory (e.g., if keyboard_tui/qmk_firmware doesn't exist,
+    /// looks for keyboard-configurator/qmk_firmware).
+    fn try_fix_qmk_path(old_path: &std::path::Path) -> Option<PathBuf> {
+        // If the path exists, no fix needed
+        if old_path.exists() {
+            return Some(old_path.to_path_buf());
+        }
 
-         // Get the directory name (e.g., "vial-qmk-keebart")
-         let dir_name = old_path.file_name()?;
-         
-         // Get the parent of the parent (e.g., /Users/user/dev)
-         let old_parent = old_path.parent()?.parent()?;
-         
-          // Look for the directory in siblings of the parent
-          // e.g., if /Users/user/dev/keyboard_tui/qmk_firmware doesn't exist,
-          // try /Users/user/dev/keyboard-configurator/qmk_firmware
-         if let Ok(siblings) = std::fs::read_dir(old_parent) {
-             for entry in siblings.flatten() {
-                 if let Ok(metadata) = entry.metadata() {
-                     if metadata.is_dir() {
-                         let candidate = entry.path().join(dir_name);
-                         if candidate.exists() {
-                             // Check if it's a valid QMK directory
-                             if candidate.join("Makefile").exists() && candidate.join("keyboards").exists() {
-                                 return Some(candidate);
-                             }
-                         }
-                     }
-                 }
-             }
-         }
+        // Get the directory name (e.g., "vial-qmk-keebart")
+        let dir_name = old_path.file_name()?;
 
-         None
-     }
+        // Get the parent of the parent (e.g., /Users/user/dev)
+        let old_parent = old_path.parent()?.parent()?;
+
+        // Look for the directory in siblings of the parent
+        // e.g., if /Users/user/dev/keyboard_tui/qmk_firmware doesn't exist,
+        // try /Users/user/dev/keyboard-configurator/qmk_firmware
+        if let Ok(siblings) = std::fs::read_dir(old_parent) {
+            for entry in siblings.flatten() {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_dir() {
+                        let candidate = entry.path().join(dir_name);
+                        if candidate.exists() {
+                            // Check if it's a valid QMK directory
+                            if candidate.join("Makefile").exists()
+                                && candidate.join("keyboards").exists()
+                            {
+                                return Some(candidate);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
 
     /// Saves configuration to the config file using atomic write.
     ///
@@ -351,7 +351,7 @@ impl Config {
 
         // Keyboard-specific settings (keyboard, layout, keymap, output_format)
         // are now stored in layout metadata, not in config.toml
-        
+
         Ok(())
     }
 
@@ -389,10 +389,10 @@ mod tests {
     #[test]
     fn test_config_is_configured() {
         let mut config = Config::new();
-        
+
         // Without QMK path, config is not configured
         assert!(!config.is_configured());
-        
+
         // With QMK path set, config is configured
         config.paths.qmk_firmware = Some(PathBuf::from("/some/path"));
         assert!(config.is_configured());
@@ -442,7 +442,10 @@ mod tests {
         let loaded: Config = toml::from_str(&content).unwrap();
 
         // Verify basic fields are preserved
-        assert_eq!(loaded.ui.show_help_on_startup, config.ui.show_help_on_startup);
+        assert_eq!(
+            loaded.ui.show_help_on_startup,
+            config.ui.show_help_on_startup
+        );
         // Note: keyboard and layout are now per-layout in metadata
     }
 
@@ -565,83 +568,83 @@ mod tests {
 
         let build_config = BuildConfig::default();
 
-        let result = build_config
-            .determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42);
+        let result =
+            build_config.determine_keyboard_variant(&qmk_path, "keebart/corne_choc_pro", 42);
 
         // Should return the base keyboard path when no variants are detected
         assert_eq!(result.unwrap(), "keebart/corne_choc_pro");
     }
 
-     #[test]
-     fn test_determine_keyboard_variant_with_info_json() {
-         let temp_dir = TempDir::new().unwrap();
-         let qmk_path = temp_dir.path().join("qmk");
-         let keyboards_dir = qmk_path.join("keyboards");
-         let keyboard_dir = keyboards_dir.join("test_keyboard");
-         let standard_dir = keyboard_dir.join("standard");
+    #[test]
+    fn test_determine_keyboard_variant_with_info_json() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("test_keyboard");
+        let standard_dir = keyboard_dir.join("standard");
 
-         // Create variant directory with info.json instead of keyboard.json
-         fs::create_dir_all(&standard_dir).unwrap();
-         fs::write(standard_dir.join("info.json"), "{}").unwrap();
+        // Create variant directory with info.json instead of keyboard.json
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(standard_dir.join("info.json"), "{}").unwrap();
 
-         let build_config = BuildConfig::default();
+        let build_config = BuildConfig::default();
 
-         // Use 44 keys which maps to "standard" variant
-         let result = build_config
-             .determine_keyboard_variant(&qmk_path, "test_keyboard", 44)
-             .unwrap();
+        // Use 44 keys which maps to "standard" variant
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "test_keyboard", 44)
+            .unwrap();
 
-         assert_eq!(result, "test_keyboard/standard");
-     }
+        assert_eq!(result, "test_keyboard/standard");
+    }
 
-     #[test]
-     fn test_try_fix_qmk_path_existing_path() {
-         let temp_dir = TempDir::new().unwrap();
-         let qmk_path = temp_dir.path().join("qmk");
-         fs::create_dir(&qmk_path).unwrap();
+    #[test]
+    fn test_try_fix_qmk_path_existing_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        fs::create_dir(&qmk_path).unwrap();
 
-         // If path exists, should return it as-is
-         let result = Config::try_fix_qmk_path(&qmk_path);
-         assert_eq!(result, Some(qmk_path));
-     }
+        // If path exists, should return it as-is
+        let result = Config::try_fix_qmk_path(&qmk_path);
+        assert_eq!(result, Some(qmk_path));
+    }
 
-     #[test]
-     fn test_try_fix_qmk_path_moved_directory() {
-         let temp_dir = TempDir::new().unwrap();
-         
-         // Create old and new project directories
-         let old_project = temp_dir.path().join("old_project");
-         let new_project = temp_dir.path().join("new_project");
-         fs::create_dir(&old_project).unwrap();
-         fs::create_dir(&new_project).unwrap();
+    #[test]
+    fn test_try_fix_qmk_path_moved_directory() {
+        let temp_dir = TempDir::new().unwrap();
 
-         // Create a valid QMK directory in new_project
-         let qmk_dir = new_project.join("vial-qmk-keebart");
-         fs::create_dir(&qmk_dir).unwrap();
-         fs::write(qmk_dir.join("Makefile"), "").unwrap();
-         fs::create_dir(qmk_dir.join("keyboards")).unwrap();
+        // Create old and new project directories
+        let old_project = temp_dir.path().join("old_project");
+        let new_project = temp_dir.path().join("new_project");
+        fs::create_dir(&old_project).unwrap();
+        fs::create_dir(&new_project).unwrap();
 
-         // Create a reference to the old path (which doesn't exist)
-         let old_path = old_project.join("vial-qmk-keebart");
+        // Create a valid QMK directory in new_project
+        let qmk_dir = new_project.join("vial-qmk-keebart");
+        fs::create_dir(&qmk_dir).unwrap();
+        fs::write(qmk_dir.join("Makefile"), "").unwrap();
+        fs::create_dir(qmk_dir.join("keyboards")).unwrap();
 
-         // Should find and return the new path
-         let result = Config::try_fix_qmk_path(&old_path);
-         assert_eq!(result, Some(qmk_dir));
-     }
+        // Create a reference to the old path (which doesn't exist)
+        let old_path = old_project.join("vial-qmk-keebart");
 
-     #[test]
-     fn test_try_fix_qmk_path_not_found() {
-         let temp_dir = TempDir::new().unwrap();
-         
-         // Create a project directory but no QMK directory
-         let project = temp_dir.path().join("project");
-         fs::create_dir(&project).unwrap();
+        // Should find and return the new path
+        let result = Config::try_fix_qmk_path(&old_path);
+        assert_eq!(result, Some(qmk_dir));
+    }
 
-         // Reference to a non-existent path
-         let missing_path = project.join("vial-qmk-keebart");
+    #[test]
+    fn test_try_fix_qmk_path_not_found() {
+        let temp_dir = TempDir::new().unwrap();
 
-         // Should return None since directory doesn't exist anywhere
-         let result = Config::try_fix_qmk_path(&missing_path);
-         assert_eq!(result, None);
-     }
+        // Create a project directory but no QMK directory
+        let project = temp_dir.path().join("project");
+        fs::create_dir(&project).unwrap();
+
+        // Reference to a non-existent path
+        let missing_path = project.join("vial-qmk-keebart");
+
+        // Should return None since directory doesn't exist anywhere
+        let result = Config::try_fix_qmk_path(&missing_path);
+        assert_eq!(result, None);
+    }
 }

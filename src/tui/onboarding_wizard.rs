@@ -166,22 +166,25 @@ impl OnboardingWizardState {
     }
 
     /// Creates a wizard state starting at keyboard selection step.
-    /// 
+    ///
     /// This is used when changing keyboard from settings - skips QMK path setup
     /// and completes after layout selection (skips output path, format, etc.).
-    /// 
+    ///
     /// # Arguments
     /// * `qmk_path` - The already-configured QMK firmware path
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Self)` - Wizard state ready for keyboard selection
     /// * `Err` - If keyboard scanning fails
     pub fn new_for_keyboard_selection(qmk_path: &std::path::Path) -> Result<Self> {
         let keyboards = scan_keyboards(qmk_path)?;
-        
+
         let mut inputs = HashMap::new();
-        inputs.insert("qmk_path".to_string(), qmk_path.to_string_lossy().to_string());
-        
+        inputs.insert(
+            "qmk_path".to_string(),
+            qmk_path.to_string_lossy().to_string(),
+        );
+
         Ok(Self {
             current_step: WizardStep::KeyboardSelection,
             inputs,
@@ -199,28 +202,37 @@ impl OnboardingWizardState {
     }
 
     /// Creates a wizard state for creating a new layout.
-    /// 
+    ///
     /// This starts at keyboard selection but goes through all steps
     /// (keyboard, layout, layout name, output path, confirmation).
     /// Used when "Create New Layout" is selected from the layout picker.
-    /// 
+    ///
     /// # Arguments
     /// * `config` - The existing configuration with QMK path already set
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Self)` - Wizard state ready for keyboard selection
     /// * `Err` - If keyboard scanning fails
     pub fn new_for_new_layout(config: &Config) -> Result<Self> {
-        let qmk_path = config.paths.qmk_firmware.as_ref()
+        let qmk_path = config
+            .paths
+            .qmk_firmware
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("QMK firmware path not configured"))?;
-        
+
         let keyboards = scan_keyboards(qmk_path)?;
-        
+
         let mut inputs = HashMap::new();
-        inputs.insert("qmk_path".to_string(), qmk_path.to_string_lossy().to_string());
+        inputs.insert(
+            "qmk_path".to_string(),
+            qmk_path.to_string_lossy().to_string(),
+        );
         // Pre-populate output path from existing config
-        inputs.insert("output_path".to_string(), config.build.output_dir.display().to_string());
-        
+        inputs.insert(
+            "output_path".to_string(),
+            config.build.output_dir.display().to_string(),
+        );
+
         Ok(Self {
             current_step: WizardStep::KeyboardSelection,
             inputs,
@@ -339,20 +351,20 @@ impl OnboardingWizardState {
 
                 let layout = self.available_layouts[self.layout_selected_index].clone();
                 self.inputs.insert("layout".to_string(), layout);
-                
+
                 // If this is a keyboard-only change, we're done
                 if self.keyboard_change_only {
                     self.is_complete = true;
                     return Ok(());
                 }
-                
+
                 // Pre-populate layout name from keyboard if not already set
                 if !self.inputs.contains_key("layout_name") {
                     let keyboard = self.inputs.get("keyboard").unwrap();
                     let default_name = keyboard.split('/').next_back().unwrap_or(keyboard);
                     self.input_buffer = format!("{default_name}_layout");
                 }
-                
+
                 self.current_step = WizardStep::LayoutName;
             }
             WizardStep::LayoutName => {
@@ -361,17 +373,18 @@ impl OnboardingWizardState {
                     self.error_message = Some("Layout name cannot be empty".to_string());
                     return Ok(());
                 }
-                
-                self.inputs.insert("layout_name".to_string(), self.input_buffer.clone());
+
+                self.inputs
+                    .insert("layout_name".to_string(), self.input_buffer.clone());
                 self.input_buffer.clear();
-                
+
                 // Pre-populate output path with default if not already set
                 if !self.inputs.contains_key("output_path") {
                     if let Ok(default_dir) = Config::config_dir() {
                         self.input_buffer = default_dir.join("builds").display().to_string();
                     }
                 }
-                
+
                 self.current_step = WizardStep::OutputPath;
             }
             WizardStep::OutputPath => {
@@ -380,9 +393,9 @@ impl OnboardingWizardState {
                     self.error_message = Some("Output path cannot be empty".to_string());
                     return Ok(());
                 }
-                
+
                 let output_path = PathBuf::from(&self.input_buffer);
-                
+
                 // Validate parent directory exists or can be created
                 if let Some(parent) = output_path.parent() {
                     if !parent.exists() {
@@ -393,8 +406,9 @@ impl OnboardingWizardState {
                         return Ok(());
                     }
                 }
-                
-                self.inputs.insert("output_path".to_string(), self.input_buffer.clone());
+
+                self.inputs
+                    .insert("output_path".to_string(), self.input_buffer.clone());
                 self.input_buffer.clear();
                 self.current_step = WizardStep::Confirmation;
             }
@@ -467,12 +481,15 @@ impl OnboardingWizardState {
     ///
     /// This is used when opening the wizard from the TUI with Ctrl+W
     /// to allow editing the current configuration.
-    #[must_use] pub fn from_config(config: &Config) -> Self {
+    #[must_use]
+    pub fn from_config(config: &Config) -> Self {
         let mut wizard = Self::new();
 
         // Pre-populate QMK path
         if let Some(qmk_path) = &config.paths.qmk_firmware {
-            wizard.inputs.insert("qmk_path".to_string(), qmk_path.display().to_string());
+            wizard
+                .inputs
+                .insert("qmk_path".to_string(), qmk_path.display().to_string());
             wizard.input_buffer = qmk_path.display().to_string();
         }
 
@@ -480,7 +497,10 @@ impl OnboardingWizardState {
         // The wizard is for initial setup only
 
         // Pre-populate output path
-        wizard.inputs.insert("output_path".to_string(), config.build.output_dir.display().to_string());
+        wizard.inputs.insert(
+            "output_path".to_string(),
+            config.build.output_dir.display().to_string(),
+        );
 
         wizard
     }
@@ -500,8 +520,7 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::
     f.render_widget(Clear, size);
 
     // Render opaque background for entire wizard
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, size);
 
     // Create centered layout
@@ -524,14 +543,20 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL).style(Style::default().bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
+        );
     f.render_widget(title, vertical_chunks[0]);
 
     // Render content based on current step
     match state.current_step {
         WizardStep::Welcome => render_welcome(f, vertical_chunks[1], theme),
         WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1], theme),
-        WizardStep::KeyboardSelection => render_keyboard_selection(f, state, vertical_chunks[1], theme),
+        WizardStep::KeyboardSelection => {
+            render_keyboard_selection(f, state, vertical_chunks[1], theme)
+        }
         WizardStep::LayoutSelection => render_layout_selection(f, state, vertical_chunks[1], theme),
         WizardStep::LayoutName => render_layout_name_input(f, state, vertical_chunks[1], theme),
         WizardStep::OutputPath => render_output_path_input(f, state, vertical_chunks[1], theme),
@@ -555,7 +580,9 @@ fn render_welcome(f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
         Line::from(""),
         Line::from(Span::styled(
             "Welcome to Keyboard TUI!",
-            Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(
@@ -585,11 +612,20 @@ fn render_welcome(f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Center)
         .style(Style::default().fg(theme.text))
-        .block(Block::default().borders(Borders::ALL).style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 
-fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_qmk_path_input(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let text = vec![
         Line::from(""),
         Line::from("Enter the path to your QMK firmware directory:"),
@@ -606,11 +642,21 @@ fn render_qmk_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rec
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Left)
         .style(Style::default().fg(theme.text))
-        .block(Block::default().borders(Borders::ALL).title("QMK Path").style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("QMK Path")
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 
-fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_keyboard_selection(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     // Split area into filter input and list
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -633,10 +679,19 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
     } else {
         Style::default().fg(theme.primary)
     };
-    
+
     let filter_input = Paragraph::new(format!("Filter: {}_", state.keyboard_filter))
-        .style(Style::default().fg(if filter_focused { theme.accent } else { theme.text }))
-        .block(Block::default().borders(Borders::ALL).title(filter_title).style(filter_border_style.bg(theme.background)));
+        .style(Style::default().fg(if filter_focused {
+            theme.accent
+        } else {
+            theme.text
+        }))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(filter_title)
+                .style(filter_border_style.bg(theme.background)),
+        );
     f.render_widget(filter_input, chunks[0]);
 
     // Get filtered keyboards
@@ -679,7 +734,12 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
     };
 
     let list = List::new(keyboards)
-        .block(Block::default().borders(Borders::ALL).title(list_title).style(list_border_style.bg(theme.background)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(list_title)
+                .style(list_border_style.bg(theme.background)),
+        )
         .highlight_style(
             Style::default()
                 .fg(theme.accent)
@@ -700,7 +760,12 @@ fn render_keyboard_selection(f: &mut Frame, state: &OnboardingWizardState, area:
     f.render_widget(help, chunks[2]);
 }
 
-fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_layout_selection(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let layouts: Vec<ListItem> = state
         .available_layouts
         .iter()
@@ -719,11 +784,16 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
 
     let keyboard = state.inputs.get("keyboard").unwrap();
     let list = List::new(layouts)
-        .block(Block::default().borders(Borders::ALL).title(format!(
-            "Layouts for {} ({} available)",
-            keyboard,
-            state.available_layouts.len()
-        )).style(Style::default().fg(theme.primary).bg(theme.background)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(
+                    "Layouts for {} ({} available)",
+                    keyboard,
+                    state.available_layouts.len()
+                ))
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        )
         .highlight_style(
             Style::default()
                 .fg(theme.accent)
@@ -733,7 +803,12 @@ fn render_layout_selection(f: &mut Frame, state: &OnboardingWizardState, area: R
     f.render_widget(list, area);
 }
 
-fn render_layout_name_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_layout_name_input(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let text = vec![
         Line::from(""),
         Line::from("Enter a name for your layout file:"),
@@ -750,11 +825,21 @@ fn render_layout_name_input(f: &mut Frame, state: &OnboardingWizardState, area: 
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Left)
         .style(Style::default().fg(theme.text))
-        .block(Block::default().borders(Borders::ALL).title("Layout Name").style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Layout Name")
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 
-fn render_output_path_input(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_output_path_input(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let text = vec![
         Line::from(""),
         Line::from("Enter the path where firmware files should be copied:"),
@@ -771,11 +856,21 @@ fn render_output_path_input(f: &mut Frame, state: &OnboardingWizardState, area: 
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Left)
         .style(Style::default().fg(theme.text))
-        .block(Block::default().borders(Borders::ALL).title("Firmware Output Path").style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Firmware Output Path")
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 
-fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_confirmation(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let default_value = "<not set>".to_string();
     let qmk_path = state.inputs.get("qmk_path").unwrap_or(&default_value);
     let keyboard = state.inputs.get("keyboard").unwrap_or(&default_value);
@@ -814,22 +909,32 @@ fn render_confirmation(f: &mut Frame, state: &OnboardingWizardState, area: Rect,
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Left)
         .style(Style::default().fg(theme.text))
-        .block(Block::default().borders(Borders::ALL).title("Confirmation").style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Confirmation")
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 
-fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect, theme: &crate::tui::theme::Theme) {
+fn render_instructions(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
     let step_info = format!(
         "Step {} of {}",
         state.current_step.step_number(),
         WizardStep::total_steps()
     );
-    
+
     let instructions = match state.current_step {
         WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
-        WizardStep::QmkPath 
-        | WizardStep::LayoutName 
-        | WizardStep::OutputPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
+        WizardStep::QmkPath | WizardStep::LayoutName | WizardStep::OutputPath => {
+            "Enter: Continue  |  Backspace: Delete  |  Esc: Back"
+        }
         WizardStep::KeyboardSelection => {
             "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back"
         }
@@ -837,15 +942,16 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect,
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
     };
 
-    let text = vec![
-        Line::from(step_info),
-        Line::from(instructions),
-    ];
+    let text = vec![Line::from(step_info), Line::from(instructions)];
 
     let paragraph = Paragraph::new(text)
         .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL).style(Style::default().fg(theme.primary).bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(theme.primary).bg(theme.background)),
+        );
     f.render_widget(paragraph, area);
 }
 

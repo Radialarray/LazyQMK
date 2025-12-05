@@ -10,11 +10,12 @@ mod firmware;
 mod keycode_db;
 mod models;
 mod parser;
+mod shortcuts;
 mod tui;
 
 use anyhow::Result;
 use clap::Parser;
-use constants::{APP_NAME, APP_BINARY_NAME};
+use constants::{APP_BINARY_NAME, APP_NAME};
 use std::path::PathBuf;
 
 /// Keyboard Configurator - Terminal-based keyboard layout editor
@@ -64,15 +65,21 @@ fn run_onboarding_wizard() -> Result<()> {
                         config.save()?;
 
                         // Get keyboard and layout from wizard inputs
-                        let keyboard = wizard_state.inputs.get("keyboard")
+                        let keyboard = wizard_state
+                            .inputs
+                            .get("keyboard")
                             .cloned()
                             .ok_or_else(|| anyhow::anyhow!("Keyboard not selected"))?;
-                        let layout_variant = wizard_state.inputs.get("layout")
+                        let layout_variant = wizard_state
+                            .inputs
+                            .get("layout")
                             .cloned()
                             .ok_or_else(|| anyhow::anyhow!("Layout not selected"))?;
-                        
+
                         // Get the layout name from wizard inputs
-                        let layout_name = wizard_state.inputs.get("layout_name")
+                        let layout_name = wizard_state
+                            .inputs
+                            .get("layout_name")
                             .cloned()
                             .unwrap_or_else(|| {
                                 // Fallback to keyboard-based name if not set
@@ -88,7 +95,12 @@ fn run_onboarding_wizard() -> Result<()> {
                         println!();
 
                         // Launch the editor with default layout using keyboard/layout from wizard
-                        launch_editor_with_default_layout(&config, &keyboard, &layout_variant, &layout_name)?;
+                        launch_editor_with_default_layout(
+                            &config,
+                            &keyboard,
+                            &layout_variant,
+                            &layout_name,
+                        )?;
                         return Ok(());
                     } else {
                         // User cancelled
@@ -104,10 +116,10 @@ fn run_onboarding_wizard() -> Result<()> {
 
 /// Creates a default layout from QMK keyboard info and launches the editor
 fn launch_editor_with_default_layout(
-    config: &config::Config, 
+    config: &config::Config,
     keyboard: &str,
     layout_variant: &str,
-    layout_file_name: &str
+    layout_file_name: &str,
 ) -> Result<()> {
     // Get QMK path from config
     let qmk_path = config
@@ -121,17 +133,22 @@ fn launch_editor_with_default_layout(
     let base_keyboard = tui::AppState::extract_base_keyboard(keyboard);
 
     // Parse keyboard info.json using the base keyboard path
-    let keyboard_info =
-        parser::keyboard_json::parse_keyboard_info_json(qmk_path, &base_keyboard)?;
+    let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(qmk_path, &base_keyboard)?;
 
     // Get the key count for the selected layout to determine the correct variant
-    let layout_def = keyboard_info.layouts.get(layout_variant)
-        .ok_or_else(|| anyhow::anyhow!("Layout '{}' not found in keyboard info.json", layout_variant))?;
+    let layout_def = keyboard_info.layouts.get(layout_variant).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Layout '{}' not found in keyboard info.json",
+            layout_variant
+        )
+    })?;
     let key_count = layout_def.layout.len();
 
     // Determine the correct keyboard variant based on key count
     // This is critical for split keyboards where different variants have different key counts
-    let variant_path = config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
+    let variant_path = config
+        .build
+        .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
         .unwrap_or_else(|_| base_keyboard.clone());
 
     // Try to get RGB matrix mapping from the variant's keyboard.json
@@ -176,7 +193,7 @@ fn launch_editor_with_default_layout(
     // Create save path using the user-specified layout name
     let layouts_dir = config::Config::config_dir()?.join("layouts");
     std::fs::create_dir_all(&layouts_dir)?;
-    
+
     let layout_path = layouts_dir.join(format!("{}.md", sanitized_name));
 
     // Save the layout immediately so it can be found on restart
@@ -187,13 +204,8 @@ fn launch_editor_with_default_layout(
 
     // Initialize TUI with the generated layout
     let mut terminal = tui::setup_terminal()?;
-    let mut app_state = tui::AppState::new(
-        layout,
-        Some(layout_path),
-        geometry,
-        mapping,
-        config.clone(),
-    )?;
+    let mut app_state =
+        tui::AppState::new(layout, Some(layout_path), geometry, mapping, config.clone())?;
 
     // Layout is clean since we just saved it
     app_state.dirty = false;
@@ -223,11 +235,7 @@ fn create_default_layer(
     let palette = ColorPalette::load().unwrap_or_default();
     let default_color = palette.default_layer_color();
 
-    let mut layer = models::Layer::new(
-        number,
-        name.to_string(),
-        default_color,
-    )?;
+    let mut layer = models::Layer::new(number, name.to_string(), default_color)?;
 
     // Add KC_TRNS for each visual position in the mapping
     // This ensures keys use visual positions (not matrix positions) for proper rendering
@@ -281,10 +289,15 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
                             let layout = parser::parse_markdown_layout(&path)?;
 
                             // Get keyboard and layout variant from layout metadata
-                            let keyboard = layout.metadata.keyboard.as_ref()
-                                .ok_or_else(|| anyhow::anyhow!("Keyboard not specified in layout metadata"))?;
-                            let layout_variant = layout.metadata.layout_variant.as_ref()
-                                .ok_or_else(|| anyhow::anyhow!("Layout variant not specified in layout metadata"))?;
+                            let keyboard = layout.metadata.keyboard.as_ref().ok_or_else(|| {
+                                anyhow::anyhow!("Keyboard not specified in layout metadata")
+                            })?;
+                            let layout_variant =
+                                layout.metadata.layout_variant.as_ref().ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Layout variant not specified in layout metadata"
+                                    )
+                                })?;
 
                             // Parse keyboard info.json to rebuild geometry
                             let qmk_path = config.paths.qmk_firmware.as_ref().ok_or_else(|| {
@@ -300,18 +313,30 @@ fn run_layout_picker(config: &config::Config) -> Result<()> {
                             )?;
 
                             // Get key count from layout to determine correct variant
-                            let layout_def = keyboard_info.layouts.get(layout_variant)
-                                .ok_or_else(|| anyhow::anyhow!("Layout '{}' not found in keyboard info.json", layout_variant))?;
+                            let layout_def =
+                                keyboard_info.layouts.get(layout_variant).ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Layout '{}' not found in keyboard info.json",
+                                        layout_variant
+                                    )
+                                })?;
                             let key_count = layout_def.layout.len();
 
                             // Determine keyboard variant based on key count
-                            let variant_path = config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
+                            let variant_path = config
+                                .build
+                                .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
                                 .unwrap_or_else(|_| base_keyboard.clone());
 
                             // Try to get RGB matrix mapping from variant keyboard.json
-                            let matrix_to_led = parser::keyboard_json::parse_variant_keyboard_json(qmk_path, &variant_path)
-                                .and_then(|variant| variant.rgb_matrix)
-                                .map(|rgb_config| parser::keyboard_json::build_matrix_to_led_map(&rgb_config));
+                            let matrix_to_led = parser::keyboard_json::parse_variant_keyboard_json(
+                                qmk_path,
+                                &variant_path,
+                            )
+                            .and_then(|variant| variant.rgb_matrix)
+                            .map(|rgb_config| {
+                                parser::keyboard_json::build_matrix_to_led_map(&rgb_config)
+                            });
 
                             let geometry = parser::keyboard_json::build_keyboard_geometry_with_rgb(
                                 &keyboard_info,
@@ -363,7 +388,8 @@ fn run_new_layout_wizard(config: &config::Config) -> Result<()> {
 
     // Initialize terminal
     let mut terminal = tui::setup_terminal()?;
-    let mut wizard_state = tui::onboarding_wizard::OnboardingWizardState::new_for_new_layout(config)?;
+    let mut wizard_state =
+        tui::onboarding_wizard::OnboardingWizardState::new_for_new_layout(config)?;
 
     // Run wizard loop
     loop {
@@ -382,13 +408,19 @@ fn run_new_layout_wizard(config: &config::Config) -> Result<()> {
                 if should_exit {
                     if wizard_state.is_complete {
                         // Get values from wizard
-                        let keyboard = wizard_state.inputs.get("keyboard")
+                        let keyboard = wizard_state
+                            .inputs
+                            .get("keyboard")
                             .cloned()
                             .ok_or_else(|| anyhow::anyhow!("Keyboard not selected"))?;
-                        let layout_variant = wizard_state.inputs.get("layout")
+                        let layout_variant = wizard_state
+                            .inputs
+                            .get("layout")
                             .cloned()
                             .ok_or_else(|| anyhow::anyhow!("Layout not selected"))?;
-                        let layout_name = wizard_state.inputs.get("layout_name")
+                        let layout_name = wizard_state
+                            .inputs
+                            .get("layout_name")
                             .cloned()
                             .unwrap_or_else(|| format!("{}_layout", keyboard.replace('/', "_")));
 
@@ -399,7 +431,12 @@ fn run_new_layout_wizard(config: &config::Config) -> Result<()> {
                         println!();
 
                         // Launch the editor with the new layout
-                        launch_editor_with_default_layout(&config, &keyboard, &layout_variant, &layout_name)?;
+                        launch_editor_with_default_layout(
+                            &config,
+                            &keyboard,
+                            &layout_variant,
+                            &layout_name,
+                        )?;
                         return Ok(());
                     } else {
                         // User cancelled - return to layout picker
@@ -478,18 +515,24 @@ fn main() -> Result<()> {
             match parser::keyboard_json::parse_keyboard_info_json(qmk_path, &base_keyboard) {
                 Ok(keyboard_info) => {
                     // Get key count from layout to determine correct variant
-                    let variant_path = if let Some(layout_def) = keyboard_info.layouts.get(layout_variant) {
-                        let key_count = layout_def.layout.len();
-                        config.build.determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
-                            .unwrap_or_else(|_| base_keyboard.clone())
-                    } else {
-                        base_keyboard.clone()
-                    };
+                    let variant_path =
+                        if let Some(layout_def) = keyboard_info.layouts.get(layout_variant) {
+                            let key_count = layout_def.layout.len();
+                            config
+                                .build
+                                .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
+                                .unwrap_or_else(|_| base_keyboard.clone())
+                        } else {
+                            base_keyboard.clone()
+                        };
 
                     // Try to get RGB matrix mapping from variant keyboard.json
-                    let matrix_to_led = parser::keyboard_json::parse_variant_keyboard_json(qmk_path, &variant_path)
-                        .and_then(|variant| variant.rgb_matrix)
-                        .map(|rgb_config| parser::keyboard_json::build_matrix_to_led_map(&rgb_config));
+                    let matrix_to_led =
+                        parser::keyboard_json::parse_variant_keyboard_json(qmk_path, &variant_path)
+                            .and_then(|variant| variant.rgb_matrix)
+                            .map(|rgb_config| {
+                                parser::keyboard_json::build_matrix_to_led_map(&rgb_config)
+                            });
 
                     match parser::keyboard_json::build_keyboard_geometry_with_rgb(
                         &keyboard_info,
@@ -503,36 +546,45 @@ fn main() -> Result<()> {
                         }
                         Err(_) => {
                             // Fall back to minimal geometry
-                            (models::KeyboardGeometry {
-                                keyboard_name: "test".to_string(),
-                                layout_name: "test".to_string(),
-                                matrix_rows: 4,
-                                matrix_cols: 2,
-                                keys: vec![],
-                            }, models::VisualLayoutMapping::new())
+                            (
+                                models::KeyboardGeometry {
+                                    keyboard_name: "test".to_string(),
+                                    layout_name: "test".to_string(),
+                                    matrix_rows: 4,
+                                    matrix_cols: 2,
+                                    keys: vec![],
+                                },
+                                models::VisualLayoutMapping::new(),
+                            )
                         }
                     }
                 }
                 Err(_) => {
                     // Fall back to minimal geometry
-                    (models::KeyboardGeometry {
-                        keyboard_name: "test".to_string(),
-                        layout_name: "test".to_string(),
-                        matrix_rows: 4,
-                        matrix_cols: 2,
-                        keys: vec![],
-                    }, models::VisualLayoutMapping::new())
+                    (
+                        models::KeyboardGeometry {
+                            keyboard_name: "test".to_string(),
+                            layout_name: "test".to_string(),
+                            matrix_rows: 4,
+                            matrix_cols: 2,
+                            keys: vec![],
+                        },
+                        models::VisualLayoutMapping::new(),
+                    )
                 }
             }
         } else {
             // No QMK path configured, use minimal geometry
-            (models::KeyboardGeometry {
-                keyboard_name: "test".to_string(),
-                layout_name: "test".to_string(),
-                matrix_rows: 4,
-                matrix_cols: 2,
-                keys: vec![],
-            }, models::VisualLayoutMapping::new())
+            (
+                models::KeyboardGeometry {
+                    keyboard_name: "test".to_string(),
+                    layout_name: "test".to_string(),
+                    matrix_rows: 4,
+                    matrix_cols: 2,
+                    keys: vec![],
+                },
+                models::VisualLayoutMapping::new(),
+            )
         };
 
         // Initialize TUI
@@ -554,7 +606,10 @@ fn main() -> Result<()> {
         // No file argument provided - check if config exists and is properly configured
         if !config::Config::exists() {
             // No config file exists - automatically run the onboarding wizard
-            println!("Welcome! It looks like this is your first time running {}.", APP_NAME);
+            println!(
+                "Welcome! It looks like this is your first time running {}.",
+                APP_NAME
+            );
             println!();
             println!("Starting the setup wizard...");
             println!();

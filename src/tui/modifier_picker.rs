@@ -53,7 +53,8 @@ impl QmkModifier {
     ];
 
     /// Get the QMK macro name for this modifier
-    #[must_use] pub const fn qmk_name(&self) -> &'static str {
+    #[must_use]
+    pub const fn qmk_name(&self) -> &'static str {
         match self {
             Self::LCtrl => "MOD_LCTL",
             Self::LShift => "MOD_LSFT",
@@ -67,7 +68,8 @@ impl QmkModifier {
     }
 
     /// Get display name
-    #[must_use] pub const fn display_name(&self) -> &'static str {
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
         match self {
             Self::LCtrl | Self::RCtrl => "Ctrl",
             Self::LShift | Self::RShift => "Shift",
@@ -79,11 +81,9 @@ impl QmkModifier {
     /// Check if this is a left-side modifier.
     /// Note: Kept for API completeness - useful for modifier display logic.
     #[allow(dead_code)]
-    #[must_use] pub const fn is_left(&self) -> bool {
-        matches!(
-            self,
-            Self::LCtrl | Self::LShift | Self::LAlt | Self::LGui
-        )
+    #[must_use]
+    pub const fn is_left(&self) -> bool {
+        matches!(self, Self::LCtrl | Self::LShift | Self::LAlt | Self::LGui)
     }
 }
 
@@ -98,7 +98,8 @@ pub enum ModifierPreset {
 
 impl ModifierPreset {
     /// Get the modifier bits for this preset
-    #[must_use] pub const fn bits(&self) -> u8 {
+    #[must_use]
+    pub const fn bits(&self) -> u8 {
         match self {
             Self::Meh => {
                 QmkModifier::LCtrl as u8 | QmkModifier::LShift as u8 | QmkModifier::LAlt as u8
@@ -113,7 +114,8 @@ impl ModifierPreset {
     }
 
     /// Get display name
-    #[must_use] pub const fn display_name(&self) -> &'static str {
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
         match self {
             Self::Meh => "Meh (C+S+A)",
             Self::Hyper => "Hyper (C+S+A+G)",
@@ -158,7 +160,8 @@ impl ModifierPickerState {
     }
 
     /// Check if a modifier is selected
-    #[must_use] pub const fn is_selected(&self, mod_bit: u8) -> bool {
+    #[must_use]
+    pub const fn is_selected(&self, mod_bit: u8) -> bool {
         (self.selected_mods & mod_bit) != 0
     }
 
@@ -187,17 +190,17 @@ impl ModifierPickerState {
 
     /// Move focus up
     pub const fn focus_up(&mut self) {
-        // Layout: 
+        // Layout:
         // 0-3: left column (LCtrl, LShift, LAlt, LGui)
         // 4-7: right column (RCtrl, RShift, RAlt, RGui)
         // 8-9: presets row (Meh, Hyper)
         match self.focus {
-            0 => self.focus = 8,    // LCtrl -> Meh
+            0 => self.focus = 8, // LCtrl -> Meh
             1..=3 => self.focus -= 1,
-            4 => self.focus = 9,    // RCtrl -> Hyper
+            4 => self.focus = 9, // RCtrl -> Hyper
             5..=7 => self.focus -= 1,
-            8 => self.focus = 3,    // Meh -> LGui
-            9 => self.focus = 7,    // Hyper -> RGui
+            8 => self.focus = 3, // Meh -> LGui
+            9 => self.focus = 7, // Hyper -> RGui
             _ => {}
         }
     }
@@ -206,11 +209,11 @@ impl ModifierPickerState {
     pub const fn focus_down(&mut self) {
         match self.focus {
             0..=2 => self.focus += 1,
-            3 => self.focus = 8,    // LGui -> Meh
+            3 => self.focus = 8, // LGui -> Meh
             4..=6 => self.focus += 1,
-            7 => self.focus = 9,    // RGui -> Hyper
-            8 => self.focus = 0,    // Meh -> LCtrl
-            9 => self.focus = 4,    // Hyper -> RCtrl
+            7 => self.focus = 9, // RGui -> Hyper
+            8 => self.focus = 0, // Meh -> LCtrl
+            9 => self.focus = 4, // Hyper -> RCtrl
             _ => {}
         }
     }
@@ -218,8 +221,8 @@ impl ModifierPickerState {
     /// Move focus left
     pub const fn focus_left(&mut self) {
         match self.focus {
-            4..=7 => self.focus -= 4,  // Right column -> Left column
-            9 => self.focus = 8,       // Hyper -> Meh
+            4..=7 => self.focus -= 4, // Right column -> Left column
+            9 => self.focus = 8,      // Hyper -> Meh
             _ => {}
         }
     }
@@ -227,8 +230,8 @@ impl ModifierPickerState {
     /// Move focus right
     pub const fn focus_right(&mut self) {
         match self.focus {
-            0..=3 => self.focus += 4,  // Left column -> Right column
-            8 => self.focus = 9,       // Meh -> Hyper
+            0..=3 => self.focus += 4, // Left column -> Right column
+            8 => self.focus = 9,      // Meh -> Hyper
             _ => {}
         }
     }
@@ -252,7 +255,8 @@ impl ModifierPickerState {
     }
 
     /// Check if any modifier is selected
-    #[must_use] pub const fn has_selection(&self) -> bool {
+    #[must_use]
+    pub const fn has_selection(&self) -> bool {
         self.selected_mods != 0
     }
 }
@@ -272,14 +276,14 @@ pub fn render_modifier_picker(f: &mut Frame, state: &ModifierPickerState, theme:
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Title
-            Constraint::Length(1),  // Spacer
-            Constraint::Length(6),  // Modifier grid (4 rows)
-            Constraint::Length(1),  // Spacer
-            Constraint::Length(3),  // Presets row
-            Constraint::Length(1),  // Spacer
-            Constraint::Length(2),  // Selected display
-            Constraint::Min(2),     // Help text
+            Constraint::Length(3), // Title
+            Constraint::Length(1), // Spacer
+            Constraint::Length(6), // Modifier grid (4 rows)
+            Constraint::Length(1), // Spacer
+            Constraint::Length(3), // Presets row
+            Constraint::Length(1), // Spacer
+            Constraint::Length(2), // Selected display
+            Constraint::Min(2),    // Help text
         ])
         .split(area);
 
@@ -296,29 +300,37 @@ pub fn render_modifier_picker(f: &mut Frame, state: &ModifierPickerState, theme:
     // Modifier grid - split into left and right columns
     let grid_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[2]);
 
     // Left column header + modifiers
     render_modifier_column(f, grid_chunks[0], state, true, theme);
-    
+
     // Right column header + modifiers
     render_modifier_column(f, grid_chunks[1], state, false, theme);
 
     // Presets row
     let preset_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[4]);
 
-    render_preset(f, preset_chunks[0], ModifierPreset::Meh, state.focus == 8, state, theme);
-    render_preset(f, preset_chunks[1], ModifierPreset::Hyper, state.focus == 9, state, theme);
+    render_preset(
+        f,
+        preset_chunks[0],
+        ModifierPreset::Meh,
+        state.focus == 8,
+        state,
+        theme,
+    );
+    render_preset(
+        f,
+        preset_chunks[1],
+        ModifierPreset::Hyper,
+        state.focus == 9,
+        state,
+        theme,
+    );
 
     // Selected display
     let selected_text = if state.has_selection() {
@@ -326,23 +338,41 @@ pub fn render_modifier_picker(f: &mut Frame, state: &ModifierPickerState, theme:
     } else {
         " Selected: (none)".to_string()
     };
-    let selected = Paragraph::new(selected_text)
-        .style(Style::default().fg(theme.accent));
+    let selected = Paragraph::new(selected_text).style(Style::default().fg(theme.accent));
     f.render_widget(selected, chunks[6]);
 
     // Help text
     let help_spans = vec![
-        Span::styled("↑↓←→", Style::default().fg(theme.primary).add_modifier(StyleModifier::BOLD)),
+        Span::styled(
+            "↑↓←→",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(StyleModifier::BOLD),
+        ),
         Span::raw(" Navigate  "),
-        Span::styled("Space", Style::default().fg(theme.primary).add_modifier(StyleModifier::BOLD)),
+        Span::styled(
+            "Space",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(StyleModifier::BOLD),
+        ),
         Span::raw(" Toggle  "),
-        Span::styled("Enter", Style::default().fg(theme.success).add_modifier(StyleModifier::BOLD)),
+        Span::styled(
+            "Enter",
+            Style::default()
+                .fg(theme.success)
+                .add_modifier(StyleModifier::BOLD),
+        ),
         Span::raw(" Confirm  "),
-        Span::styled("Esc", Style::default().fg(theme.error).add_modifier(StyleModifier::BOLD)),
+        Span::styled(
+            "Esc",
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(StyleModifier::BOLD),
+        ),
         Span::raw(" Cancel"),
     ];
-    let help = Paragraph::new(Line::from(help_spans))
-        .style(Style::default().fg(theme.text_muted));
+    let help = Paragraph::new(Line::from(help_spans)).style(Style::default().fg(theme.text_muted));
     f.render_widget(help, chunks[7]);
 }
 
@@ -355,18 +385,21 @@ fn render_modifier_column(
     theme: &Theme,
 ) {
     let header = if is_left { " Left Hand" } else { " Right Hand" };
-    let header_widget = Paragraph::new(header)
-        .style(Style::default().fg(theme.text_muted).add_modifier(StyleModifier::BOLD));
-    
+    let header_widget = Paragraph::new(header).style(
+        Style::default()
+            .fg(theme.text_muted)
+            .add_modifier(StyleModifier::BOLD),
+    );
+
     // Split into header + 4 modifier rows
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Header
-            Constraint::Length(1),  // Ctrl
-            Constraint::Length(1),  // Shift
-            Constraint::Length(1),  // Alt
-            Constraint::Length(1),  // GUI
+            Constraint::Length(1), // Header
+            Constraint::Length(1), // Ctrl
+            Constraint::Length(1), // Shift
+            Constraint::Length(1), // Alt
+            Constraint::Length(1), // GUI
         ])
         .split(area);
 
@@ -463,17 +496,17 @@ mod tests {
     #[test]
     fn test_toggle_individual_modifier() {
         let mut state = ModifierPickerState::new();
-        
+
         // Toggle LCtrl on
         state.toggle_mod(QmkModifier::LCtrl as u8);
         assert!(state.is_selected(QmkModifier::LCtrl as u8));
         assert!(state.has_selection());
-        
+
         // Toggle LShift on
         state.toggle_mod(QmkModifier::LShift as u8);
         assert!(state.is_selected(QmkModifier::LCtrl as u8));
         assert!(state.is_selected(QmkModifier::LShift as u8));
-        
+
         // Toggle LCtrl off
         state.toggle_mod(QmkModifier::LCtrl as u8);
         assert!(!state.is_selected(QmkModifier::LCtrl as u8));
@@ -484,7 +517,7 @@ mod tests {
     fn test_to_mod_string_single() {
         let mut state = ModifierPickerState::new();
         state.toggle_mod(QmkModifier::LCtrl as u8);
-        
+
         assert_eq!(state.to_mod_string(), "MOD_LCTL");
     }
 
@@ -493,7 +526,7 @@ mod tests {
         let mut state = ModifierPickerState::new();
         state.toggle_mod(QmkModifier::LCtrl as u8);
         state.toggle_mod(QmkModifier::LShift as u8);
-        
+
         assert_eq!(state.to_mod_string(), "MOD_LCTL | MOD_LSFT");
     }
 
@@ -501,7 +534,7 @@ mod tests {
     fn test_to_mod_string_meh() {
         let mut state = ModifierPickerState::new();
         state.selected_mods = ModifierPreset::Meh.bits();
-        
+
         assert_eq!(state.to_mod_string(), "MOD_LCTL | MOD_LSFT | MOD_LALT");
     }
 
@@ -509,8 +542,11 @@ mod tests {
     fn test_to_mod_string_hyper() {
         let mut state = ModifierPickerState::new();
         state.selected_mods = ModifierPreset::Hyper.bits();
-        
-        assert_eq!(state.to_mod_string(), "MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI");
+
+        assert_eq!(
+            state.to_mod_string(),
+            "MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"
+        );
     }
 
     #[test]
@@ -522,16 +558,16 @@ mod tests {
     #[test]
     fn test_toggle_focused_modifier() {
         let mut state = ModifierPickerState::new();
-        
+
         // Focus is at 0 (LCtrl)
         state.toggle_focused();
         assert!(state.is_selected(QmkModifier::LCtrl as u8));
-        
+
         // Move focus to 1 (LShift) and toggle
         state.focus = 1;
         state.toggle_focused();
         assert!(state.is_selected(QmkModifier::LShift as u8));
-        
+
         // Move focus to 8 (Meh preset) and toggle
         state.focus = 8;
         state.toggle_focused();
@@ -541,26 +577,26 @@ mod tests {
     #[test]
     fn test_focus_navigation() {
         let mut state = ModifierPickerState::new();
-        
+
         // Start at 0 (LCtrl)
         assert_eq!(state.focus, 0);
-        
+
         // Move right to 4 (RCtrl)
         state.focus_right();
         assert_eq!(state.focus, 4);
-        
+
         // Move left back to 0 (LCtrl)
         state.focus_left();
         assert_eq!(state.focus, 0);
-        
+
         // Move down to 1 (LShift)
         state.focus_down();
         assert_eq!(state.focus, 1);
-        
+
         // Move up back to 0 (LCtrl)
         state.focus_up();
         assert_eq!(state.focus, 0);
-        
+
         // Move up wraps to 8 (Meh)
         state.focus_up();
         assert_eq!(state.focus, 8);
@@ -571,9 +607,9 @@ mod tests {
         let mut state = ModifierPickerState::new();
         state.toggle_mod(QmkModifier::LCtrl as u8);
         state.focus = 5;
-        
+
         state.reset();
-        
+
         assert_eq!(state.selected_mods, 0);
         assert_eq!(state.focus, 0);
     }

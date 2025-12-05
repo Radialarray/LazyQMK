@@ -162,7 +162,7 @@ Categories help organize keys by function (navigation, symbols, modifiers, etc.)
 - `Ctrl+K` - Select different keyboard
 - `Ctrl+Y` - Switch layout variant
 - `Ctrl+T` - Category manager
-- `Ctrl+E` - Edit layout metadata
+- `Shift+E` - Edit layout metadata
 
 ### Templates
 - `t` - Browse and load templates

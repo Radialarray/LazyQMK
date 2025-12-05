@@ -87,8 +87,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
     f.render_widget(Clear, area);
 
     // Render opaque background with theme color
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     // Build list items with color previews

@@ -376,7 +376,7 @@
 
 **Goal**: Enable editing layout metadata through dedicated dialog
 
-**Independent Test**: Press Ctrl+E to open metadata editor, modify name and description fields, add tags as comma-separated values, confirm changes, verify metadata in YAML frontmatter when saved
+**Independent Test**: Press Shift+E to open metadata editor, modify name and description fields, add tags as comma-separated values, confirm changes, verify metadata in YAML frontmatter when saved
 
 ### Metadata Editor
 
@@ -386,7 +386,7 @@
 - [X] T159 [US9] Implement text input with Backspace in src/tui/metadata_editor.rs
 - [X] T160 [US9] Implement comma-separated tag input parsing in src/tui/metadata_editor.rs
 - [X] T161 [US9] Implement metadata confirmation updating Layout.metadata with modified timestamp in src/tui/metadata_editor.rs
-- [X] T162 [US9] Implement metadata editor opening with Ctrl+E in src/tui/mod.rs
+- [X] T162 [US9] Implement metadata editor opening with Shift+E in src/tui/mod.rs
 - [X] T163 [US9] Implement metadata editor cancellation with Escape in src/tui/metadata_editor.rs
 
 **Checkpoint**: ✅ Metadata management complete - layout metadata can be edited through UI

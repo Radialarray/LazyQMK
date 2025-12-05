@@ -129,7 +129,11 @@ impl HelpRegistry {
         let keys = if binding.alt_keys.is_empty() {
             binding.keys.join("/")
         } else {
-            format!("{} ({})", binding.keys.join("/"), binding.alt_keys.join("/"))
+            format!(
+                "{} ({})",
+                binding.keys.join("/"),
+                binding.alt_keys.join("/")
+            )
         };
         (keys, binding.action.clone())
     }
@@ -137,7 +141,11 @@ impl HelpRegistry {
     /// Format bindings for status bar display
     /// Returns a compact string like "Enter Keycode  c Color  ? Help"
     #[must_use]
-    pub fn format_status_bar_hints(&self, context_name: &str, max_hints: usize) -> Vec<(String, String)> {
+    pub fn format_status_bar_hints(
+        &self,
+        context_name: &str,
+        max_hints: usize,
+    ) -> Vec<(String, String)> {
         self.get_status_bar_hints(context_name)
             .into_iter()
             .take(max_hints)
@@ -162,9 +170,9 @@ impl HelpRegistry {
         self.context_names()
             .into_iter()
             .filter_map(|key| {
-                self.contexts.get(key).map(|ctx| {
-                    (key.as_str(), ctx.name.as_str(), ctx.description.as_str())
-                })
+                self.contexts
+                    .get(key)
+                    .map(|ctx| (key.as_str(), ctx.name.as_str(), ctx.description.as_str()))
             })
             .collect()
     }
@@ -252,7 +260,7 @@ mod tests {
         let registry = HelpRegistry::load().unwrap();
         let bindings = registry.get_bindings(contexts::MAIN);
         assert!(!bindings.is_empty());
-        
+
         // Verify bindings are sorted by priority
         for window in bindings.windows(2) {
             assert!(window[0].priority <= window[1].priority);
@@ -263,7 +271,7 @@ mod tests {
     fn test_status_bar_hints() {
         let registry = HelpRegistry::load().unwrap();
         let hints = registry.get_status_bar_hints(contexts::MAIN);
-        
+
         // All returned bindings should have hints
         for binding in &hints {
             assert!(binding.hint.is_some());

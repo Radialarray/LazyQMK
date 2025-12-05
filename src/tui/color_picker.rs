@@ -128,7 +128,7 @@ impl ColorPickerState {
                 let dg = (i32::from(shade.g) - i32::from(target.g)).abs() as u32;
                 let db = (i32::from(shade.b) - i32::from(target.b)).abs() as u32;
                 let distance = dr * dr + dg * dg + db * db;
-                
+
                 if distance < best_distance {
                     best_distance = distance;
                     best_color = ci;
@@ -161,7 +161,8 @@ impl ColorPickerState {
     /// Get the currently selected palette shade
     #[must_use]
     pub fn get_selected_shade(&self) -> Option<&crate::models::Shade> {
-        self.palette.color_at(self.selected_color)
+        self.palette
+            .color_at(self.selected_color)
             .and_then(|c| c.shade_at(self.selected_shade))
     }
 
@@ -211,10 +212,11 @@ impl ColorPickerState {
                 // Navigate the color grid
                 let current_row = self.selected_color / columns;
                 let current_col = self.selected_color % columns;
-                
+
                 let new_col = (current_col as i32 + dx).clamp(0, columns as i32 - 1) as usize;
-                let new_row = (current_row as i32 + dy).clamp(0, (self.palette.rows() - 1) as i32) as usize;
-                
+                let new_row =
+                    (current_row as i32 + dy).clamp(0, (self.palette.rows() - 1) as i32) as usize;
+
                 let new_idx = new_row * columns + new_col;
                 if new_idx < color_count {
                     self.selected_color = new_idx;
@@ -225,8 +227,8 @@ impl ColorPickerState {
                 // Navigate the shade bar
                 if let Some(color) = self.palette.color_at(self.selected_color) {
                     let shade_count = color.shade_count();
-                    self.selected_shade = (self.selected_shade as i32 + dx)
-                        .clamp(0, shade_count as i32 - 1) as usize;
+                    self.selected_shade =
+                        (self.selected_shade as i32 + dx).clamp(0, shade_count as i32 - 1) as usize;
                     self.sync_from_palette();
                 }
             }
@@ -275,8 +277,7 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
     f.render_widget(Clear, area);
 
     // Render opaque background with theme color
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let picker_state = &state.color_picker_state;
@@ -286,16 +287,16 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(2),  // 0: Title
-            Constraint::Length(1),  // 1: Step 1 label
-            Constraint::Length(9),  // 2: Color grid (3 rows × 3 lines each for borders)
-            Constraint::Length(1),  // 3: Spacer
-            Constraint::Length(1),  // 4: Step 2 label
-            Constraint::Length(3),  // 5: Shade bar
-            Constraint::Length(1),  // 6: Spacer
-            Constraint::Length(4),  // 7: Preview
-            Constraint::Min(0),     // 8: Flexible spacer (pushes instructions to bottom)
-            Constraint::Length(2),  // 9: Instructions
+            Constraint::Length(2), // 0: Title
+            Constraint::Length(1), // 1: Step 1 label
+            Constraint::Length(9), // 2: Color grid (3 rows × 3 lines each for borders)
+            Constraint::Length(1), // 3: Spacer
+            Constraint::Length(1), // 4: Step 2 label
+            Constraint::Length(3), // 5: Shade bar
+            Constraint::Length(1), // 6: Spacer
+            Constraint::Length(4), // 7: Preview
+            Constraint::Min(0),    // 8: Flexible spacer (pushes instructions to bottom)
+            Constraint::Length(2), // 9: Instructions
         ])
         .split(area);
 
@@ -315,7 +316,9 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
 
     // Step 1 label
     let step1_style = if picker_state.palette_focus == PaletteFocus::Colors {
-        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(theme.text_muted)
     };
@@ -327,7 +330,9 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
 
     // Step 2 label
     let step2_style = if picker_state.palette_focus == PaletteFocus::Shades {
-        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(theme.text_muted)
     };
@@ -360,15 +365,18 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
 }
 
 /// Render the color grid (4x3)
-fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, theme: &super::Theme) {
+fn render_color_grid(
+    f: &mut Frame,
+    area: Rect,
+    picker_state: &ColorPickerState,
+    theme: &super::Theme,
+) {
     let columns = picker_state.palette.columns();
     let rows = picker_state.palette.rows();
-    
+
     // Create row layout (3 lines per row for border support)
-    let row_constraints: Vec<Constraint> = (0..rows)
-        .map(|_| Constraint::Length(3))
-        .collect();
-    
+    let row_constraints: Vec<Constraint> = (0..rows).map(|_| Constraint::Length(3)).collect();
+
     let row_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(row_constraints)
@@ -379,7 +387,7 @@ fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState,
         let col_constraints: Vec<Constraint> = (0..columns)
             .map(|_| Constraint::Ratio(1, columns as u32))
             .collect();
-        
+
         let col_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(col_constraints)
@@ -388,25 +396,26 @@ fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState,
         for col in 0..columns {
             let idx = row * columns + col;
             if let Some(color) = picker_state.palette.color_at(idx) {
-                let is_selected = idx == picker_state.selected_color 
+                let is_selected = idx == picker_state.selected_color
                     && picker_state.palette_focus == PaletteFocus::Colors;
-                
+
                 // Get the primary shade color for the dot
-                let shade = color.primary_shade()
+                let shade = color
+                    .primary_shade()
                     .map_or(Color::White, |s| Color::Rgb(s.r, s.g, s.b));
-                
+
                 // Build the display: colored dot + name
                 let dot = "●";
                 let name = &color.name;
-                
+
                 let text_style = Style::default().fg(theme.text);
-                
+
                 let content = Line::from(vec![
                     Span::styled(dot, Style::default().fg(shade)),
                     Span::raw(" "),
                     Span::styled(name.as_str(), text_style),
                 ]);
-                
+
                 if is_selected {
                     // Render with border for selected color
                     let block = Block::default()
@@ -431,33 +440,40 @@ fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState,
 }
 
 /// Render the shade bar for the selected color
-fn render_shade_bar(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, theme: &super::Theme) {
+fn render_shade_bar(
+    f: &mut Frame,
+    area: Rect,
+    picker_state: &ColorPickerState,
+    theme: &super::Theme,
+) {
     if let Some(color) = picker_state.palette.color_at(picker_state.selected_color) {
         let shade_count = color.shade_count();
-        
+
         // Create columns for each shade
         let col_constraints: Vec<Constraint> = (0..shade_count)
             .map(|_| Constraint::Ratio(1, shade_count as u32))
             .collect();
-        
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(col_constraints)
             .split(area);
 
         for (i, shade) in color.shades.iter().enumerate() {
-            let is_selected = i == picker_state.selected_shade 
+            let is_selected = i == picker_state.selected_shade
                 && picker_state.palette_focus == PaletteFocus::Shades;
-            
+
             let shade_color = Color::Rgb(shade.r, shade.g, shade.b);
-            
+
             // Shade block with level label
             let label = format!("{}", shade.level);
-            
+
             let (block_style, text_style) = if is_selected {
                 (
                     Style::default().bg(shade_color),
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
                 )
             } else {
                 (
@@ -465,11 +481,11 @@ fn render_shade_bar(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, 
                     Style::default().fg(theme.text_muted),
                 )
             };
-            
+
             // Draw the color block
             let block = Block::default().style(block_style);
             f.render_widget(block, chunks[i]);
-            
+
             // Draw selection indicator and label below
             if chunks[i].height >= 2 {
                 let indicator = if is_selected { "▲" } else { " " };
@@ -488,7 +504,12 @@ fn render_shade_bar(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, 
 }
 
 /// Render preview section
-fn render_preview(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, theme: &super::Theme) {
+fn render_preview(
+    f: &mut Frame,
+    area: Rect,
+    picker_state: &ColorPickerState,
+    theme: &super::Theme,
+) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -503,18 +524,31 @@ fn render_preview(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, th
     f.render_widget(preview, chunks[0]);
 
     // Hex code and color name - use pre-computed hex from Shade when available
-    let hex = picker_state.get_selected_shade().map_or_else(|| picker_state.get_color().to_hex(), |s| s.hex.clone());
-    let color_name = picker_state.palette.color_at(picker_state.selected_color)
-        .map(|c| format!("{}-{}", c.name, 
-            picker_state.get_selected_shade()
-                .map(|s| s.level.to_string())
-                .unwrap_or_default()))
+    let hex = picker_state
+        .get_selected_shade()
+        .map_or_else(|| picker_state.get_color().to_hex(), |s| s.hex.clone());
+    let color_name = picker_state
+        .palette
+        .color_at(picker_state.selected_color)
+        .map(|c| {
+            format!(
+                "{}-{}",
+                c.name,
+                picker_state
+                    .get_selected_shade()
+                    .map(|s| s.level.to_string())
+                    .unwrap_or_default()
+            )
+        })
         .unwrap_or_default();
-    
+
     let info = Paragraph::new(vec![
         Line::from(vec![
             Span::styled(" Hex: ", Style::default().fg(theme.text_muted)),
-            Span::styled(hex, Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                hex,
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" Name: ", Style::default().fg(theme.text_muted)),
@@ -534,8 +568,7 @@ fn render_rgb_mode(f: &mut Frame, state: &super::AppState) {
     f.render_widget(Clear, area);
 
     // Render opaque background with theme color
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     // Split into sections
@@ -557,7 +590,9 @@ fn render_rgb_mode(f: &mut Frame, state: &super::AppState) {
 
     // Title - context-aware
     let title_text = match state.color_picker_context {
-        Some(super::ColorPickerContext::IndividualKey) => "Individual Key Color Picker (Custom RGB)",
+        Some(super::ColorPickerContext::IndividualKey) => {
+            "Individual Key Color Picker (Custom RGB)"
+        }
         Some(super::ColorPickerContext::LayerDefault) => "Layer Color Picker (Custom RGB)",
         Some(super::ColorPickerContext::Category) => "Category Color Picker (Custom RGB)",
         None => "Custom RGB",
@@ -719,7 +754,7 @@ fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::R
                     let columns = state.color_picker_state.palette.columns();
                     let current_row = state.color_picker_state.selected_color / columns;
                     let rows = state.color_picker_state.palette.rows();
-                    
+
                     if current_row >= rows - 1 {
                         // At bottom row, move to shades
                         state.color_picker_state.palette_focus = PaletteFocus::Shades;

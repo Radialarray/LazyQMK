@@ -6,9 +6,9 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::cast_possible_truncation)]
 
+use crate::keycode_db::KeycodeDb;
 #[cfg(test)]
 use crate::models::layer::Position;
-use crate::keycode_db::KeycodeDb;
 use crate::models::layer::{KeyDefinition, Layer};
 use crate::models::{Category, RgbColor};
 use anyhow::Result;
@@ -58,8 +58,6 @@ impl From<u8> for UncoloredKeyBehavior {
         Self::new(value.min(100))
     }
 }
-
-
 
 // ============================================================================
 // RGB Settings
@@ -428,10 +426,9 @@ pub struct LayoutMetadata {
     /// QMK layout variant (e.g., "`LAYOUT_split_3x6_3_ex2`")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_variant: Option<String>,
-    
+
     // === Keyboard-specific settings ===
     // These were moved from config.toml to be per-layout
-    
     /// QMK keyboard path (e.g., "splitkb/halcyon/corne")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keyboard: Option<String>,
@@ -563,7 +560,7 @@ pub struct Layout {
     pub layers: Vec<Layer>,
     /// User-defined categories for organization
     pub categories: Vec<Category>,
-    
+
     // === RGB Settings ===
     /// Master switch for all RGB LEDs
     #[serde(default = "default_rgb_enabled")]
@@ -578,7 +575,7 @@ pub struct Layout {
     /// Behavior for keys without individual or category colors
     #[serde(default, alias = "inactive_key_behavior")]
     pub uncolored_key_behavior: UncoloredKeyBehavior,
-    
+
     // === Tap-Hold Settings ===
     /// Tap-hold configuration (LT, MT, TT timing and behavior)
     #[serde(default)]
@@ -691,7 +688,7 @@ impl Layout {
         // If any layer has colors enabled, disable all. Otherwise, enable all.
         let any_enabled = self.layers.iter().any(|l| l.layer_colors_enabled);
         let new_state = !any_enabled;
-        
+
         for layer in &mut self.layers {
             layer.set_layer_colors_enabled(new_state);
         }
@@ -771,7 +768,11 @@ impl Layout {
     /// individual color or key category. This allows showing a neutral color
     /// for keys that would normally inherit from the layer.
     #[must_use]
-    pub fn resolve_key_color_if_enabled(&self, layer_idx: usize, key: &KeyDefinition) -> Option<RgbColor> {
+    pub fn resolve_key_color_if_enabled(
+        &self,
+        layer_idx: usize,
+        key: &KeyDefinition,
+    ) -> Option<RgbColor> {
         // 1. Individual key color override (always works)
         if let Some(color) = key.color_override {
             return Some(color);
@@ -836,7 +837,7 @@ impl Layout {
 
         // From here, colors are layer-level (not key-specific)
         // Apply uncolored_key_behavior
-        
+
         // First, check if layer colors are enabled
         if let Some(layer) = self.get_layer(layer_idx) {
             if !layer.layer_colors_enabled {
@@ -858,8 +859,8 @@ impl Layout {
             // Apply uncolored_key_behavior
             // Apply uncolored key brightness: 0=off, 1-99=dim, 100=full color
             let display_color = match self.uncolored_key_behavior.as_percent() {
-                0 => RgbColor::new(0, 0, 0), // Off
-                100 => layer_color, // Full color
+                0 => RgbColor::new(0, 0, 0),         // Off
+                100 => layer_color,                  // Full color
                 percent => layer_color.dim(percent), // Dim to percentage
             };
 
@@ -905,7 +906,7 @@ impl Layout {
     }
 
     /// Resolves layer references in a keycode to layer indices.
-    /// 
+    ///
     /// Uses the keycode database to detect layer keycodes dynamically,
     /// then converts @uuid references to the current layer index.
     /// Returns None if the layer reference is invalid.
@@ -1223,7 +1224,7 @@ mod tests {
     fn test_tap_hold_settings_apply_preset() {
         let mut settings = TapHoldSettings::default();
         settings.apply_preset(TapHoldPreset::HomeRowMods);
-        
+
         assert_eq!(settings.tapping_term, 175);
         assert!(settings.chordal_hold);
         assert_eq!(settings.preset, TapHoldPreset::HomeRowMods);
@@ -1233,7 +1234,7 @@ mod tests {
     fn test_tap_hold_settings_mark_custom() {
         let mut settings = TapHoldPreset::HomeRowMods.settings();
         assert_eq!(settings.preset, TapHoldPreset::HomeRowMods);
-        
+
         settings.mark_custom();
         assert_eq!(settings.preset, TapHoldPreset::Custom);
     }
@@ -1280,7 +1281,13 @@ mod tests {
     #[test]
     fn test_hold_decision_mode_config_define() {
         assert_eq!(HoldDecisionMode::Default.config_define(), None);
-        assert_eq!(HoldDecisionMode::PermissiveHold.config_define(), Some("PERMISSIVE_HOLD"));
-        assert_eq!(HoldDecisionMode::HoldOnOtherKeyPress.config_define(), Some("HOLD_ON_OTHER_KEY_PRESS"));
+        assert_eq!(
+            HoldDecisionMode::PermissiveHold.config_define(),
+            Some("PERMISSIVE_HOLD")
+        );
+        assert_eq!(
+            HoldDecisionMode::HoldOnOtherKeyPress.config_define(),
+            Some("HOLD_ON_OTHER_KEY_PRESS")
+        );
     }
 }

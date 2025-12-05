@@ -268,7 +268,9 @@ fn run_build(
         .stderr(Stdio::piped());
 
     // Execute command
-    let output = cmd.output().context("Failed to execute qmk compile command")?;
+    let output = cmd
+        .output()
+        .context("Failed to execute qmk compile command")?;
 
     // Parse output
     let stdout = String::from_utf8_lossy(&output.stdout);

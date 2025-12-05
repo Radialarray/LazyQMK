@@ -1,7 +1,7 @@
 //! Category manager for CRUD operations on categories.
 //!
 //! Provides a UI for creating, renaming, recoloring, and deleting categories.
-//! Accessible via Ctrl+T shortcut.
+//! Accessible via Shift+K shortcut (mnemonic: K = Kategorties/Categories).
 
 use ratatui::{
     layout::{Alignment, Constraint, Rect},
@@ -124,8 +124,9 @@ impl CategoryManagerState {
     #[must_use]
     pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
-            ManagerMode::CreatingName { input } 
-            | ManagerMode::Renaming { input, .. } => Some(input),
+            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
+                Some(input)
+            }
             _ => None,
         }
     }
@@ -133,8 +134,9 @@ impl CategoryManagerState {
     /// Get mutable reference to current input text
     pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
-            ManagerMode::CreatingName { input } 
-            | ManagerMode::Renaming { input, .. } => Some(input),
+            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
+                Some(input)
+            }
             _ => None,
         }
     }
@@ -175,7 +177,7 @@ pub fn render_category_manager(
     // Background block
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Category Manager (Ctrl+T) ")
+        .title(" Category Manager (Shift+K) ")
         .style(Style::default().bg(theme.background));
 
     f.render_widget(block, dialog_area);

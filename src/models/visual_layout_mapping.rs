@@ -76,7 +76,12 @@ impl VisualLayoutMapping {
 
         // Pre-allocate vectors
         let max_led = geometry.keys.iter().map(|k| k.led_index).max().unwrap_or(0) as usize;
-        let max_layout = geometry.keys.iter().map(|k| k.layout_index).max().unwrap_or(0) as usize;
+        let max_layout = geometry
+            .keys
+            .iter()
+            .map(|k| k.layout_index)
+            .max()
+            .unwrap_or(0) as usize;
         mapping.led_to_matrix.resize(max_led + 1, (0, 0));
         mapping.layout_to_matrix.resize(max_layout + 1, (0, 0));
 

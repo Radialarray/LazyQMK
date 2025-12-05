@@ -16,6 +16,9 @@ pub use category::Category;
 pub use color_palette::{ColorPalette, Shade};
 pub use keyboard_geometry::{KeyGeometry, KeyboardGeometry};
 pub use layer::{KeyDefinition, Layer, Position};
-pub use layout::{HoldDecisionMode, Layout, LayoutMetadata, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior};
+pub use layout::{
+    HoldDecisionMode, Layout, LayoutMetadata, RgbBrightness, TapHoldPreset, TapHoldSettings,
+    UncoloredKeyBehavior,
+};
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

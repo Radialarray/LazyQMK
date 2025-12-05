@@ -240,9 +240,9 @@ fn generate_key_descriptions(layout: &Layout) -> Option<String> {
         .enumerate()
         .flat_map(|(layer_idx, layer)| {
             layer.keys.iter().filter_map(move |key| {
-                key.description.as_ref().map(|desc| {
-                    (layer_idx, key.position.row, key.position.col, desc.clone())
-                })
+                key.description
+                    .as_ref()
+                    .map(|desc| (layer_idx, key.position.row, key.position.col, desc.clone()))
             })
         })
         .collect();
@@ -263,13 +263,17 @@ fn generate_key_descriptions(layout: &Layout) -> Option<String> {
 /// Generates the settings section.
 /// Only writes non-default settings to keep files clean.
 fn generate_settings(layout: &Layout) -> Option<String> {
-    use crate::models::{HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior};
+    use crate::models::{
+        HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    };
 
     let default_uncolored = UncoloredKeyBehavior::default();
     let default_tap_hold = TapHoldSettings::default();
 
     // Check if we have any non-default settings
-    let has_rgb_settings = !layout.rgb_enabled || layout.rgb_brightness != RgbBrightness::default() || layout.rgb_timeout_ms > 0;
+    let has_rgb_settings = !layout.rgb_enabled
+        || layout.rgb_brightness != RgbBrightness::default()
+        || layout.rgb_timeout_ms > 0;
     let has_uncolored_setting = layout.uncolored_key_behavior != default_uncolored;
     let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
 
@@ -284,13 +288,19 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         output.push_str("**RGB Enabled**: Off\n");
     }
     if layout.rgb_brightness != RgbBrightness::default() {
-        output.push_str(&format!("**RGB Brightness**: {}%\n", layout.rgb_brightness.as_percent()));
+        output.push_str(&format!(
+            "**RGB Brightness**: {}%\n",
+            layout.rgb_brightness.as_percent()
+        ));
     }
 
     // Write uncolored_key_behavior if not default
     // Only write if not default (100%)
     if layout.uncolored_key_behavior.as_percent() != 100 {
-        output.push_str(&format!("**Uncolored Key Brightness**: {}%\n", layout.uncolored_key_behavior.as_percent()));
+        output.push_str(&format!(
+            "**Uncolored Key Brightness**: {}%\n",
+            layout.uncolored_key_behavior.as_percent()
+        ));
     }
 
     // Write RGB timeout if set
@@ -352,7 +362,10 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         }
 
         if ths.tapping_toggle != default_tap_hold.tapping_toggle {
-            output.push_str(&format!("**Tapping Toggle**: {} taps\n", ths.tapping_toggle));
+            output.push_str(&format!(
+                "**Tapping Toggle**: {} taps\n",
+                ths.tapping_toggle
+            ));
         }
 
         if ths.flow_tap_term != default_tap_hold.flow_tap_term {
@@ -395,7 +408,9 @@ fn atomic_write(path: &Path, content: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, ColorPalette, KeyDefinition, Layer, LayoutMetadata, Position, RgbColor};
+    use crate::models::{
+        Category, ColorPalette, KeyDefinition, Layer, LayoutMetadata, Position, RgbColor,
+    };
     use crate::parser::layout::parse_markdown_layout_str;
     use chrono::Utc;
 
@@ -419,7 +434,9 @@ mod tests {
             id: "test-layer-0".to_string(),
             number: 0,
             name: "Base".to_string(),
-            default_color: ColorPalette::load().unwrap_or_default().default_layer_color(),
+            default_color: ColorPalette::load()
+                .unwrap_or_default()
+                .default_layer_color(),
             category_id: None,
             keys: vec![],
             layer_colors_enabled: true,
@@ -571,33 +588,33 @@ mod tests {
     #[test]
     fn test_settings_round_trip() {
         use crate::models::UncoloredKeyBehavior;
-        
+
         let mut layout = create_test_layout();
-        
+
         // Test with Off setting (0%)
         layout.uncolored_key_behavior = UncoloredKeyBehavior::from(0);
         let markdown = generate_markdown(&layout).unwrap();
         println!("Generated markdown with Off:\n{markdown}");
         assert!(markdown.contains("**Uncolored Key Brightness**: 0%"));
-        
+
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.uncolored_key_behavior.as_percent(), 0);
-        
+
         // Test with 50% brightness
         layout.uncolored_key_behavior = UncoloredKeyBehavior::from(50);
         let markdown = generate_markdown(&layout).unwrap();
         println!("Generated markdown with 50% brightness:\n{markdown}");
         assert!(markdown.contains("**Uncolored Key Brightness**: 50%"));
-        
+
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.uncolored_key_behavior.as_percent(), 50);
-        
+
         // Test RGB brightness
         layout.rgb_brightness = crate::models::RgbBrightness::from(50);
         let markdown = generate_markdown(&layout).unwrap();
         println!("Generated markdown with 50% brightness:\n{markdown}");
         assert!(markdown.contains("**RGB Brightness**: 50%"));
-        
+
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.rgb_brightness.as_percent(), 50);
     }

@@ -72,16 +72,16 @@ enum ParseState {
 /// - Invalid table structure
 /// - Invalid keycodes or color syntax
 pub fn parse_markdown_layout(path: &Path) -> Result<Layout> {
-     // Check if file exists first to provide better error message
-     if !path.exists() {
-         anyhow::bail!(
-             "Layout file not found: {}\n\n\
+    // Check if file exists first to provide better error message
+    if !path.exists() {
+        anyhow::bail!(
+            "Layout file not found: {}\n\n\
              Please check the file path and try again.\n\
              If you need help getting started, run: {} --init",
-             path.display(),
-             APP_BINARY_NAME
-         );
-     }
+            path.display(),
+            APP_BINARY_NAME
+        );
+    }
 
     // Check if it's a file (not a directory)
     if !path.is_file() {
@@ -237,8 +237,9 @@ fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
 
         // Check for key descriptions section (## Key Descriptions)
         if line == "## Key Descriptions" {
-            line_num = parse_key_descriptions(lines, line_num, layout)
-                .with_context(|| format!("Error parsing key descriptions at line {}", line_num + 1))?;
+            line_num = parse_key_descriptions(lines, line_num, layout).with_context(|| {
+                format!("Error parsing key descriptions at line {}", line_num + 1)
+            })?;
             continue;
         }
 
@@ -291,12 +292,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
 
         // Parse optional ID: **ID**: uuid
         if line.starts_with("**ID**:") {
-            layer_id = Some(
-                line.strip_prefix("**ID**:")
-                    .unwrap()
-                    .trim()
-                    .to_string(),
-            );
+            layer_id = Some(line.strip_prefix("**ID**:").unwrap().trim().to_string());
             line_num += 1;
             continue;
         }
@@ -397,10 +393,7 @@ fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Re
 fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
     // Split by pipes and trim, keeping empty cells to preserve column indices
     // This is critical for split keyboards where gaps between halves are empty cells
-    let cells: Vec<&str> = line
-        .split('|')
-        .map(str::trim)
-        .collect();
+    let cells: Vec<&str> = line.split('|').map(str::trim).collect();
 
     // Skip leading empty element from split (line starts with '|')
     // and trailing empty element (line ends with '|')
@@ -527,9 +520,10 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 
         // Parse setting: **Setting Name**: value
         // Support both old and new names for backwards compatibility
-        if line.starts_with("**Inactive Key Behavior**:") 
-            || line.starts_with("**Uncolored Key Behavior**:") 
-            || line.starts_with("**Uncolored Key Brightness**:") {
+        if line.starts_with("**Inactive Key Behavior**:")
+            || line.starts_with("**Uncolored Key Behavior**:")
+            || line.starts_with("**Uncolored Key Brightness**:")
+        {
             let value = line
                 .strip_prefix("**Inactive Key Behavior**:")
                 .or_else(|| line.strip_prefix("**Uncolored Key Behavior**:"))
@@ -540,17 +534,22 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 
             // Parse as percentage (legacy format support)
             let percent = if value.contains('%') {
-                value.trim_end_matches('%').trim().parse::<u8>().unwrap_or(100)
+                value
+                    .trim_end_matches('%')
+                    .trim()
+                    .parse::<u8>()
+                    .unwrap_or(100)
             } else {
                 match value.as_str() {
                     "off" | "black" | "off (black)" => 0,
                     "show color" | "full" => 100,
                     _ => value.parse::<u8>().unwrap_or(100),
                 }
-            }.min(100);
+            }
+            .min(100);
             layout.uncolored_key_behavior = crate::models::UncoloredKeyBehavior::from(percent);
         }
-        
+
         // Parse RGB Master Switch
         if line.starts_with("**RGB Enabled**:") || line.starts_with("**RGB Master Switch**:") {
             let value = line
@@ -561,7 +560,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .to_lowercase();
             layout.rgb_enabled = matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
-        
+
         // Parse RGB Brightness
         if line.starts_with("**RGB Brightness**:") {
             let value = line
@@ -999,20 +998,37 @@ version: '1.0'
 "#;
 
         let layout = parse_markdown_layout_str(content).expect("Parse failed");
-        
+
         println!("Layer 0 has {} keys", layout.layers[0].keys.len());
         for key in &layout.layers[0].keys {
-            println!("  {:?}: {} -> {:?}", key.position, key.keycode, key.description);
+            println!(
+                "  {:?}: {} -> {:?}",
+                key.position, key.keycode, key.description
+            );
         }
-        
+
         // Check that descriptions were parsed
-        let key0 = layout.layers[0].keys.iter().find(|k| k.position == Position { row: 0, col: 0 });
-        let key1 = layout.layers[0].keys.iter().find(|k| k.position == Position { row: 0, col: 1 });
-        
+        let key0 = layout.layers[0]
+            .keys
+            .iter()
+            .find(|k| k.position == Position { row: 0, col: 0 });
+        let key1 = layout.layers[0]
+            .keys
+            .iter()
+            .find(|k| k.position == Position { row: 0, col: 1 });
+
         assert!(key0.is_some(), "Key at 0:0 not found");
         assert!(key1.is_some(), "Key at 0:1 not found");
-        
-        assert_eq!(key0.unwrap().description, Some("This is a test".to_string()), "Key 0:0:0 description mismatch");
-        assert_eq!(key1.unwrap().description, Some("Another test".to_string()), "Key 0:0:1 description mismatch");
+
+        assert_eq!(
+            key0.unwrap().description,
+            Some("This is a test".to_string()),
+            "Key 0:0:0 description mismatch"
+        );
+        assert_eq!(
+            key1.unwrap().description,
+            Some("Another test".to_string()),
+            "Key 0:0:1 description mismatch"
+        );
     }
 }

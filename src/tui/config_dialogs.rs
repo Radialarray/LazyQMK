@@ -254,8 +254,7 @@ pub fn render_path_dialog(f: &mut Frame, state: &PathConfigDialogState, theme: &
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let chunks = Layout::default()
@@ -310,8 +309,7 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState, theme:
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let chunks = Layout::default()
@@ -377,8 +375,7 @@ pub fn render_layout_picker(
     f.render_widget(Clear, area);
 
     // Render opaque background
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let chunks = Layout::default()

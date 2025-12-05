@@ -49,13 +49,13 @@ action = "Clear key (KC_TRNS)"
 priority = 12
 
 [[contexts.main.bindings]]
-keys = ["Shift+C"]
+keys = ["c"]
 action = "Set key color"
 hint = "Individual Color"
 priority = 4
 
 [[contexts.main.bindings]]
-keys = ["c"]
+keys = ["Shift+C"]
 action = "Set layer color"
 hint = "Layer Color"
 priority = 13
@@ -71,24 +71,25 @@ action = "Toggle all layer colors"
 priority = 15
 
 [[contexts.main.bindings]]
-keys = ["Shift+N"]
+keys = ["Shift+L"]
 action = "Layer manager"
 hint = "Layers"
 priority = 5
 
 [[contexts.main.bindings]]
-keys = ["Shift+K"]
+keys = ["Ctrl+K"]
 action = "Assign category to key"
 priority = 16
 
 [[contexts.main.bindings]]
-keys = ["Shift+L"]
+keys = ["Ctrl+L"]
 action = "Assign category to layer"
 priority = 17
 
 [[contexts.main.bindings]]
-keys = ["Ctrl+T"]
+keys = ["Shift+K"]
 action = "Category manager"
+hint = "Categories"
 priority = 18
 
 [[contexts.main.bindings]]
@@ -129,7 +130,7 @@ hint = "Save"
 priority = 7
 
 [[contexts.main.bindings]]
-keys = ["Ctrl+E"]
+keys = ["Shift+E"]
 action = "Edit metadata"
 priority = 24
 
@@ -145,8 +146,9 @@ hint = "Build"
 priority = 8
 
 [[contexts.main.bindings]]
-keys = ["Ctrl+L"]
+keys = ["Shift+B"]
 action = "View build log"
+hint = "Build Log"
 priority = 26
 
 [[contexts.main.bindings]]

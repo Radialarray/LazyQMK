@@ -22,8 +22,8 @@ impl StatusBar {
             let status = &build_state.status;
             let color = match status {
                 crate::firmware::BuildStatus::Idle => theme.inactive,
-                crate::firmware::BuildStatus::Validating 
-                | crate::firmware::BuildStatus::Generating 
+                crate::firmware::BuildStatus::Validating
+                | crate::firmware::BuildStatus::Generating
                 | crate::firmware::BuildStatus::Compiling => theme.warning,
                 crate::firmware::BuildStatus::Success => theme.success,
                 crate::firmware::BuildStatus::Failed => theme.error,
@@ -47,7 +47,10 @@ impl StatusBar {
             };
             Line::from(vec![
                 Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
-                Span::styled(format!("[{type_indicator}] "), Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    format!("[{type_indicator}] "),
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(preview, Style::default().fg(theme.accent)),
                 if state.clipboard.can_undo() {
                     Span::styled(" | Ctrl+Z: Undo", Style::default().fg(theme.text_muted))
@@ -78,7 +81,7 @@ impl StatusBar {
         };
 
         // Determine if we should show hints (no active status/error message)
-        let show_hints = state.status_message.is_empty() 
+        let show_hints = state.status_message.is_empty()
             && state.error_message.is_none()
             && state.active_popup.is_none();
 
@@ -121,22 +124,22 @@ impl StatusBar {
 
         // Calculate available lines (6 height - 2 for borders = 4 lines, minus 1 for help = 3 for content)
         const MAX_CONTENT_LINES: usize = 3;
-        
+
         // Pad with empty lines to push help to the bottom
         let padding_needed = MAX_CONTENT_LINES.saturating_sub(content_lines.len());
-        
+
         let mut status_text: Vec<Line> = Vec::new();
-        
+
         // Add content lines (truncate if too many)
         for line in content_lines.into_iter().take(MAX_CONTENT_LINES) {
             status_text.push(line);
         }
-        
+
         // Add padding to push help line to bottom
         for _ in 0..padding_needed {
             status_text.push(Line::from(""));
         }
-        
+
         // Add help line at the bottom
         status_text.push(help_line);
 
@@ -163,7 +166,9 @@ impl StatusBar {
             }
             spans.push(Span::styled(
                 key,
-                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
             ));
             spans.push(Span::raw(" "));
             spans.push(Span::styled(action, Style::default().fg(theme.text_muted)));
@@ -233,9 +238,7 @@ impl StatusBar {
             Some(PopupType::LayerManager) => {
                 "n: New | r: Rename | v: Toggle Colors | d: Delete | Shift+↑↓: Reorder | Esc: Close"
             }
-            Some(PopupType::LayerPicker) => {
-                "↑↓: Navigate | Enter: Select layer | Esc: Cancel"
-            }
+            Some(PopupType::LayerPicker) => "↑↓: Navigate | Enter: Select layer | Esc: Cancel",
             Some(PopupType::TemplateBrowser) => {
                 "↑↓: Navigate | Enter: Load | /: Search | Esc: Cancel"
             }
@@ -248,9 +251,7 @@ impl StatusBar {
             Some(PopupType::SetupWizard) => {
                 "Enter: Next | Esc: Back/Cancel | ↑↓: Navigate | Type: Input"
             }
-            Some(PopupType::SettingsManager) => {
-                "↑↓: Navigate | Enter: Change | Esc: Close"
-            }
+            Some(PopupType::SettingsManager) => "↑↓: Navigate | Enter: Change | Esc: Close",
             Some(PopupType::TapKeycodePicker) => {
                 "↑↓: Navigate | Enter: Select tap keycode | Esc: Cancel"
             }
@@ -265,7 +266,7 @@ impl StatusBar {
                 if state.selection_mode.is_some() {
                     "↑↓←→: Move | Space: Toggle | y: Copy | d: Cut | Esc: Exit"
                 } else {
-                    "↑↓←→: Navigate | Enter: Edit | Shift+C: Color | Shift+N: Layers | ?: Help"
+                    "↑↓←→: Navigate | Enter: Edit | Shift+C: Color | Shift+L: Layers | ?: Help"
                 }
             }
         }

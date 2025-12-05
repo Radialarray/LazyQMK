@@ -103,15 +103,19 @@ impl LayerPickerState {
 }
 
 /// Render the layer picker popup
-pub fn render_layer_picker(f: &mut Frame, state: &LayerPickerState, layers: &[Layer], theme: &Theme) {
+pub fn render_layer_picker(
+    f: &mut Frame,
+    state: &LayerPickerState,
+    layers: &[Layer],
+    theme: &Theme,
+) {
     let area = centered_rect(50, 60, f.size());
 
     // Clear the background area first
     f.render_widget(Clear, area);
 
     // Render opaque background with theme color
-    let background = Block::default()
-        .style(Style::default().bg(theme.background));
+    let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
     let chunks = Layout::default()
@@ -129,13 +133,13 @@ pub fn render_layer_picker(f: &mut Frame, state: &LayerPickerState, layers: &[La
     } else {
         format!("{}(?)", state.keycode_prefix)
     };
-    
+
     let title = format!(" Select Layer for {} ", state.keycode_prefix);
     let title_block = Block::default()
         .title(title)
         .borders(Borders::ALL)
         .style(Style::default().bg(theme.background));
-    
+
     let preview_text = Paragraph::new(format!("Preview: {preview}"))
         .block(title_block)
         .style(Style::default().fg(theme.text));
@@ -151,10 +155,7 @@ pub fn render_layer_picker(f: &mut Frame, state: &LayerPickerState, layers: &[La
                     format!("Layer {idx}: "),
                     Style::default().fg(theme.text_muted),
                 ),
-                Span::styled(
-                    &layer.name,
-                    Style::default().fg(theme.text),
-                ),
+                Span::styled(&layer.name, Style::default().fg(theme.text)),
             ]);
             ListItem::new(content)
         })
@@ -293,5 +294,4 @@ mod tests {
         state.select_previous(layer_count);
         assert_eq!(state.selected, 2);
     }
-
 }

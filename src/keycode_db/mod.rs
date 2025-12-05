@@ -134,12 +134,12 @@ impl KeycodeDb {
     pub fn load() -> Result<Self> {
         // Load categories index
         let categories_json = include_str!("categories.json");
-        let index: CategoriesIndex = serde_json::from_str(categories_json)
-            .context("Failed to parse categories.json")?;
+        let index: CategoriesIndex =
+            serde_json::from_str(categories_json).context("Failed to parse categories.json")?;
 
         // Load each category file
         let mut all_keycodes = Vec::new();
-        
+
         // Include all category files at compile time
         let category_files: &[(&str, &str)] = &[
             ("basic", include_str!("categories/basic.json")),
@@ -159,7 +159,10 @@ impl KeycodeDb {
             ("backlight", include_str!("categories/backlight.json")),
             ("audio", include_str!("categories/audio.json")),
             ("system", include_str!("categories/system.json")),
-            ("international", include_str!("categories/international.json")),
+            (
+                "international",
+                include_str!("categories/international.json"),
+            ),
             ("advanced", include_str!("categories/advanced.json")),
             ("magic", include_str!("categories/magic.json")),
         ];
@@ -355,8 +358,7 @@ impl KeycodeDb {
     /// Check if a keycode is parameterized (requires additional input).
     #[must_use]
     pub fn is_parameterized(&self, code: &str) -> bool {
-        self.get(code)
-            .is_some_and(|kc| !kc.params.is_empty())
+        self.get(code).is_some_and(|kc| !kc.params.is_empty())
     }
 
     /// Get the parameters for a keycode, if any.
@@ -375,7 +377,7 @@ impl KeycodeDb {
     }
 
     /// Get display abbreviation for a mod-tap prefix.
-    /// 
+    ///
     /// Returns a short display name suitable for showing on a key.
     /// E.g., "`LCTL_T`" -> "CTL", "`MEH_T`" -> "MEH", "`LGUI_T`" -> "GUI"
     #[must_use]
@@ -386,7 +388,8 @@ impl KeycodeDb {
             "LCTL_T" | "RCTL_T" | "CTL_T" => Some("CTL"),
             "LSFT_T" | "RSFT_T" | "SFT_T" => Some("SFT"),
             "LALT_T" | "RALT_T" | "ALT_T" | "LOPT_T" | "ROPT_T" | "OPT_T" => Some("ALT"),
-            "LGUI_T" | "RGUI_T" | "GUI_T" | "LCMD_T" | "RCMD_T" | "CMD_T" | "LWIN_T" | "RWIN_T" | "WIN_T" => Some("GUI"),
+            "LGUI_T" | "RGUI_T" | "GUI_T" | "LCMD_T" | "RCMD_T" | "CMD_T" | "LWIN_T" | "RWIN_T"
+            | "WIN_T" => Some("GUI"),
             "LSG_T" | "RSG_T" | "SGUI_T" => Some("S+G"),
             "LCA_T" | "RCA_T" => Some("C+A"),
             "LCS_T" | "RCS_T" => Some("C+S"),
@@ -400,7 +403,7 @@ impl KeycodeDb {
     }
 
     /// Parse a keycode to extract tap-hold information if applicable.
-    /// 
+    ///
     /// Returns `Some(TapHoldInfo)` if the keycode is a tap-hold type,
     /// `None` otherwise.
     #[must_use]
@@ -461,7 +464,7 @@ impl KeycodeDb {
             if kc.code == "MT()" {
                 continue;
             }
-            
+
             // Get the prefix without ()
             if let Some(prefix) = kc.code.strip_suffix("()") {
                 let full_prefix = format!("{prefix}(");
@@ -481,7 +484,7 @@ impl KeycodeDb {
     }
 
     /// Check if a keycode is a layer-switching keycode.
-    /// 
+    ///
     /// This dynamically checks against all keycodes in the "layers" category
     /// that have a layer parameter.
     #[must_use]
@@ -492,7 +495,7 @@ impl KeycodeDb {
             if kc.params.is_empty() {
                 continue;
             }
-            
+
             // Check if keycode matches this layer keycode's pattern
             if let Some(pattern) = &kc.pattern {
                 if let Ok(regex) = Regex::new(pattern) {
@@ -506,7 +509,7 @@ impl KeycodeDb {
     }
 
     /// Parse a layer keycode to extract (prefix, `layer_ref`, suffix).
-    /// 
+    ///
     /// For simple keycodes like MO(1), returns ("MO", "1", "")
     /// For compound keycodes like LT(1, `KC_A`), returns ("LT", "1", ", `KC_A`)")
     #[must_use]
@@ -516,14 +519,14 @@ impl KeycodeDb {
             if kc.params.is_empty() {
                 continue;
             }
-            
+
             // Get the prefix from the code (e.g., "MO" from "MO()")
             let prefix = kc.code.strip_suffix("()")?;
             let prefix_with_paren = format!("{prefix}(");
-            
+
             if keycode.starts_with(&prefix_with_paren) && keycode.ends_with(')') {
                 let inner = &keycode[prefix_with_paren.len()..keycode.len() - 1];
-                
+
                 // Check if this is a compound keycode (has comma)
                 if kc.params.len() > 1 {
                     // LT(layer, kc) or LM(layer, mod)
@@ -909,7 +912,8 @@ mod tests {
     #[test]
     fn test_parse_layer_keycode_lm() {
         let db = get_test_db();
-        let (prefix, layer_ref, suffix) = db.parse_layer_keycode("LM(@layer-id, MOD_LSFT)").unwrap();
+        let (prefix, layer_ref, suffix) =
+            db.parse_layer_keycode("LM(@layer-id, MOD_LSFT)").unwrap();
         assert_eq!(prefix, "LM");
         assert_eq!(layer_ref, "@layer-id");
         assert_eq!(suffix, ", MOD_LSFT)");

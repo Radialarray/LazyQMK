@@ -125,7 +125,11 @@ impl KeyClipboard {
     /// Copy multiple keys to the clipboard.
     ///
     /// Keys are stored with positions relative to the anchor (first key).
-    pub fn copy_multi(&mut self, keys: Vec<(Position, ClipboardContent)>, anchor: Position) -> String {
+    pub fn copy_multi(
+        &mut self,
+        keys: Vec<(Position, ClipboardContent)>,
+        anchor: Position,
+    ) -> String {
         // Clear single-key and cut state
         self.content = None;
         self.cut_source = None;
@@ -252,7 +256,12 @@ impl KeyClipboard {
     }
 
     /// Save undo state before making changes.
-    pub fn save_undo(&mut self, layer_index: usize, keys: Vec<(Position, ClipboardContent)>, description: String) {
+    pub fn save_undo(
+        &mut self,
+        layer_index: usize,
+        keys: Vec<(Position, ClipboardContent)>,
+        description: String,
+    ) {
         self.undo_state = Some(UndoState {
             layer_index,
             original_keys: keys,
@@ -406,16 +415,22 @@ mod tests {
     fn test_clipboard_multi_copy() {
         let mut clipboard = KeyClipboard::new();
         let keys = vec![
-            (Position::new(0, 0), ClipboardContent {
-                keycode: "KC_A".to_string(),
-                color_override: None,
-                category_id: None,
-            }),
-            (Position::new(0, 1), ClipboardContent {
-                keycode: "KC_B".to_string(),
-                color_override: None,
-                category_id: None,
-            }),
+            (
+                Position::new(0, 0),
+                ClipboardContent {
+                    keycode: "KC_A".to_string(),
+                    color_override: None,
+                    category_id: None,
+                },
+            ),
+            (
+                Position::new(0, 1),
+                ClipboardContent {
+                    keycode: "KC_B".to_string(),
+                    color_override: None,
+                    category_id: None,
+                },
+            ),
         ];
 
         let msg = clipboard.copy_multi(keys, Position::new(0, 0));
@@ -429,16 +444,22 @@ mod tests {
     fn test_clipboard_multi_cut() {
         let mut clipboard = KeyClipboard::new();
         let keys = vec![
-            (Position::new(0, 0), ClipboardContent {
-                keycode: "KC_A".to_string(),
-                color_override: None,
-                category_id: None,
-            }),
-            (Position::new(0, 1), ClipboardContent {
-                keycode: "KC_B".to_string(),
-                color_override: None,
-                category_id: None,
-            }),
+            (
+                Position::new(0, 0),
+                ClipboardContent {
+                    keycode: "KC_A".to_string(),
+                    color_override: None,
+                    category_id: None,
+                },
+            ),
+            (
+                Position::new(0, 1),
+                ClipboardContent {
+                    keycode: "KC_B".to_string(),
+                    color_override: None,
+                    category_id: None,
+                },
+            ),
         ];
         let positions = vec![Position::new(0, 0), Position::new(0, 1)];
 
@@ -456,11 +477,14 @@ mod tests {
 
         assert!(!clipboard.can_undo());
 
-        let keys = vec![(Position::new(0, 0), ClipboardContent {
-            keycode: "KC_A".to_string(),
-            color_override: None,
-            category_id: None,
-        })];
+        let keys = vec![(
+            Position::new(0, 0),
+            ClipboardContent {
+                keycode: "KC_A".to_string(),
+                color_override: None,
+                category_id: None,
+            },
+        )];
         clipboard.save_undo(0, keys, "Pasted KC_B".to_string());
 
         assert!(clipboard.can_undo());

@@ -239,7 +239,8 @@ pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkIn
 /// # Returns
 ///
 /// Parsed variant keyboard.json structure, or None if not found
-#[must_use] pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
+#[must_use]
+pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
     let keyboards_dir = qmk_path.join("keyboards");
     let keyboard_json_path = keyboards_dir.join(keyboard).join("keyboard.json");
 
@@ -273,7 +274,6 @@ pub fn build_matrix_to_led_map(rgb_config: &RgbMatrixConfig) -> HashMap<(u8, u8)
     }
     map
 }
-
 
 /// Layout variant information including name and key count.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -580,11 +580,14 @@ mod tests {
     #[test]
     fn test_scan_keyboards_invalid_path() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Test with a path that has no keyboards directory
         let result = scan_keyboards(temp_dir.path());
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("QMK keyboards directory not found"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("QMK keyboards directory not found"));
     }
 
     // Note: Testing scan_keyboards with actual QMK requires the QMK CLI to be installed

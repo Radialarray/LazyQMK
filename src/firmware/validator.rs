@@ -459,22 +459,20 @@ impl<'a> FirmwareValidator<'a> {
 ///
 /// Always returns an empty vector (no warnings).
 #[allow(dead_code)]
-#[must_use] pub fn check_deprecated_options(
-    _qmk_path: &std::path::Path,
-    _keyboard: &str,
-) -> Vec<String> {
+#[must_use]
+pub fn check_deprecated_options(_qmk_path: &std::path::Path, _keyboard: &str) -> Vec<String> {
     // Migration to standard QMK means we no longer check for Vial-specific options
     Vec::new()
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use tempfile::TempDir;
     use super::*;
     use crate::models::keyboard_geometry::KeyGeometry;
     use crate::models::layer::{KeyDefinition, Layer, Position};
     use crate::models::RgbColor;
+    use std::fs;
+    use tempfile::TempDir;
 
     fn create_test_setup() -> (Layout, KeyboardGeometry, VisualLayoutMapping, KeycodeDb) {
         let mut layout = Layout::new("Test").unwrap();

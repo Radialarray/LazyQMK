@@ -18,8 +18,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::keycode_db::TapHoldType;
 use super::AppState;
+use crate::keycode_db::TapHoldType;
 
 /// Keyboard widget renders the visual keyboard layout
 pub struct KeyboardWidget;
@@ -54,7 +54,7 @@ impl KeyboardWidget {
     #[allow(clippy::too_many_lines)]
     pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         let theme = &state.theme;
-        
+
         // Get current layer
         let layer = if let Some(layer) = state.layout.layers.get(state.current_layer) {
             layer
@@ -96,8 +96,7 @@ impl KeyboardWidget {
             let key_y = inner_area.y + (row * key_height) as u16;
 
             // Skip if key is outside visible area
-            if key_x >= inner_area.x + inner_area.width
-                || key_y >= inner_area.y + inner_area.height
+            if key_x >= inner_area.x + inner_area.width || key_y >= inner_area.y + inner_area.height
             {
                 continue;
             }
@@ -105,8 +104,12 @@ impl KeyboardWidget {
             let key_area = Rect {
                 x: key_x,
                 y: key_y,
-                width: key_width.min((inner_area.x + inner_area.width).saturating_sub(key_x) as usize) as u16,
-                height: key_height.min((inner_area.y + inner_area.height).saturating_sub(key_y) as usize) as u16,
+                width: key_width
+                    .min((inner_area.x + inner_area.width).saturating_sub(key_x) as usize)
+                    as u16,
+                height: key_height
+                    .min((inner_area.y + inner_area.height).saturating_sub(key_y) as usize)
+                    as u16,
             };
 
             // Skip if key area is too small
@@ -118,37 +121,45 @@ impl KeyboardWidget {
                 && col == state.selected_position.col as usize;
 
             // Check if this key is the cut source (for visual feedback)
-            let is_cut_source = state.clipboard.is_cut_source(state.current_layer, key.position);
+            let is_cut_source = state
+                .clipboard
+                .is_cut_source(state.current_layer, key.position);
 
             // Check if this key is part of multi-selection
             let is_in_selection = state.selected_keys.contains(&key.position);
 
             // Check if this key should flash (paste feedback)
-            let is_flashing = state.flash_highlight
+            let is_flashing = state
+                .flash_highlight
                 .is_some_and(|(layer, pos, _)| layer == state.current_layer && pos == key.position);
 
             // Resolve key color for display (respects colors_enabled and inactive_key_behavior)
-            let (key_color, color_indicator) = if let Some(current_layer) = state.layout.layers.get(state.current_layer) {
+            let (key_color, color_indicator) = if let Some(current_layer) =
+                state.layout.layers.get(state.current_layer)
+            {
                 if !current_layer.layer_colors_enabled {
                     // Layer colors disabled - use theme text_muted for visible border
                     (theme.text_muted, "-")
                 } else {
                     // Use resolve_display_color which considers inactive_key_behavior
-                    let (rgb, is_key_specific) = state.layout.resolve_display_color(state.current_layer, key);
-                    
+                    let (rgb, is_key_specific) =
+                        state.layout.resolve_display_color(state.current_layer, key);
+
                     // Apply RGB settings (brightness and master switch)
                     let final_rgb = state.layout.apply_rgb_settings(rgb);
-                    
+
                     // Check if the color is too dark to be visible (e.g., black from "Off" behavior or master switch)
                     // If brightness is below threshold, use theme.text_muted for visibility
-                    let brightness = (u16::from(final_rgb.r) + u16::from(final_rgb.g) + u16::from(final_rgb.b)) / 3;
+                    let brightness =
+                        (u16::from(final_rgb.r) + u16::from(final_rgb.g) + u16::from(final_rgb.b))
+                            / 3;
                     let color = if brightness < 30 {
                         // Color too dark for TUI visibility, use muted theme color
                         theme.text_muted
                     } else {
                         Color::Rgb(final_rgb.r, final_rgb.g, final_rgb.b)
                     };
-                    
+
                     let indicator = if is_key_specific {
                         if key.color_override.is_some() {
                             "i" // Individual override
@@ -169,35 +180,29 @@ impl KeyboardWidget {
 
             // Parse keycode to determine if it's a tap-hold type
             let tap_hold = Self::parse_tap_hold_keycode(&key.keycode, state);
-            
+
             // Build content lines based on keycode type
             let content: Vec<Line> = if let Some(th) = &tap_hold {
                 // Tap-hold keycode: show hold on top, tap on bottom
                 vec![
-                    Line::from(vec![
-                        Span::styled(
-                            format!("▼{:<5}", Self::truncate(&th.hold, 5)),
-                            Style::default().fg(theme.text_muted),
-                        ),
-                    ]),
-                    Line::from(vec![
-                        Span::styled(
-                            format!(" {:<5}", Self::truncate(&th.tap, 5)),
-                            Style::default().fg(theme.text),
-                        ),
-                    ]),
+                    Line::from(vec![Span::styled(
+                        format!("▼{:<5}", Self::truncate(&th.hold, 5)),
+                        Style::default().fg(theme.text_muted),
+                    )]),
+                    Line::from(vec![Span::styled(
+                        format!(" {:<5}", Self::truncate(&th.tap, 5)),
+                        Style::default().fg(theme.text),
+                    )]),
                 ]
             } else {
                 // Simple keycode: center vertically with two lines
                 let display = Self::format_simple_keycode(&key.keycode);
                 vec![
                     Line::from(""), // Empty first line for vertical centering
-                    Line::from(vec![
-                        Span::styled(
-                            format!(" {:<5}", Self::truncate(&display, 5)),
-                            Style::default().fg(theme.text),
-                        ),
-                    ]),
+                    Line::from(vec![Span::styled(
+                        format!(" {:<5}", Self::truncate(&display, 5)),
+                        Style::default().fg(theme.text),
+                    )]),
                 ]
             };
 
@@ -235,66 +240,82 @@ impl KeyboardWidget {
         let (border_style, content_bg, content_fg) = if is_flashing {
             // Flash highlight: bright accent background
             (
-                Style::default().fg(theme.success).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
                 Some(theme.success),
                 theme.background,
             )
         } else if is_selected {
             (
-                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
                 Some(theme.accent),
                 theme.background,
             )
         } else if is_in_selection {
             // Multi-selection: highlighted but not as prominent as primary selection
             (
-                Style::default().fg(theme.warning).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme.warning)
+                    .add_modifier(Modifier::BOLD),
                 Some(theme.surface),
                 theme.text,
             )
         } else if is_cut_source {
             // Cut source: dimmed appearance
             (
-                Style::default().fg(border_color).add_modifier(Modifier::DIM),
+                Style::default()
+                    .fg(border_color)
+                    .add_modifier(Modifier::DIM),
                 None,
                 theme.text_muted,
             )
         } else {
-            (
-                Style::default().fg(border_color),
-                None,
-                theme.text,
-            )
+            (Style::default().fg(border_color), None, theme.text)
         };
 
         // Draw the custom border with indicator in top-right corner
         let buf = f.buffer_mut();
-        
+
         // Top border with indicator in right corner: ┌──────i┐
         let top_y = area.y;
         let left_x = area.x;
         let right_x = area.x + area.width.saturating_sub(1);
-        
+
         // Draw corners
-        buf.get_mut(left_x, top_y).set_char('┌').set_style(border_style);
-        buf.get_mut(right_x, top_y).set_char('┐').set_style(border_style);
-        buf.get_mut(left_x, area.y + area.height.saturating_sub(1)).set_char('└').set_style(border_style);
-        buf.get_mut(right_x, area.y + area.height.saturating_sub(1)).set_char('┘').set_style(border_style);
-        
+        buf.get_mut(left_x, top_y)
+            .set_char('┌')
+            .set_style(border_style);
+        buf.get_mut(right_x, top_y)
+            .set_char('┐')
+            .set_style(border_style);
+        buf.get_mut(left_x, area.y + area.height.saturating_sub(1))
+            .set_char('└')
+            .set_style(border_style);
+        buf.get_mut(right_x, area.y + area.height.saturating_sub(1))
+            .set_char('┘')
+            .set_style(border_style);
+
         // Top border with indicator in right corner (just before ┐)
         let top_width = area.width.saturating_sub(2) as usize;
         if top_width > 0 {
             // Indicator goes in the rightmost position of the top border
             let indicator_pos = top_width.saturating_sub(1);
-            
+
             for i in 0..top_width {
                 let x = left_x + 1 + i as u16;
                 if i == indicator_pos {
                     // Draw the indicator character with the border color
                     let indicator_style = if is_selected {
-                        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(theme.accent)
+                            .add_modifier(Modifier::BOLD)
                     } else {
-                        Style::default().fg(border_color).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(border_color)
+                            .add_modifier(Modifier::BOLD)
                     };
                     buf.get_mut(x, top_y)
                         .set_char(indicator.chars().next().unwrap_or('─'))
@@ -304,30 +325,33 @@ impl KeyboardWidget {
                 }
             }
         }
-        
+
         // Bottom border
         for i in 1..area.width.saturating_sub(1) {
             buf.get_mut(left_x + i, area.y + area.height.saturating_sub(1))
                 .set_char('─')
                 .set_style(border_style);
         }
-        
+
         // Left and right borders
         for row in 1..area.height.saturating_sub(1) {
-            buf.get_mut(left_x, area.y + row).set_char('│').set_style(border_style);
-            buf.get_mut(right_x, area.y + row).set_char('│').set_style(border_style);
+            buf.get_mut(left_x, area.y + row)
+                .set_char('│')
+                .set_style(border_style);
+            buf.get_mut(right_x, area.y + row)
+                .set_char('│')
+                .set_style(border_style);
         }
-        
+
         // Fill content area background if selected
         if let Some(bg) = content_bg {
             for row in 1..area.height.saturating_sub(1) {
                 for col in 1..area.width.saturating_sub(1) {
-                    buf.get_mut(area.x + col, area.y + row)
-                        .set_bg(bg);
+                    buf.get_mut(area.x + col, area.y + row).set_bg(bg);
                 }
             }
         }
-        
+
         // Render content lines
         let content_area = Rect {
             x: area.x + 1,
@@ -335,13 +359,13 @@ impl KeyboardWidget {
             width: area.width.saturating_sub(2),
             height: area.height.saturating_sub(2),
         };
-        
+
         for (i, line) in content.iter().enumerate() {
             if i >= content_area.height as usize {
                 break;
             }
             let y = content_area.y + i as u16;
-            
+
             // Render each span in the line
             let mut x = content_area.x;
             for span in &line.spans {
@@ -364,13 +388,13 @@ impl KeyboardWidget {
     }
 
     /// Parse a keycode to extract tap-hold components if applicable.
-    /// 
+    ///
     /// Uses the keycode database to dynamically detect mod-tap prefixes
     /// rather than maintaining a hardcoded list.
     fn parse_tap_hold_keycode(keycode: &str, state: &AppState) -> Option<TapHoldKeycode> {
         // Use the keycode database to parse tap-hold keycodes
         let info = state.keycode_db.parse_tap_hold(keycode)?;
-        
+
         match info.tap_hold_type {
             TapHoldType::LayerTap => {
                 // LT(layer, keycode) - Layer Tap
@@ -395,7 +419,8 @@ impl KeyboardWidget {
             TapHoldType::ModTapNamed => {
                 // Named mod-tap like LCTL_T(keycode)
                 // Use keycode_db to get the display name for the prefix
-                let mod_display = state.keycode_db
+                let mod_display = state
+                    .keycode_db
                     .get_mod_tap_display(&info.prefix)
                     .unwrap_or("MOD")
                     .to_string();
@@ -427,7 +452,7 @@ impl KeyboardWidget {
             }
         }
     }
-    
+
     /// Resolve layer reference to display string
     fn resolve_layer_display(layer_ref: &str, state: &AppState) -> String {
         // If it's a @uuid reference, find the layer number
@@ -441,12 +466,12 @@ impl KeyboardWidget {
         // Otherwise assume it's already a number or return as-is
         layer_ref.to_string()
     }
-    
+
     /// Format modifier for compact display
     fn format_modifier(mod_str: &str) -> String {
         // Handle combined modifiers like "MOD_LCTL | MOD_LSFT"
         let mut result = String::new();
-        
+
         if mod_str.contains("LCTL") || mod_str.contains("RCTL") {
             result.push('C');
         }
@@ -459,7 +484,7 @@ impl KeyboardWidget {
         if mod_str.contains("LGUI") || mod_str.contains("RGUI") {
             result.push('G');
         }
-        
+
         if result.is_empty() {
             // Fallback: take first 3 chars
             mod_str.chars().take(3).collect()
@@ -474,7 +499,7 @@ impl KeyboardWidget {
         let display = keycode.strip_prefix("KC_").unwrap_or(keycode);
         display.to_string()
     }
-    
+
     /// Truncate a string to a maximum length
     fn truncate(s: &str, max_len: usize) -> String {
         if s.len() <= max_len {
@@ -504,8 +529,14 @@ mod tests {
         assert_eq!(KeyboardWidget::format_modifier("MOD_LALT"), "A");
         assert_eq!(KeyboardWidget::format_modifier("MOD_LGUI"), "G");
         assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT"), "CS");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"), "CSA");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"), "CSAG");
+        assert_eq!(
+            KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"),
+            "CSA"
+        );
+        assert_eq!(
+            KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"),
+            "CSAG"
+        );
     }
 
     #[test]

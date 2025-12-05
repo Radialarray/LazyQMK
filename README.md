@@ -119,12 +119,12 @@ keyboard-configurator my_layout.md
 
 - **Enter**: Open keycode picker for selected key
 - **x** or **Delete**: Clear key (set to KC_TRNS)
-- **Shift+C**: Set individual key color
+- **c**: Set individual key color
 - **Shift+K**: Assign key to category
 
 ### Layer Operations
 
-- **c**: Set layer default color
+- **Shift+C**: Set layer default color
 - **Shift+L**: Assign layer to category
 
 ### File Operations
@@ -144,7 +144,7 @@ keyboard-configurator my_layout.md
 - **Ctrl+K**: Select different keyboard
 - **Ctrl+Y**: Switch layout variant
 - **Ctrl+T**: Open category manager
-- **Ctrl+E**: Edit layout metadata
+- **Shift+E**: Edit layout metadata
 
 ### Templates
 

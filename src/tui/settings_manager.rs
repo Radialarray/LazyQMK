@@ -12,7 +12,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior};
+use crate::models::{
+    HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+};
 
 use super::Theme;
 
@@ -26,7 +28,7 @@ pub enum SettingGroup {
     Build,
     /// UI preferences
     Ui,
-    
+
     // === Per-Layout Settings (stored in layout .md file) ===
     /// General layout settings
     General,
@@ -169,7 +171,10 @@ impl SettingItem {
             | Self::OutputFormat
             | Self::OutputDir => SettingGroup::Build,
             Self::ShowHelpOnStartup => SettingGroup::Ui,
-            Self::RgbEnabled | Self::RgbBrightness | Self::RgbTimeout | Self::UncoloredKeyBehavior => SettingGroup::Rgb,
+            Self::RgbEnabled
+            | Self::RgbBrightness
+            | Self::RgbTimeout
+            | Self::UncoloredKeyBehavior => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
             | Self::QuickTapTerm
@@ -221,7 +226,9 @@ impl SettingItem {
             Self::RgbEnabled => "Turn all RGB LEDs on or off",
             Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
             Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
-            Self::UncoloredKeyBehavior => "Brightness for keys without individual/category colors (0=Off, 100=Full)",
+            Self::UncoloredKeyBehavior => {
+                "Brightness for keys without individual/category colors (0=Off, 100=Full)"
+            }
             Self::TapHoldPreset => "Quick configuration preset for common use cases",
             Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
             Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
@@ -359,7 +366,13 @@ impl SettingsManagerState {
     }
 
     /// Start editing a numeric value
-    pub fn start_editing_numeric(&mut self, setting: SettingItem, current: u16, min: u16, max: u16) {
+    pub fn start_editing_numeric(
+        &mut self,
+        setting: SettingItem,
+        current: u16,
+        min: u16,
+        max: u16,
+    ) {
         self.mode = ManagerMode::EditingNumeric {
             setting,
             value: current.to_string(),
@@ -618,7 +631,19 @@ pub fn render_settings_manager(
 
     match &state.mode {
         ManagerMode::Browsing => {
-            render_settings_list(f, inner_area, state, rgb_enabled, rgb_brightness, rgb_timeout_ms, uncolored_key_behavior, tap_hold_settings, config, layout, theme);
+            render_settings_list(
+                f,
+                inner_area,
+                state,
+                rgb_enabled,
+                rgb_brightness,
+                rgb_timeout_ms,
+                uncolored_key_behavior,
+                tap_hold_settings,
+                config,
+                layout,
+                theme,
+            );
         }
         ManagerMode::SelectingTapHoldPreset { selected_option } => {
             render_tap_hold_preset_selector(f, inner_area, *selected_option, theme);
@@ -626,7 +651,12 @@ pub fn render_settings_manager(
         ManagerMode::SelectingHoldMode { selected_option } => {
             render_hold_mode_selector(f, inner_area, *selected_option, theme);
         }
-        ManagerMode::EditingNumeric { setting, value, min, max } => {
+        ManagerMode::EditingNumeric {
+            setting,
+            value,
+            min,
+            max,
+        } => {
             render_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
         }
         ManagerMode::TogglingBoolean { setting, value } => {
@@ -699,7 +729,16 @@ fn render_settings_list(
         };
 
         // Get current value for this setting
-        let value = get_setting_value_display(*setting, rgb_enabled, rgb_brightness, rgb_timeout_ms, uncolored_key_behavior, tap_hold_settings, config, Some(layout));
+        let value = get_setting_value_display(
+            *setting,
+            rgb_enabled,
+            rgb_brightness,
+            rgb_timeout_ms,
+            uncolored_key_behavior,
+            tap_hold_settings,
+            config,
+            Some(layout),
+        );
 
         let marker = if display_index == state.selected {
             "▶ "
@@ -734,8 +773,7 @@ fn render_settings_list(
 
     // Show description of selected setting
     let selected_setting = settings.get(state.selected);
-    let description = selected_setting
-        .map_or("", SettingItem::description);
+    let description = selected_setting.map_or("", SettingItem::description);
 
     // Render help text
     let help_text = vec![
@@ -777,34 +815,35 @@ fn get_setting_value_display(
         SettingItem::QmkFirmwarePath => config
             .paths
             .qmk_firmware
-            .as_ref().map_or_else(|| "<not set>".to_string(), |p| p.display().to_string()),
+            .as_ref()
+            .map_or_else(|| "<not set>".to_string(), |p| p.display().to_string()),
         // Per-Layout: Build settings (now in layout metadata)
-        SettingItem::Keyboard => layout.as_ref()
+        SettingItem::Keyboard => layout
+            .as_ref()
             .and_then(|l| l.metadata.keyboard.clone())
             .unwrap_or_else(|| "<not set>".to_string()),
-        SettingItem::LayoutVariant => layout.as_ref()
+        SettingItem::LayoutVariant => layout
+            .as_ref()
             .and_then(|l| l.metadata.layout_variant.clone())
             .unwrap_or_else(|| "<not set>".to_string()),
-        SettingItem::KeymapName => layout.as_ref()
+        SettingItem::KeymapName => layout
+            .as_ref()
             .and_then(|l| l.metadata.keymap_name.clone())
             .unwrap_or_else(|| "<not set>".to_string()),
-        SettingItem::OutputFormat => layout.as_ref()
+        SettingItem::OutputFormat => layout
+            .as_ref()
             .and_then(|l| l.metadata.output_format.clone())
             .unwrap_or_else(|| "<not set>".to_string()),
         SettingItem::OutputDir => config.build.output_dir.display().to_string(),
         // Global: UI
-        SettingItem::ShowHelpOnStartup => {
-            if config.ui.show_help_on_startup {
-                "On"
-            } else {
-                "Off"
-            }
-            .to_string()
+        SettingItem::ShowHelpOnStartup => if config.ui.show_help_on_startup {
+            "On"
+        } else {
+            "Off"
         }
+        .to_string(),
         // Per-Layout: RGB
-        SettingItem::RgbEnabled => {
-            if rgb_enabled { "On" } else { "Off" }.to_string()
-        }
+        SettingItem::RgbEnabled => if rgb_enabled { "On" } else { "Off" }.to_string(),
         SettingItem::RgbBrightness => format!("{}%", rgb_brightness.as_percent()),
         SettingItem::RgbTimeout => {
             if rgb_timeout_ms == 0 {
@@ -826,27 +865,13 @@ fn get_setting_value_display(
             None => "Auto".to_string(),
         },
         SettingItem::HoldMode => tap_hold.hold_mode.display_name().to_string(),
-        SettingItem::RetroTapping => {
-            if tap_hold.retro_tapping {
-                "On"
-            } else {
-                "Off"
-            }
-            .to_string()
-        }
+        SettingItem::RetroTapping => if tap_hold.retro_tapping { "On" } else { "Off" }.to_string(),
         SettingItem::TappingToggle => format!("{} taps", tap_hold.tapping_toggle),
         SettingItem::FlowTapTerm => match tap_hold.flow_tap_term {
             Some(term) => format!("{term}ms"),
             None => "Disabled".to_string(),
         },
-        SettingItem::ChordalHold => {
-            if tap_hold.chordal_hold {
-                "On"
-            } else {
-                "Off"
-            }
-            .to_string()
-        }
+        SettingItem::ChordalHold => if tap_hold.chordal_hold { "On" } else { "Off" }.to_string(),
     }
 }
 
@@ -1112,12 +1137,7 @@ fn render_string_editor(
 }
 
 /// Render output format selector
-fn render_output_format_selector(
-    f: &mut Frame,
-    area: Rect,
-    selected_option: usize,
-    theme: &Theme,
-) {
+fn render_output_format_selector(f: &mut Frame, area: Rect, selected_option: usize, theme: &Theme) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
@@ -1195,13 +1215,7 @@ fn render_output_format_selector(
 }
 
 /// Render path editor (for QMK path, output directory, etc.)
-fn render_path_editor(
-    f: &mut Frame,
-    area: Rect,
-    setting: SettingItem,
-    value: &str,
-    theme: &Theme,
-) {
+fn render_path_editor(f: &mut Frame, area: Rect, setting: SettingItem, value: &str, theme: &Theme) {
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
@@ -1283,7 +1297,6 @@ fn render_path_editor(
 
     f.render_widget(help_widget, chunks[3]);
 }
-
 
 /// Render boolean toggle
 fn render_boolean_toggle(

@@ -166,7 +166,7 @@ impl KeyboardGeometry {
     }
 
     /// Checks if the keyboard has RGB matrix LEDs.
-    /// 
+    ///
     /// Returns true if there are any keys defined (RGB LED count matches key count).
     #[must_use]
     pub const fn has_rgb_matrix(&self) -> bool {
