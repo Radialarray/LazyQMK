@@ -1,7 +1,7 @@
-//! Firmware generation for QMK keymap.c and vial.json.
+//! Firmware generation for QMK keymap.c and config.h.
 //!
-//! This module generates QMK C code and Vial JSON configuration
-//! from keyboard layouts using the LED index order.
+//! This module generates QMK C code from keyboard layouts using the LED index order.
+//! Works with standard QMK firmware (not Vial fork).
 
 // Allow format! appended to String - more readable than write! in code generation
 #![allow(clippy::format_push_string)]
@@ -16,7 +16,7 @@ use anyhow::{Context, Result};
 use serde_json::json;
 use std::fs;
 
-/// Firmware generator for keymap.c and vial.json.
+/// Firmware generator for keymap.c and config.h.
 pub struct FirmwareGenerator<'a> {
     layout: &'a Layout,
     geometry: &'a KeyboardGeometry,
@@ -44,14 +44,15 @@ impl<'a> FirmwareGenerator<'a> {
         }
     }
 
-    /// Generates keymap.c, vial.json, and config.h files.
+    /// Generates keymap.c and config.h files.
     ///
     /// Files are written to both:
     /// 1. Timestamped output directory (for archival)
     /// 2. QMK keymap directory (for building)
     ///
-    /// Returns paths to the generated files in the timestamped directory.
-    pub fn generate(&self) -> Result<(String, String, String)> {
+    /// Returns paths to the generated files in the timestamped directory:
+    /// (keymap_path, config_h_path)
+    pub fn generate(&self) -> Result<(String, String)> {
         // Create timestamped output directory
         let timestamp_dir = self.create_timestamped_output_dir()?;
         
@@ -63,11 +64,7 @@ impl<'a> FirmwareGenerator<'a> {
         let keymap_c = self.generate_keymap_c()?;
         let keymap_path = self.write_file_to_both(&timestamp_dir, "keymap.c", &keymap_c)?;
 
-        // Generate vial.json
-        let vial_json = self.generate_vial_json()?;
-        let vial_path = self.write_file_to_both(&timestamp_dir, "vial.json", &vial_json)?;
-
-        Ok((keymap_path, vial_path, config_h_path))
+        Ok((keymap_path, config_h_path))
     }
 
     /// Generates keymap.c C code.
@@ -159,13 +156,14 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {\n");
 
         // Generate encoder bindings for each layer
-        // We use RGB controls as sensible defaults that work on most keyboards
+        // We use RGB Matrix controls as sensible defaults (RM_* keycodes)
+        // These work with RGB_MATRIX_ENABLE, which is the modern QMK approach
         for (layer_idx, _layer) in self.layout.layers.iter().enumerate() {
             code.push_str(&format!("    [{layer_idx}] = {{\n"));
-            code.push_str("        ENCODER_CCW_CW(RGB_MOD, RGB_RMOD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_HUI, RGB_HUD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_VAI, RGB_VAD),\n");
-            code.push_str("        ENCODER_CCW_CW(RGB_SAI, RGB_SAD),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_NEXT, RM_PREV),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_HUEU, RM_HUED),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_VALU, RM_VALD),\n");
+            code.push_str("        ENCODER_CCW_CW(RM_SATU, RM_SATD),\n");
             code.push_str("    }");
             
             if layer_idx < self.layout.layers.len() - 1 {
@@ -415,9 +413,11 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(code)
     }
 
-    /// Generates vial.json configuration.
+    /// DEPRECATED: Generates vial.json configuration.
     ///
-    /// Creates a Vial JSON file with layout definition and metadata.
+    /// This function is no longer used since migration to standard QMK.
+    /// Kept for reference and potential future use with VIA.
+    #[allow(dead_code)]
     fn generate_vial_json(&self) -> Result<String> {
         let vial_config = json!({
             "name": self.layout.metadata.name,
@@ -442,9 +442,11 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(json_str)
     }
 
-    /// Generates the Vial layout array.
+    /// DEPRECATED: Generates the Vial layout array.
     ///
-    /// Creates the visual key layout for the Vial UI.
+    /// This function is no longer used since migration to standard QMK.
+    /// Kept for reference and potential future use with VIA.
+    #[allow(dead_code)]
     fn generate_vial_layout_array(&self) -> Result<serde_json::Value> {
         let mut layout_keys = Vec::new();
 
@@ -646,52 +648,6 @@ impl<'a> FirmwareGenerator<'a> {
             content.push_str("#endif\n");
         }
  
-        // If this keyboard already has a Vial keymap, copy its unlock combo macros
-        // so that quantum/vial.c can compile for the generated keymap as well.
-        if let Some(qmk_path) = &self.config.paths.qmk_firmware {
-            // Vial unlock combo is defined at the base keyboard level (without variant).
-            // E.g., keebart/corne_choc_pro/keymaps/vial/config.h
-            let keyboard_parts: Vec<&str> = self.config.build.keyboard.split('/').collect();
-            let base_keyboard = if keyboard_parts.len() > 2 {
-                keyboard_parts[..keyboard_parts.len() - 1].join("/")
-            } else {
-                self.config.build.keyboard.clone()
-            };
-
-            let vial_config_path = qmk_path
-                .join("keyboards")
-                .join(&base_keyboard)
-                .join("keymaps")
-                .join("vial")
-                .join("config.h");
- 
-            if let Ok(vial_config) = fs::read_to_string(&vial_config_path) {
-                let mut rows_define: Option<String> = None;
-                let mut cols_define: Option<String> = None;
- 
-                for line in vial_config.lines() {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with("#define VIAL_UNLOCK_COMBO_ROWS") {
-                        rows_define = Some(trimmed.to_string());
-                    } else if trimmed.starts_with("#define VIAL_UNLOCK_COMBO_COLS") {
-                        cols_define = Some(trimmed.to_string());
-                    }
-                }
- 
-                if rows_define.is_some() || cols_define.is_some() {
-                    content.push_str("\n// Vial unlock combo copied from keymaps/vial/config.h\n");
-                    if let Some(rows) = rows_define {
-                        content.push_str(&rows);
-                        content.push('\n');
-                    }
-                    if let Some(cols) = cols_define {
-                        content.push_str(&cols);
-                        content.push('\n');
-                    }
-                }
-            }
-        }
- 
         Ok(content)
     }
 
@@ -750,7 +706,7 @@ mod tests {
         // Verify encoder_map is included
         assert!(keymap_c.contains("#ifdef ENCODER_MAP_ENABLE"));
         assert!(keymap_c.contains("const uint16_t PROGMEM encoder_map[]"));
-        assert!(keymap_c.contains("ENCODER_CCW_CW(RGB_MOD, RGB_RMOD)"));
+        assert!(keymap_c.contains("ENCODER_CCW_CW(RM_NEXT, RM_PREV)"));
         assert!(keymap_c.contains("#endif"));
 
         // Verify RGB matrix base color table is included for RGB keyboards

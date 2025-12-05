@@ -399,17 +399,33 @@ fn handle_sidebar_input(
             state.set_status("Cancelled");
             Ok(false)
         }
-        KeyCode::Up | KeyCode::Char('k') => {
+        KeyCode::Up => {
             if state.keycode_picker_state.category_index > 0 {
                 state.keycode_picker_state.category_index -= 1;
                 state.keycode_picker_state.selected = 0; // Reset keycode selection
             }
             Ok(false)
         }
-        KeyCode::Down | KeyCode::Char('j') => {
+        KeyCode::Down => {
             if state.keycode_picker_state.category_index < total_categories - 1 {
                 state.keycode_picker_state.category_index += 1;
                 state.keycode_picker_state.selected = 0; // Reset keycode selection
+            }
+            Ok(false)
+        }
+        // Vim navigation only when search is empty (sidebar doesn't have search input,
+        // but we check anyway for consistency with keycodes pane)
+        KeyCode::Char('k') => {
+            if state.keycode_picker_state.category_index > 0 {
+                state.keycode_picker_state.category_index -= 1;
+                state.keycode_picker_state.selected = 0;
+            }
+            Ok(false)
+        }
+        KeyCode::Char('j') => {
+            if state.keycode_picker_state.category_index < total_categories - 1 {
+                state.keycode_picker_state.category_index += 1;
+                state.keycode_picker_state.selected = 0;
             }
             Ok(false)
         }
@@ -424,7 +440,12 @@ fn handle_sidebar_input(
             Ok(false)
         }
         // Switch to keycodes pane
-        KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => {
+        KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
+            state.keycode_picker_state.focus = PickerFocus::Keycodes;
+            Ok(false)
+        }
+        KeyCode::Char('l') => {
+            // Vim navigation to switch pane
             state.keycode_picker_state.focus = PickerFocus::Keycodes;
             Ok(false)
         }
@@ -444,6 +465,9 @@ fn handle_sidebar_input(
 /// Handle input when keycodes list has focus
 #[allow(clippy::too_many_lines)]
 fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Check if search is active (has content) - vim keys should type instead of navigate
+    let search_active = !state.keycode_picker_state.search.is_empty();
+
     match key.code {
         KeyCode::Esc => {
             // If we were editing a combo part, go back to key editor
@@ -459,8 +483,8 @@ fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<b
             }
             Ok(false)
         }
-        // Switch back to sidebar
-        KeyCode::Left | KeyCode::Char('h') => {
+        // Switch back to sidebar (arrow keys always work)
+        KeyCode::Left => {
             state.keycode_picker_state.focus = PickerFocus::Sidebar;
             Ok(false)
         }
@@ -522,13 +546,14 @@ fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<b
 
             Ok(false)
         }
-        KeyCode::Up | KeyCode::Char('k') => {
+        // Arrow keys always navigate
+        KeyCode::Up => {
             if state.keycode_picker_state.selected > 0 {
                 state.keycode_picker_state.selected -= 1;
             }
             Ok(false)
         }
-        KeyCode::Down | KeyCode::Char('j') => {
+        KeyCode::Down => {
             let keycodes = get_filtered_keycodes(state);
             if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
                 state.keycode_picker_state.selected += 1;
@@ -555,8 +580,26 @@ fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<b
                 (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
             Ok(false)
         }
+        // Vim navigation keys - only navigate when search is empty
+        KeyCode::Char('k') if !search_active => {
+            if state.keycode_picker_state.selected > 0 {
+                state.keycode_picker_state.selected -= 1;
+            }
+            Ok(false)
+        }
+        KeyCode::Char('j') if !search_active => {
+            let keycodes = get_filtered_keycodes(state);
+            if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
+                state.keycode_picker_state.selected += 1;
+            }
+            Ok(false)
+        }
+        KeyCode::Char('h') if !search_active => {
+            state.keycode_picker_state.focus = PickerFocus::Sidebar;
+            Ok(false)
+        }
         KeyCode::Char(c) => {
-            // Add to search
+            // Add to search (includes j, k, h, l when search is active)
             state.keycode_picker_state.search.push(c);
             state.keycode_picker_state.selected = 0; // Reset selection on new search
             Ok(false)
@@ -597,17 +640,34 @@ pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::Keycod
 #[allow(clippy::too_many_lines)]
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
+    // Check if search is active (has content) - vim keys should type instead of navigate
+    let search_active = !state.keycode_picker_state.search.is_empty();
 
     match state.keycode_picker_state.focus {
         PickerFocus::Sidebar => match key.code {
-            KeyCode::Up | KeyCode::Char('k') => {
+            KeyCode::Up => {
                 if state.keycode_picker_state.category_index > 0 {
                     state.keycode_picker_state.category_index -= 1;
                     state.keycode_picker_state.selected = 0;
                 }
                 Ok(false)
             }
-            KeyCode::Down | KeyCode::Char('j') => {
+            KeyCode::Down => {
+                if state.keycode_picker_state.category_index < total_categories - 1 {
+                    state.keycode_picker_state.category_index += 1;
+                    state.keycode_picker_state.selected = 0;
+                }
+                Ok(false)
+            }
+            // Vim keys in sidebar (no search input here)
+            KeyCode::Char('k') => {
+                if state.keycode_picker_state.category_index > 0 {
+                    state.keycode_picker_state.category_index -= 1;
+                    state.keycode_picker_state.selected = 0;
+                }
+                Ok(false)
+            }
+            KeyCode::Char('j') => {
                 if state.keycode_picker_state.category_index < total_categories - 1 {
                     state.keycode_picker_state.category_index += 1;
                     state.keycode_picker_state.selected = 0;
@@ -624,7 +684,11 @@ pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<b
                 state.keycode_picker_state.selected = 0;
                 Ok(false)
             }
-            KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
+            KeyCode::Tab | KeyCode::Right => {
+                state.keycode_picker_state.focus = PickerFocus::Keycodes;
+                Ok(false)
+            }
+            KeyCode::Char('l') => {
                 state.keycode_picker_state.focus = PickerFocus::Keycodes;
                 Ok(false)
             }
@@ -639,7 +703,7 @@ pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<b
             _ => Ok(false),
         },
         PickerFocus::Keycodes => match key.code {
-            KeyCode::Left | KeyCode::Char('h') => {
+            KeyCode::Left => {
                 state.keycode_picker_state.focus = PickerFocus::Sidebar;
                 Ok(false)
             }
@@ -651,17 +715,35 @@ pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<b
                 state.keycode_picker_state.focus = PickerFocus::Sidebar;
                 Ok(false)
             }
-            KeyCode::Up | KeyCode::Char('k') => {
+            KeyCode::Up => {
                 if state.keycode_picker_state.selected > 0 {
                     state.keycode_picker_state.selected -= 1;
                 }
                 Ok(false)
             }
-            KeyCode::Down | KeyCode::Char('j') => {
+            KeyCode::Down => {
                 let keycodes = get_filtered_keycodes(state);
                 if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
                     state.keycode_picker_state.selected += 1;
                 }
+                Ok(false)
+            }
+            // Vim navigation - only when search is empty
+            KeyCode::Char('k') if !search_active => {
+                if state.keycode_picker_state.selected > 0 {
+                    state.keycode_picker_state.selected -= 1;
+                }
+                Ok(false)
+            }
+            KeyCode::Char('j') if !search_active => {
+                let keycodes = get_filtered_keycodes(state);
+                if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
+                    state.keycode_picker_state.selected += 1;
+                }
+                Ok(false)
+            }
+            KeyCode::Char('h') if !search_active => {
+                state.keycode_picker_state.focus = PickerFocus::Sidebar;
                 Ok(false)
             }
             KeyCode::Home => {
@@ -685,6 +767,7 @@ pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<b
                 Ok(false)
             }
             KeyCode::Char(c) => {
+                // Add to search (includes j, k, h, l when search is active)
                 state.keycode_picker_state.search.push(c);
                 state.keycode_picker_state.selected = 0;
                 Ok(false)
