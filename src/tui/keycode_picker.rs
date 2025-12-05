@@ -445,7 +445,7 @@ fn handle_sidebar_input(
 #[allow(clippy::too_many_lines)]
 fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     // Check if search is active (has content) - vim keys should type instead of navigate
-    let search_active = !state.keycode_picker_state.search.is_empty();
+    let _search_active = !state.keycode_picker_state.search.is_empty();
 
     match key.code {
         KeyCode::Esc => {
@@ -604,7 +604,7 @@ pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::Keycod
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
     // Check if search is active (has content) - vim keys should type instead of navigate
-    let search_active = !state.keycode_picker_state.search.is_empty();
+    let _search_active = !state.keycode_picker_state.search.is_empty();
 
     match state.keycode_picker_state.focus {
         PickerFocus::Sidebar => match key.code {
