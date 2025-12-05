@@ -263,34 +263,38 @@ fn generate_key_descriptions(layout: &Layout) -> Option<String> {
 /// Generates the settings section.
 /// Only writes non-default settings to keep files clean.
 fn generate_settings(layout: &Layout) -> Option<String> {
-    use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset, TapHoldSettings};
+    use crate::models::{HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior};
 
-    let default_inactive = InactiveKeyBehavior::default();
+    let default_uncolored = UncoloredKeyBehavior::default();
     let default_tap_hold = TapHoldSettings::default();
 
     // Check if we have any non-default settings
-    let has_inactive_setting = layout.inactive_key_behavior != default_inactive;
+    let has_rgb_settings = !layout.rgb_enabled || layout.rgb_brightness != RgbBrightness::default() || layout.rgb_timeout_ms > 0;
+    let has_uncolored_setting = layout.uncolored_key_behavior != default_uncolored;
     let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
-    let has_rgb_timeout = layout.rgb_timeout_ms > 0;
 
-    if !has_inactive_setting && !has_tap_hold_settings && !has_rgb_timeout {
+    if !has_rgb_settings && !has_uncolored_setting && !has_tap_hold_settings {
         return None;
     }
 
     let mut output = String::from("## Settings\n\n");
 
-    // Write inactive_key_behavior if not default
-    if layout.inactive_key_behavior != default_inactive {
-        let value = match layout.inactive_key_behavior {
-            InactiveKeyBehavior::ShowColor => "Show Color",
-            InactiveKeyBehavior::Off => "Off",
-            InactiveKeyBehavior::Dim => "Dim",
-        };
-        output.push_str(&format!("**Inactive Key Behavior**: {value}\n"));
+    // Write RGB settings
+    if !layout.rgb_enabled {
+        output.push_str("**RGB Enabled**: Off\n");
+    }
+    if layout.rgb_brightness != RgbBrightness::default() {
+        output.push_str(&format!("**RGB Brightness**: {}%\n", layout.rgb_brightness.as_percent()));
+    }
+
+    // Write uncolored_key_behavior if not default
+    // Only write if not default (100%)
+    if layout.uncolored_key_behavior.as_percent() != 100 {
+        output.push_str(&format!("**Uncolored Key Brightness**: {}%\n", layout.uncolored_key_behavior.as_percent()));
     }
 
     // Write RGB timeout if set
-    if has_rgb_timeout {
+    if layout.rgb_timeout_ms > 0 {
         // Convert milliseconds to a human-readable format
         let timeout_ms = layout.rgb_timeout_ms;
         if timeout_ms >= 60000 && timeout_ms % 60000 == 0 {
@@ -406,6 +410,9 @@ mod tests {
             is_template: false,
             version: "1.0".to_string(),
             layout_variant: None,
+            keyboard: None,
+            keymap_name: None,
+            output_format: None,
         };
 
         let mut layer = Layer {
@@ -449,9 +456,11 @@ mod tests {
             metadata,
             layers: vec![layer],
             categories: vec![category],
-            inactive_key_behavior: crate::models::InactiveKeyBehavior::default(),
-            tap_hold_settings: crate::models::TapHoldSettings::default(),
+            rgb_enabled: true,
+            rgb_brightness: crate::models::RgbBrightness::default(),
             rgb_timeout_ms: 0,
+            uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+            tap_hold_settings: crate::models::TapHoldSettings::default(),
         }
     }
 
@@ -561,37 +570,36 @@ mod tests {
 
     #[test]
     fn test_settings_round_trip() {
-        use crate::models::InactiveKeyBehavior;
+        use crate::models::UncoloredKeyBehavior;
         
         let mut layout = create_test_layout();
         
-        // Test with Off setting
-        layout.inactive_key_behavior = InactiveKeyBehavior::Off;
+        // Test with Off setting (0%)
+        layout.uncolored_key_behavior = UncoloredKeyBehavior::from(0);
         let markdown = generate_markdown(&layout).unwrap();
         println!("Generated markdown with Off:\n{markdown}");
-        assert!(markdown.contains("## Settings"));
-        assert!(markdown.contains("**Inactive Key Behavior**: Off"));
+        assert!(markdown.contains("**Uncolored Key Brightness**: 0%"));
         
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
-        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::Off);
+        assert_eq!(parsed.uncolored_key_behavior.as_percent(), 0);
         
-        // Test with Dim setting
-        layout.inactive_key_behavior = InactiveKeyBehavior::Dim;
+        // Test with 50% brightness
+        layout.uncolored_key_behavior = UncoloredKeyBehavior::from(50);
         let markdown = generate_markdown(&layout).unwrap();
-        println!("Generated markdown with Dim:\n{markdown}");
-        assert!(markdown.contains("**Inactive Key Behavior**: Dim"));
+        println!("Generated markdown with 50% brightness:\n{markdown}");
+        assert!(markdown.contains("**Uncolored Key Brightness**: 50%"));
         
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
-        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::Dim);
+        assert_eq!(parsed.uncolored_key_behavior.as_percent(), 50);
         
-        // Test with ShowColor (default) - should NOT write settings section
-        layout.inactive_key_behavior = InactiveKeyBehavior::ShowColor;
+        // Test RGB brightness
+        layout.rgb_brightness = crate::models::RgbBrightness::from(50);
         let markdown = generate_markdown(&layout).unwrap();
-        println!("Generated markdown with ShowColor:\n{markdown}");
-        assert!(!markdown.contains("## Settings"));
+        println!("Generated markdown with 50% brightness:\n{markdown}");
+        assert!(markdown.contains("**RGB Brightness**: 50%"));
         
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
-        assert_eq!(parsed.inactive_key_behavior, InactiveKeyBehavior::ShowColor);
+        assert_eq!(parsed.rgb_brightness.as_percent(), 50);
     }
 
     #[test]

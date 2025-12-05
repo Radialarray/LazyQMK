@@ -15,50 +15,93 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Behavior for keys without a color defined on the current layer.
+/// Brightness level for keys without an individual or category color assignment.
 ///
-/// This controls how keys are displayed when they don't have an explicit
-/// color assignment (individual, category, or layer default) on the active layer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum InactiveKeyBehavior {
-    /// Show the resolved color (fallback through priority system)
-    #[default]
-    ShowColor,
-    /// Turn off LEDs for keys without color on current layer (black)
-    Off,
-    /// Dim the color (reduce brightness/opacity)
-    Dim,
+/// This controls how keys are displayed when they only have layer-level colors
+/// (layer category or layer default) but no individual override or key category.
+///
+/// - 0 = Off (black LEDs)
+/// - 1-99 = Dim to that percentage
+/// - 100 = Show full color
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UncoloredKeyBehavior(u8);
+
+impl UncoloredKeyBehavior {
+    /// Creates a new brightness value (0-100).
+    ///
+    /// # Panics
+    /// Panics if value > 100
+    #[must_use]
+    pub const fn new(value: u8) -> Self {
+        assert!(value <= 100, "Brightness must be 0-100");
+        Self(value)
+    }
+
+    /// Returns the brightness as a percentage (0-100).
+    #[must_use]
+    pub const fn as_percent(&self) -> u8 {
+        self.0
+    }
+
+    /// Full brightness - show resolved color (100%).
+    pub const FULL: Self = Self(100);
 }
 
-impl InactiveKeyBehavior {
-    /// Returns all available behavior options.
+impl Default for UncoloredKeyBehavior {
+    fn default() -> Self {
+        Self::FULL // Show full color by default
+    }
+}
+
+impl From<u8> for UncoloredKeyBehavior {
+    fn from(value: u8) -> Self {
+        Self::new(value.min(100))
+    }
+}
+
+
+
+// ============================================================================
+// RGB Settings
+// ============================================================================
+
+/// RGB brightness level (0-100%).
+///
+/// Controls the global brightness multiplier for all RGB LEDs.
+/// 0 = LEDs off, 100 = full brightness.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RgbBrightness(u8);
+
+impl RgbBrightness {
+    /// Creates a new brightness value (0-100).
+    ///
+    /// # Panics
+    /// Panics if value > 100
     #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
-            Self::ShowColor,
-            Self::Off,
-            Self::Dim,
-        ]
+    pub const fn new(value: u8) -> Self {
+        assert!(value <= 100, "Brightness must be 0-100");
+        Self(value)
     }
 
-    /// Returns a human-readable name for this behavior.
+    /// Returns the brightness as a percentage (0-100).
     #[must_use]
-    pub const fn display_name(&self) -> &'static str {
-        match self {
-            Self::ShowColor => "Show Color",
-            Self::Off => "Off (Black)",
-            Self::Dim => "Dim (50%)",
-        }
+    pub const fn as_percent(&self) -> u8 {
+        self.0
     }
 
-    /// Returns a description of this behavior.
-    #[must_use]
-    pub const fn description(&self) -> &'static str {
-        match self {
-            Self::ShowColor => "Show resolved color from priority system",
-            Self::Off => "Turn off LEDs for keys without layer color",
-            Self::Dim => "Dim keys without layer color to 50% brightness",
-        }
+    /// Full brightness (100%).
+    pub const FULL: Self = Self(100);
+}
+
+impl Default for RgbBrightness {
+    fn default() -> Self {
+        Self::FULL
+    }
+}
+
+impl From<u8> for RgbBrightness {
+    fn from(value: u8) -> Self {
+        Self::new(value.min(100))
     }
 }
 
@@ -385,6 +428,19 @@ pub struct LayoutMetadata {
     /// QMK layout variant (e.g., "`LAYOUT_split_3x6_3_ex2`")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_variant: Option<String>,
+    
+    // === Keyboard-specific settings ===
+    // These were moved from config.toml to be per-layout
+    
+    /// QMK keyboard path (e.g., "splitkb/halcyon/corne")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keyboard: Option<String>,
+    /// QMK keymap name (e.g., "my_custom_keymap")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keymap_name: Option<String>,
+    /// Firmware output format: "uf2", "hex", or "bin"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -405,6 +461,9 @@ impl LayoutMetadata {
             is_template: false,
             version: "1.0".to_string(),
             layout_variant: None,
+            keyboard: None,
+            keymap_name: None,
+            output_format: None,
         })
     }
 
@@ -476,7 +535,7 @@ impl LayoutMetadata {
 
 impl Default for LayoutMetadata {
     fn default() -> Self {
-        Self::new("Untitled Layout").unwrap()
+        Self::new("Untitled Layout".to_string()).unwrap()
     }
 }
 
@@ -504,16 +563,31 @@ pub struct Layout {
     pub layers: Vec<Layer>,
     /// User-defined categories for organization
     pub categories: Vec<Category>,
-    /// Behavior for keys without a color on the current layer
+    
+    // === RGB Settings ===
+    /// Master switch for all RGB LEDs
+    #[serde(default = "default_rgb_enabled")]
+    pub rgb_enabled: bool,
+    /// Global RGB brightness (0-100%)
     #[serde(default)]
-    pub inactive_key_behavior: InactiveKeyBehavior,
-    /// Tap-hold configuration (LT, MT, TT timing and behavior)
-    #[serde(default)]
-    pub tap_hold_settings: TapHoldSettings,
+    pub rgb_brightness: RgbBrightness,
     /// RGB Matrix timeout in milliseconds (0 = disabled)
     /// Automatically turns off RGB after this many ms of inactivity
     #[serde(default)]
     pub rgb_timeout_ms: u32,
+    /// Behavior for keys without individual or category colors
+    #[serde(default, alias = "inactive_key_behavior")]
+    pub uncolored_key_behavior: UncoloredKeyBehavior,
+    
+    // === Tap-Hold Settings ===
+    /// Tap-hold configuration (LT, MT, TT timing and behavior)
+    #[serde(default)]
+    pub tap_hold_settings: TapHoldSettings,
+}
+
+/// Default for rgb_enabled is true
+const fn default_rgb_enabled() -> bool {
+    true
 }
 
 #[allow(dead_code)]
@@ -525,9 +599,11 @@ impl Layout {
             metadata,
             layers: Vec::new(),
             categories: Vec::new(),
-            inactive_key_behavior: InactiveKeyBehavior::default(),
-            tap_hold_settings: TapHoldSettings::default(),
+            rgb_enabled: true,
+            rgb_brightness: RgbBrightness::default(),
             rgb_timeout_ms: 0,
+            uncolored_key_behavior: UncoloredKeyBehavior::default(),
+            tap_hold_settings: TapHoldSettings::default(),
         })
     }
 
@@ -730,11 +806,11 @@ impl Layout {
         Some(RgbColor::default())
     }
 
-    /// Resolves the color for a key for display, respecting `inactive_key_behavior`.
+    /// Resolves the color for a key for display, respecting `uncolored_key_behavior`.
     ///
-    /// This method considers the `inactive_key_behavior` setting for keys that
+    /// This method considers the `uncolored_key_behavior` setting for keys that
     /// don't have an individual color or key category. Keys that would normally
-    /// inherit from layer-level colors are considered "inactive" and their
+    /// inherit from layer-level colors are considered "uncolored" and their
     /// display is modified based on the setting:
     ///
     /// - `ShowColor`: Show the resolved layer color normally
@@ -759,7 +835,7 @@ impl Layout {
         }
 
         // From here, colors are layer-level (not key-specific)
-        // Apply inactive_key_behavior
+        // Apply uncolored_key_behavior
         
         // First, check if layer colors are enabled
         if let Some(layer) = self.get_layer(layer_idx) {
@@ -779,11 +855,12 @@ impl Layout {
                 layer.default_color
             };
 
-            // Apply inactive_key_behavior
-            let display_color = match self.inactive_key_behavior {
-                InactiveKeyBehavior::ShowColor => layer_color,
-                InactiveKeyBehavior::Off => RgbColor::new(0, 0, 0),
-                InactiveKeyBehavior::Dim => layer_color.dim(50),
+            // Apply uncolored_key_behavior
+            // Apply uncolored key brightness: 0=off, 1-99=dim, 100=full color
+            let display_color = match self.uncolored_key_behavior.as_percent() {
+                0 => RgbColor::new(0, 0, 0), // Off
+                100 => layer_color, // Full color
+                percent => layer_color.dim(percent), // Dim to percentage
             };
 
             return (display_color, false);
@@ -791,6 +868,28 @@ impl Layout {
 
         // Fallback to white if layer doesn't exist
         (RgbColor::default(), false)
+    }
+
+    /// Applies global RGB settings (master switch, brightness) to a color.
+    ///
+    /// This should be called after resolve_display_color to apply the global
+    /// RGB brightness multiplier and respect the master switch.
+    ///
+    /// Returns the color with brightness applied, or black if RGB is disabled.
+    #[must_use]
+    pub fn apply_rgb_settings(&self, color: RgbColor) -> RgbColor {
+        // If RGB master switch is off, return black
+        if !self.rgb_enabled {
+            return RgbColor::new(0, 0, 0);
+        }
+
+        // Apply brightness multiplier
+        let brightness_percent = self.rgb_brightness.as_percent();
+        if brightness_percent == 100 {
+            color
+        } else {
+            color.dim(brightness_percent)
+        }
     }
 
     /// Gets a layer by its unique ID.
