@@ -13,9 +13,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::keycode_db::{KeycodeDb, ParamType};
-use super::{AppState, LayerPickerState, ParameterizedKeycodeType, PendingKeycodeState, PopupType};
 use super::key_editor::ComboEditPart;
+use super::{AppState, LayerPickerState, ParameterizedKeycodeType, PendingKeycodeState, PopupType};
+use crate::keycode_db::{KeycodeDb, ParamType};
 
 /// Which pane has focus in the keycode picker
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -120,14 +120,19 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     } else {
         theme.surface
     };
-    
+
     let search_text = vec![Line::from(vec![
         Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
         Span::styled(
             &state.keycode_picker_state.search,
             Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
         ),
-        Span::styled("_", Style::default().fg(theme.primary).add_modifier(Modifier::SLOW_BLINK)),
+        Span::styled(
+            "_",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::SLOW_BLINK),
+        ),
     ])];
     let search = Paragraph::new(search_text).block(
         Block::default()
@@ -156,7 +161,9 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let list_items: Vec<ListItem> = keycodes
         .iter()
         .map(|keycode| {
-            let code_style = Style::default().fg(theme.primary).add_modifier(Modifier::BOLD);
+            let code_style = Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD);
             let name_style = Style::default().fg(theme.text);
             let desc_style = Style::default().fg(theme.text_muted);
 
@@ -178,7 +185,8 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
         "All".to_string()
     } else {
         categories
-            .get(category_index - 1).map_or_else(|| "Unknown".to_string(), |c| c.name.clone())
+            .get(category_index - 1)
+            .map_or_else(|| "Unknown".to_string(), |c| c.name.clone())
     };
 
     let list_border_color = if focus == PickerFocus::Keycodes {
@@ -219,26 +227,71 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     // Help text
     let help_spans = if focus == PickerFocus::Sidebar {
         vec![
-            Span::styled("↑↓", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↑↓",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Category  "),
-            Span::styled("Tab/→", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Tab/→",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Keycodes  "),
-            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Select  "),
-            Span::styled("Esc", Style::default().fg(theme.error).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.error)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Cancel"),
         ]
     } else {
         vec![
-            Span::styled("↑↓", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↑↓",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Navigate  "),
-            Span::styled("Tab/←", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Tab/←",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Categories  "),
-            Span::styled("Enter", Style::default().fg(theme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Apply  "),
-            Span::styled("Esc", Style::default().fg(theme.error).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.error)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Cancel  "),
-            Span::styled("Type", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Type",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Search"),
         ]
     };
@@ -265,7 +318,7 @@ fn render_sidebar(
 
     // Build category list items: "All" + all categories
     let mut items: Vec<ListItem> = Vec::with_capacity(categories.len() + 1);
-    
+
     // "All" option
     let all_style = if selected == 0 {
         Style::default()
@@ -275,9 +328,9 @@ fn render_sidebar(
     } else {
         Style::default().fg(theme.text)
     };
-    items.push(ListItem::new(Line::from(vec![
-        Span::styled(" All", all_style),
-    ])));
+    items.push(ListItem::new(Line::from(vec![Span::styled(
+        " All", all_style,
+    )])));
 
     // Category items
     for (i, cat) in categories.iter().enumerate() {
@@ -289,17 +342,15 @@ fn render_sidebar(
         } else {
             Style::default().fg(theme.text)
         };
-        
+
         // Truncate long names to fit sidebar
         let name = if cat.name.len() > 18 {
             format!(" {}…", &cat.name[..17])
         } else {
             format!(" {}", cat.name)
         };
-        
-        items.push(ListItem::new(Line::from(vec![
-            Span::styled(name, style),
-        ])));
+
+        items.push(ListItem::new(Line::from(vec![Span::styled(name, style)])));
     }
 
     let list = List::new(items)
@@ -310,7 +361,11 @@ fn render_sidebar(
                 .border_style(Style::default().fg(border_color))
                 .style(Style::default().bg(theme.background)),
         )
-        .highlight_symbol(if focus == PickerFocus::Sidebar { "►" } else { " " });
+        .highlight_symbol(if focus == PickerFocus::Sidebar {
+            "►"
+        } else {
+            " "
+        });
 
     // Create list state for sidebar
     let mut list_state = ListState::default();
@@ -344,14 +399,14 @@ fn handle_sidebar_input(
             state.set_status("Cancelled");
             Ok(false)
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             if state.keycode_picker_state.category_index > 0 {
                 state.keycode_picker_state.category_index -= 1;
                 state.keycode_picker_state.selected = 0; // Reset keycode selection
             }
             Ok(false)
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             if state.keycode_picker_state.category_index < total_categories - 1 {
                 state.keycode_picker_state.category_index += 1;
                 state.keycode_picker_state.selected = 0; // Reset keycode selection
@@ -369,7 +424,7 @@ fn handle_sidebar_input(
             Ok(false)
         }
         // Switch to keycodes pane
-        KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
+        KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => {
             state.keycode_picker_state.focus = PickerFocus::Keycodes;
             Ok(false)
         }
@@ -388,10 +443,7 @@ fn handle_sidebar_input(
 
 /// Handle input when keycodes list has focus
 #[allow(clippy::too_many_lines)]
-fn handle_keycodes_input(
-    state: &mut AppState,
-    key: event::KeyEvent,
-) -> Result<bool> {
+fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
             // If we were editing a combo part, go back to key editor
@@ -408,7 +460,7 @@ fn handle_keycodes_input(
             Ok(false)
         }
         // Switch back to sidebar
-        KeyCode::Left => {
+        KeyCode::Left | KeyCode::Char('h') => {
             state.keycode_picker_state.focus = PickerFocus::Sidebar;
             Ok(false)
         }
@@ -436,18 +488,18 @@ fn handle_keycodes_input(
                         ComboEditPart::Tap => combo_type.with_tap(&keycode),
                     };
                     let new_keycode = new_combo.to_keycode();
-                    
+
                     if let Some(selected_key) = state.get_selected_key_mut() {
                         selected_key.keycode.clone_from(&new_keycode);
                         state.mark_dirty();
                         state.set_status(format!("Updated: {new_keycode}"));
                     }
-                    
+
                     state.active_popup = Some(PopupType::KeyEditor);
                     state.keycode_picker_state.reset();
                     return Ok(false);
                 }
-                
+
                 // Check if this keycode has parameters defined in the database
                 // Clone the params to avoid borrow conflicts
                 let params_opt = state.keycode_db.get_params(&keycode).map(Vec::from);
@@ -470,13 +522,13 @@ fn handle_keycodes_input(
 
             Ok(false)
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             if state.keycode_picker_state.selected > 0 {
                 state.keycode_picker_state.selected -= 1;
             }
             Ok(false)
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             let keycodes = get_filtered_keycodes(state);
             if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
                 state.keycode_picker_state.selected += 1;
@@ -493,13 +545,13 @@ fn handle_keycodes_input(
             Ok(false)
         }
         KeyCode::PageUp => {
-            state.keycode_picker_state.selected = 
+            state.keycode_picker_state.selected =
                 state.keycode_picker_state.selected.saturating_sub(10);
             Ok(false)
         }
         KeyCode::PageDown => {
             let keycodes = get_filtered_keycodes(state);
-            state.keycode_picker_state.selected = 
+            state.keycode_picker_state.selected =
                 (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
             Ok(false)
         }
@@ -520,10 +572,11 @@ fn handle_keycodes_input(
 }
 
 /// Get filtered keycodes based on current search and category
-#[must_use] pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
+#[must_use]
+pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
     let categories = state.keycode_db.categories();
     let category_index = state.keycode_picker_state.category_index;
-    
+
     let active_category = if category_index == 0 {
         None
     } else {
@@ -544,109 +597,105 @@ fn handle_keycodes_input(
 #[allow(clippy::too_many_lines)]
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
-    
+
     match state.keycode_picker_state.focus {
-        PickerFocus::Sidebar => {
-            match key.code {
-                KeyCode::Up => {
-                    if state.keycode_picker_state.category_index > 0 {
-                        state.keycode_picker_state.category_index -= 1;
-                        state.keycode_picker_state.selected = 0;
-                    }
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    if state.keycode_picker_state.category_index < total_categories - 1 {
-                        state.keycode_picker_state.category_index += 1;
-                        state.keycode_picker_state.selected = 0;
-                    }
-                    Ok(false)
-                }
-                KeyCode::Home => {
-                    state.keycode_picker_state.category_index = 0;
+        PickerFocus::Sidebar => match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                if state.keycode_picker_state.category_index > 0 {
+                    state.keycode_picker_state.category_index -= 1;
                     state.keycode_picker_state.selected = 0;
-                    Ok(false)
                 }
-                KeyCode::End => {
-                    state.keycode_picker_state.category_index = total_categories - 1;
-                    state.keycode_picker_state.selected = 0;
-                    Ok(false)
-                }
-                KeyCode::Tab | KeyCode::Right => {
-                    state.keycode_picker_state.focus = PickerFocus::Keycodes;
-                    Ok(false)
-                }
-                KeyCode::Char(c) if c.is_ascii_digit() => {
-                    let idx = c.to_digit(10).unwrap() as usize;
-                    if idx < total_categories {
-                        state.keycode_picker_state.category_index = idx;
-                        state.keycode_picker_state.selected = 0;
-                    }
-                    Ok(false)
-                }
-                _ => Ok(false),
+                Ok(false)
             }
-        }
-        PickerFocus::Keycodes => {
-            match key.code {
-                KeyCode::Left => {
-                    state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                    Ok(false)
-                }
-                KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                    state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                    Ok(false)
-                }
-                KeyCode::Tab => {
-                    state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    if state.keycode_picker_state.selected > 0 {
-                        state.keycode_picker_state.selected -= 1;
-                    }
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    let keycodes = get_filtered_keycodes(state);
-                    if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
-                        state.keycode_picker_state.selected += 1;
-                    }
-                    Ok(false)
-                }
-                KeyCode::Home => {
+            KeyCode::Down | KeyCode::Char('j') => {
+                if state.keycode_picker_state.category_index < total_categories - 1 {
+                    state.keycode_picker_state.category_index += 1;
                     state.keycode_picker_state.selected = 0;
-                    Ok(false)
                 }
-                KeyCode::End => {
-                    let keycodes = get_filtered_keycodes(state);
-                    state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
-                    Ok(false)
-                }
-                KeyCode::PageUp => {
-                    state.keycode_picker_state.selected = 
-                        state.keycode_picker_state.selected.saturating_sub(10);
-                    Ok(false)
-                }
-                KeyCode::PageDown => {
-                    let keycodes = get_filtered_keycodes(state);
-                    state.keycode_picker_state.selected = 
-                        (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
-                    Ok(false)
-                }
-                KeyCode::Char(c) => {
-                    state.keycode_picker_state.search.push(c);
-                    state.keycode_picker_state.selected = 0;
-                    Ok(false)
-                }
-                KeyCode::Backspace => {
-                    state.keycode_picker_state.search.pop();
-                    state.keycode_picker_state.selected = 0;
-                    Ok(false)
-                }
-                _ => Ok(false),
+                Ok(false)
             }
-        }
+            KeyCode::Home => {
+                state.keycode_picker_state.category_index = 0;
+                state.keycode_picker_state.selected = 0;
+                Ok(false)
+            }
+            KeyCode::End => {
+                state.keycode_picker_state.category_index = total_categories - 1;
+                state.keycode_picker_state.selected = 0;
+                Ok(false)
+            }
+            KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
+                state.keycode_picker_state.focus = PickerFocus::Keycodes;
+                Ok(false)
+            }
+            KeyCode::Char(c) if c.is_ascii_digit() => {
+                let idx = c.to_digit(10).unwrap() as usize;
+                if idx < total_categories {
+                    state.keycode_picker_state.category_index = idx;
+                    state.keycode_picker_state.selected = 0;
+                }
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
+        PickerFocus::Keycodes => match key.code {
+            KeyCode::Left | KeyCode::Char('h') => {
+                state.keycode_picker_state.focus = PickerFocus::Sidebar;
+                Ok(false)
+            }
+            KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                state.keycode_picker_state.focus = PickerFocus::Sidebar;
+                Ok(false)
+            }
+            KeyCode::Tab => {
+                state.keycode_picker_state.focus = PickerFocus::Sidebar;
+                Ok(false)
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                if state.keycode_picker_state.selected > 0 {
+                    state.keycode_picker_state.selected -= 1;
+                }
+                Ok(false)
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let keycodes = get_filtered_keycodes(state);
+                if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
+                    state.keycode_picker_state.selected += 1;
+                }
+                Ok(false)
+            }
+            KeyCode::Home => {
+                state.keycode_picker_state.selected = 0;
+                Ok(false)
+            }
+            KeyCode::End => {
+                let keycodes = get_filtered_keycodes(state);
+                state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
+                Ok(false)
+            }
+            KeyCode::PageUp => {
+                state.keycode_picker_state.selected =
+                    state.keycode_picker_state.selected.saturating_sub(10);
+                Ok(false)
+            }
+            KeyCode::PageDown => {
+                let keycodes = get_filtered_keycodes(state);
+                state.keycode_picker_state.selected = (state.keycode_picker_state.selected + 10)
+                    .min(keycodes.len().saturating_sub(1));
+                Ok(false)
+            }
+            KeyCode::Char(c) => {
+                state.keycode_picker_state.search.push(c);
+                state.keycode_picker_state.selected = 0;
+                Ok(false)
+            }
+            KeyCode::Backspace => {
+                state.keycode_picker_state.search.pop();
+                state.keycode_picker_state.selected = 0;
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
     }
 }
 
@@ -688,7 +737,7 @@ fn handle_parameterized_keycode(
     // For keycodes with a fixed prefix, store it in param1
     if matches!(
         keycode_type,
-        ParameterizedKeycodeType::SimpleModTap 
+        ParameterizedKeycodeType::SimpleModTap
             | ParameterizedKeycodeType::SwapHandsTap
             | ParameterizedKeycodeType::SingleMod
     ) {
@@ -748,9 +797,7 @@ fn determine_keycode_type(
             ParameterizedKeycodeType::ModTap
         }
         // One param: Keycode with special prefix
-        (1, Some(ParamType::Keycode)) if prefix == "SH_T" => {
-            ParameterizedKeycodeType::SwapHandsTap
-        }
+        (1, Some(ParamType::Keycode)) if prefix == "SH_T" => ParameterizedKeycodeType::SwapHandsTap,
         // One param: Keycode (mod-tap or modifier wrapper)
         (1, Some(ParamType::Keycode)) => ParameterizedKeycodeType::SimpleModTap,
         // One param: Layer only (MO, TG, TO, etc.) - handled separately via layer_picker

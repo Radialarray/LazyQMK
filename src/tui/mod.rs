@@ -1133,30 +1133,30 @@ fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<
             } else {
                 state.set_error("No build log available");
             }
-            Ok(false)
-        }
-        KeyCode::Up => {
-            state.build_log_state.scroll_up();
-            Ok(false)
-        }
-        KeyCode::Down => {
-            if let Some(build_state) = &state.build_state {
-                let max_lines = build_state.log_lines.len();
-                state.build_log_state.scroll_down(max_lines, 20); // Approximate visible lines
-            }
-            Ok(false)
-        }
-        KeyCode::Home => {
-            state.build_log_state.scroll_to_top();
-            Ok(false)
-        }
-        KeyCode::End => {
-            if let Some(build_state) = &state.build_state {
-                let max_lines = build_state.log_lines.len();
-                state.build_log_state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
-            }
-            Ok(false)
-        }
+             Ok(false)
+         }
+         KeyCode::Up | KeyCode::Char('k') => {
+             state.build_log_state.scroll_up();
+             Ok(false)
+         }
+         KeyCode::Down | KeyCode::Char('j') => {
+             if let Some(build_state) = &state.build_state {
+                 let max_lines = build_state.log_lines.len();
+                 state.build_log_state.scroll_down(max_lines, 20); // Approximate visible lines
+             }
+             Ok(false)
+         }
+         KeyCode::Home => {
+             state.build_log_state.scroll_to_top();
+             Ok(false)
+         }
+         KeyCode::End => {
+             if let Some(build_state) = &state.build_state {
+                 let max_lines = build_state.log_lines.len();
+                 state.build_log_state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
+             }
+             Ok(false)
+         }
         _ => Ok(false),
     }
 }
@@ -1170,26 +1170,26 @@ fn handle_help_overlay_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             state.set_status("Press ? for help");
             Ok(false)
         }
-        // Scroll up
-        KeyCode::Up => {
-            state.help_overlay_state.scroll_up();
-            Ok(false)
-        }
-        // Scroll down
-        KeyCode::Down => {
-            state.help_overlay_state.scroll_down();
-            Ok(false)
-        }
-        // Page up
-        KeyCode::PageUp => {
-            state.help_overlay_state.page_up(20); // Approximate visible height
-            Ok(false)
-        }
-        // Page down
-        KeyCode::PageDown => {
-            state.help_overlay_state.page_down(20); // Approximate visible height
-            Ok(false)
-        }
+         // Scroll up
+         KeyCode::Up | KeyCode::Char('k') => {
+             state.help_overlay_state.scroll_up();
+             Ok(false)
+         }
+         // Scroll down
+         KeyCode::Down | KeyCode::Char('j') => {
+             state.help_overlay_state.scroll_down();
+             Ok(false)
+         }
+         // Page up
+         KeyCode::PageUp => {
+             state.help_overlay_state.page_up(20); // Approximate visible height
+             Ok(false)
+         }
+         // Page down
+         KeyCode::PageDown => {
+             state.help_overlay_state.page_down(20); // Approximate visible height
+             Ok(false)
+         }
         // Home - scroll to top
         KeyCode::Home => {
             state.help_overlay_state.scroll_to_top();
@@ -1341,18 +1341,18 @@ fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Resu
             state.layer_picker_state.reset();
             state.set_status("Layer selection cancelled");
             Ok(false)
-        }
-        KeyCode::Up => {
-            let layer_count = state.layout.layers.len();
-            state.layer_picker_state.select_previous(layer_count);
-            Ok(false)
-        }
-        KeyCode::Down => {
-            let layer_count = state.layout.layers.len();
-            state.layer_picker_state.select_next(layer_count);
-            Ok(false)
-        }
-        KeyCode::Enter => {
+         }
+         KeyCode::Up | KeyCode::Char('k') => {
+             let layer_count = state.layout.layers.len();
+             state.layer_picker_state.select_previous(layer_count);
+             Ok(false)
+         }
+         KeyCode::Down | KeyCode::Char('j') => {
+             let layer_count = state.layout.layers.len();
+             state.layer_picker_state.select_next(layer_count);
+             Ok(false)
+         }
+         KeyCode::Enter => {
             // Get the selected layer
             let selected_idx = state.layer_picker_state.selected;
             if let Some(layer) = state.layout.layers.get(selected_idx) {
@@ -1486,26 +1486,26 @@ fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> R
             state.active_popup = None;
             state.set_status("Cancelled");
             Ok(false)
-        }
-        KeyCode::Up => {
-            state.modifier_picker_state.focus_up();
-            Ok(false)
-        }
-        KeyCode::Down => {
-            state.modifier_picker_state.focus_down();
-            Ok(false)
-        }
-        KeyCode::Left => {
-            state.modifier_picker_state.focus_left();
-            Ok(false)
-        }
-        KeyCode::Right => {
-            state.modifier_picker_state.focus_right();
-            Ok(false)
-        }
-        KeyCode::Char(' ') => {
-            // Toggle the focused modifier
-            state.modifier_picker_state.toggle_focused();
+         }
+         KeyCode::Up | KeyCode::Char('k') => {
+             state.modifier_picker_state.focus_up();
+             Ok(false)
+         }
+         KeyCode::Down | KeyCode::Char('j') => {
+             state.modifier_picker_state.focus_down();
+             Ok(false)
+         }
+         KeyCode::Left | KeyCode::Char('h') => {
+             state.modifier_picker_state.focus_left();
+             Ok(false)
+         }
+         KeyCode::Right | KeyCode::Char('l') => {
+             state.modifier_picker_state.focus_right();
+             Ok(false)
+         }
+         KeyCode::Char(' ') => {
+             // Toggle the focused modifier
+             state.modifier_picker_state.toggle_focused();
             Ok(false)
         }
         KeyCode::Enter => {
@@ -1693,26 +1693,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.active_popup = None;
                 state.set_status("Settings closed");
                 Ok(false)
-            }
-            KeyCode::Up => {
-                let count = SettingItem::all().len();
-                state.settings_manager_state.select_previous(count);
-                Ok(false)
-            }
-            KeyCode::Down => {
-                let count = SettingItem::all().len();
-                state.settings_manager_state.select_next(count);
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                // Start editing the selected setting
-                let settings = SettingItem::all();
-                if let Some(setting) = settings.get(state.settings_manager_state.selected) {
-                    match setting {
-                        SettingItem::InactiveKeyBehavior => {
-                            state
-                                .settings_manager_state
-                                .start_selecting_inactive_behavior(
+             }
+             KeyCode::Up | KeyCode::Char('k') => {
+                 let count = SettingItem::all().len();
+                 state.settings_manager_state.select_previous(count);
+                 Ok(false)
+             }
+             KeyCode::Down | KeyCode::Char('j') => {
+                 let count = SettingItem::all().len();
+                 state.settings_manager_state.select_next(count);
+                 Ok(false)
+             }
+             KeyCode::Enter => {
+                 // Start editing the selected setting
+                 let settings = SettingItem::all();
+                 if let Some(setting) = settings.get(state.settings_manager_state.selected) {
+                     match setting {
+                         SettingItem::InactiveKeyBehavior => {
+                             state
+                                 .settings_manager_state
+                                 .start_selecting_inactive_behavior(
                                     state.layout.inactive_key_behavior,
                                 );
                         }
@@ -1878,26 +1878,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.settings_manager_state.cancel();
                 state.set_status("Cancelled");
                 Ok(false)
-            }
-            KeyCode::Up => {
-                let count = InactiveKeyBehavior::all().len();
-                state.settings_manager_state.option_previous(count);
-                Ok(false)
-            }
-            KeyCode::Down => {
-                let count = InactiveKeyBehavior::all().len();
-                state.settings_manager_state.option_next(count);
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                    if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
-                        state.layout.inactive_key_behavior = behavior;
-                        state.mark_dirty();
-                        state.settings_manager_state.cancel();
-                        state.set_status(format!(
-                            "Inactive key behavior set to: {}",
-                            behavior.display_name()
+             }
+             KeyCode::Up | KeyCode::Char('k') => {
+                 let count = InactiveKeyBehavior::all().len();
+                 state.settings_manager_state.option_previous(count);
+                 Ok(false)
+             }
+             KeyCode::Down | KeyCode::Char('j') => {
+                 let count = InactiveKeyBehavior::all().len();
+                 state.settings_manager_state.option_next(count);
+                 Ok(false)
+             }
+             KeyCode::Enter => {
+                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                     if let Some(&behavior) = InactiveKeyBehavior::all().get(selected_idx) {
+                         state.layout.inactive_key_behavior = behavior;
+                         state.mark_dirty();
+                         state.settings_manager_state.cancel();
+                         state.set_status(format!(
+                             "Inactive key behavior set to: {}",
+                             behavior.display_name()
                         ));
                     }
                 }
@@ -1910,26 +1910,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.settings_manager_state.cancel();
                 state.set_status("Cancelled");
                 Ok(false)
-            }
-            KeyCode::Up => {
-                let count = TapHoldPreset::all().len();
-                state.settings_manager_state.option_previous(count);
-                Ok(false)
-            }
-            KeyCode::Down => {
-                let count = TapHoldPreset::all().len();
-                state.settings_manager_state.option_next(count);
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                    if let Some(&preset) = TapHoldPreset::all().get(selected_idx) {
-                        state.layout.tap_hold_settings.apply_preset(preset);
-                        state.mark_dirty();
-                        state.settings_manager_state.cancel();
-                        state.set_status(format!(
-                            "Tap-hold preset set to: {}",
-                            preset.display_name()
+             }
+             KeyCode::Up | KeyCode::Char('k') => {
+                 let count = TapHoldPreset::all().len();
+                 state.settings_manager_state.option_previous(count);
+                 Ok(false)
+             }
+             KeyCode::Down | KeyCode::Char('j') => {
+                 let count = TapHoldPreset::all().len();
+                 state.settings_manager_state.option_next(count);
+                 Ok(false)
+             }
+             KeyCode::Enter => {
+                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                     if let Some(&preset) = TapHoldPreset::all().get(selected_idx) {
+                         state.layout.tap_hold_settings.apply_preset(preset);
+                         state.mark_dirty();
+                         state.settings_manager_state.cancel();
+                         state.set_status(format!(
+                             "Tap-hold preset set to: {}",
+                             preset.display_name()
                         ));
                     }
                 }
@@ -1942,26 +1942,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                 state.settings_manager_state.cancel();
                 state.set_status("Cancelled");
                 Ok(false)
-            }
-            KeyCode::Up => {
-                let count = HoldDecisionMode::all().len();
-                state.settings_manager_state.option_previous(count);
-                Ok(false)
-            }
-            KeyCode::Down => {
-                let count = HoldDecisionMode::all().len();
-                state.settings_manager_state.option_next(count);
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
-                    if let Some(&mode) = HoldDecisionMode::all().get(selected_idx) {
-                        state.layout.tap_hold_settings.hold_mode = mode;
-                        state.layout.tap_hold_settings.mark_custom();
-                        state.mark_dirty();
-                        state.settings_manager_state.cancel();
-                        state.set_status(format!("Hold mode set to: {}", mode.display_name()));
-                    }
+             }
+             KeyCode::Up | KeyCode::Char('k') => {
+                 let count = HoldDecisionMode::all().len();
+                 state.settings_manager_state.option_previous(count);
+                 Ok(false)
+             }
+             KeyCode::Down | KeyCode::Char('j') => {
+                 let count = HoldDecisionMode::all().len();
+                 state.settings_manager_state.option_next(count);
+                 Ok(false)
+             }
+             KeyCode::Enter => {
+                 if let Some(selected_idx) = state.settings_manager_state.get_selected_option() {
+                     if let Some(&mode) = HoldDecisionMode::all().get(selected_idx) {
+                         state.layout.tap_hold_settings.hold_mode = mode;
+                         state.layout.tap_hold_settings.mark_custom();
+                         state.mark_dirty();
+                         state.settings_manager_state.cancel();
+                         state.set_status(format!("Hold mode set to: {}", mode.display_name()));
+                     }
                 }
                 Ok(false)
             }
@@ -1974,26 +1974,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     state.settings_manager_state.cancel();
                     state.set_status("Cancelled");
                     Ok(false)
-                }
-                KeyCode::Up => {
-                    state.settings_manager_state.increment_numeric(10);
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state.settings_manager_state.decrement_numeric(10);
-                    Ok(false)
-                }
-                KeyCode::Char(c) if c.is_ascii_digit() => {
-                    state.settings_manager_state.handle_char_input(c);
-                    Ok(false)
-                }
-                KeyCode::Backspace => {
-                    state.settings_manager_state.handle_backspace();
-                    Ok(false)
-                }
-                KeyCode::Enter => {
-                    if let Some(value) = state.settings_manager_state.get_numeric_value() {
-                        apply_numeric_setting(state, setting, value);
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state.settings_manager_state.increment_numeric(10);
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state.settings_manager_state.decrement_numeric(10);
+                     Ok(false)
+                 }
+                 KeyCode::Char(c) if c.is_ascii_digit() => {
+                     state.settings_manager_state.handle_char_input(c);
+                     Ok(false)
+                 }
+                 KeyCode::Backspace => {
+                     state.settings_manager_state.handle_backspace();
+                     Ok(false)
+                 }
+                 KeyCode::Enter => {
+                     if let Some(value) = state.settings_manager_state.get_numeric_value() {
+                         apply_numeric_setting(state, setting, value);
                         state.mark_dirty();
                         state.settings_manager_state.cancel();
                     }
@@ -2010,7 +2010,7 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     state.set_status("Cancelled");
                     Ok(false)
                 }
-                KeyCode::Up | KeyCode::Down => {
+                KeyCode::Up | KeyCode::Down | KeyCode::Char('k') | KeyCode::Char('j') => {
                     state.settings_manager_state.option_previous(2);
                     Ok(false)
                 }
@@ -2057,26 +2057,26 @@ fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
                     state.settings_manager_state.cancel();
                     state.set_status("Cancelled");
                     Ok(false)
-                }
-                KeyCode::Up => {
-                    state.settings_manager_state.option_previous(3);
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state.settings_manager_state.option_next(3);
-                    Ok(false)
-                }
-                KeyCode::Enter => {
-                    if let Some(selected_idx) = state.settings_manager_state.get_output_format_selected() {
-                        let format = match selected_idx {
-                            0 => "uf2",
-                            1 => "hex",
-                            2 => "bin",
-                            _ => "uf2",
-                        };
-                        state.config.build.output_format = format.to_string();
-                        if let Err(e) = state.config.save() {
-                            state.set_status(format!("Failed to save config: {e}"));
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state.settings_manager_state.option_previous(3);
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state.settings_manager_state.option_next(3);
+                     Ok(false)
+                 }
+                 KeyCode::Enter => {
+                     if let Some(selected_idx) = state.settings_manager_state.get_output_format_selected() {
+                         let format = match selected_idx {
+                             0 => "uf2",
+                             1 => "hex",
+                             2 => "bin",
+                             _ => "uf2",
+                         };
+                         state.config.build.output_format = format.to_string();
+                         if let Err(e) = state.config.save() {
+                             state.set_status(format!("Failed to save config: {e}"));
                         } else {
                             state.set_status(format!("Output format set to: {format}"));
                         }
@@ -2311,26 +2311,26 @@ fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> 
         }
     } else {
         // Navigation mode
-        match key.code {
-            KeyCode::Up => {
-                browser_state.select_previous();
-                Ok(false)
-            }
-            KeyCode::Down => {
-                browser_state.select_next();
-                Ok(false)
-            }
-            KeyCode::Char('/') => {
-                browser_state.toggle_search();
-                state.set_status("Search mode - type to filter templates");
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                // Load selected template
-                match browser_state.load_selected_template() {
-                    Ok(layout) => {
-                        state.layout = layout;
-                        state.source_path = None; // New layout from template
+         match key.code {
+             KeyCode::Up | KeyCode::Char('k') => {
+                 browser_state.select_previous();
+                 Ok(false)
+             }
+             KeyCode::Down | KeyCode::Char('j') => {
+                 browser_state.select_next();
+                 Ok(false)
+             }
+             KeyCode::Char('/') => {
+                 browser_state.toggle_search();
+                 state.set_status("Search mode - type to filter templates");
+                 Ok(false)
+             }
+             KeyCode::Enter => {
+                 // Load selected template
+                 match browser_state.load_selected_template() {
+                     Ok(layout) => {
+                         state.layout = layout;
+                         state.source_path = None; // New layout from template
                         state.mark_dirty(); // Mark as dirty since it's unsaved
                         state.active_popup = None;
                         state.set_status("Template loaded");
@@ -2485,106 +2485,67 @@ fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool>
             Ok(false)
         }
 
-        // Navigation - Arrow keys (with rectangle selection support)
-        (KeyCode::Up, _) => {
-            if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
-                state.selected_position = new_pos;
-                // Update rectangle selection if active
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
+         // Navigation - Arrow keys (with rectangle selection support)
+         (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
+             if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
+                 state.selected_position = new_pos;
+                 // Update rectangle selection if active
+                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                 }
+                 state.clear_error();
+             }
+             Ok(false)
+         }
+         (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
+             if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
+                 state.selected_position = new_pos;
+                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                 }
+                 state.clear_error();
+             }
+             Ok(false)
+         }
+         (KeyCode::Left, _) | (KeyCode::Char('h'), _) => {
+             if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
+                 state.selected_position = new_pos;
+                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                 }
+                 state.clear_error();
+             }
             Ok(false)
-        }
-        (KeyCode::Down, _) => {
-            if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
-        (KeyCode::Left, _) => {
-            if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
-        (KeyCode::Right, _) => {
-            if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
+         }
 
-        // Navigation - VIM style (hjkl) (with rectangle selection support)
-        (KeyCode::Char('h'), _) => {
-            if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
-        (KeyCode::Char('j'), _) => {
-            if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
-        (KeyCode::Char('k'), _) => {
-            if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
-        // Toggle build log (Ctrl+L) - must come before general 'l' pattern
-        (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
-            if state.build_state.is_some() {
-                if state.build_log_state.visible {
-                    state.active_popup = None;
-                    state.build_log_state.visible = false;
-                } else {
-                    state.active_popup = Some(PopupType::BuildLog);
-                    state.build_log_state.visible = true;
-                }
-                state.set_status("Build log toggled");
-            } else {
-                state.set_error("No build active");
-            }
-            Ok(false)
-        }
-        (KeyCode::Char('l'), _) => {
-            if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
-                state.selected_position = new_pos;
-                if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
-                    state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
-                }
-                state.clear_error();
-            }
-            Ok(false)
-        }
+         // Toggle build log (Ctrl+L) - must come before general navigation patterns
+         (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
+             if state.build_state.is_some() {
+                 if state.build_log_state.visible {
+                     state.active_popup = None;
+                     state.build_log_state.visible = false;
+                 } else {
+                     state.active_popup = Some(PopupType::BuildLog);
+                     state.build_log_state.visible = true;
+                 }
+                 state.set_status("Build log toggled");
+             } else {
+                 state.set_error("No build active");
+             }
+             Ok(false)
+         }
+
+         // Navigation - Right arrow and 'l' key (without modifiers)
+         (KeyCode::Right, _) | (KeyCode::Char('l'), KeyModifiers::NONE) => {
+             if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
+                 state.selected_position = new_pos;
+                 if let Some(SelectionMode::Rectangle { start }) = state.selection_mode {
+                     state.selected_keys = calculate_rectangle_selection(start, new_pos, &state.mapping);
+                 }
+                 state.clear_error();
+             }
+             Ok(false)
+         }
 
         // Layer switching
         (KeyCode::BackTab, _) => {
@@ -3292,24 +3253,24 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
     match &state.category_manager_state.mode.clone() {
         ManagerMode::Browsing => {
             match key.code {
-                KeyCode::Esc => {
-                    state.active_popup = None;
-                    state.set_status("Category manager closed");
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    state
-                        .category_manager_state
-                        .select_previous(state.layout.categories.len());
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state
-                        .category_manager_state
-                        .select_next(state.layout.categories.len());
-                    Ok(false)
-                }
-                KeyCode::Char('n') => {
+                 KeyCode::Esc => {
+                     state.active_popup = None;
+                     state.set_status("Category manager closed");
+                     Ok(false)
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state
+                         .category_manager_state
+                         .select_previous(state.layout.categories.len());
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state
+                         .category_manager_state
+                         .select_next(state.layout.categories.len());
+                     Ok(false)
+                 }
+                 KeyCode::Char('n') => {
                     // Start creating new category (T107)
                     state.category_manager_state.start_creating();
                     state.set_status("Enter category name (kebab-case, e.g., 'navigation')");
@@ -3535,29 +3496,29 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                         }
                         state.mark_dirty();
                         state.set_status(format!("Layer moved down to position {}", selected + 1));
-                    }
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    state
-                        .layer_manager_state
-                        .select_previous(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state
-                        .layer_manager_state
-                        .select_next(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Enter => {
-                    // Go to selected layer
-                    state.current_layer = state.layer_manager_state.selected;
-                    state.active_popup = None;
-                    state.set_status(format!("Switched to layer {}", state.current_layer));
-                    Ok(false)
-                }
-                KeyCode::Char('n') => {
+                     }
+                     Ok(false)
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state
+                         .layer_manager_state
+                         .select_previous(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state
+                         .layer_manager_state
+                         .select_next(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Enter => {
+                     // Go to selected layer
+                     state.current_layer = state.layer_manager_state.selected;
+                     state.active_popup = None;
+                     state.set_status(format!("Switched to layer {}", state.current_layer));
+                     Ok(false)
+                 }
+                 KeyCode::Char('n') => {
                     // Start creating new layer
                     state.layer_manager_state.start_creating();
                     state.set_status("Enter layer name");
@@ -3791,28 +3752,28 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
                 KeyCode::Esc => {
                     state.layer_manager_state.cancel();
                     state.set_status("Copy cancelled");
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    state.layer_manager_state.select_target_previous(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state.layer_manager_state.select_target_next(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Enter => {
-                    // Copy all keys from source to target
-                    if let Some(source) = state.layout.layers.get(source_index) {
-                        let keys_to_copy: Vec<_> = source.keys.iter().map(|k| {
-                            (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
-                        }).collect();
-                        
-                        if let Some(target) = state.layout.layers.get_mut(target_selected) {
-                            for (pos, keycode, color, category) in keys_to_copy {
-                                if let Some(key) = target.keys.iter_mut().find(|k| k.position == pos) {
-                                    key.keycode = keycode;
-                                    key.color_override = color;
+                     Ok(false)
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state.layer_manager_state.select_target_previous(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state.layer_manager_state.select_target_next(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Enter => {
+                     // Copy all keys from source to target
+                     if let Some(source) = state.layout.layers.get(source_index) {
+                         let keys_to_copy: Vec<_> = source.keys.iter().map(|k| {
+                             (k.position, k.keycode.clone(), k.color_override, k.category_id.clone())
+                         }).collect();
+                         
+                         if let Some(target) = state.layout.layers.get_mut(target_selected) {
+                             for (pos, keycode, color, category) in keys_to_copy {
+                                 if let Some(key) = target.keys.iter_mut().find(|k| k.position == pos) {
+                                     key.keycode = keycode;
+                                     key.color_override = color;
                                     key.category_id = category;
                                 }
                             }
@@ -3830,20 +3791,20 @@ fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Res
             let source_index = *source_index;
             let target_selected = *target_selected;
             match key.code {
-                KeyCode::Esc => {
-                    state.layer_manager_state.cancel();
-                    state.set_status("Swap cancelled");
-                    Ok(false)
-                }
-                KeyCode::Up => {
-                    state.layer_manager_state.select_target_previous(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Down => {
-                    state.layer_manager_state.select_target_next(state.layout.layers.len());
-                    Ok(false)
-                }
-                KeyCode::Enter => {
+                 KeyCode::Esc => {
+                     state.layer_manager_state.cancel();
+                     state.set_status("Swap cancelled");
+                     Ok(false)
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     state.layer_manager_state.select_target_previous(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     state.layer_manager_state.select_target_next(state.layout.layers.len());
+                     Ok(false)
+                 }
+                 KeyCode::Enter => {
                     // Swap all keys between source and target
                     // We need to collect both sets of keys first to avoid borrow issues
                     let source_keys: Vec<_>;

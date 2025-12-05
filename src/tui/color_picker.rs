@@ -690,7 +690,7 @@ fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::R
             state.color_picker_state.toggle_palette_focus();
             Ok(false)
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             match state.color_picker_state.palette_focus {
                 PaletteFocus::Colors => state.color_picker_state.navigate_palette(0, -1),
                 PaletteFocus::Shades => {
@@ -700,7 +700,7 @@ fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::R
             }
             Ok(false)
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             match state.color_picker_state.palette_focus {
                 PaletteFocus::Colors => {
                     // Check if we should move to shades or next row
@@ -721,11 +721,11 @@ fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::R
             }
             Ok(false)
         }
-        KeyCode::Left => {
+        KeyCode::Left | KeyCode::Char('h') => {
             state.color_picker_state.navigate_palette(-1, 0);
             Ok(false)
         }
-        KeyCode::Right => {
+        KeyCode::Right | KeyCode::Char('l') => {
             state.color_picker_state.navigate_palette(1, 0);
             Ok(false)
         }
@@ -756,19 +756,19 @@ fn handle_rgb_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
             state.color_picker_state.mode = ColorPickerMode::Palette;
             Ok(false)
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             state.color_picker_state.increase_value(10);
             Ok(false)
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             state.color_picker_state.decrease_value(10);
             Ok(false)
         }
-        KeyCode::Right => {
+        KeyCode::Right | KeyCode::Char('l') => {
             state.color_picker_state.increase_value(1);
             Ok(false)
         }
-        KeyCode::Left => {
+        KeyCode::Left | KeyCode::Char('h') => {
             state.color_picker_state.decrease_value(1);
             Ok(false)
         }

@@ -833,12 +833,12 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
             _ => {}
         },
         WizardStep::KeyboardSelection => match key.code {
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') => {
                 if state.keyboard_selected_index > 0 {
                     state.keyboard_selected_index -= 1;
                 }
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 let filtered_count = state.get_filtered_keyboards().len();
                 if state.keyboard_selected_index < filtered_count.saturating_sub(1) {
                     state.keyboard_selected_index += 1;
@@ -874,12 +874,12 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
             _ => {}
         },
         WizardStep::LayoutSelection => match key.code {
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') => {
                 if state.layout_selected_index > 0 {
                     state.layout_selected_index -= 1;
                 }
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 if state.layout_selected_index < state.available_layouts.len().saturating_sub(1) {
                     state.layout_selected_index += 1;
                 }

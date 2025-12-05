@@ -459,11 +459,11 @@ pub fn handle_keyboard_picker_input(
     key: KeyEvent,
 ) -> Option<String> {
     match key.code {
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             state.move_up();
             None
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             state.move_down();
             None
         }
@@ -486,11 +486,11 @@ pub fn handle_keyboard_picker_input(
 /// Handles input for layout picker
 pub fn handle_layout_picker_input(state: &mut LayoutPickerState, key: KeyEvent) -> Option<String> {
     match key.code {
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             state.move_up();
             None
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             state.move_down();
             None
         }

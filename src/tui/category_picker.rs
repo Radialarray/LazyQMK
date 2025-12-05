@@ -211,13 +211,13 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
             state.category_picker_context = None;
             Ok(false)
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             state
                 .category_picker_state
                 .previous(state.layout.categories.len());
             Ok(false)
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             state
                 .category_picker_state
                 .next(state.layout.categories.len());

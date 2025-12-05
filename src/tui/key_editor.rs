@@ -684,45 +684,45 @@ pub fn handle_input(
     let is_editing = state.key_editor_state.is_editing();
 
     if is_editing {
-        // Description edit mode
-        match key.code {
-            KeyCode::Esc => {
-                state.key_editor_state.cancel_edit_description();
-                state.set_status("Description edit cancelled");
-            }
-            KeyCode::Enter => {
-                state.key_editor_state.confirm_edit_description();
-                // Apply the description to the actual key
-                let description = state.key_editor_state.get_description();
-                if let Some(key) = state.get_selected_key_mut() {
-                    key.description = description;
-                    state.mark_dirty();
-                    state.set_status("Description saved");
-                }
-            }
-            KeyCode::Backspace => {
-                state.key_editor_state.handle_backspace();
-            }
-            KeyCode::Delete => {
-                state.key_editor_state.handle_delete();
-            }
-            KeyCode::Left => {
-                state.key_editor_state.cursor_left();
-            }
-            KeyCode::Right => {
-                state.key_editor_state.cursor_right();
-            }
-            KeyCode::Home => {
-                state.key_editor_state.cursor_home();
-            }
-            KeyCode::End => {
-                state.key_editor_state.cursor_end();
-            }
-            KeyCode::Char(c) => {
-                state.key_editor_state.handle_char(c);
-            }
-            _ => {}
-        }
+         // Description edit mode
+         match key.code {
+             KeyCode::Esc => {
+                 state.key_editor_state.cancel_edit_description();
+                 state.set_status("Description edit cancelled");
+             }
+             KeyCode::Enter => {
+                 state.key_editor_state.confirm_edit_description();
+                 // Apply the description to the actual key
+                 let description = state.key_editor_state.get_description();
+                 if let Some(key) = state.get_selected_key_mut() {
+                     key.description = description;
+                     state.mark_dirty();
+                     state.set_status("Description saved");
+                 }
+             }
+             KeyCode::Backspace => {
+                 state.key_editor_state.handle_backspace();
+             }
+             KeyCode::Delete => {
+                 state.key_editor_state.handle_delete();
+             }
+             KeyCode::Left | KeyCode::Char('h') => {
+                 state.key_editor_state.cursor_left();
+             }
+             KeyCode::Right | KeyCode::Char('l') => {
+                 state.key_editor_state.cursor_right();
+             }
+             KeyCode::Home => {
+                 state.key_editor_state.cursor_home();
+             }
+             KeyCode::End => {
+                 state.key_editor_state.cursor_end();
+             }
+             KeyCode::Char(c) => {
+                 state.key_editor_state.handle_char(c);
+             }
+             _ => {}
+         }
     } else {
         // View mode
         match key.code {
