@@ -19,5 +19,6 @@ pub mod firmware;
 pub mod keycode_db;
 pub mod models;
 pub mod parser;
+pub mod services;
 pub mod shortcuts;
 pub mod tui;

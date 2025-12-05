@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crate::{config, models, parser, tui};
+use crate::{config, models, parser, services, tui};
 
 /// Creates a default layout from QMK keyboard info and launches the editor
 pub fn launch_editor_with_default_layout(
@@ -8,54 +8,21 @@ pub fn launch_editor_with_default_layout(
     layout_variant: &str,
     layout_file_name: &str,
 ) -> Result<()> {
-    // Get QMK path from config
-    let qmk_path = config
-        .paths
-        .qmk_firmware
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("QMK firmware path not set in configuration"))?;
-
-    // Get the base keyboard name (without any variant subdirectory)
-    // This mirrors the logic in AppState::rebuild_geometry()
-    let base_keyboard = tui::AppState::extract_base_keyboard(keyboard);
-
-    // Parse keyboard info.json using the base keyboard path
-    let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(qmk_path, &base_keyboard)?;
-
-    // Get the key count for the selected layout to determine the correct variant
-    let layout_def = keyboard_info.layouts.get(layout_variant).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Layout '{}' not found in keyboard info.json",
-            layout_variant
-        )
-    })?;
-    let key_count = layout_def.layout.len();
-
-    // Determine the correct keyboard variant based on key count
-    // This is critical for split keyboards where different variants have different key counts
-    let variant_path = config
-        .build
-        .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
-        .unwrap_or_else(|_| base_keyboard.clone());
-
-    // Try to get RGB matrix mapping from the variant's keyboard.json
-    let matrix_to_led = parser::keyboard_json::parse_variant_keyboard_json(qmk_path, &variant_path)
-        .and_then(|variant| variant.rgb_matrix)
-        .map(|rgb_config| parser::keyboard_json::build_matrix_to_led_map(&rgb_config));
-
-    // Build geometry from the selected layout with RGB matrix mapping if available
-    let geometry = parser::keyboard_json::build_keyboard_geometry_with_rgb(
-        &keyboard_info,
-        &base_keyboard,
-        layout_variant,
-        matrix_to_led.as_ref(),
-    )?;
-
-    // Build visual mapping
-    let mapping = models::VisualLayoutMapping::build(&geometry);
-
     // Create a default layout with the user-specified name
     let mut layout = models::Layout::new(layout_file_name)?;
+    
+    // Set keyboard in metadata for geometry building
+    layout.metadata.keyboard = Some(keyboard.to_string());
+    
+    // Build geometry using the centralized geometry service
+    let geo_context = services::geometry::GeometryContext {
+        config,
+        metadata: &layout.metadata,
+    };
+    
+    let geo_result = services::geometry::build_geometry_for_layout(geo_context, layout_variant)?;
+    let geometry = geo_result.geometry;
+    let mapping = geo_result.mapping;
 
     // Sanitize the layout name for use as keymap directory name
     // This must be done BEFORE setting metadata to avoid conflicts with QMK's built-in keymaps
@@ -66,8 +33,8 @@ pub fn launch_editor_with_default_layout(
         .replace(' ', "_")
         .to_lowercase();
 
-    // Store keyboard and layout info in metadata
-    layout.metadata.keyboard = Some(variant_path);
+    // Update the layout metadata with the resolved variant path
+    layout.metadata.keyboard = Some(geo_result.variant_path);
     layout.metadata.layout_variant = Some(layout_variant.to_string());
     // Use sanitized layout name as keymap name to avoid conflicts with default keymaps
     layout.metadata.keymap_name = Some(sanitized_name.clone());

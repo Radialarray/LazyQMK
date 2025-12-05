@@ -11,6 +11,7 @@ mod firmware;
 mod keycode_db;
 mod models;
 mod parser;
+mod services;
 mod shortcuts;
 mod tui;
 
@@ -89,89 +90,29 @@ fn main() -> Result<()> {
         let config = config_result.unwrap_or_else(|_| config::Config::default());
 
         // Try to build proper geometry from QMK if config is available
-        let (geometry, mapping) = if let Some(qmk_path) = config.paths.qmk_firmware.as_ref() {
-            // Get keyboard and layout variant from layout metadata
-            let keyboard = layout.metadata.keyboard.as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Keyboard not specified in layout metadata - layout may be from an older version"))?;
+        let (geometry, mapping) = if config.paths.qmk_firmware.is_some() {
+            // Get layout variant from metadata
             let layout_variant = layout.metadata.layout_variant.as_ref()
                 .ok_or_else(|| anyhow::anyhow!("Layout variant not specified in layout metadata - layout may be from an older version"))?;
-
-            // Extract base keyboard name (without variant subdirectory)
-            let base_keyboard = tui::AppState::extract_base_keyboard(keyboard);
-
-            match parser::keyboard_json::parse_keyboard_info_json(qmk_path, &base_keyboard) {
-                Ok(keyboard_info) => {
-                    // Get key count from layout to determine correct variant
-                    let variant_path =
-                        if let Some(layout_def) = keyboard_info.layouts.get(layout_variant) {
-                            let key_count = layout_def.layout.len();
-                            config
-                                .build
-                                .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
-                                .unwrap_or_else(|_| base_keyboard.clone())
-                        } else {
-                            base_keyboard.clone()
-                        };
-
-                    // Try to get RGB matrix mapping from variant keyboard.json
-                    let matrix_to_led =
-                        parser::keyboard_json::parse_variant_keyboard_json(qmk_path, &variant_path)
-                            .and_then(|variant| variant.rgb_matrix)
-                            .map(|rgb_config| {
-                                parser::keyboard_json::build_matrix_to_led_map(&rgb_config)
-                            });
-
-                    match parser::keyboard_json::build_keyboard_geometry_with_rgb(
-                        &keyboard_info,
-                        &base_keyboard,
-                        layout_variant,
-                        matrix_to_led.as_ref(),
-                    ) {
-                        Ok(geometry) => {
-                            let mapping = models::VisualLayoutMapping::build(&geometry);
-                            (geometry, mapping)
-                        }
-                        Err(_) => {
-                            // Fall back to minimal geometry
-                            (
-                                models::KeyboardGeometry {
-                                    keyboard_name: "test".to_string(),
-                                    layout_name: "test".to_string(),
-                                    matrix_rows: 4,
-                                    matrix_cols: 2,
-                                    keys: vec![],
-                                },
-                                models::VisualLayoutMapping::new(),
-                            )
-                        }
-                    }
-                }
+            
+            // Try to build geometry using the service
+            let geo_context = services::geometry::GeometryContext {
+                config: &config,
+                metadata: &layout.metadata,
+            };
+            
+            match services::geometry::build_geometry_for_layout(geo_context, layout_variant) {
+                Ok(geo_result) => (geo_result.geometry, geo_result.mapping),
                 Err(_) => {
-                    // Fall back to minimal geometry
-                    (
-                        models::KeyboardGeometry {
-                            keyboard_name: "test".to_string(),
-                            layout_name: "test".to_string(),
-                            matrix_rows: 4,
-                            matrix_cols: 2,
-                            keys: vec![],
-                        },
-                        models::VisualLayoutMapping::new(),
-                    )
+                    // Fall back to minimal geometry on error
+                    let geo_result = services::geometry::build_minimal_geometry();
+                    (geo_result.geometry, geo_result.mapping)
                 }
             }
         } else {
             // No QMK path configured, use minimal geometry
-            (
-                models::KeyboardGeometry {
-                    keyboard_name: "test".to_string(),
-                    layout_name: "test".to_string(),
-                    matrix_rows: 4,
-                    matrix_cols: 2,
-                    keys: vec![],
-                },
-                models::VisualLayoutMapping::new(),
-            )
+            let geo_result = services::geometry::build_minimal_geometry();
+            (geo_result.geometry, geo_result.mapping)
         };
 
         // Initialize TUI

@@ -59,6 +59,7 @@ use crate::config::Config;
 use crate::firmware::BuildState;
 use crate::keycode_db::KeycodeDb;
 use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
+use crate::services::geometry::{build_geometry_for_layout, extract_base_keyboard, GeometryContext};
 use crate::shortcuts::{Action, ShortcutRegistry};
 
 // Re-export TUI components
@@ -433,17 +434,7 @@ impl AppState {
     /// - `"crkbd"` → `"crkbd"`
     #[must_use]
     pub fn extract_base_keyboard(keyboard_path: &str) -> String {
-        let keyboard_parts: Vec<&str> = keyboard_path.split('/').collect();
-        if keyboard_parts.len() > 2
-            && ["standard", "mini", "normal", "full", "compact"]
-                .contains(&keyboard_parts[keyboard_parts.len() - 1])
-        {
-            // Has variant subdirectory - use parent path
-            keyboard_parts[..keyboard_parts.len() - 1].join("/")
-        } else {
-            // No variant subdirectory
-            keyboard_path.to_string()
-        }
+        extract_base_keyboard(keyboard_path)
     }
 
     /// Creates a new `AppState` from config, layout, and keyboard geometry.
@@ -558,75 +549,24 @@ impl AppState {
     ///
     /// Result indicating success or error with context
     pub fn rebuild_geometry(&mut self, layout_name: &str) -> Result<()> {
-        use crate::models::VisualLayoutMapping;
-        use crate::parser::keyboard_json::{
-            build_keyboard_geometry_with_rgb, build_matrix_to_led_map, parse_keyboard_info_json,
-            parse_variant_keyboard_json,
+        // Build geometry context
+        let geo_context = GeometryContext {
+            config: &self.config,
+            metadata: &self.layout.metadata,
         };
 
-        // Parse keyboard info.json to get layout definition
-        let qmk_path = self
-            .config
-            .paths
-            .qmk_firmware
-            .as_ref()
-            .context("QMK firmware path not configured")?;
+        // Build geometry using the service
+        let geo_result = build_geometry_for_layout(geo_context, layout_name)?;
 
-        // Get the base keyboard name (without any variant subdirectory)
-        let keyboard = self
-            .layout
-            .metadata
-            .keyboard
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Keyboard not set in layout metadata"))?;
-        let base_keyboard = Self::extract_base_keyboard(keyboard);
-
-        let info = parse_keyboard_info_json(qmk_path, &base_keyboard)
-            .context("Failed to parse keyboard info.json")?;
-
-        // Get the key count for the selected layout to determine variant
-        let layout_def = info.layouts.get(layout_name).context(format!(
-            "Layout '{layout_name}' not found in keyboard info.json"
-        ))?;
-        let key_count = layout_def.layout.len();
-
-        // Determine keyboard variant first so we can look for RGB matrix config
-        let variant_path =
-            match self
-                .config
-                .build
-                .determine_keyboard_variant(qmk_path, &base_keyboard, key_count)
-            {
-                Ok(path) => path,
-                Err(_) => base_keyboard.to_string(),
-            };
-
-        // Try to get RGB matrix mapping from variant keyboard.json
-        let matrix_to_led = parse_variant_keyboard_json(qmk_path, &variant_path)
-            .and_then(|variant| variant.rgb_matrix)
-            .map(|rgb_config| build_matrix_to_led_map(&rgb_config));
-
-        // Build new geometry for selected layout with RGB matrix mapping if available
-        let new_geometry = build_keyboard_geometry_with_rgb(
-            &info,
-            &base_keyboard,
-            layout_name,
-            matrix_to_led.as_ref(),
-        )
-        .context("Failed to build keyboard geometry")?;
-
-        // Build new visual layout mapping
-        let new_mapping = VisualLayoutMapping::build(&new_geometry);
+        // Update AppState with new geometry and mapping
+        self.geometry = geo_result.geometry;
+        self.mapping = geo_result.mapping;
 
         // Store the layout variant in the layout metadata for persistence
         self.layout.metadata.layout_variant = Some(layout_name.to_string());
 
-        // Update keyboard variant (already determined above for RGB matrix lookup)
-        self.layout.metadata.keyboard = Some(variant_path);
-
-        // Update AppState with new geometry and mapping
-        self.geometry = new_geometry;
-        self.mapping = new_mapping;
+        // Update keyboard variant path
+        self.layout.metadata.keyboard = Some(geo_result.variant_path);
 
         // Adjust all layers to match new geometry
         // Add KC_NO keys for new positions, keep existing keys where they still fit
