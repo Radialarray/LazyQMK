@@ -344,7 +344,7 @@ impl SettingsManagerState {
         }
     }
 
-    /// Start selecting uncolored key behavior
+    // /// Start selecting uncolored key behavior
     // Removed: UncoloredKeyBehavior is now a simple percentage, not a selector
 
     /// Start selecting tap-hold preset
@@ -875,7 +875,7 @@ fn get_setting_value_display(
     }
 }
 
-/// Render inactive behavior selector
+// /// Render inactive behavior selector
 // Removed: UncoloredKeyBehavior is now a simple percentage, not a selector
 
 /// Render tap-hold preset selector

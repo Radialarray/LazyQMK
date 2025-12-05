@@ -969,7 +969,7 @@ mod description_tests {
 
     #[test]
     fn test_parse_descriptions_from_real_format() {
-        let content = r#"---
+        let content = r"---
 name: test
 description: ''
 author: ''
@@ -995,7 +995,7 @@ version: '1.0'
 
 - 0:0:0: This is a test
 - 0:0:1: Another test
-"#;
+";
 
         let layout = parse_markdown_layout_str(content).expect("Parse failed");
 
