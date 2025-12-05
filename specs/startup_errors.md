@@ -1,4 +1,4 @@
-◎ cargo run keyboard_tui --init                                                                                    □ keyboard_tui △ 001-tui-com⋯⎪●◦◌◦⎥ pkg ◨ 0.1.0 rs ⊃ 1.88.0 12:07
+◎ cargo run keyboard-configurator --init                                                                            □ keyboard-configurator △ 001-tui-com⋯⎪●◦◌◦⎥ pkg ◨ 0.1.0 rs ⊃ 1.88.0 12:07
 warning: unexpected `cfg` condition value: `ratatui`
   --> src/models/rgb.rs:85:11
    |
@@ -583,7 +583,7 @@ warning: missing documentation for a variant
 21 |     Tags,
    |     ^^^^
 
-warning: `keyboard_tui` (lib) generated 91 warnings (run `cargo fix --lib -p keyboard_tui` to apply 5 suggestions)
+warning: `keyboard-configurator` (lib) generated 91 warnings (run `cargo fix --lib -p keyboard-configurator` to apply 5 suggestions)
 warning: unused import: `BuildMessage`
   --> src/firmware/mod.rs:11:19
    |
@@ -1110,10 +1110,10 @@ warning: function `handle_input` is never used
 451 | pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<bool> {
     |        ^^^^^^^^^^^^
 
-warning: `keyboard_tui` (bin "keyboard_tui") generated 54 warnings (8 duplicates) (run `cargo fix --bin "keyboard_tui"` to apply 9 suggestions)
+warning: `keyboard-configurator` (bin "keyboard-configurator") generated 54 warnings (8 duplicates) (run `cargo fix --bin "keyboard-configurator"` to apply 9 suggestions)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
-     Running `target/debug/keyboard_tui keyboard_tui --init`
-Keyboard TUI v0.1.0
-Terminal-based keyboard layout editor
+     Running `target/debug/keyboard-configurator keyboard-configurator --init`
+Keyboard Configurator v0.1.0
+Terminal-based keyboard layout editor and configurator
 
 Configuration setup wizard will be implemented in Phase 3

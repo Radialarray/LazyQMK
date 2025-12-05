@@ -1,4 +1,4 @@
-# Keyboard TUI
+# Keyboard Configurator
 
 A terminal-based keyboard layout editor for mechanical keyboards with QMK firmware support. Edit keyboard layouts visually in your terminal, manage multiple layers, organize keys with colors and categories, and generate QMK firmware - all with human-readable Markdown files.
 
@@ -42,13 +42,13 @@ Download the latest release from GitHub:
 
 ```bash
 # Download the binary
-curl -LO https://github.com/Radialarray/Keyboard-Configurator/releases/latest/download/keyboard_tui
+curl -LO https://github.com/Radialarray/Keyboard-Configurator/releases/latest/download/keyboard-configurator
 
 # Make it executable
-chmod +x keyboard_tui
+chmod +x keyboard-configurator
 
 # Move to your PATH (optional)
-mv keyboard_tui /usr/local/bin/
+mv keyboard-configurator /usr/local/bin/
 ```
 
 Or visit the [Releases page](https://github.com/Radialarray/Keyboard-Configurator/releases) to download manually.
@@ -58,7 +58,7 @@ Or visit the [Releases page](https://github.com/Radialarray/Keyboard-Configurato
 ```bash
 # Clone the repository
 git clone https://github.com/Radialarray/Keyboard-Configurator.git
-cd Keyboard-Configurator
+cd keyboard-configurator
 
 # Initialize QMK submodule
 git submodule update --init --recursive vial-qmk-keebart
@@ -66,7 +66,7 @@ git submodule update --init --recursive vial-qmk-keebart
 # Build in release mode
 cargo build --release
 
-# Binary will be at target/release/keyboard_tui
+# Binary will be at target/release/keyboard-configurator
 ```
 
 ### Quick Build
@@ -82,7 +82,7 @@ cargo build --release
 On first run, the onboarding wizard will guide you through configuration:
 
 ```bash
-./target/release/keyboard_tui
+./target/release/keyboard-configurator
 ```
 
 The wizard will prompt you for:
@@ -95,7 +95,7 @@ Configuration is saved to `~/.config/layout_tools/config.toml` (Unix) or `%APPDA
 ### Loading an Existing Layout
 
 ```bash
-keyboard_tui path/to/layout.md
+keyboard-configurator path/to/layout.md
 ```
 
 ### Creating a New Layout
@@ -103,7 +103,7 @@ keyboard_tui path/to/layout.md
 ```bash
 # Create an empty layout file first, then edit it
 touch my_layout.md
-keyboard_tui my_layout.md
+keyboard-configurator my_layout.md
 ```
 
 ## Usage

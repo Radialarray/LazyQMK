@@ -1,10 +1,11 @@
-//! Keyboard TUI - Terminal-based keyboard layout editor
+//! Keyboard Configurator - Terminal-based keyboard layout editor
 //!
 //! This application provides a visual editor for mechanical keyboard layouts,
 //! allowing users to design layouts, assign keycodes, and generate QMK firmware.
 
 // Module declarations
 mod config;
+mod constants;
 mod firmware;
 mod keycode_db;
 mod models;
@@ -13,9 +14,10 @@ mod tui;
 
 use anyhow::Result;
 use clap::Parser;
+use constants::{APP_NAME, APP_BINARY_NAME};
 use std::path::PathBuf;
 
-/// Keyboard TUI - Terminal-based keyboard layout editor
+/// Keyboard Configurator - Terminal-based keyboard layout editor
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -408,7 +410,7 @@ fn run_new_layout_wizard(config: &config::Config) -> Result<()> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    println!("Keyboard TUI v{}", env!("CARGO_PKG_VERSION"));
+    println!("{} v{}", APP_NAME, env!("CARGO_PKG_VERSION"));
     println!("Terminal-based keyboard layout editor");
     println!();
 
@@ -426,14 +428,14 @@ fn main() -> Result<()> {
             eprintln!("Please provide a valid path to a Markdown layout file.");
             eprintln!();
             eprintln!("Examples:");
-            eprintln!("  keyboard_tui my_layout.md");
-            eprintln!("  keyboard_tui path/to/layout.md");
+            eprintln!("  {} my_layout.md", APP_BINARY_NAME);
+            eprintln!("  {} path/to/layout.md", APP_BINARY_NAME);
             eprintln!();
             eprintln!("To set up the application for the first time, run:");
-            eprintln!("  keyboard_tui --init");
+            eprintln!("  {} --init", APP_BINARY_NAME);
             eprintln!();
             eprintln!("For more options, run:");
-            eprintln!("  keyboard_tui --help");
+            eprintln!("  {} --help", APP_BINARY_NAME);
             std::process::exit(1);
         }
 
@@ -543,7 +545,7 @@ fn main() -> Result<()> {
         // No file argument provided - check if config exists and is properly configured
         if !config::Config::exists() {
             // No config file exists - automatically run the onboarding wizard
-            println!("Welcome! It looks like this is your first time running Keyboard TUI.");
+            println!("Welcome! It looks like this is your first time running {}.", APP_NAME);
             println!();
             println!("Starting the setup wizard...");
             println!();

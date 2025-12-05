@@ -40,7 +40,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::RgbColor;
+    /// use keyboard_configurator::models::RgbColor;
     ///
     /// let color = RgbColor::from_hex("#FF0000").unwrap();
     /// assert_eq!(color, RgbColor::new(255, 0, 0));
@@ -75,7 +75,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::RgbColor;
+    /// use keyboard_configurator::models::RgbColor;
     ///
     /// let color = RgbColor::new(255, 0, 0);
     /// assert_eq!(color.to_hex(), "#FF0000");
@@ -104,7 +104,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::RgbColor;
+    /// use keyboard_configurator::models::RgbColor;
     ///
     /// let color = RgbColor::new(200, 100, 50);
     /// let dimmed = color.dim(50); // 50% brightness

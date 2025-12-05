@@ -3,6 +3,7 @@
 **Feature**: 002-fix-startup-warnings  
 **Branch**: `002-fix-startup-warnings`  
 **Date**: 2025-11-25
+**Project**: Keyboard Configurator
 
 This guide provides a quick overview of how to implement the warning fixes based on the research and planning completed in Phases 0-1.
 
@@ -13,7 +14,7 @@ This guide provides a quick overview of how to implement the warning fixes based
 - Rust 1.75+ installed (`rustc --version`)
 - Familiarity with Rust compiler warnings
 - Access to the `002-fix-startup-warnings` feature branch
-- Understanding of the keyboard_tui project structure
+- Understanding of the Keyboard Configurator project structure
 
 ---
 
@@ -66,7 +67,7 @@ cargo fix --lib --allow-dirty
 git diff
 
 # Fix binary warnings
-cargo fix --bin keyboard_tui --allow-dirty
+cargo fix --bin keyboard-configurator --allow-dirty
 
 # Review changes again
 git diff

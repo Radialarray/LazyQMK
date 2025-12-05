@@ -64,7 +64,7 @@ impl Theme {
     ///
     /// # Examples
     /// ```
-    /// use keyboard_tui::tui::theme::Theme;
+    /// use keyboard_configurator::tui::theme::Theme;
     ///
     /// let theme = Theme::detect();
     /// // Theme will match OS dark/light mode setting

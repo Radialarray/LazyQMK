@@ -1,6 +1,6 @@
-//! Keyboard TUI Library
+//! Keyboard Configurator Library
 //!
-//! This library provides core functionality for the Keyboard TUI application,
+//! This library provides core functionality for the Keyboard Configurator application,
 //! including parsing QMK info.json files, managing keyboard layouts, and
 //! generating firmware code.
 
@@ -13,6 +13,7 @@
 
 // Module declarations
 pub mod config;
+pub mod constants;
 pub mod firmware;
 pub mod keycode_db;
 pub mod models;

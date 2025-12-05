@@ -1,8 +1,9 @@
-# Quickstart: TUI Keyboard Layout Editor
+# Quickstart: Keyboard Configurator TUI
 
 **Feature**: Complete TUI Keyboard Layout Editor  
 **Branch**: `001-tui-complete-features`  
 **Status**: Implementation Plan Complete
+**Project**: Keyboard Configurator
 
 ## Overview
 
@@ -21,7 +22,7 @@ This guide helps developers get started implementing the TUI keyboard layout edi
 
 ```bash
 # Repository should already exist
-cd keyboard_tui
+cd keyboard-configurator
 
 # Ensure QMK submodule is initialized
 git submodule update --init --recursive vial-qmk-keebart
@@ -224,6 +225,9 @@ cargo run -- path/to/layout.md
 
 # Release mode (optimized)
 cargo run --release -- path/to/layout.md
+
+# Run the configurator
+keyboard-configurator path/to/layout.md
 
 # Run tests
 cargo test

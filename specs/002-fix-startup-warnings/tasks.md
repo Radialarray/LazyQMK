@@ -3,6 +3,7 @@
 **Feature Branch**: `002-fix-startup-warnings`  
 **Date**: 2025-11-25  
 **Input**: Design documents from `/specs/002-fix-startup-warnings/`
+**Project**: Keyboard Configurator
 
 **Organization**: Tasks are grouped by user story priority to enable systematic elimination of all 145 compiler warnings while maintaining code quality and functionality.
 
@@ -31,7 +32,7 @@
 **⚠️ CRITICAL**: These fixes are prerequisites for remaining user stories
 
 - [X] T004 Run `cargo fix --lib --allow-dirty` to apply automated fixes
-- [X] T005 Run `cargo fix --bin keyboard_tui --allow-dirty` for binary-specific fixes
+- [X] T005 Run `cargo fix --bin keyboard-configurator --allow-dirty` for binary-specific fixes
 - [X] T006 Review and commit automated changes with `git diff`
 - [X] T007 Verify automated fixes with `cargo check` and `cargo test`
 
@@ -170,7 +171,7 @@
 
 - [ ] T065 [US4] Build complete documentation: `cargo doc --no-deps`
 - [ ] T066 [US4] Verify documentation builds without any missing docs warnings
-- [ ] T067 [US4] Review generated HTML documentation in target/doc/keyboard_tui/
+- [ ] T067 [US4] Review generated HTML documentation in target/doc/keyboard-configurator/
 - [ ] T068 [US4] Run full test suite: `cargo test`
 
 **Checkpoint**: Complete documentation coverage achieved - all public APIs documented
