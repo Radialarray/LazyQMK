@@ -458,12 +458,25 @@ pub fn handle_keyboard_picker_input(
     state: &mut KeyboardPickerState,
     key: KeyEvent,
 ) -> Option<String> {
+    // Check if search is active (has content) - vim keys should type instead of navigate
+    let search_active = !state.search_query.is_empty();
+
     match key.code {
-        KeyCode::Up | KeyCode::Char('k') => {
+        // Arrow keys always navigate
+        KeyCode::Up => {
             state.move_up();
             None
         }
-        KeyCode::Down | KeyCode::Char('j') => {
+        KeyCode::Down => {
+            state.move_down();
+            None
+        }
+        // Vim navigation only when search is empty
+        KeyCode::Char('k') if !search_active => {
+            state.move_up();
+            None
+        }
+        KeyCode::Char('j') if !search_active => {
             state.move_down();
             None
         }
@@ -474,6 +487,7 @@ pub fn handle_keyboard_picker_input(
             None
         }
         KeyCode::Char(c) => {
+            // Add to search (includes j, k when search is active)
             state.search_query.push(c);
             state.update_filter();
             None
