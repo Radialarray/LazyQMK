@@ -153,10 +153,20 @@ fn launch_editor_with_default_layout(
     // Create a default layout with the user-specified name
     let mut layout = models::Layout::new(layout_file_name)?;
 
+    // Sanitize the layout name for use as keymap directory name
+    // This must be done BEFORE setting metadata to avoid conflicts with QMK's built-in keymaps
+    let sanitized_name = layout_file_name
+        .replace('/', "_")
+        .replace('\\', "_")
+        .replace(':', "_")
+        .replace(' ', "_")
+        .to_lowercase();
+
     // Store keyboard and layout info in metadata
     layout.metadata.keyboard = Some(variant_path);
     layout.metadata.layout_variant = Some(layout_variant.to_string());
-    layout.metadata.keymap_name = Some("default".to_string());
+    // Use sanitized layout name as keymap name to avoid conflicts with default keymaps
+    layout.metadata.keymap_name = Some(sanitized_name.clone());
     layout.metadata.output_format = Some("uf2".to_string());
 
     // Add a default base layer with KC_TRNS for all positions
@@ -166,13 +176,6 @@ fn launch_editor_with_default_layout(
     // Create save path using the user-specified layout name
     let layouts_dir = config::Config::config_dir()?.join("layouts");
     std::fs::create_dir_all(&layouts_dir)?;
-
-    // Sanitize the filename: remove/replace problematic characters
-    let sanitized_name = layout_file_name
-        .replace('/', "_")
-        .replace('\\', "_")
-        .replace(':', "_")
-        .replace(' ', "_");
     
     let layout_path = layouts_dir.join(format!("{}.md", sanitized_name));
 
