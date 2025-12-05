@@ -105,6 +105,11 @@ const fn default_key_size() -> f32 {
 
 /// Scans the QMK keyboards directory and returns a list of available keyboards.
 ///
+/// This function uses the `qmk list-keyboards` command to get all compilable
+/// keyboard paths directly from QMK. This ensures only valid, buildable keyboards
+/// are returned (e.g., `splitkb/halcyon/ferris/rev1` instead of the non-compilable
+/// parent `splitkb/halcyon/ferris`).
+///
 /// # Arguments
 ///
 /// * `qmk_path` - Path to QMK firmware root directory
@@ -112,8 +117,17 @@ const fn default_key_size() -> f32 {
 /// # Returns
 ///
 /// A vector of keyboard names (relative paths from keyboards/ directory)
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The QMK keyboards directory doesn't exist
+/// - The `qmk list-keyboards` command fails
+/// - The command output cannot be parsed
 #[allow(dead_code)]
 pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
+    use std::process::Command;
+
     let keyboards_dir = qmk_path.join("keyboards");
 
     if !keyboards_dir.exists() {
@@ -123,59 +137,30 @@ pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
         );
     }
 
-    let mut keyboards = Vec::new();
-    scan_keyboards_recursive(&keyboards_dir, "", &mut keyboards)?;
+    // Run `qmk list-keyboards` command to get all compilable keyboards
+    let output = Command::new("qmk")
+        .arg("list-keyboards")
+        .current_dir(qmk_path)
+        .output()
+        .context("Failed to execute 'qmk list-keyboards'. Is QMK CLI installed?")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("qmk list-keyboards failed: {}", stderr);
+    }
+
+    // Parse output - one keyboard per line
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut keyboards: Vec<String> = stdout
+        .lines()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
 
     // Sort alphabetically for consistent ordering
     keyboards.sort();
 
     Ok(keyboards)
-}
-
-/// Recursively scans keyboard directories looking for info.json files.
-#[allow(dead_code)]
-fn scan_keyboards_recursive(dir: &Path, prefix: &str, keyboards: &mut Vec<String>) -> Result<()> {
-    let entries =
-        fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;
-
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-
-        // Skip hidden directories and common non-keyboard directories
-        if name_str.starts_with('.')
-            || name_str == "keymaps"
-            || name_str == "lib"
-            || name_str == "common"
-        {
-            continue;
-        }
-
-        if path.is_dir() {
-            // Check if this directory has an info.json
-            let info_json_path = path.join("info.json");
-            if info_json_path.exists() {
-                let keyboard_name = if prefix.is_empty() {
-                    name_str.to_string()
-                } else {
-                    format!("{prefix}/{name_str}")
-                };
-                keyboards.push(keyboard_name);
-            }
-
-            // Recurse into subdirectories
-            let new_prefix = if prefix.is_empty() {
-                name_str.to_string()
-            } else {
-                format!("{prefix}/{name_str}")
-            };
-            scan_keyboards_recursive(&path, &new_prefix, keyboards)?;
-        }
-    }
-
-    Ok(())
 }
 
 /// Parses a QMK info.json file.
@@ -593,27 +578,16 @@ mod tests {
     }
 
     #[test]
-    fn test_scan_keyboards() {
+    fn test_scan_keyboards_invalid_path() {
         let temp_dir = TempDir::new().unwrap();
-        let keyboards_dir = temp_dir.path().join("keyboards");
-        fs::create_dir(&keyboards_dir).unwrap();
-
-        // Create test keyboard directories with info.json
-        let kb1_dir = keyboards_dir.join("keyboard1");
-        fs::create_dir(&kb1_dir).unwrap();
-        fs::write(kb1_dir.join("info.json"), "{}").unwrap();
-
-        let kb2_dir = keyboards_dir.join("vendor");
-        fs::create_dir(&kb2_dir).unwrap();
-        let kb2_model_dir = kb2_dir.join("model_a");
-        fs::create_dir(&kb2_model_dir).unwrap();
-        fs::write(kb2_model_dir.join("info.json"), "{}").unwrap();
-
-        // Scan keyboards
-        let keyboards = scan_keyboards(temp_dir.path()).unwrap();
-
-        assert_eq!(keyboards.len(), 2);
-        assert!(keyboards.contains(&"keyboard1".to_string()));
-        assert!(keyboards.contains(&"vendor/model_a".to_string()));
+        
+        // Test with a path that has no keyboards directory
+        let result = scan_keyboards(temp_dir.path());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("QMK keyboards directory not found"));
     }
+
+    // Note: Testing scan_keyboards with actual QMK requires the QMK CLI to be installed
+    // and a valid QMK repository. See tests/qmk_info_json_tests.rs for integration tests
+    // that test against the actual QMK firmware submodule.
 }

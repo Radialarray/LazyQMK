@@ -13,7 +13,7 @@ use std::path::PathBuf;
 /// Gets the QMK firmware path from the submodule.
 fn get_qmk_path() -> PathBuf {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    PathBuf::from(manifest_dir).join("vial-qmk-keebart")
+    PathBuf::from(manifest_dir).join("qmk_firmware")
 }
 
 /// Checks if the QMK submodule is initialized.
@@ -232,7 +232,36 @@ fn test_scan_keyboards_finds_crkbd() {
         &keyboards[..10.min(keyboards.len())]
     );
 
-    // crkbd should be in the list
+    // crkbd should be in the list (with specific revision paths)
     let has_crkbd = keyboards.iter().any(|k| k.contains("crkbd"));
     assert!(has_crkbd, "crkbd should be found in keyboard scan");
+    
+    // Should find specific compilable paths, not parent directories
+    // e.g., "keebart/corne_choc_pro/standard" not "keebart/corne_choc_pro"
+    let keebart_keyboards: Vec<_> = keyboards.iter()
+        .filter(|k| k.starts_with("keebart/corne_choc_pro/"))
+        .collect();
+    
+    if !keebart_keyboards.is_empty() {
+        println!("Found keebart/corne_choc_pro variants: {:?}", keebart_keyboards);
+        // Should have standard and/or mini, not the parent directory
+        assert!(
+            keebart_keyboards.iter().any(|k| k.ends_with("/standard") || k.ends_with("/mini")),
+            "Should find specific variants (standard/mini), not parent directory"
+        );
+    }
+    
+    // Check splitkb keyboards - should find revision paths
+    let splitkb_keyboards: Vec<_> = keyboards.iter()
+        .filter(|k| k.starts_with("splitkb/"))
+        .collect();
+    
+    if !splitkb_keyboards.is_empty() {
+        println!("Sample splitkb keyboards: {:?}", &splitkb_keyboards[..3.min(splitkb_keyboards.len())]);
+        // Should include revision numbers like /rev1, /rev2, etc.
+        assert!(
+            splitkb_keyboards.iter().any(|k| k.contains("/rev")),
+            "splitkb keyboards should include revision paths"
+        );
+    }
 }
