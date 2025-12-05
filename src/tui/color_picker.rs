@@ -818,12 +818,13 @@ fn apply_color(state: &mut super::AppState) {
                     if let Ok(category) = crate::models::Category::new(&id, &name, color) {
                         state.layout.categories.push(category);
                         state.mark_dirty();
-                        state.category_manager_state.cancel();
                         state.set_status(format!("Created category '{name}'"));
                     } else {
                         state.set_error("Failed to create category");
                     }
 
+                    // Always reset mode back to browsing after color selection
+                    state.category_manager_state.cancel();
                     state.active_popup = Some(super::PopupType::CategoryManager);
                     state.color_picker_context = None;
                 }
