@@ -9,7 +9,7 @@
 
 ### User Story 1 - Clean Build Without Compilation Warnings (Priority: P1)
 
-As a developer building the keyboard_tui project, I need the build process to complete without any compiler warnings so that I can identify real issues quickly and maintain code quality standards.
+As a developer building the Keyboard Configurator project, I need the build process to complete without any compiler warnings so that I can identify real issues quickly and maintain code quality standards.
 
 **Why this priority**: Compilation warnings indicate potential bugs, configuration issues, and code smell. They create noise that obscures real problems and violate professional development standards. This is P1 because it directly impacts development velocity and code reliability.
 
@@ -57,7 +57,7 @@ As a developer maintaining the codebase, I need all unused code (imports, functi
 
 ### User Story 4 - Complete Documentation Coverage (Priority: P3)
 
-As a developer consuming the keyboard_tui library, I need all public APIs to have documentation so that I can understand how to use them without reading source code.
+As a developer consuming the Keyboard Configurator library, I need all public APIs to have documentation so that I can understand how to use them without reading source code.
 
 **Why this priority**: Documentation warnings indicate incomplete API documentation. This is P3 because the code functions correctly without it, but it affects developer experience and library usability.
 

@@ -1,4 +1,4 @@
-# Keyboard TUI - Quick Start Guide
+# Keyboard Configurator - Quick Start Guide
 
 A terminal-based keyboard layout editor for mechanical keyboards with QMK firmware support.
 
@@ -6,8 +6,8 @@ A terminal-based keyboard layout editor for mechanical keyboards with QMK firmwa
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/keyboard_tui.git
-cd keyboard_tui
+git clone https://github.com/Radialarray/Keyboard-Configurator.git
+cd keyboard-configurator
 
 # Initialize QMK submodule
 git submodule update --init --recursive vial-qmk-keebart
@@ -15,7 +15,7 @@ git submodule update --init --recursive vial-qmk-keebart
 # Build in release mode
 cargo build --release
 
-# Binary will be at target/release/keyboard_tui
+# Binary will be at target/release/keyboard-configurator
 ```
 
 ## First Run - Onboarding Wizard
@@ -23,7 +23,7 @@ cargo build --release
 On first run, the onboarding wizard will guide you through configuration:
 
 ```bash
-./target/release/keyboard_tui
+./target/release/keyboard-configurator
 ```
 
 The wizard will prompt you for:
@@ -44,13 +44,13 @@ Configuration is saved to:
 touch my_layout.md
 
 # Open in editor
-keyboard_tui my_layout.md
+keyboard-configurator my_layout.md
 ```
 
 ### Loading an Existing Layout
 
 ```bash
-keyboard_tui path/to/existing_layout.md
+keyboard-configurator path/to/existing_layout.md
 ```
 
 ## Core Workflows

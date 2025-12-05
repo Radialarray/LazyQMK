@@ -218,8 +218,8 @@ Line 1111 matches `(KeyCode::Char('l'), _)` (any modifier), so line 1288's `(Key
 ### Context
 Cargo provides `cargo fix` to automatically apply some warning fixes. The warnings include:
 ```
-warning: `keyboard_tui` (lib) generated 91 warnings (run `cargo fix --lib -p keyboard_tui` to apply 5 suggestions)
-warning: `keyboard_tui` (bin "keyboard_tui") generated 54 warnings (8 duplicates) (run `cargo fix --bin "keyboard_tui"` to apply 9 suggestions)
+warning: `keyboard-configurator` (lib) generated 91 warnings (run `cargo fix --lib -p keyboard-configurator` to apply 5 suggestions)
+warning: `keyboard-configurator` (bin "keyboard-configurator") generated 54 warnings (8 duplicates) (run `cargo fix --bin "keyboard-configurator"` to apply 9 suggestions)
 ```
 
 ### Research Findings
@@ -246,7 +246,7 @@ warning: `keyboard_tui` (bin "keyboard_tui") generated 54 warnings (8 duplicates
 **Workflow**:
 1. Run `cargo fix --lib --allow-dirty` to auto-fix safe warnings
 2. Review git diff to ensure changes are correct
-3. Run `cargo fix --bin keyboard_tui --allow-dirty` for binary-specific fixes
+3. Run `cargo fix --bin keyboard-configurator --allow-dirty` for binary-specific fixes
 4. Review git diff again
 5. Manually address remaining warnings (patterns, docs, dead code)
 6. Run `cargo check` and `cargo clippy` to verify

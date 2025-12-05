@@ -89,7 +89,7 @@ impl ColorPalette {
     /// 
     /// # Example
     /// ```no_run
-    /// use keyboard_tui::models::ColorPalette;
+    /// use keyboard_configurator::models::ColorPalette;
     /// let palette = ColorPalette::load().unwrap();
     /// let gray_500 = palette.get_shade("Gray", 500);
     /// ```

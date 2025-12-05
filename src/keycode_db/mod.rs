@@ -205,7 +205,7 @@ impl KeycodeDb {
     /// # Examples
     ///
     /// ```no_run
-    /// use keyboard_tui::keycode_db::KeycodeDb;
+    /// use keyboard_configurator::keycode_db::KeycodeDb;
     ///
     /// let db = KeycodeDb::load().unwrap();
     /// assert!(db.is_valid("KC_A"));
@@ -245,7 +245,7 @@ impl KeycodeDb {
     /// # Examples
     ///
     /// ```no_run
-    /// use keyboard_tui::keycode_db::KeycodeDb;
+    /// use keyboard_configurator::keycode_db::KeycodeDb;
     ///
     /// let db = KeycodeDb::load().unwrap();
     /// let results = db.search("arr");
@@ -305,7 +305,7 @@ impl KeycodeDb {
     /// # Examples
     ///
     /// ```no_run
-    /// use keyboard_tui::keycode_db::KeycodeDb;
+    /// use keyboard_configurator::keycode_db::KeycodeDb;
     ///
     /// let db = KeycodeDb::load().unwrap();
     /// let nav_keys = db.search_in_category("", "navigation");

@@ -1,11 +1,11 @@
 [package]
-name = "keyboard_tui"
+name = "keyboard-configurator"
 version = "0.2.0"
 edition = "2021"
-authors = ["Keyboard TUI Contributors"]
+authors = ["Keyboard Configurator Contributors"]
 description = "Terminal-based keyboard layout editor for mechanical keyboards"
 license = "MIT"
-repository = "https://github.com/yourusername/keyboard_tui"
+repository = "https://github.com/yourusername/keyboard-configurator"
 readme = "README.md"
 keywords = ["keyboard", "qmk", "tui", "terminal", "editor"]
 categories = ["command-line-utilities", "text-editors"]

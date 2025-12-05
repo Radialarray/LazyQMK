@@ -155,7 +155,7 @@ impl Layer {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::{Layer, RgbColor};
+    /// use keyboard_configurator::models::{Layer, RgbColor};
     ///
     /// let layer = Layer::new(0, "Base", RgbColor::new(255, 0, 0)).unwrap();
     /// ```

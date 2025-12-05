@@ -31,7 +31,7 @@ impl Category {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::{Category, RgbColor};
+    /// use keyboard_configurator::models::{Category, RgbColor};
     ///
     /// let category = Category::new(
     ///     "navigation",

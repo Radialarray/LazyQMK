@@ -8,6 +8,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]
 
+use crate::constants::APP_BINARY_NAME;
 use crate::models::{Category, KeyDefinition, Layer, Layout, LayoutMetadata, Position, RgbColor};
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -71,15 +72,16 @@ enum ParseState {
 /// - Invalid table structure
 /// - Invalid keycodes or color syntax
 pub fn parse_markdown_layout(path: &Path) -> Result<Layout> {
-    // Check if file exists first to provide better error message
-    if !path.exists() {
-        anyhow::bail!(
-            "Layout file not found: {}\n\n\
-            Please check the file path and try again.\n\
-            If you need help getting started, run: keyboard_tui --init",
-            path.display()
-        );
-    }
+     // Check if file exists first to provide better error message
+     if !path.exists() {
+         anyhow::bail!(
+             "Layout file not found: {}\n\n\
+             Please check the file path and try again.\n\
+             If you need help getting started, run: {} --init",
+             path.display(),
+             APP_BINARY_NAME
+         );
+     }
 
     // Check if it's a file (not a directory)
     if !path.is_file() {

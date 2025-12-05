@@ -640,7 +640,7 @@ impl Layout {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_tui::models::{Layout, Layer, KeyDefinition, Category, Position, RgbColor};
+    /// use keyboard_configurator::models::{Layout, Layer, KeyDefinition, Category, Position, RgbColor};
     ///
     /// let mut layout = Layout::new("Test").unwrap();
     /// let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
