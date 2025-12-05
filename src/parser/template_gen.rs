@@ -3,6 +3,11 @@
 //! This module handles generating human-readable Markdown files from Layout structures,
 //! with atomic file writes for safety.
 
+// Allow format! appended to String - more readable for template generation
+#![allow(clippy::format_push_string)]
+// Allow intentional type casts
+#![allow(clippy::cast_possible_truncation)]
+
 use crate::models::Layout;
 use anyhow::{Context, Result};
 use std::path::Path;
@@ -111,6 +116,7 @@ fn generate_layer(layer: &crate::models::Layer) -> Result<String> {
 }
 
 /// Generates a Markdown table for a layer's keys.
+#[allow(clippy::unnecessary_wraps)]
 fn generate_table(layer: &crate::models::Layer) -> Result<String> {
     use std::collections::HashMap;
 

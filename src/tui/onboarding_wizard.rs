@@ -4,6 +4,9 @@
 //! initial configuration: QMK path, keyboard selection, layout variant,
 //! output paths, and layout file settings.
 
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -235,6 +238,7 @@ impl OnboardingWizardState {
     }
 
     /// Advances to the next step
+    #[allow(clippy::too_many_lines)]
     pub fn next_step(&mut self) -> Result<()> {
         self.error_message = None;
 
@@ -780,13 +784,13 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect,
     
     let instructions = match state.current_step {
         WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
-        WizardStep::QmkPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
+        WizardStep::QmkPath 
+        | WizardStep::LayoutName 
+        | WizardStep::OutputPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
         WizardStep::KeyboardSelection => {
             "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back"
         }
         WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
-        WizardStep::LayoutName => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
-        WizardStep::OutputPath => "Enter: Continue  |  Backspace: Delete  |  Esc: Back",
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
     };
 
@@ -803,6 +807,7 @@ fn render_instructions(f: &mut Frame, state: &OnboardingWizardState, area: Rect,
 }
 
 /// Handles keyboard input for the onboarding wizard
+#[allow(clippy::too_many_lines)]
 pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<bool> {
     match state.current_step {
         WizardStep::Welcome => match key.code {

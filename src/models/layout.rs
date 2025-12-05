@@ -1,5 +1,11 @@
 //! Layout and metadata data structures.
 
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+// Allow intentional type casts
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::cast_possible_truncation)]
+
 #[cfg(test)]
 use crate::models::layer::Position;
 use crate::keycode_db::KeycodeDb;
@@ -188,7 +194,7 @@ impl TapHoldPreset {
     #[must_use]
     pub fn settings(&self) -> TapHoldSettings {
         match self {
-            Self::Default => TapHoldSettings::default(),
+            Self::Default | Self::Custom => TapHoldSettings::default(),
             Self::HomeRowMods => TapHoldSettings {
                 tapping_term: 175,
                 quick_tap_term: Some(120),
@@ -219,7 +225,6 @@ impl TapHoldPreset {
                 chordal_hold: false,
                 preset: Self::Deliberate,
             },
-            Self::Custom => TapHoldSettings::default(),
         }
     }
 }

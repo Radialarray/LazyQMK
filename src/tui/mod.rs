@@ -3,6 +3,17 @@
 //! This module contains the main TUI loop, `AppState`, event handling,
 //! and all UI widgets using Ratatui.
 
+// Allow clone assignment patterns - common in UI state management
+#![allow(clippy::assigning_clones)]
+// Input handlers use Result<bool> for consistency even when they never fail
+#![allow(clippy::unnecessary_wraps)]
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+// Allow intentional type casts for terminal coordinates
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_lossless)]
+
 pub mod build_log;
 pub mod category_manager;
 pub mod category_picker;
@@ -1117,7 +1128,7 @@ fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<
                 
                 match arboard::Clipboard::new().and_then(|mut clipboard| clipboard.set_text(log_text)) {
                     Ok(()) => state.set_status("Build log copied to clipboard"),
-                    Err(e) => state.set_error(&format!("Failed to copy to clipboard: {e}")),
+                    Err(e) => state.set_error(format!("Failed to copy to clipboard: {e}")),
                 }
             } else {
                 state.set_error("No build log available");
@@ -1458,6 +1469,7 @@ fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -
 }
 
 /// Handle input for modifier picker (for MT/LM keycodes)
+#[allow(clippy::too_many_lines)]
 fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
@@ -1670,6 +1682,7 @@ fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Resu
 }
 
 /// Handle input for settings manager
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
     use settings_manager::{ManagerMode, SettingItem};
@@ -2447,6 +2460,7 @@ fn calculate_rectangle_selection(start: Position, end: Position, mapping: &Visua
 }
 
 /// Handle input for main UI
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 fn handle_main_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match (key.code, key.modifiers) {
         // Quit
@@ -3271,6 +3285,7 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
 }
 
 /// Handle input for category manager
+#[allow(clippy::too_many_lines)]
 fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     use category_manager::ManagerMode;
 
@@ -3481,6 +3496,7 @@ fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent) -> 
 }
 
 /// Handle input for layer manager
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     use layer_manager::ManagerMode;
 

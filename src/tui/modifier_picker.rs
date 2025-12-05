@@ -2,6 +2,11 @@
 //!
 //! Used for `MT()` and `LM()` keycodes that require modifier selection.
 
+// Navigation uses separate match arms for left/right columns for clarity
+#![allow(clippy::match_same_arms)]
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier as StyleModifier, Style},
@@ -64,14 +69,10 @@ impl QmkModifier {
     /// Get display name
     #[must_use] pub const fn display_name(&self) -> &'static str {
         match self {
-            Self::LCtrl => "Ctrl",
-            Self::LShift => "Shift",
-            Self::LAlt => "Alt",
-            Self::LGui => "GUI",
-            Self::RCtrl => "Ctrl",
-            Self::RShift => "Shift",
-            Self::RAlt => "Alt",
-            Self::RGui => "GUI",
+            Self::LCtrl | Self::RCtrl => "Ctrl",
+            Self::LShift | Self::RShift => "Shift",
+            Self::LAlt | Self::RAlt => "Alt",
+            Self::LGui | Self::RGui => "GUI",
         }
     }
 

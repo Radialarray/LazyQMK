@@ -193,7 +193,7 @@ impl KeyEditorState {
         self.mode = KeyEditorMode::View;
         self.description_buffer = key.description.clone().unwrap_or_default();
         self.cursor_position = self.description_buffer.len();
-        self.original_description = key.description.clone();
+        self.original_description.clone_from(&key.description);
         self.combo_edit = None;
     }
 
@@ -478,6 +478,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 /// Render the key editor dialog
+#[allow(clippy::too_many_lines)]
 pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     let area = centered_rect(60, 50, f.size());
     let theme = &state.theme;
@@ -672,6 +673,7 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
 }
 
 /// Handle input for the key editor
+#[allow(clippy::too_many_lines)]
 pub fn handle_input(
     state: &mut AppState,
     key: crossterm::event::KeyEvent,

@@ -52,6 +52,90 @@ cargo = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+# Multiple crate versions - caused by transitive dependencies, cannot fix
+multiple_crate_versions = "allow"
+# if_not_else - sometimes if !cond is clearer
+if_not_else = "allow"
+# option_if_let_else - sometimes if let is clearer than map_or_else
+option_if_let_else = "allow"
+# items_after_statements - sometimes defining items near their use is clearer
+items_after_statements = "allow"
+# branches_sharing_code - sometimes duplicating at end is clearer
+branches_sharing_code = "allow"
+# doc_markdown - false positives for technical terms
+doc_markdown = "allow"
+# needless_pass_by_value - sometimes owned types are clearer
+needless_pass_by_value = "allow"
+# similar_names - false positives for color components (r,g,b)
+similar_names = "allow"
+# too_many_arguments - some builders need many params
+too_many_arguments = "allow"
+# match_same_arms - sometimes separate arms are clearer for documentation
+match_same_arms = "allow"
+# missing_const_for_fn - false positives for functions that may change
+missing_const_for_fn = "allow"
+# redundant_else - sometimes else after return is clearer
+redundant_else = "allow"
+# unused_self - may be needed for future implementation
+unused_self = "allow"
+# unnested_or_patterns - sometimes separate patterns are clearer
+unnested_or_patterns = "allow"
+# if_same_then_else - intentional for clarity in some cases
+if_same_then_else = "allow"
+# ptr_arg - PathBuf reference is acceptable in some cases
+ptr_arg = "allow"
+# must_use_candidate - not all Self returns need must_use
+must_use_candidate = "allow"
+# or_fun_call - sometimes lazy evaluation isn't needed
+or_fun_call = "allow"
+# implicit_hasher - HashMap is fine for internal use
+implicit_hasher = "allow"
+# too_many_lines - some functions are inherently large
+too_many_lines = "allow"
+# fn_params_excessive_bools - some functions need multiple bool params
+fn_params_excessive_bools = "allow"
+# single_match_else - sometimes match is clearer than if let
+single_match_else = "allow"
+# return_self_not_must_use - builders don't need must_use
+return_self_not_must_use = "allow"
+# option_map_unwrap_or - sometimes unwrap_or_else is fine
+map_unwrap_or = "allow"
+# useless_let_if_seq - sometimes let before if is clearer
+useless_let_if_seq = "allow"
+# explicit_iter_loop - for x in &vec is fine
+explicit_iter_loop = "allow"
+# struct_field_names - field names matching struct name is fine
+struct_field_names = "allow"
+# wrong_self_convention - to_* with &self is fine for some types
+wrong_self_convention = "allow"
+# cast_possible_wrap - intentional for terminal coordinates
+cast_possible_wrap = "allow"
+# str_to_string - String::from vs to_string is a style choice
+str_to_string = "allow"
+# needless_collect - sometimes collecting is clearer
+needless_collect = "allow"
+# explicit_deref_methods - .as_ref() vs &* is a style choice
+explicit_deref_methods = "allow"
+# use_self - Self vs type name is a style choice
+use_self = "allow"
+# let_else - sometimes if let is clearer
+manual_let_else = "allow"
+# enum_variant_names - common prefix is intentional in some enums
+enum_variant_names = "allow"
+# tuple_array_conversions - array.into() is fine
+tuple_array_conversions = "allow"
+# explicit_counter_loop - enumerate isn't always clearer
+explicit_counter_loop = "allow"
+# needless_borrow - sometimes & is clearer
+needless_borrow = "allow"
+# single_match - sometimes match is clearer than if let
+single_match = "allow"
+# string_replace_chain - consecutive replace is fine
+collapsible_str_replace = "allow"
+# uninlined_format_args - format!("{}", x) vs format!("{x}") is a style choice
+uninlined_format_args = "allow"
+# needless_pass_by_ref_mut - sometimes &mut is needed for API consistency
+needless_pass_by_ref_mut = "allow"
 
 [lints.rust]
 unsafe_code = "forbid"

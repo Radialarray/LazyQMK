@@ -4,6 +4,10 @@
 //! and generating them back for saving. The format uses YAML frontmatter for metadata
 //! and Markdown tables for key assignments.
 
+// Allow intentional type casts for parsing
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+
 use crate::models::{Category, KeyDefinition, Layer, Layout, LayoutMetadata, Position, RgbColor};
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -494,6 +498,7 @@ fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
 }
 
 /// Parses the settings section.
+#[allow(clippy::cognitive_complexity, clippy::unnecessary_wraps)]
 fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     use crate::models::{HoldDecisionMode, InactiveKeyBehavior, TapHoldPreset};
 
@@ -700,6 +705,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 ///
 /// Format: `- layer:row:col: description text`
 /// Example: `- 0:1:3: Primary thumb key - hold for symbols, tap for space`
+#[allow(clippy::unnecessary_wraps)]
 fn parse_key_descriptions(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     let mut line_num = start_line + 1; // Skip "## Key Descriptions" header
 

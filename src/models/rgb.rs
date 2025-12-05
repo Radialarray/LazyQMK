@@ -1,5 +1,12 @@
 //! RGB color handling with hex parsing and serialization.
 
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+// Allow intentional type casts for color math
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_lossless)]
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;

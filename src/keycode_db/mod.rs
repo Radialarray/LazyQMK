@@ -3,6 +3,8 @@
 //! This module provides access to the embedded keycode database,
 //! validation functions, and fuzzy search capabilities.
 
+#![allow(clippy::doc_link_with_quotes)]
+
 use anyhow::{Context, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};

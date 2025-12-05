@@ -138,6 +138,7 @@ impl HelpOverlayState {
     }
 
     /// Get the comprehensive help content organized by feature.
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn get_help_content(theme: &Theme) -> Vec<Line<'static>> {
         let registry = HelpRegistry::default();
         let mut lines = Vec::new();

@@ -404,6 +404,7 @@ fn run_new_layout_wizard(config: &config::Config) -> Result<()> {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
