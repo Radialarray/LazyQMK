@@ -12,6 +12,7 @@
 #![allow(clippy::cast_possible_wrap)]
 
 // Module declarations
+pub mod app;
 pub mod config;
 pub mod constants;
 pub mod firmware;
