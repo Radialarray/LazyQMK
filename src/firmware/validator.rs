@@ -445,60 +445,26 @@ impl<'a> FirmwareValidator<'a> {
 
 /// Checks for deprecated VIAL configuration options in keyboard files.
 ///
-/// Modern QMK (2024+) rejects old VIAL configuration methods:
-/// - `VIAL_ENABLE = yes` in rules.mk (replaced by `-e VIAL_KEYBOARD_UID` in build command)
-/// - `VIAL_KEYBOARD_UID` in config.h (should be in keyboard.json instead)
+/// **DEPRECATED**: This function is no longer used as we have migrated to standard QMK.
+/// Vial-specific options (VIAL_ENABLE, VIAL_KEYBOARD_UID) are no longer checked.
+///
+/// This function is kept for API compatibility and now returns an empty vector.
 ///
 /// # Arguments
 ///
-/// * `qmk_path` - Path to QMK firmware directory
-/// * `keyboard` - Keyboard path (e.g., "`keebart/corne_choc_pro/standard`")
+/// * `qmk_path` - Path to QMK firmware directory (unused)
+/// * `keyboard` - Keyboard path (unused)
 ///
 /// # Returns
 ///
-/// Returns a vector of warning messages for any deprecated options found.
+/// Always returns an empty vector (no warnings).
 #[allow(dead_code)]
 #[must_use] pub fn check_deprecated_options(
-    qmk_path: &std::path::Path,
-    keyboard: &str,
+    _qmk_path: &std::path::Path,
+    _keyboard: &str,
 ) -> Vec<String> {
-    use std::fs;
-
-    let mut warnings = Vec::new();
-    let keyboard_dir = qmk_path.join("keyboards").join(keyboard);
-
-    // Check rules.mk for VIAL_ENABLE
-    let rules_mk = keyboard_dir.join("rules.mk");
-    if rules_mk.exists() {
-        if let Ok(content) = fs::read_to_string(&rules_mk) {
-            if content.contains("VIAL_ENABLE") {
-                warnings.push(format!(
-                    "Deprecated: {} contains 'VIAL_ENABLE'. \
-                    Modern QMK rejects this option. \
-                    Remove it and use: make {}:{{keymap}} -e VIAL_KEYBOARD_UID={{uuid}}",
-                    rules_mk.display(),
-                    keyboard
-                ));
-            }
-        }
-    }
-
-    // Check config.h for VIAL_KEYBOARD_UID
-    let config_h = keyboard_dir.join("config.h");
-    if config_h.exists() {
-        if let Ok(content) = fs::read_to_string(&config_h) {
-            if content.contains("VIAL_KEYBOARD_UID") {
-                warnings.push(format!(
-                    "Deprecated: {} contains 'VIAL_KEYBOARD_UID'. \
-                    Modern QMK rejects this option. \
-                    Move the UID to keyboard.json under 'vial' section.",
-                    config_h.display()
-                ));
-            }
-        }
-    }
-
-    warnings
+    // Migration to standard QMK means we no longer check for Vial-specific options
+    Vec::new()
 }
 
 #[cfg(test)]
@@ -606,7 +572,10 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_deprecated_options_clean() {
+        // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
+        // after migration to standard QMK
         let temp_dir = TempDir::new().unwrap();
         let qmk_path = temp_dir.path().join("qmk");
         let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
@@ -621,7 +590,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_deprecated_options_vial_enable() {
+        // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
         let qmk_path = temp_dir.path().join("qmk");
         let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
@@ -641,7 +612,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_deprecated_options_vial_keyboard_uid() {
+        // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
         let qmk_path = temp_dir.path().join("qmk");
         let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
@@ -661,7 +634,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_deprecated_options_both() {
+        // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
         let qmk_path = temp_dir.path().join("qmk");
         let keyboard_dir = qmk_path.join("keyboards/test_keyboard");
@@ -680,7 +655,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_check_deprecated_options_no_files() {
+        // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
         let qmk_path = temp_dir.path().join("qmk");
         let keyboard_dir = qmk_path.join("keyboards/test_keyboard");

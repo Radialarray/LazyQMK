@@ -261,11 +261,11 @@ impl Config {
          Ok(config)
      }
 
-     /// Attempts to fix a stale QMK firmware path.
-     ///
-     /// If the path doesn't exist, looks for a directory with similar naming
-     /// in the parent directory (e.g., if keyboard_tui/vial-qmk-keebart doesn't exist,
-     /// looks for keyboard-configurator/vial-qmk-keebart).
+      /// Attempts to fix a stale QMK firmware path.
+      ///
+      /// If the path doesn't exist, looks for a directory with similar naming
+      /// in the parent directory (e.g., if keyboard_tui/qmk_firmware doesn't exist,
+      /// looks for keyboard-configurator/qmk_firmware).
      fn try_fix_qmk_path(old_path: &std::path::Path) -> Option<PathBuf> {
          // If the path exists, no fix needed
          if old_path.exists() {
@@ -278,9 +278,9 @@ impl Config {
          // Get the parent of the parent (e.g., /Users/svenlochner/dev)
          let old_parent = old_path.parent()?.parent()?;
          
-         // Look for the directory in siblings of the parent
-         // e.g., if /Users/svenlochner/dev/keyboard_tui/vial-qmk-keebart doesn't exist,
-         // try /Users/svenlochner/dev/keyboard-configurator/vial-qmk-keebart
+          // Look for the directory in siblings of the parent
+          // e.g., if /Users/svenlochner/dev/keyboard_tui/qmk_firmware doesn't exist,
+          // try /Users/svenlochner/dev/keyboard-configurator/qmk_firmware
          if let Ok(siblings) = std::fs::read_dir(old_parent) {
              for entry in siblings.flatten() {
                  if let Ok(metadata) = entry.metadata() {

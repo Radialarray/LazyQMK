@@ -3182,8 +3182,8 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
     );
 
     match generator.generate() {
-        Ok((keymap_path, vial_path, config_path)) => {
-            state.set_status(format!("✓ Generated: {keymap_path}, {vial_path}, {config_path}"));
+        Ok((keymap_path, config_path)) => {
+            state.set_status(format!("✓ Generated: {keymap_path}, {config_path}"));
         }
         Err(e) => {
             state.set_error(format!("Generation failed: {e}"));
@@ -3195,7 +3195,7 @@ fn handle_firmware_generation(state: &mut AppState) -> Result<()> {
 
 /// Handle firmware build in background
 fn handle_firmware_build(state: &mut AppState) -> Result<()> {
-    // Generate firmware files first (keymap.c, vial.json, config.h)
+    // Generate firmware files first (keymap.c, config.h)
     handle_firmware_generation(state)?;
     
     // Check that QMK firmware path is configured

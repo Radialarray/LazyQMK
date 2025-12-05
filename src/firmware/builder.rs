@@ -233,6 +233,8 @@ impl Default for BuildState {
 ///
 /// The keyboard parameter may include variant subdirectories (e.g., "`keebart/corne_choc_pro/standard`").
 /// QMK's build system will use the variant-specific keyboard.json for configuration.
+///
+/// Uses `qmk compile` CLI command which is the standard way to build QMK firmware.
 fn run_build(
     sender: Sender<BuildMessage>,
     qmk_path: PathBuf,
@@ -250,21 +252,23 @@ fn run_build(
     sender
         .send(BuildMessage::Log {
             level: LogLevel::Info,
-            message: format!("Running: make {keyboard}:{keymap}"),
+            message: format!("Running: qmk compile -kb {keyboard} -km {keymap}"),
         })
         .ok();
 
-    // Build make command with full keyboard path (including variant if present)
-    let make_target = format!("{keyboard}:{keymap}");
-
-    let mut cmd = Command::new("make");
-    cmd.arg(&make_target)
+    // Build using qmk compile command (standard QMK CLI)
+    let mut cmd = Command::new("qmk");
+    cmd.arg("compile")
+        .arg("-kb")
+        .arg(&keyboard)
+        .arg("-km")
+        .arg(&keymap)
         .current_dir(&qmk_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
     // Execute command
-    let output = cmd.output().context("Failed to execute make command")?;
+    let output = cmd.output().context("Failed to execute qmk compile command")?;
 
     // Parse output
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -317,7 +321,7 @@ fn run_build(
             .send(BuildMessage::Complete {
                 success: false,
                 firmware_path: None,
-                error: Some("Make command failed. Check build log for details.".to_string()),
+                error: Some("qmk compile command failed. Check build log for details.".to_string()),
             })
             .ok();
     }
