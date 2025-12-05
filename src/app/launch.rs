@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crate::{config, models, parser, services, tui};
+use crate::{config, models, services, tui};
 
 /// Creates a default layout from QMK keyboard info and launches the editor
 pub fn launch_editor_with_default_layout(
@@ -51,7 +51,7 @@ pub fn launch_editor_with_default_layout(
     let layout_path = layouts_dir.join(format!("{}.md", sanitized_name));
 
     // Save the layout immediately so it can be found on restart
-    parser::save_markdown_layout(&layout, &layout_path)?;
+    services::LayoutService::save(&layout, &layout_path)?;
 
     println!("Layout saved to: {}", layout_path.display());
     println!();

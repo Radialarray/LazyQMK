@@ -83,7 +83,7 @@ fn main() -> Result<()> {
         }
 
         // Load the layout
-        let layout = parser::parse_markdown_layout(&path)?;
+        let layout = services::LayoutService::load(&path)?;
 
         // Load or create default config
         let config_result = config::Config::load();

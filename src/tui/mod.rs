@@ -60,6 +60,7 @@ use crate::firmware::BuildState;
 use crate::keycode_db::KeycodeDb;
 use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 use crate::services::geometry::{build_geometry_for_layout, extract_base_keyboard, GeometryContext};
+use crate::services::LayoutService;
 use crate::shortcuts::{Action, ShortcutRegistry};
 
 // Re-export TUI components
@@ -1194,36 +1195,17 @@ fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> R
                     // If name changed and we have a source file, rename it
                     if name_changed {
                         if let Some(ref old_path) = state.source_path {
-                            if old_path.exists() {
-                                // Build new filename from new name (sanitized)
-                                let sanitized_name = new_name.replace(['/', '\\', ':', ' '], "_");
-
-                                if let Some(parent) = old_path.parent() {
-                                    let new_path = parent.join(format!("{sanitized_name}.md"));
-
-                                    // Only rename if the new path is different
-                                    if new_path != *old_path {
-                                        match std::fs::rename(old_path, &new_path) {
-                                            Ok(()) => {
-                                                state.source_path = Some(new_path);
-                                                state.set_status(format!(
-                                                    "Layout renamed to '{new_name}'"
-                                                ));
-                                            }
-                                            Err(e) => {
-                                                state.set_error(format!(
-                                                    "Failed to rename file: {e}"
-                                                ));
-                                            }
-                                        }
-                                    } else {
-                                        state.set_status("Metadata updated");
-                                    }
-                                } else {
+                            match LayoutService::rename_file_if_needed(old_path, &new_name) {
+                                Ok(Some(new_path)) => {
+                                    state.source_path = Some(new_path);
+                                    state.set_status(format!("Layout renamed to '{new_name}'"));
+                                }
+                                Ok(None) => {
                                     state.set_status("Metadata updated");
                                 }
-                            } else {
-                                state.set_status("Metadata updated (file will be renamed on save)");
+                                Err(e) => {
+                                    state.set_error(format!("Failed to rename file: {e}"));
+                                }
                             }
                         } else {
                             state.set_status("Metadata updated");
@@ -2268,7 +2250,7 @@ fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Re
         KeyCode::Char('s' | 'S') => {
             // Save and quit
             if let Some(path) = &state.source_path.clone() {
-                crate::parser::save_markdown_layout(&state.layout, path)?;
+                LayoutService::save(&state.layout, path)?;
                 state.mark_clean();
                 state.set_status("Saved");
             }
@@ -2437,7 +2419,7 @@ fn handle_template_save_dialog_input(state: &mut AppState, key: event::KeyEvent)
             let template_path = templates_dir.join(format!("{filename}.md"));
 
             // Save template
-            match crate::parser::save_markdown_layout(&template_layout, &template_path) {
+            match LayoutService::save(&template_layout, &template_path) {
                 Ok(()) => {
                     state.active_popup = None;
                     state.set_status(format!("Template saved: {}", template_path.display()));
@@ -2496,7 +2478,7 @@ fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::Save => {
             if let Some(path) = &state.source_path.clone() {
-                crate::parser::save_markdown_layout(&state.layout, path)?;
+                LayoutService::save(&state.layout, path)?;
                 state.mark_clean();
                 state.set_status("Saved");
             } else {

@@ -2,7 +2,7 @@ use anyhow::Result;
 use crossterm::event::{self, Event};
 use std::time::Duration;
 
-use crate::{config, parser, services::geometry, tui};
+use crate::{config, services, tui};
 
 use super::onboarding;
 
@@ -42,7 +42,7 @@ pub fn run_layout_picker_terminal(config: &config::Config) -> Result<()> {
                             println!();
 
                             // Load the selected layout
-                            let layout = parser::parse_markdown_layout(&path)?;
+                            let layout = services::LayoutService::load(&path)?;
 
                             // Get layout variant from layout metadata
                             let layout_variant =
@@ -53,12 +53,12 @@ pub fn run_layout_picker_terminal(config: &config::Config) -> Result<()> {
                                 })?;
 
                             // Build geometry using the centralized geometry service
-                            let geo_context = geometry::GeometryContext {
+                            let geo_context = services::geometry::GeometryContext {
                                 config,
                                 metadata: &layout.metadata,
                             };
 
-                            let geo_result = geometry::build_geometry_for_layout(geo_context, layout_variant)?;
+                            let geo_result = services::geometry::build_geometry_for_layout(geo_context, layout_variant)?;
                             let geometry = geo_result.geometry;
                             let mapping = geo_result.mapping;
 
