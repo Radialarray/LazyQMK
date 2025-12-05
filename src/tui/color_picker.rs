@@ -4,6 +4,15 @@
 //! - Palette mode: Select from curated colors with shades
 //! - Custom RGB mode: Fine-tune with RGB sliders
 
+// Input handlers use Result<bool> for consistency even when they never fail
+#![allow(clippy::unnecessary_wraps)]
+// Allow intentional type casts for color math
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_abs_to_unsigned)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::as_conversions)]
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},

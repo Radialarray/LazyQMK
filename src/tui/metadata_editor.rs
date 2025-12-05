@@ -1,5 +1,9 @@
 //! Metadata editor dialog for editing layout metadata.
 
+#![allow(clippy::assigning_clones)]
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use chrono::Utc;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{

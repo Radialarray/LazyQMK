@@ -3,6 +3,9 @@
 //! This module handles spawning background threads to compile QMK firmware
 //! and reporting progress via message channels.
 
+// Allow small types passed by reference for API consistency
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -152,7 +155,7 @@ impl BuildState {
         match message {
             BuildMessage::Progress { status, message } => {
                 self.status = status.clone();
-                self.last_message = message.clone();
+                self.last_message.clone_from(&message);
                 self.log_lines
                     .push((LogLevel::Info, format!("[{status}] {message}")));
             }
@@ -177,7 +180,7 @@ impl BuildState {
                 }
 
                 if let Some(err) = error {
-                    self.last_message = err.clone();
+                    self.last_message.clone_from(&err);
                     self.log_lines.push((LogLevel::Error, err));
                 }
 

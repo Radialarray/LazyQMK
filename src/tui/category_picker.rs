@@ -1,5 +1,8 @@
 //! Category picker dialog for assigning categories to keys
 
+// Input handlers use Result<bool> for consistency even when they never fail
+#![allow(clippy::unnecessary_wraps)]
+
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -177,7 +180,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
             match state.category_picker_context {
                 Some(super::CategoryPickerContext::IndividualKey) => {
                     if let Some(key) = state.get_selected_key_mut() {
-                        key.category_id = category_id.clone();
+                        key.category_id.clone_from(&category_id);
                         state.mark_dirty();
 
                         if let Some(id) = category_id {
@@ -189,7 +192,7 @@ pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Resul
                 }
                 Some(super::CategoryPickerContext::Layer) => {
                     if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
-                        layer.category_id = category_id.clone();
+                        layer.category_id.clone_from(&category_id);
                         state.mark_dirty();
 
                         if let Some(id) = category_id {

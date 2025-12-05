@@ -3,6 +3,9 @@
 //! This module generates QMK C code and Vial JSON configuration
 //! from keyboard layouts using the LED index order.
 
+// Allow format! appended to String - more readable than write! in code generation
+#![allow(clippy::format_push_string)]
+
 use crate::config::Config;
 use crate::keycode_db::KeycodeDb;
 use crate::models::keyboard_geometry::KeyboardGeometry;
@@ -147,6 +150,7 @@ impl<'a> FirmwareGenerator<'a> {
     ///
     /// This allows the keymap to work both with and without encoders enabled.
     /// When `ENCODER_MAP_ENABLE` is defined in rules.mk, this `encoder_map` will be included.
+    #[allow(clippy::unnecessary_wraps)]
     fn generate_conditional_encoder_map(&self) -> Result<String> {
         let mut code = String::new();
 
@@ -270,7 +274,7 @@ impl<'a> FirmwareGenerator<'a> {
                 })?;
 
             // Store keycode at LED position
-            keys_by_led[led_idx as usize] = key.keycode.clone();
+            keys_by_led[led_idx as usize].clone_from(&key.keycode);
         }
 
         Ok(keys_by_led)
@@ -1047,7 +1051,7 @@ mod tests {
 
     #[test]
     fn test_config_h_emits_tap_hold_settings() {
-        use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
+        use crate::models::{TapHoldPreset, TapHoldSettings};
 
         let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 

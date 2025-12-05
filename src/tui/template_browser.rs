@@ -3,6 +3,11 @@
 //! This module provides UI components for browsing, searching, and loading
 //! reusable layout templates stored in ~/.`config/KeyboardConfigurator/templates`/
 
+// Allow intentional type casts for layout rendering
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+
 use anyhow::{Context, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
@@ -223,6 +228,7 @@ impl Default for TemplateBrowserState {
 }
 
 /// Renders the template browser popup.
+#[allow(clippy::too_many_lines)]
 pub fn render(f: &mut Frame, state: &TemplateBrowserState, area: Rect, theme: &crate::tui::theme::Theme) {
     // Center the popup (60% width, 80% height)
     let popup_width = (f32::from(area.width) * 0.6) as u16;

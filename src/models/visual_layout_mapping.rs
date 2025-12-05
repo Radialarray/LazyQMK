@@ -1,5 +1,11 @@
 //! Bidirectional coordinate transformation system.
 
+// Allow intentional type casts for coordinate transformations
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::doc_link_code)]
+
 use crate::models::keyboard_geometry::KeyboardGeometry;
 use crate::models::layer::Position;
 use std::collections::HashMap;

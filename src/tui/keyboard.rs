@@ -6,6 +6,10 @@
 //! - Color type indicators in border (i=individual, k=category, L=layer, d=default)
 //! - RGB color borders based on the color priority system
 
+// Allow intentional type casts for terminal rendering
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -47,6 +51,7 @@ pub enum TapHoldKind {
 
 impl KeyboardWidget {
     /// Render the keyboard widget
+    #[allow(clippy::too_many_lines)]
     pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         let theme = &state.theme;
         
@@ -210,6 +215,7 @@ impl KeyboardWidget {
     }
 
     /// Render a key with the color indicator embedded in the top border
+    #[allow(clippy::too_many_lines)]
     fn render_key_with_indicator(
         f: &mut Frame,
         area: Rect,

@@ -3,6 +3,9 @@
 //! This module performs pre-generation validation to ensure the layout
 //! can be successfully compiled into QMK firmware.
 
+// Allow format! appended to String - more readable for building messages
+#![allow(clippy::format_push_string)]
+
 use crate::keycode_db::KeycodeDb;
 use crate::models::keyboard_geometry::KeyboardGeometry;
 use crate::models::layout::Layout;
@@ -233,6 +236,7 @@ impl<'a> FirmwareValidator<'a> {
     /// - Matrix coordinates are within keyboard bounds
     /// - All required positions are present
     /// - No duplicate positions per layer
+    #[allow(clippy::unnecessary_wraps)]
     pub fn validate(&self) -> Result<ValidationReport> {
         let mut report = ValidationReport::new();
 

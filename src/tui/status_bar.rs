@@ -22,9 +22,9 @@ impl StatusBar {
             let status = &build_state.status;
             let color = match status {
                 crate::firmware::BuildStatus::Idle => theme.inactive,
-                crate::firmware::BuildStatus::Validating => theme.warning,
-                crate::firmware::BuildStatus::Generating => theme.warning,
-                crate::firmware::BuildStatus::Compiling => theme.warning,
+                crate::firmware::BuildStatus::Validating 
+                | crate::firmware::BuildStatus::Generating 
+                | crate::firmware::BuildStatus::Compiling => theme.warning,
                 crate::firmware::BuildStatus::Success => theme.success,
                 crate::firmware::BuildStatus::Failed => theme.error,
             };
@@ -224,7 +224,9 @@ impl StatusBar {
             Some(PopupType::ColorPicker) => {
                 "←→↑↓: Navigate | Tab: Switch | Enter: Apply | Esc: Cancel"
             }
-            Some(PopupType::CategoryPicker) => "↑↓: Navigate | Enter: Select | Esc: Cancel",
+            Some(PopupType::CategoryPicker) | Some(PopupType::LayoutPicker) => {
+                "↑↓: Navigate | Enter: Select | Esc: Cancel"
+            }
             Some(PopupType::CategoryManager) => {
                 "n: New | r: Rename | c: Color | d: Delete | Enter: Select | Esc: Close"
             }
@@ -237,16 +239,12 @@ impl StatusBar {
             Some(PopupType::TemplateBrowser) => {
                 "↑↓: Navigate | Enter: Load | /: Search | Esc: Cancel"
             }
-            Some(PopupType::TemplateSaveDialog) => {
+            Some(PopupType::TemplateSaveDialog) | Some(PopupType::MetadataEditor) => {
                 "Tab: Next field | Enter: Save | Esc: Cancel | Type: Edit"
             }
             Some(PopupType::HelpOverlay) => "↑↓: Scroll | Home/End: Jump | ?: Close",
             Some(PopupType::BuildLog) => "↑↓: Scroll | Home/End: Jump | Esc: Close",
-            Some(PopupType::MetadataEditor) => {
-                "Tab: Next field | Enter: Save | Esc: Cancel | Type: Edit"
-            }
             Some(PopupType::UnsavedChangesPrompt) => "y: Save and quit | n: Discard | Esc: Cancel",
-            Some(PopupType::LayoutPicker) => "↑↓: Navigate | Enter: Select | Esc: Cancel",
             Some(PopupType::SetupWizard) => {
                 "Enter: Next | Esc: Back/Cancel | ↑↓: Navigate | Type: Input"
             }

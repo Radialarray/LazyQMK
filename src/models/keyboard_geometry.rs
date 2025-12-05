@@ -1,5 +1,9 @@
 //! Keyboard geometry definitions from QMK info.json.
 
+// Allow intentional type casts for terminal coordinate calculations
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+
 use serde::{Deserialize, Serialize};
 
 /// Individual key's physical properties from QMK layout definition.

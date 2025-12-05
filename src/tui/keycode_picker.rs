@@ -1,5 +1,8 @@
 //! Keycode picker dialog for selecting keycodes
 
+// Input handlers use Result<bool> for consistency even when they never fail
+#![allow(clippy::unnecessary_wraps)]
+
 use anyhow::Result;
 use crossterm::event::{self, KeyCode, KeyModifiers};
 use ratatui::{
@@ -69,6 +72,7 @@ impl KeycodePickerState {
 }
 
 /// Render the keycode picker popup with sidebar layout
+#[allow(clippy::too_many_lines)]
 pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let theme = &state.theme;
     let area = centered_rect(80, 85, f.size());
@@ -383,6 +387,7 @@ fn handle_sidebar_input(
 }
 
 /// Handle input when keycodes list has focus
+#[allow(clippy::too_many_lines)]
 fn handle_keycodes_input(
     state: &mut AppState,
     key: event::KeyEvent,
@@ -433,7 +438,7 @@ fn handle_keycodes_input(
                     let new_keycode = new_combo.to_keycode();
                     
                     if let Some(selected_key) = state.get_selected_key_mut() {
-                        selected_key.keycode = new_keycode.clone();
+                        selected_key.keycode.clone_from(&new_keycode);
                         state.mark_dirty();
                         state.set_status(format!("Updated: {new_keycode}"));
                     }
@@ -454,7 +459,7 @@ fn handle_keycodes_input(
 
                 // Regular keycode - assign directly
                 if let Some(selected_key) = state.get_selected_key_mut() {
-                    selected_key.keycode = keycode.clone();
+                    selected_key.keycode.clone_from(&keycode);
                     state.mark_dirty();
                     state.set_status(format!("Keycode assigned: {keycode}"));
                 }
@@ -536,6 +541,7 @@ fn handle_keycodes_input(
 
 /// Handle navigation-only input for keycode picker (used by `TapKeycodePicker`)
 /// This handles all input except Enter (which is handled by caller)
+#[allow(clippy::too_many_lines)]
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
     

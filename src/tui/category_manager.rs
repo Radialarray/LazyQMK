@@ -124,8 +124,8 @@ impl CategoryManagerState {
     #[must_use]
     pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
-            ManagerMode::CreatingName { input } => Some(input),
-            ManagerMode::Renaming { input, .. } => Some(input),
+            ManagerMode::CreatingName { input } 
+            | ManagerMode::Renaming { input, .. } => Some(input),
             _ => None,
         }
     }
@@ -133,8 +133,8 @@ impl CategoryManagerState {
     /// Get mutable reference to current input text
     pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
-            ManagerMode::CreatingName { input } => Some(input),
-            ManagerMode::Renaming { input, .. } => Some(input),
+            ManagerMode::CreatingName { input } 
+            | ManagerMode::Renaming { input, .. } => Some(input),
             _ => None,
         }
     }

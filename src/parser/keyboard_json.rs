@@ -3,6 +3,10 @@
 //! This module handles parsing QMK's info.json files to extract keyboard metadata,
 //! layout definitions, and physical key positions for building coordinate mappings.
 
+// Allow intentional type casts for QMK coordinate parsing
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::doc_link_with_quotes)]
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
