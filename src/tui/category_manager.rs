@@ -3,6 +3,7 @@
 //! Provides a UI for creating, renaming, recoloring, and deleting categories.
 //! Accessible via Shift+K shortcut (mnemonic: K = Kategorties/Categories).
 
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Rect},
     style::{Color, Modifier, Style},
@@ -11,7 +12,29 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::Category;
+use crate::models::{Category, RgbColor};
+use crate::tui::component::Component;
+use crate::tui::Theme;
+
+/// Events emitted by the CategoryManager component
+#[derive(Debug, Clone)]
+pub enum CategoryManagerEvent {
+    /// User deleted a category
+    CategoryDeleted(String),
+    /// User updated a category
+    CategoryUpdated {
+        /// Category ID
+        id: String,
+        /// New name (if changed)
+        name: Option<String>,
+        /// New color (if changed)
+        color: Option<RgbColor>,
+    },
+    /// User cancelled without making changes
+    Cancelled,
+    /// Component closed naturally
+    Closed,
+}
 
 /// Manager mode - determines what operation is being performed
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,6 +145,7 @@ impl CategoryManagerState {
 
     /// Get the current input text (for name entry or renaming)
     #[must_use]
+    #[allow(dead_code)]
     pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
             ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
@@ -132,6 +156,7 @@ impl CategoryManagerState {
     }
 
     /// Get mutable reference to current input text
+    #[allow(dead_code)]
     pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
             ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
@@ -148,7 +173,226 @@ impl Default for CategoryManagerState {
     }
 }
 
-use super::Theme;
+/// CategoryManager component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct CategoryManager {
+    /// Internal state of the category manager
+    state: CategoryManagerState,
+    /// Categories to display and modify (reference - not owned)
+    /// The component requires external categories data to function
+    cached_categories: Vec<Category>,
+}
+
+impl CategoryManager {
+    /// Create a new CategoryManager with initial categories
+    #[must_use]
+    pub fn new(categories: Vec<Category>) -> Self {
+        Self {
+            state: CategoryManagerState::new(),
+            cached_categories: categories,
+        }
+    }
+
+    /// Update the categories list (needed for rendering)
+    pub fn set_categories(&mut self, categories: Vec<Category>) {
+        self.cached_categories = categories;
+        // Clamp selection to valid range
+        if self.state.selected >= self.cached_categories.len() && !self.cached_categories.is_empty() {
+            self.state.selected = self.cached_categories.len() - 1;
+        }
+    }
+
+    /// Get the internal state (for backward compatibility)
+    #[must_use]
+    pub const fn state(&self) -> &CategoryManagerState {
+        &self.state
+    }
+
+    /// Get mutable reference to the internal state (for backward compatibility)
+    pub fn state_mut(&mut self) -> &mut CategoryManagerState {
+        &mut self.state
+    }
+}
+
+impl Component for CategoryManager {
+    type Event = CategoryManagerEvent;
+
+    #[allow(unused_variables)]
+    fn handle_input(&mut self, key: KeyEvent) -> Option<Self::Event> {
+        match &self.state.mode {
+            ManagerMode::Browsing => self.handle_browsing_input(key),
+            ManagerMode::CreatingName { input } => self.handle_creating_name_input(key, input.clone()),
+            ManagerMode::CreatingColor { name } => {
+                // Color selection is handled by parent - just cancel here
+                if key.code == KeyCode::Esc {
+                    self.state.cancel();
+                    Some(CategoryManagerEvent::Cancelled)
+                } else {
+                    None
+                }
+            }
+            ManagerMode::Renaming { category_id, input } => {
+                self.handle_renaming_input(key, category_id.clone(), input.clone())
+            }
+            ManagerMode::ConfirmingDelete { category_id } => {
+                self.handle_delete_confirmation_input(key, category_id.clone())
+            }
+        }
+    }
+
+    fn render(&self, f: &mut Frame, area: Rect, theme: &Theme) {
+        render_category_manager(f, area, &self.state, &self.cached_categories, theme);
+    }
+}
+
+impl CategoryManager {
+    /// Handle input in browsing mode
+    fn handle_browsing_input(&mut self, key: KeyEvent) -> Option<CategoryManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.reset();
+                Some(CategoryManagerEvent::Closed)
+            }
+            KeyCode::Char('n') => {
+                self.state.start_creating();
+                None
+            }
+            KeyCode::Char('r') => {
+                if let Some(category) = self.cached_categories.get(self.state.selected) {
+                    self.state.start_renaming(category);
+                }
+                None
+            }
+            KeyCode::Char('c') => {
+                if let Some(category) = self.cached_categories.get(self.state.selected) {
+                    self.state.mode = ManagerMode::CreatingColor {
+                        name: category.name.clone(),
+                    };
+                }
+                None
+            }
+            KeyCode::Char('d') => {
+                if let Some(category) = self.cached_categories.get(self.state.selected) {
+                    self.state.start_deleting(category);
+                }
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.select_previous(self.cached_categories.len());
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.select_next(self.cached_categories.len());
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input in creating name mode
+    fn handle_creating_name_input(
+        &mut self,
+        key: KeyEvent,
+        mut input: String,
+    ) -> Option<CategoryManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                Some(CategoryManagerEvent::Cancelled)
+            }
+            KeyCode::Enter => {
+                if !input.trim().is_empty() {
+                    // Transition to color selection mode
+                    self.state.mode = ManagerMode::CreatingColor {
+                        name: input.clone(),
+                    };
+                    None
+                } else {
+                    None
+                }
+            }
+            KeyCode::Char(c) => {
+                input.push(c);
+                if let ManagerMode::CreatingName { input: ref mut i } = self.state.mode {
+                    *i = input;
+                }
+                None
+            }
+            KeyCode::Backspace => {
+                input.pop();
+                if let ManagerMode::CreatingName { input: ref mut i } = self.state.mode {
+                    *i = input;
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input in renaming mode
+    fn handle_renaming_input(
+        &mut self,
+        key: KeyEvent,
+        category_id: String,
+        mut input: String,
+    ) -> Option<CategoryManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                Some(CategoryManagerEvent::Cancelled)
+            }
+            KeyCode::Enter => {
+                if !input.trim().is_empty() {
+                    let event = Some(CategoryManagerEvent::CategoryUpdated {
+                        id: category_id,
+                        name: Some(input.clone()),
+                        color: None,
+                    });
+                    self.state.cancel();
+                    event
+                } else {
+                    None
+                }
+            }
+            KeyCode::Char(c) => {
+                input.push(c);
+                if let ManagerMode::Renaming { input: ref mut i, .. } = self.state.mode {
+                    *i = input;
+                }
+                None
+            }
+            KeyCode::Backspace => {
+                input.pop();
+                if let ManagerMode::Renaming { input: ref mut i, .. } = self.state.mode {
+                    *i = input;
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input in delete confirmation mode
+    fn handle_delete_confirmation_input(
+        &mut self,
+        key: KeyEvent,
+        category_id: String,
+    ) -> Option<CategoryManagerEvent> {
+        match key.code {
+            KeyCode::Char('y') => {
+                let event = Some(CategoryManagerEvent::CategoryDeleted(category_id));
+                self.state.cancel();
+                event
+            }
+            KeyCode::Char('n') | KeyCode::Esc => {
+                self.state.cancel();
+                Some(CategoryManagerEvent::Cancelled)
+            }
+            _ => None,
+        }
+    }
+}
+
 
 /// Render the category manager dialog
 pub fn render_category_manager(

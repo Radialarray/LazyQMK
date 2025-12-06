@@ -12,6 +12,18 @@ use ratatui::{
     Frame,
 };
 
+use crate::tui::component::ContextualComponent;
+use crate::tui::Theme;
+
+/// Events emitted by the CategoryPicker component
+#[derive(Debug, Clone)]
+pub enum CategoryPickerEvent {
+    /// User selected a category
+    CategorySelected(Option<String>),
+    /// User cancelled without making changes
+    Cancelled,
+}
+
 /// State for the category picker dialog
 #[derive(Debug, Clone)]
 pub struct CategoryPickerState {
@@ -45,16 +57,39 @@ impl CategoryPickerState {
         self.list_state.select(Some(self.selected));
     }
 
-    /// Move selection down
-    pub fn next(&mut self, category_count: usize) {
-        // Total items = categories + 1 for "None" option
-        if self.selected < category_count {
-            self.selected += 1;
-        } else {
-            // Wrap to first item
-            self.selected = 0;
+     /// Move selection down
+     pub fn next(&mut self, category_count: usize) {
+         // Total items = categories + 1 for "None" option
+         if self.selected < category_count {
+             self.selected += 1;
+         } else {
+             // Wrap to first item
+             self.selected = 0;
+         }
+         self.list_state.select(Some(self.selected));
+     }
+ }
+
+impl Default for CategoryPickerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// CategoryPicker component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct CategoryPicker {
+    /// Internal state of the category picker
+    state: CategoryPickerState,
+}
+
+impl CategoryPicker {
+    /// Create a new CategoryPicker
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: CategoryPickerState::new(),
         }
-        self.list_state.select(Some(self.selected));
     }
 
     /// Get the selected category ID (None if "None" is selected)
@@ -63,8 +98,8 @@ impl CategoryPickerState {
         &self,
         categories: &[crate::models::Category],
     ) -> Option<String> {
-        if self.selected < categories.len() {
-            Some(categories[self.selected].id.clone())
+        if self.state.selected < categories.len() {
+            Some(categories[self.state.selected].id.clone())
         } else {
             // Last item is "None" option
             None
@@ -72,15 +107,46 @@ impl CategoryPickerState {
     }
 }
 
-impl Default for CategoryPickerState {
+impl Default for CategoryPicker {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Render the category picker dialog
-pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
-    let theme = &state.theme;
+impl ContextualComponent for CategoryPicker {
+    type Context = Vec<crate::models::Category>;
+    type Event = CategoryPickerEvent;
+
+    fn handle_input(&mut self, key: KeyEvent, categories: &Self::Context) -> Option<Self::Event> {
+        match key.code {
+            KeyCode::Esc => Some(CategoryPickerEvent::Cancelled),
+            KeyCode::Enter => Some(CategoryPickerEvent::CategorySelected(
+                self.get_selected_category_id(categories),
+            )),
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.previous(categories.len());
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.next(categories.len());
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme, categories: &Self::Context) {
+        render_category_picker_component(f, self, categories, theme);
+    }
+}
+
+/// Render the category picker component (using ContextualComponent pattern)
+pub fn render_category_picker_component(
+    f: &mut Frame,
+    picker: &CategoryPicker,
+    categories: &[crate::models::Category],
+    theme: &Theme,
+) {
     let area = centered_rect(60, 60, f.size());
 
     // Clear the background area first
@@ -91,9 +157,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
     f.render_widget(background, area);
 
     // Build list items with color previews
-    let mut items: Vec<ListItem> = state
-        .layout
-        .categories
+    let mut items: Vec<ListItem> = categories
         .iter()
         .map(|cat| {
             let color = Color::Rgb(cat.color.r, cat.color.g, cat.color.b);
@@ -136,7 +200,7 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
         .highlight_symbol("► ");
 
     // Clone the list_state for rendering
-    let mut list_state = state.category_picker_state.list_state.clone();
+    let mut list_state = picker.state.list_state.clone();
 
     // Render the list with state
     f.render_stateful_widget(list, area, &mut list_state);
@@ -158,72 +222,6 @@ pub fn render_category_picker(f: &mut Frame, state: &super::AppState) {
         Span::raw(" Cancel"),
     ]));
     f.render_widget(instructions, instructions_area);
-}
-
-/// Handle input for category picker
-pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            // Cancel
-            state.active_popup = None;
-            state.category_picker_context = None;
-            state.set_status("Cancelled");
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            // Apply category based on context
-            let category_id = state
-                .category_picker_state
-                .get_selected_category_id(&state.layout.categories);
-
-            match state.category_picker_context {
-                Some(super::CategoryPickerContext::IndividualKey) => {
-                    if let Some(key) = state.get_selected_key_mut() {
-                        key.category_id.clone_from(&category_id);
-                        state.mark_dirty();
-
-                        if let Some(id) = category_id {
-                            state.set_status(format!("Assigned key category '{id}'"));
-                        } else {
-                            state.set_status("Removed key category");
-                        }
-                    }
-                }
-                Some(super::CategoryPickerContext::Layer) => {
-                    if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
-                        layer.category_id.clone_from(&category_id);
-                        state.mark_dirty();
-
-                        if let Some(id) = category_id {
-                            state.set_status(format!("Assigned layer category '{id}'"));
-                        } else {
-                            state.set_status("Removed layer category");
-                        }
-                    }
-                }
-                None => {
-                    state.set_error("No category context set");
-                }
-            }
-
-            state.active_popup = None;
-            state.category_picker_context = None;
-            Ok(false)
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            state
-                .category_picker_state
-                .previous(state.layout.categories.len());
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            state
-                .category_picker_state
-                .next(state.layout.categories.len());
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
 }
 
 /// Helper to create a centered rectangle

@@ -10,6 +10,13 @@ use ratatui::{
 
 use crate::firmware::BuildState;
 
+/// Events emitted by the BuildLog component
+#[derive(Debug, Clone)]
+pub enum BuildLogEvent {
+    /// User closed the build log
+    Closed,
+}
+
 /// Build log viewer state with scrolling support.
 #[derive(Debug, Clone)]
 pub struct BuildLogState {
@@ -72,13 +79,92 @@ impl Default for BuildLogState {
 
 use super::Theme;
 
-/// Renders the build log viewer overlay.
-pub fn render_build_log(
+/// BuildLog component that implements the ContextualComponent trait
+#[derive(Debug, Clone)]
+pub struct BuildLog {
+    /// Internal state of the build log
+    state: BuildLogState,
+}
+
+impl BuildLog {
+    /// Create a new BuildLog
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            state: BuildLogState::new(),
+        }
+    }
+
+    /// Get reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub const fn state(&self) -> &BuildLogState {
+        &self.state
+    }
+
+    /// Get mutable reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn state_mut(&mut self) -> &mut BuildLogState {
+        &mut self.state
+    }
+}
+
+impl Default for BuildLog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl crate::tui::component::ContextualComponent for BuildLog {
+    type Context = BuildState;
+    type Event = BuildLogEvent;
+
+    fn handle_input(
+        &mut self,
+        key: crossterm::event::KeyEvent,
+        context: &Self::Context,
+    ) -> Option<Self::Event> {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('B') => Some(BuildLogEvent::Closed),
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.scroll_up();
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let max_lines = context.log_lines.len();
+                self.state.scroll_down(max_lines, 20); // Approximate visible lines
+                None
+            }
+            KeyCode::Home | KeyCode::Char('g') => {
+                self.state.scroll_to_top();
+                None
+            }
+            KeyCode::End | KeyCode::Char('G') => {
+                let max_lines = context.log_lines.len();
+                self.state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme, context: &Self::Context) {
+        render_build_log_component(f, self, theme, context);
+    }
+}
+
+/// Renders the build log viewer overlay (for Component)
+fn render_build_log_component(
     f: &mut Frame,
-    build_state: &BuildState,
-    log_state: &BuildLogState,
+    log: &BuildLog,
     theme: &Theme,
+    build_state: &BuildState,
 ) {
+    let log_state = &log.state;
+
     // Calculate centered area (80% width, 60% height)
     let area = centered_rect(80, 60, f.size());
 

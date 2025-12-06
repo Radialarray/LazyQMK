@@ -555,7 +555,7 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::
         WizardStep::Welcome => render_welcome(f, vertical_chunks[1], theme),
         WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1], theme),
         WizardStep::KeyboardSelection => {
-            render_keyboard_selection(f, state, vertical_chunks[1], theme)
+            render_keyboard_selection(f, state, vertical_chunks[1], theme);
         }
         WizardStep::LayoutSelection => render_layout_selection(f, state, vertical_chunks[1], theme),
         WizardStep::LayoutName => render_layout_name_input(f, state, vertical_chunks[1], theme),

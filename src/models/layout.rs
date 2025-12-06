@@ -1239,19 +1239,23 @@ mod tests {
         assert_eq!(settings.preset, TapHoldPreset::Custom);
     }
 
-    #[test]
-    fn test_tap_hold_settings_has_custom_settings() {
-        let default_settings = TapHoldSettings::default();
-        assert!(!default_settings.has_custom_settings());
+     #[test]
+     fn test_tap_hold_settings_has_custom_settings() {
+         let default_settings = TapHoldSettings::default();
+         assert!(!default_settings.has_custom_settings());
 
-        let mut custom = TapHoldSettings::default();
-        custom.tapping_term = 180;
-        assert!(custom.has_custom_settings());
+         let custom = TapHoldSettings {
+             tapping_term: 180,
+             ..TapHoldSettings::default()
+         };
+         assert!(custom.has_custom_settings());
 
-        let mut with_retro = TapHoldSettings::default();
-        with_retro.retro_tapping = true;
-        assert!(with_retro.has_custom_settings());
-    }
+         let with_retro = TapHoldSettings {
+             retro_tapping: true,
+             ..TapHoldSettings::default()
+         };
+         assert!(with_retro.has_custom_settings());
+     }
 
     #[test]
     fn test_tap_hold_settings_validation() {

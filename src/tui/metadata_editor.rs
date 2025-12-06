@@ -4,7 +4,6 @@
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
-use chrono::Utc;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -14,7 +13,32 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{Layout as LayoutModel, LayoutMetadata};
+use crate::models::LayoutMetadata;
+use super::component::Component;
+use super::Theme;
+
+/// Events emitted by the MetadataEditor component
+#[derive(Debug, Clone)]
+pub enum MetadataEditorEvent {
+    /// User saved metadata changes
+    MetadataUpdated {
+        /// Updated layout name
+        name: String,
+        /// Updated description
+        description: String,
+        /// Updated author
+        author: String,
+        /// Updated tags
+        tags: Vec<String>,
+        /// Whether the name was changed (for renaming)
+        name_changed: bool,
+    },
+    /// User cancelled without saving
+    Cancelled,
+    /// Editor closed
+    #[allow(dead_code)]
+    Closed,
+}
 
 /// Field in the metadata editor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,21 +188,6 @@ impl MetadataEditorState {
         Ok(())
     }
 
-    /// Apply the changes to the layout metadata.
-    pub fn apply_to_layout(&self, layout: &mut LayoutModel) -> Result<(), String> {
-        // Validate first
-        self.validate()?;
-
-        // Update metadata
-        layout.metadata.name = self.name.clone();
-        layout.metadata.description = self.description.clone();
-        layout.metadata.author = self.author.clone();
-        layout.metadata.tags = self.parse_tags();
-        layout.metadata.modified = Utc::now();
-
-        Ok(())
-    }
-
     /// Check if the name was changed from the original.
     #[must_use]
     pub fn name_changed(&self) -> bool {
@@ -199,7 +208,65 @@ impl Default for MetadataEditorState {
     }
 }
 
-use super::Theme;
+/// MetadataEditor component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct MetadataEditor {
+    /// Internal state of the metadata editor
+    state: MetadataEditorState,
+}
+
+impl MetadataEditor {
+    /// Create a new MetadataEditor from layout metadata
+    #[must_use]
+    pub fn new(metadata: &LayoutMetadata) -> Self {
+        Self {
+            state: MetadataEditorState::new(metadata),
+        }
+    }
+
+    /// Get a reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub const fn state(&self) -> &MetadataEditorState {
+        &self.state
+    }
+
+    /// Get a mutable reference to the internal state
+    #[allow(dead_code)]
+    pub fn state_mut(&mut self) -> &mut MetadataEditorState {
+        &mut self.state
+    }
+}
+
+impl Component for MetadataEditor {
+    type Event = MetadataEditorEvent;
+
+    fn handle_input(&mut self, key: KeyEvent) -> Option<Self::Event> {
+        match handle_metadata_editor_input(&mut self.state, key) {
+            MetadataEditorAction::Confirm => {
+                // Validate before emitting event
+                if self.state.validate().is_ok() {
+                    Some(MetadataEditorEvent::MetadataUpdated {
+                        name: self.state.name.clone(),
+                        description: self.state.description.clone(),
+                        author: self.state.author.clone(),
+                        tags: self.state.parse_tags(),
+                        name_changed: self.state.name_changed(),
+                    })
+                } else {
+                    // Validation failed - don't emit event, stay in editor
+                    None
+                }
+            }
+            MetadataEditorAction::Cancel => Some(MetadataEditorEvent::Cancelled),
+            MetadataEditorAction::Continue => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme) {
+        render_metadata_editor(f, &self.state, theme);
+    }
+}
 
 /// Render the metadata editor dialog.
 pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState, theme: &Theme) {

@@ -178,29 +178,31 @@ impl KeyboardGeometry {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_key_geometry_new() {
-        let key = KeyGeometry::new((0, 0), 0, 0.0, 0.0);
-        assert_eq!(key.matrix_position, (0, 0));
-        assert_eq!(key.led_index, 0);
-        assert_eq!(key.visual_x, 0.0);
-        assert_eq!(key.visual_y, 0.0);
-        assert_eq!(key.width, 1.0);
-        assert_eq!(key.height, 1.0);
-        assert_eq!(key.rotation, 0.0);
-    }
+     #[test]
+     #[allow(clippy::float_cmp)]
+     fn test_key_geometry_new() {
+         let key = KeyGeometry::new((0, 0), 0, 0.0, 0.0);
+         assert_eq!(key.matrix_position, (0, 0));
+         assert_eq!(key.led_index, 0);
+         assert_eq!(key.visual_x, 0.0);
+         assert_eq!(key.visual_y, 0.0);
+         assert_eq!(key.width, 1.0);
+         assert_eq!(key.height, 1.0);
+         assert_eq!(key.rotation, 0.0);
+     }
 
-    #[test]
-    fn test_key_geometry_builder() {
-        let key = KeyGeometry::new((0, 0), 0, 0.0, 0.0)
-            .with_width(1.5)
-            .with_height(2.0)
-            .with_rotation(15.0);
+     #[test]
+     #[allow(clippy::float_cmp)]
+     fn test_key_geometry_builder() {
+         let key = KeyGeometry::new((0, 0), 0, 0.0, 0.0)
+             .with_width(1.5)
+             .with_height(2.0)
+             .with_rotation(15.0);
 
-        assert_eq!(key.width, 1.5);
-        assert_eq!(key.height, 2.0);
-        assert_eq!(key.rotation, 15.0);
-    }
+         assert_eq!(key.width, 1.5);
+         assert_eq!(key.height, 2.0);
+         assert_eq!(key.rotation, 15.0);
+     }
 
     #[test]
     fn test_key_geometry_terminal_conversion() {

@@ -1,4 +1,8 @@
 //! Keycode picker dialog for selecting keycodes
+//!
+//! This module implements both:
+//! - Legacy rendering function: `render_keycode_picker()` for backward compatibility
+//! - Component trait: `KeycodePicker` for self-contained UI components
 
 // Input handlers use Result<bool> for consistency even when they never fail
 #![allow(clippy::unnecessary_wraps)]
@@ -13,9 +17,18 @@ use ratatui::{
     Frame,
 };
 
-use super::key_editor::ComboEditPart;
-use super::{AppState, LayerPickerState, ParameterizedKeycodeType, PendingKeycodeState, PopupType};
-use crate::keycode_db::{KeycodeDb, ParamType};
+use super::component::ContextualComponent;
+use super::{AppState};
+use crate::keycode_db::KeycodeDb;
+
+/// Events emitted by the KeycodePicker component
+#[derive(Debug, Clone)]
+pub enum KeycodePickerEvent {
+    /// User selected a keycode
+    KeycodeSelected(String),
+    /// User cancelled without making changes
+    Cancelled,
+}
 
 /// Which pane has focus in the keycode picker
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -71,7 +84,437 @@ impl KeycodePickerState {
     }
 }
 
-/// Render the keycode picker popup with sidebar layout
+/// KeycodePicker component that implements the ContextualComponent trait
+#[derive(Debug, Clone)]
+pub struct KeycodePicker {
+    /// Internal state of the keycode picker
+    state: KeycodePickerState,
+}
+
+impl KeycodePicker {
+    /// Create a new KeycodePicker with default state
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: KeycodePickerState::new(),
+        }
+    }
+
+    /// Get the current state (for rendering with parent context)
+    #[must_use]
+    pub const fn state(&self) -> &KeycodePickerState {
+        &self.state
+    }
+}
+
+impl Default for KeycodePicker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ContextualComponent for KeycodePicker {
+    type Context = KeycodeDb;
+    type Event = KeycodePickerEvent;
+
+    fn handle_input(&mut self, key: event::KeyEvent, context: &Self::Context) -> Option<Self::Event> {
+        let total_categories = context.categories().len() + 1; // +1 for "All"
+
+        match self.state.focus {
+            PickerFocus::Sidebar => self.handle_sidebar_input(key, total_categories),
+            PickerFocus::Keycodes => self.handle_keycodes_input(key, context),
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &super::Theme, context: &Self::Context) {
+        render_keycode_picker_component(f, self, context, theme);
+    }
+}
+
+impl KeycodePicker {
+    /// Handle input when sidebar has focus
+    fn handle_sidebar_input(&mut self, key: event::KeyEvent, total_categories: usize) -> Option<KeycodePickerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.reset();
+                Some(KeycodePickerEvent::Cancelled)
+            }
+            KeyCode::Up => {
+                if self.state.category_index > 0 {
+                    self.state.category_index -= 1;
+                    self.state.selected = 0; // Reset keycode selection
+                }
+                None
+            }
+            KeyCode::Down => {
+                if self.state.category_index < total_categories - 1 {
+                    self.state.category_index += 1;
+                    self.state.selected = 0; // Reset keycode selection
+                }
+                None
+            }
+            KeyCode::Home => {
+                self.state.category_index = 0;
+                self.state.selected = 0;
+                None
+            }
+            KeyCode::End => {
+                self.state.category_index = total_categories - 1;
+                self.state.selected = 0;
+                None
+            }
+            // Switch to keycodes pane
+            KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
+                self.state.focus = PickerFocus::Keycodes;
+                None
+            }
+            // Number keys for quick category jump
+            KeyCode::Char(c) if c.is_ascii_digit() => {
+                let idx = c.to_digit(10).unwrap() as usize;
+                if idx < total_categories {
+                    self.state.category_index = idx;
+                    self.state.selected = 0;
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input when keycodes list has focus
+    fn handle_keycodes_input(&mut self, key: event::KeyEvent, context: &KeycodeDb) -> Option<KeycodePickerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.reset();
+                Some(KeycodePickerEvent::Cancelled)
+            }
+            // Switch back to sidebar (arrow keys always work)
+            KeyCode::Left => {
+                self.state.focus = PickerFocus::Sidebar;
+                None
+            }
+            KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                self.state.focus = PickerFocus::Sidebar;
+                None
+            }
+            KeyCode::Tab => {
+                // Tab without shift cycles back to sidebar
+                self.state.focus = PickerFocus::Sidebar;
+                None
+            }
+            KeyCode::Enter => {
+                let keycodes = get_filtered_keycodes_from_context(&self.state, context);
+                let selected_keycode_opt = keycodes
+                    .get(self.state.selected)
+                    .map(|kc| kc.code.clone());
+
+                if let Some(keycode) = selected_keycode_opt {
+                    self.state.reset();
+                    Some(KeycodePickerEvent::KeycodeSelected(keycode))
+                } else {
+                    None
+                }
+            }
+            // Arrow keys always navigate
+            KeyCode::Up => {
+                if self.state.selected > 0 {
+                    self.state.selected -= 1;
+                }
+                None
+            }
+            KeyCode::Down => {
+                let keycodes = get_filtered_keycodes_from_context(&self.state, context);
+                if self.state.selected < keycodes.len().saturating_sub(1) {
+                    self.state.selected += 1;
+                }
+                None
+            }
+            KeyCode::Home => {
+                self.state.selected = 0;
+                None
+            }
+            KeyCode::End => {
+                let keycodes = get_filtered_keycodes_from_context(&self.state, context);
+                self.state.selected = keycodes.len().saturating_sub(1);
+                None
+            }
+            KeyCode::PageUp => {
+                self.state.selected = self.state.selected.saturating_sub(10);
+                None
+            }
+            KeyCode::PageDown => {
+                let keycodes = get_filtered_keycodes_from_context(&self.state, context);
+                self.state.selected = (self.state.selected + 10).min(keycodes.len().saturating_sub(1));
+                None
+            }
+            KeyCode::Char(c) => {
+                // Add to search (includes j, k, h, l when search is active)
+                self.state.search.push(c);
+                self.state.selected = 0; // Reset selection on new search
+                None
+            }
+            KeyCode::Backspace => {
+                // Remove from search
+                self.state.search.pop();
+                self.state.selected = 0; // Reset selection
+                None
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Get filtered keycodes based on state and context (helper for component)
+fn get_filtered_keycodes_from_context<'a>(
+    picker_state: &KeycodePickerState,
+    context: &'a KeycodeDb,
+) -> Vec<&'a crate::keycode_db::KeycodeDefinition> {
+    let categories = context.categories();
+    let category_index = picker_state.category_index;
+
+    let active_category = if category_index == 0 {
+        None
+    } else {
+        categories.get(category_index - 1).map(|c| c.id.as_str())
+    };
+
+    if let Some(cat_id) = active_category {
+        context.search_in_category(&picker_state.search, cat_id)
+    } else {
+        context.search(&picker_state.search)
+    }
+}
+
+/// Render the keycode picker popup using the Component
+fn render_keycode_picker_component(
+    f: &mut Frame,
+    picker: &KeycodePicker,
+    context: &KeycodeDb,
+    theme: &super::Theme,
+) {
+    let state = picker.state();
+    let area = centered_rect(80, 85, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background with theme color
+    let background = Block::default().style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
+    // Main horizontal split: sidebar (20%) | content (80%)
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(22), // Fixed width sidebar for category names
+            Constraint::Min(40),    // Keycode list takes remaining space
+        ])
+        .split(area);
+
+    let sidebar_area = main_chunks[0];
+    let content_area = main_chunks[1];
+
+    // Get categories from database
+    let categories = context.categories();
+    let category_index = state.category_index;
+    let focus = state.focus;
+
+    // Render sidebar with categories
+    render_sidebar(f, sidebar_area, categories, category_index, focus, theme);
+
+    // Content area: search box + keycode list + help
+    let content_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Search box
+            Constraint::Min(10),   // Keycode list
+            Constraint::Length(2), // Help text
+        ])
+        .split(content_area);
+
+    // Search box
+    let search_border_color = if focus == PickerFocus::Keycodes {
+        theme.primary
+    } else {
+        theme.surface
+    };
+
+    let search_text = vec![Line::from(vec![
+        Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
+        Span::styled(
+            &state.search,
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "_",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::SLOW_BLINK),
+        ),
+    ])];
+    let search = Paragraph::new(search_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(search_border_color))
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(search, content_chunks[0]);
+
+    // Get filtered keycodes based on search and category
+    let active_category = if category_index == 0 {
+        None
+    } else {
+        categories.get(category_index - 1).map(|c| c.id.as_str())
+    };
+
+    let keycodes = if let Some(cat_id) = active_category {
+        context.search_in_category(&state.search, cat_id)
+    } else {
+        context.search(&state.search)
+    };
+
+    // Build list items with better formatting
+    let list_items: Vec<ListItem> = keycodes
+        .iter()
+        .map(|keycode| {
+            let code_style = Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD);
+            let name_style = Style::default().fg(theme.text);
+            let desc_style = Style::default().fg(theme.text_muted);
+
+            let mut spans = vec![
+                Span::styled(format!("{:16}", keycode.code), code_style),
+                Span::styled(&keycode.name, name_style),
+            ];
+
+            if let Some(desc) = &keycode.description {
+                spans.push(Span::styled(format!(" - {desc}"), desc_style));
+            }
+
+            ListItem::new(Line::from(spans))
+        })
+        .collect();
+
+    // Create list widget with stateful selection
+    let category_name = if category_index == 0 {
+        "All".to_string()
+    } else {
+        categories
+            .get(category_index - 1)
+            .map_or_else(|| "Unknown".to_string(), |c| c.name.clone())
+    };
+
+    let list_border_color = if focus == PickerFocus::Keycodes {
+        theme.primary
+    } else {
+        theme.surface
+    };
+
+    let list = List::new(list_items)
+        .block(
+            Block::default()
+                .title(format!(" {} ({}) ", category_name, keycodes.len()))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(list_border_color))
+                .style(Style::default().bg(theme.background)),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(theme.surface)
+                .fg(theme.text)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("► ");
+
+    // Create list state for highlighting
+    let mut list_state = ListState::default();
+    if focus == PickerFocus::Keycodes {
+        list_state.select(Some(
+            state.selected.min(keycodes.len().saturating_sub(1)),
+        ));
+    }
+
+    f.render_stateful_widget(list, content_chunks[1], &mut list_state);
+
+    // Help text
+    let help_spans = if focus == PickerFocus::Sidebar {
+        vec![
+            Span::styled(
+                "↑↓",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Category  "),
+            Span::styled(
+                "Tab/→",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Keycodes  "),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Select  "),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.error)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Cancel"),
+        ]
+    } else {
+        vec![
+            Span::styled(
+                "↑↓",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Navigate  "),
+            Span::styled(
+                "Tab/←",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Categories  "),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.success)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Apply  "),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.error)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Cancel  "),
+            Span::styled(
+                "Type",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Search"),
+        ]
+    };
+    let help = Paragraph::new(Line::from(help_spans))
+        .style(Style::default().fg(theme.text_muted))
+        .block(Block::default().style(Style::default().bg(theme.background)));
+    f.render_widget(help, content_chunks[2]);
+}
+
+/// Render the keycode picker popup with sidebar layout (legacy - for backward compatibility)
 #[allow(clippy::too_many_lines)]
 pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let theme = &state.theme;
@@ -376,207 +819,6 @@ fn render_sidebar(
     f.render_stateful_widget(list, area, &mut list_state);
 }
 
-/// Handle input for keycode picker
-pub fn handle_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    let total_categories = state.keycode_db.categories().len() + 1; // +1 for "All"
-
-    match state.keycode_picker_state.focus {
-        PickerFocus::Sidebar => handle_sidebar_input(state, key, total_categories),
-        PickerFocus::Keycodes => handle_keycodes_input(state, key),
-    }
-}
-
-/// Handle input when sidebar has focus
-fn handle_sidebar_input(
-    state: &mut AppState,
-    key: event::KeyEvent,
-    total_categories: usize,
-) -> Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            state.active_popup = None;
-            state.keycode_picker_state.reset();
-            state.set_status("Cancelled");
-            Ok(false)
-        }
-        KeyCode::Up => {
-            if state.keycode_picker_state.category_index > 0 {
-                state.keycode_picker_state.category_index -= 1;
-                state.keycode_picker_state.selected = 0; // Reset keycode selection
-            }
-            Ok(false)
-        }
-        KeyCode::Down => {
-            if state.keycode_picker_state.category_index < total_categories - 1 {
-                state.keycode_picker_state.category_index += 1;
-                state.keycode_picker_state.selected = 0; // Reset keycode selection
-            }
-            Ok(false)
-        }
-        KeyCode::Home => {
-            state.keycode_picker_state.category_index = 0;
-            state.keycode_picker_state.selected = 0;
-            Ok(false)
-        }
-        KeyCode::End => {
-            state.keycode_picker_state.category_index = total_categories - 1;
-            state.keycode_picker_state.selected = 0;
-            Ok(false)
-        }
-        // Switch to keycodes pane
-        KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
-            state.keycode_picker_state.focus = PickerFocus::Keycodes;
-            Ok(false)
-        }
-        // Number keys for quick category jump
-        KeyCode::Char(c) if c.is_ascii_digit() => {
-            let idx = c.to_digit(10).unwrap() as usize;
-            if idx < total_categories {
-                state.keycode_picker_state.category_index = idx;
-                state.keycode_picker_state.selected = 0;
-            }
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
-/// Handle input when keycodes list has focus
-#[allow(clippy::too_many_lines)]
-fn handle_keycodes_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    // Check if search is active (has content) - vim keys should type instead of navigate
-    let search_active = !state.keycode_picker_state.search.is_empty();
-
-    match key.code {
-        KeyCode::Esc => {
-            // If we were editing a combo part, go back to key editor
-            if state.key_editor_state.combo_edit.is_some() {
-                state.key_editor_state.combo_edit = None;
-                state.active_popup = Some(PopupType::KeyEditor);
-                state.keycode_picker_state.reset();
-                state.set_status("Cancelled - back to key editor");
-            } else {
-                state.active_popup = None;
-                state.keycode_picker_state.reset();
-                state.set_status("Cancelled");
-            }
-            Ok(false)
-        }
-        // Switch back to sidebar (arrow keys always work)
-        KeyCode::Left => {
-            state.keycode_picker_state.focus = PickerFocus::Sidebar;
-            Ok(false)
-        }
-        KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
-            state.keycode_picker_state.focus = PickerFocus::Sidebar;
-            Ok(false)
-        }
-        KeyCode::Tab => {
-            // Tab without shift cycles back to sidebar
-            state.keycode_picker_state.focus = PickerFocus::Sidebar;
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            let keycodes = get_filtered_keycodes(state);
-            let selected_keycode_opt = keycodes
-                .get(state.keycode_picker_state.selected)
-                .map(|kc| kc.code.clone());
-
-            if let Some(keycode) = selected_keycode_opt {
-                // Check if we're editing a combo keycode part
-                if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
-                    // Updating part of a combo keycode
-                    let new_combo = match part {
-                        ComboEditPart::Hold => combo_type.with_hold(&keycode),
-                        ComboEditPart::Tap => combo_type.with_tap(&keycode),
-                    };
-                    let new_keycode = new_combo.to_keycode();
-
-                    if let Some(selected_key) = state.get_selected_key_mut() {
-                        selected_key.keycode.clone_from(&new_keycode);
-                        state.mark_dirty();
-                        state.set_status(format!("Updated: {new_keycode}"));
-                    }
-
-                    state.active_popup = Some(PopupType::KeyEditor);
-                    state.keycode_picker_state.reset();
-                    return Ok(false);
-                }
-
-                // Check if this keycode has parameters defined in the database
-                // Clone the params to avoid borrow conflicts
-                let params_opt = state.keycode_db.get_params(&keycode).map(Vec::from);
-                if let Some(params) = params_opt {
-                    if let Some(prefix) = KeycodeDb::get_prefix(&keycode) {
-                        return handle_parameterized_keycode(state, prefix, &params);
-                    }
-                }
-
-                // Regular keycode - assign directly
-                if let Some(selected_key) = state.get_selected_key_mut() {
-                    selected_key.keycode.clone_from(&keycode);
-                    state.mark_dirty();
-                    state.set_status(format!("Keycode assigned: {keycode}"));
-                }
-
-                state.active_popup = None;
-                state.keycode_picker_state.reset();
-            }
-
-            Ok(false)
-        }
-        // Arrow keys always navigate
-        KeyCode::Up => {
-            if state.keycode_picker_state.selected > 0 {
-                state.keycode_picker_state.selected -= 1;
-            }
-            Ok(false)
-        }
-        KeyCode::Down => {
-            let keycodes = get_filtered_keycodes(state);
-            if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
-                state.keycode_picker_state.selected += 1;
-            }
-            Ok(false)
-        }
-        KeyCode::Home => {
-            state.keycode_picker_state.selected = 0;
-            Ok(false)
-        }
-        KeyCode::End => {
-            let keycodes = get_filtered_keycodes(state);
-            state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
-            Ok(false)
-        }
-        KeyCode::PageUp => {
-            state.keycode_picker_state.selected =
-                state.keycode_picker_state.selected.saturating_sub(10);
-            Ok(false)
-        }
-        KeyCode::PageDown => {
-            let keycodes = get_filtered_keycodes(state);
-            state.keycode_picker_state.selected =
-                (state.keycode_picker_state.selected + 10).min(keycodes.len().saturating_sub(1));
-            Ok(false)
-        }
-        // NOTE: Vim navigation (h/j/k/l) removed from keycodes pane to allow typing these
-        // letters in search. Arrow keys, PageUp/Down, Home/End still work for navigation.
-        KeyCode::Char(c) => {
-            // Add to search (includes j, k, h, l when search is active)
-            state.keycode_picker_state.search.push(c);
-            state.keycode_picker_state.selected = 0; // Reset selection on new search
-            Ok(false)
-        }
-        KeyCode::Backspace => {
-            // Remove from search
-            state.keycode_picker_state.search.pop();
-            state.keycode_picker_state.selected = 0; // Reset selection
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
 /// Get filtered keycodes based on current search and category
 #[must_use]
 pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
@@ -604,7 +846,7 @@ pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::Keycod
 pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     let total_categories = state.keycode_db.categories().len() + 1;
     // Check if search is active (has content) - vim keys should type instead of navigate
-    let search_active = !state.keycode_picker_state.search.is_empty();
+    let _search_active = !state.keycode_picker_state.search.is_empty();
 
     match state.keycode_picker_state.focus {
         PickerFocus::Sidebar => match key.code {
@@ -729,94 +971,4 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
-}
-
-/// Handle a parameterized keycode selection based on its params from the database.
-/// This replaces the old hardcoded match statements with a data-driven approach.
-fn handle_parameterized_keycode(
-    state: &mut AppState,
-    prefix: &str,
-    params: &[crate::keycode_db::KeycodeParam],
-) -> Result<bool> {
-    state.pending_keycode = PendingKeycodeState::new();
-    state.keycode_picker_state.reset();
-
-    // Determine the keycode type based on the parameter pattern
-    let keycode_type = determine_keycode_type(prefix, params);
-    state.pending_keycode.keycode_type = Some(keycode_type.clone());
-
-    // For keycodes with a fixed prefix, store it in param1
-    if matches!(
-        keycode_type,
-        ParameterizedKeycodeType::SimpleModTap
-            | ParameterizedKeycodeType::SwapHandsTap
-            | ParameterizedKeycodeType::SingleMod
-    ) {
-        state.pending_keycode.param1 = Some(prefix.to_string());
-    }
-
-    // Set up the first picker based on the first parameter type
-    let first_param = &params[0];
-    match first_param.param_type {
-        ParamType::Layer => {
-            state.layer_picker_state = LayerPickerState::with_prefix(prefix);
-            state.active_popup = Some(PopupType::LayerPicker);
-            state.set_status(format!(
-                "Select {} for {}",
-                first_param.description.as_deref().unwrap_or("layer"),
-                prefix
-            ));
-        }
-        ParamType::Modifier => {
-            state.active_popup = Some(PopupType::ModifierPicker);
-            state.set_status(format!(
-                "Select {} for {}",
-                first_param.description.as_deref().unwrap_or("modifier"),
-                prefix
-            ));
-        }
-        ParamType::Keycode => {
-            state.active_popup = Some(PopupType::TapKeycodePicker);
-            state.keycode_picker_state = KeycodePickerState::new();
-            state.set_status(format!(
-                "Select {} for {}",
-                first_param.description.as_deref().unwrap_or("keycode"),
-                prefix
-            ));
-        }
-    }
-
-    Ok(false)
-}
-
-/// Determine the `ParameterizedKeycodeType` based on prefix and params pattern
-fn determine_keycode_type(
-    prefix: &str,
-    params: &[crate::keycode_db::KeycodeParam],
-) -> ParameterizedKeycodeType {
-    match (params.len(), params.first().map(|p| &p.param_type)) {
-        // Two params: Layer + Keycode = LayerTap
-        (2, Some(ParamType::Layer)) if params[1].param_type == ParamType::Keycode => {
-            ParameterizedKeycodeType::LayerTap
-        }
-        // Two params: Layer + Modifier = LayerMod
-        (2, Some(ParamType::Layer)) if params[1].param_type == ParamType::Modifier => {
-            ParameterizedKeycodeType::LayerMod
-        }
-        // Two params: Modifier + Keycode = ModTap (custom, like MT())
-        (2, Some(ParamType::Modifier)) if params[1].param_type == ParamType::Keycode => {
-            ParameterizedKeycodeType::ModTap
-        }
-        // One param: Keycode with special prefix
-        (1, Some(ParamType::Keycode)) if prefix == "SH_T" => ParameterizedKeycodeType::SwapHandsTap,
-        // One param: Keycode (mod-tap or modifier wrapper)
-        (1, Some(ParamType::Keycode)) => ParameterizedKeycodeType::SimpleModTap,
-        // One param: Layer only (MO, TG, TO, etc.) - handled separately via layer_picker
-        // One param: Modifier only (OSM) - single modifier keycode
-        (1, Some(ParamType::Modifier)) => ParameterizedKeycodeType::SingleMod,
-        // Single layer param - shouldn't happen here as it's handled by layer_picker
-        (1, Some(ParamType::Layer)) => ParameterizedKeycodeType::LayerTap,
-        // Fallback
-        _ => ParameterizedKeycodeType::SimpleModTap,
-    }
 }

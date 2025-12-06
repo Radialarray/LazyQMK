@@ -7,7 +7,7 @@
 //! 4. Coordinate system transformations (visual -> matrix -> LED)
 
 use chrono::Utc;
-use keyboard_configurator::config::{BuildConfig, Config, PathConfig};
+use keyboard_configurator::config::{BuildConfig, Config, PathConfig, UiConfig};
 use keyboard_configurator::firmware::{FirmwareGenerator, FirmwareValidator};
 use keyboard_configurator::keycode_db::KeycodeDb;
 use keyboard_configurator::models::{
@@ -312,7 +312,7 @@ fn create_test_config(temp_dir: &TempDir) -> Config {
         build: BuildConfig {
             output_dir: temp_dir.path().to_path_buf(),
         },
-        ui: Default::default(),
+        ui: UiConfig::default(),
     }
 }
 
@@ -460,7 +460,7 @@ fn test_generation_keymap_c_structure() {
 
 /// DEPRECATED: vial.json is no longer generated since migration to standard QMK
 #[test]
-#[ignore]
+#[ignore = "requires QMK firmware"]
 fn test_generation_vial_json_structure() {
     // This test is deprecated - vial.json is no longer generated
     // Kept for reference

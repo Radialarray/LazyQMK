@@ -620,6 +620,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_tap_hold_settings_round_trip() {
         use crate::models::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
 

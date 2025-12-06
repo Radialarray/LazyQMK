@@ -808,6 +808,44 @@ hint = "Cancel"
 priority = 3
 
 # =============================================================================
+# KEYBOARD PICKER
+# =============================================================================
+
+[contexts.keyboard_picker]
+name = "Keyboard Picker"
+description = "Select keyboard from QMK firmware"
+
+[[contexts.keyboard_picker.bindings]]
+keys = ["↑", "↓"]
+alt_keys = ["j", "k"]
+action = "Navigate"
+hint = "Navigate"
+priority = 1
+
+[[contexts.keyboard_picker.bindings]]
+keys = ["Enter"]
+action = "Select"
+hint = "Select"
+priority = 2
+
+[[contexts.keyboard_picker.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 3
+
+[[contexts.keyboard_picker.bindings]]
+keys = ["Type"]
+action = "Filter keyboards"
+hint = "Filter"
+priority = 4
+
+[[contexts.keyboard_picker.bindings]]
+keys = ["Backspace"]
+action = "Clear filter"
+priority = 10
+
+# =============================================================================
 # SETUP WIZARD
 # =============================================================================
 

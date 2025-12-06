@@ -20,7 +20,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::config::Config;
-use crate::models::{Layout, LayoutMetadata};
+use crate::models::LayoutMetadata;
 use crate::parser::layout as layout_parser;
 
 /// Template metadata with file path for loading.
@@ -30,6 +30,18 @@ pub struct TemplateInfo {
     pub path: PathBuf,
     /// Template metadata
     pub metadata: LayoutMetadata,
+}
+
+/// Events emitted by the TemplateBrowser component
+#[derive(Debug, Clone)]
+pub enum TemplateBrowserEvent {
+    /// User selected a template to load
+    TemplateSelected(PathBuf),
+    /// User wants to save current layout as template
+    #[allow(dead_code)]
+    SaveAsTemplate,
+    /// User cancelled the browser
+    Cancelled,
 }
 
 /// State for the template browser dialog.
@@ -162,20 +174,6 @@ impl TemplateBrowserState {
         filtered.get(self.selected).copied()
     }
 
-    /// Loads the selected template as a Layout.
-    pub fn load_selected_template(&self) -> Result<Layout> {
-        let template = self
-            .get_selected_template()
-            .context("No template selected")?;
-
-        let layout = layout_parser::parse_markdown_layout(&template.path).context(format!(
-            "Failed to load template: {}",
-            template.path.display()
-        ))?;
-
-        Ok(layout)
-    }
-
     /// Moves selection up in the filtered list.
     pub const fn select_previous(&mut self) {
         if self.selected > 0 {
@@ -227,14 +225,111 @@ impl Default for TemplateBrowserState {
     }
 }
 
-/// Renders the template browser popup.
+/// TemplateBrowser component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct TemplateBrowser {
+    /// Internal state of the template browser
+    state: TemplateBrowserState,
+}
+
+impl TemplateBrowser {
+    /// Create a new TemplateBrowser
+    #[must_use]
+    pub fn new() -> Self {
+        let mut state = TemplateBrowserState::new();
+        // Attempt to scan templates on creation (ignore errors)
+        let _ = state.scan_templates();
+        Self { state }
+    }
+
+    /// Get reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub const fn state(&self) -> &TemplateBrowserState {
+        &self.state
+    }
+
+    /// Get mutable reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn state_mut(&mut self) -> &mut TemplateBrowserState {
+        &mut self.state
+    }
+}
+
+impl Default for TemplateBrowser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl crate::tui::component::Component for TemplateBrowser {
+    type Event = TemplateBrowserEvent;
+
+    fn handle_input(&mut self, key: crossterm::event::KeyEvent) -> Option<Self::Event> {
+        use crossterm::event::KeyCode;
+
+        if self.state.search_active {
+            // Search mode
+            match key.code {
+                KeyCode::Esc => {
+                    self.state.toggle_search();
+                    None
+                }
+                KeyCode::Enter => {
+                    // Load selected template
+                    self.state.get_selected_template().map(|t| TemplateBrowserEvent::TemplateSelected(t.path.clone()))
+                }
+                KeyCode::Backspace => {
+                    self.state.search_pop();
+                    None
+                }
+                KeyCode::Char(c) => {
+                    self.state.search_push(c);
+                    None
+                }
+                _ => None,
+            }
+        } else {
+            // Navigation mode
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => Some(TemplateBrowserEvent::Cancelled),
+                KeyCode::Enter => {
+                    // Load selected template
+                    self.state.get_selected_template().map(|t| TemplateBrowserEvent::TemplateSelected(t.path.clone()))
+                }
+                KeyCode::Char('/') => {
+                    self.state.toggle_search();
+                    None
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.state.select_previous();
+                    None
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.state.select_next();
+                    None
+                }
+                _ => None,
+            }
+        }
+    }
+
+    fn render(&self, f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
+        render_template_browser_component(f, self, area, theme);
+    }
+}
+
+/// Renders the template browser popup (for Component)
 #[allow(clippy::too_many_lines)]
-pub fn render(
+fn render_template_browser_component(
     f: &mut Frame,
-    state: &TemplateBrowserState,
+    browser: &TemplateBrowser,
     area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
+    let state = &browser.state;
+
     // Center the popup (60% width, 80% height)
     let popup_width = (f32::from(area.width) * 0.6) as u16;
     let popup_height = (f32::from(area.height) * 0.8) as u16;

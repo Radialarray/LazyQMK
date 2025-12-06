@@ -17,6 +17,13 @@ use ratatui::{
 use super::help_registry::{contexts, HelpRegistry};
 use super::Theme;
 
+/// Events emitted by the HelpOverlay component
+#[derive(Debug, Clone)]
+pub enum HelpOverlayEvent {
+    /// User closed the help overlay
+    Closed,
+}
+
 /// State for the help overlay.
 #[derive(Debug, Clone)]
 pub struct HelpOverlayState {
@@ -591,7 +598,7 @@ impl HelpOverlayState {
         lines
     }
 
-    /// Render the help overlay as a centered modal.
+    /// Render the help overlay as a centered modal (legacy - for backward compatibility during migration).
     pub fn render(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
         // Calculate centered modal size (60% width, 80% height)
         let width = (area.width * 60) / 100;
@@ -662,5 +669,85 @@ impl HelpOverlayState {
 impl Default for HelpOverlayState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// HelpOverlay component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct HelpOverlay {
+    /// Internal state of the help overlay
+    state: HelpOverlayState,
+}
+
+impl HelpOverlay {
+    /// Create a new HelpOverlay
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: HelpOverlayState::new(),
+        }
+    }
+
+    /// Get reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub const fn state(&self) -> &HelpOverlayState {
+        &self.state
+    }
+
+    /// Get mutable reference to the internal state
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn state_mut(&mut self) -> &mut HelpOverlayState {
+        &mut self.state
+    }
+}
+
+impl Default for HelpOverlay {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl crate::tui::component::Component for HelpOverlay {
+    type Event = HelpOverlayEvent;
+
+    fn handle_input(&mut self, key: crossterm::event::KeyEvent) -> Option<Self::Event> {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Char('?') | KeyCode::Esc | KeyCode::Char('q') => {
+                Some(HelpOverlayEvent::Closed)
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.scroll_up();
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.scroll_down();
+                None
+            }
+            KeyCode::PageUp => {
+                self.state.page_up(10);
+                None
+            }
+            KeyCode::PageDown => {
+                self.state.page_down(10);
+                None
+            }
+            KeyCode::Home | KeyCode::Char('g') => {
+                self.state.scroll_to_top();
+                None
+            }
+            KeyCode::End | KeyCode::Char('G') => {
+                self.state.scroll_to_bottom();
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, area: Rect, theme: &Theme) {
+        self.state.render(f, area, theme);
     }
 }

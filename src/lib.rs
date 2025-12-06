@@ -12,11 +12,13 @@
 #![allow(clippy::cast_possible_wrap)]
 
 // Module declarations
+pub mod app;
 pub mod config;
 pub mod constants;
 pub mod firmware;
 pub mod keycode_db;
 pub mod models;
 pub mod parser;
+pub mod services;
 pub mod shortcuts;
 pub mod tui;
