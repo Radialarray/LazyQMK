@@ -287,18 +287,21 @@ impl LayoutPicker {
 
     /// Get reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &LayoutPickerState {
         &self.state
     }
 
     /// Get mutable reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut LayoutPickerState {
         &mut self.state
     }
 
     /// Get the keyboard name
     #[must_use]
+    #[allow(dead_code)]
     pub fn keyboard(&self) -> &str {
         &self.keyboard
     }
@@ -320,11 +323,7 @@ impl crate::tui::component::Component for LayoutPicker {
                 None
             }
             KeyCode::Enter => {
-                if let Some(layout) = self.state.get_selected() {
-                    Some(LayoutPickerEvent::LayoutSelected(layout))
-                } else {
-                    None
-                }
+                self.state.get_selected().map(LayoutPickerEvent::LayoutSelected)
             }
             KeyCode::Esc => Some(LayoutPickerEvent::Cancelled),
             _ => None,
@@ -401,6 +400,7 @@ pub struct KeyboardPicker {
 impl KeyboardPicker {
     /// Create a new KeyboardPicker with keyboards pre-loaded
     #[must_use]
+    #[allow(dead_code)]
     pub fn new(qmk_path: &PathBuf) -> Self {
         let mut state = KeyboardPickerState::new();
         // Attempt to load keyboards on creation (ignore errors)
@@ -410,12 +410,14 @@ impl KeyboardPicker {
 
     /// Get reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &KeyboardPickerState {
         &self.state
     }
 
     /// Get mutable reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut KeyboardPickerState {
         &mut self.state
     }
@@ -450,11 +452,7 @@ impl crate::tui::component::Component for KeyboardPicker {
                 None
             }
             KeyCode::Enter => {
-                if let Some(keyboard) = self.state.get_selected() {
-                    Some(KeyboardPickerEvent::KeyboardSelected(keyboard))
-                } else {
-                    None
-                }
+                self.state.get_selected().map(KeyboardPickerEvent::KeyboardSelected)
             }
             KeyCode::Backspace => {
                 self.state.search_query.pop();
@@ -655,64 +653,6 @@ pub fn render_keyboard_picker(f: &mut Frame, state: &KeyboardPickerState, theme:
 
 use super::Theme;
 
-/// Renders the layout picker dialog
-pub fn render_layout_picker(
-    f: &mut Frame,
-    state: &LayoutPickerState,
-    keyboard: &str,
-    theme: &Theme,
-) {
-    let area = centered_rect(70, 50, f.size());
-
-    // Clear the background area first
-    f.render_widget(Clear, area);
-
-    // Render opaque background
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, area);
-
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Min(5),    // List
-            Constraint::Length(2), // Instructions
-        ])
-        .split(area);
-
-    // Layout list with key counts
-    let items: Vec<ListItem> = state
-        .layouts
-        .iter()
-        .enumerate()
-        .map(|(i, variant)| {
-            let style = if i == state.selected_index {
-                Style::default()
-                    .fg(theme.accent)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            // Display layout name with key count
-            let display = format!("{} ({} keys)", variant.name, variant.key_count);
-            ListItem::new(display).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(format!("Layouts for {keyboard}")),
-    );
-    f.render_widget(list, chunks[0]);
-
-    // Instructions
-    let instructions = Paragraph::new("↑↓: Navigate | Enter: Select | Esc: Cancel")
-        .style(Style::default().fg(theme.text_muted))
-        .alignment(Alignment::Center);
-    f.render_widget(instructions, chunks[1]);
-}
-
 /// Handles input for path configuration dialog
 #[allow(dead_code)]
 pub fn handle_path_dialog_input(
@@ -787,22 +727,7 @@ pub fn handle_keyboard_picker_input(
     }
 }
 
-/// Handles input for layout picker
-pub fn handle_layout_picker_input(state: &mut LayoutPickerState, key: KeyEvent) -> Option<String> {
-    match key.code {
-        KeyCode::Up | KeyCode::Char('k') => {
-            state.move_up();
-            None
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            state.move_down();
-            None
-        }
-        KeyCode::Enter => state.get_selected(),
-        KeyCode::Esc => Some(String::new()), // Empty string signals cancel
-        _ => None,
-    }
-}
+
 
 /// Helper to create a centered rect
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

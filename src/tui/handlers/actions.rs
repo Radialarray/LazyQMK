@@ -139,7 +139,7 @@ fn handle_firmware_build(state: &mut AppState) -> Result<()> {
 }
 
 /// Dispatch action to appropriate handler
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
     match action {
         Action::Quit => {
@@ -242,7 +242,7 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::ViewBuildLog => {
             if state.build_state.is_some() {
-                if state.active_component.as_ref().map_or(false, |c| matches!(c, ActiveComponent::BuildLog(_))) {
+                if matches!(state.active_component, Some(ActiveComponent::BuildLog(_))) {
                     state.close_component();
                 } else {
                     state.open_build_log();
@@ -695,7 +695,7 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         Action::AssignCategoryToKey => {
             // Assign category to individual key (Ctrl+K)
             if state.get_selected_key().is_some() {
-                let picker = crate::tui::CategoryPicker::new(CategoryPickerContext::IndividualKey);
+                let picker = crate::tui::CategoryPicker::new();
                 state.active_component = Some(ActiveComponent::CategoryPicker(picker));
                 state.category_picker_context = Some(CategoryPickerContext::IndividualKey);
                 state.active_popup = Some(PopupType::CategoryPicker);
@@ -708,7 +708,7 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::AssignCategoryToLayer => {
             // Assign category to layer (Shift+L or Ctrl+L)
-            let picker = crate::tui::CategoryPicker::new(CategoryPickerContext::Layer);
+            let picker = crate::tui::CategoryPicker::new();
             state.active_component = Some(ActiveComponent::CategoryPicker(picker));
             state.category_picker_context = Some(CategoryPickerContext::Layer);
             state.active_popup = Some(PopupType::CategoryPicker);

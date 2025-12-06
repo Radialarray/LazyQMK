@@ -321,12 +321,6 @@ impl SettingsManagerState {
         }
     }
 
-    /// Reset to default state
-    pub fn reset(&mut self) {
-        self.selected = 0;
-        self.mode = ManagerMode::Browsing;
-    }
-
     /// Move selection up
     pub const fn select_previous(&mut self, setting_count: usize) {
         if setting_count > 0 {
@@ -592,6 +586,7 @@ pub enum SettingsManagerEvent {
     /// User cancelled without making changes
     Cancelled,
     /// Component closed naturally
+    #[allow(dead_code)]
     Closed,
 }
 

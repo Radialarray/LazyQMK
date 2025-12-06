@@ -4,7 +4,6 @@
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
-use chrono::Utc;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -14,7 +13,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{Layout as LayoutModel, LayoutMetadata};
+use crate::models::LayoutMetadata;
 use super::component::Component;
 use super::Theme;
 
@@ -37,6 +36,7 @@ pub enum MetadataEditorEvent {
     /// User cancelled without saving
     Cancelled,
     /// Editor closed
+    #[allow(dead_code)]
     Closed,
 }
 
@@ -188,21 +188,6 @@ impl MetadataEditorState {
         Ok(())
     }
 
-    /// Apply the changes to the layout metadata.
-    pub fn apply_to_layout(&self, layout: &mut LayoutModel) -> Result<(), String> {
-        // Validate first
-        self.validate()?;
-
-        // Update metadata
-        layout.metadata.name = self.name.clone();
-        layout.metadata.description = self.description.clone();
-        layout.metadata.author = self.author.clone();
-        layout.metadata.tags = self.parse_tags();
-        layout.metadata.modified = Utc::now();
-
-        Ok(())
-    }
-
     /// Check if the name was changed from the original.
     #[must_use]
     pub fn name_changed(&self) -> bool {
@@ -241,11 +226,13 @@ impl MetadataEditor {
 
     /// Get a reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &MetadataEditorState {
         &self.state
     }
 
     /// Get a mutable reference to the internal state
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut MetadataEditorState {
         &mut self.state
     }

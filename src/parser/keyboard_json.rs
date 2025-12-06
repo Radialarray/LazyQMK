@@ -522,60 +522,63 @@ mod tests {
         assert_eq!(split.key_count, 4);
     }
 
-    #[test]
-    fn test_extract_layout_definition() {
-        let temp_dir = TempDir::new().unwrap();
-        let info_path = temp_dir.path().join("info.json");
-        fs::write(&info_path, create_test_info_json()).unwrap();
+     #[test]
+     #[allow(clippy::float_cmp)]
+     fn test_extract_layout_definition() {
+         let temp_dir = TempDir::new().unwrap();
+         let info_path = temp_dir.path().join("info.json");
+         fs::write(&info_path, create_test_info_json()).unwrap();
 
-        let info = parse_info_json(&info_path).unwrap();
+         let info = parse_info_json(&info_path).unwrap();
 
-        let layout = extract_layout_definition(&info, "LAYOUT").unwrap();
-        assert_eq!(layout.layout.len(), 6);
+         let layout = extract_layout_definition(&info, "LAYOUT").unwrap();
+         assert_eq!(layout.layout.len(), 6);
 
-        let split_layout = extract_layout_definition(&info, "LAYOUT_split").unwrap();
-        assert_eq!(split_layout.layout.len(), 4);
-        assert_eq!(split_layout.layout[0].w, 1.5);
-    }
+         let split_layout = extract_layout_definition(&info, "LAYOUT_split").unwrap();
+         assert_eq!(split_layout.layout.len(), 4);
+         assert_eq!(split_layout.layout[0].w, 1.5);
+     }
 
-    #[test]
-    fn test_build_keyboard_geometry() {
-        let temp_dir = TempDir::new().unwrap();
-        let info_path = temp_dir.path().join("info.json");
-        fs::write(&info_path, create_test_info_json()).unwrap();
+     #[test]
+     #[allow(clippy::float_cmp)]
+     fn test_build_keyboard_geometry() {
+         let temp_dir = TempDir::new().unwrap();
+         let info_path = temp_dir.path().join("info.json");
+         fs::write(&info_path, create_test_info_json()).unwrap();
 
-        let info = parse_info_json(&info_path).unwrap();
-        let geometry = build_keyboard_geometry(&info, "test_keyboard", "LAYOUT").unwrap();
+         let info = parse_info_json(&info_path).unwrap();
+         let geometry = build_keyboard_geometry(&info, "test_keyboard", "LAYOUT").unwrap();
 
-        assert_eq!(geometry.keyboard_name, "test_keyboard");
-        assert_eq!(geometry.layout_name, "LAYOUT");
-        assert_eq!(geometry.matrix_rows, 2);
-        assert_eq!(geometry.matrix_cols, 3);
-        assert_eq!(geometry.keys.len(), 6);
+         assert_eq!(geometry.keyboard_name, "test_keyboard");
+         assert_eq!(geometry.layout_name, "LAYOUT");
+         assert_eq!(geometry.matrix_rows, 2);
+         assert_eq!(geometry.matrix_cols, 3);
+         assert_eq!(geometry.keys.len(), 6);
 
-        // Check first key
-        assert_eq!(geometry.keys[0].matrix_position, (0, 0));
-        assert_eq!(geometry.keys[0].led_index, 0);
-        assert_eq!(geometry.keys[0].visual_x, 0.0);
-        assert_eq!(geometry.keys[0].visual_y, 0.0);
-    }
+         // Check first key
+         assert_eq!(geometry.keys[0].matrix_position, (0, 0));
+         assert_eq!(geometry.keys[0].led_index, 0);
+         assert_eq!(geometry.keys[0].visual_x, 0.0);
+         assert_eq!(geometry.keys[0].visual_y, 0.0);
+     }
 
-    #[test]
-    fn test_build_keyboard_geometry_with_split_layout() {
-        let temp_dir = TempDir::new().unwrap();
-        let info_path = temp_dir.path().join("info.json");
-        fs::write(&info_path, create_test_info_json()).unwrap();
+     #[test]
+     #[allow(clippy::float_cmp)]
+     fn test_build_keyboard_geometry_with_split_layout() {
+         let temp_dir = TempDir::new().unwrap();
+         let info_path = temp_dir.path().join("info.json");
+         fs::write(&info_path, create_test_info_json()).unwrap();
 
-        let info = parse_info_json(&info_path).unwrap();
-        let geometry = build_keyboard_geometry(&info, "test_keyboard", "LAYOUT_split").unwrap();
+         let info = parse_info_json(&info_path).unwrap();
+         let geometry = build_keyboard_geometry(&info, "test_keyboard", "LAYOUT_split").unwrap();
 
-        assert_eq!(geometry.matrix_rows, 5); // max row is 4, so rows = 5
-        assert_eq!(geometry.matrix_cols, 2);
-        assert_eq!(geometry.keys.len(), 4);
+         assert_eq!(geometry.matrix_rows, 5); // max row is 4, so rows = 5
+         assert_eq!(geometry.matrix_cols, 2);
+         assert_eq!(geometry.keys.len(), 4);
 
-        // Check key with custom width
-        assert_eq!(geometry.keys[0].width, 1.5);
-    }
+         // Check key with custom width
+         assert_eq!(geometry.keys[0].width, 1.5);
+     }
 
     #[test]
     fn test_scan_keyboards_invalid_path() {

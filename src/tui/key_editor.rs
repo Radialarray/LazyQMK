@@ -17,26 +17,7 @@ use ratatui::{
     Frame,
 };
 
-use super::{AppState, PopupType};
-
-/// Events emitted by the KeyEditor component
-#[derive(Debug, Clone)]
-pub enum KeyEditorEvent {
-    /// User wants to reassign the entire keycode
-    ReassignKeycode,
-    /// User wants to edit the hold part of a combo keycode
-    EditHoldPart(ComboKeycodeType),
-    /// User wants to edit the tap part of a combo keycode
-    EditTapPart(ComboKeycodeType),
-    /// User wants to set the key color
-    SetColor,
-    /// User wants to set the key category
-    SetCategory,
-    /// User saved the description
-    DescriptionSaved(Option<String>),
-    /// User closed the editor
-    Closed,
-}
+use super::AppState;
 
 /// Mode of the key editor dialog
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

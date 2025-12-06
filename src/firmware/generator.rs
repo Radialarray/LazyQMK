@@ -601,7 +601,8 @@ impl<'a> FirmwareGenerator<'a> {
     ///
     /// This generates a minimal keymap-specific config.h.
     /// Note: `RGB_MATRIX_LED_COUNT` should be defined in the keyboard's variant-specific
-    /// keyboard.json file, not in the keymap config.h.
+     /// keyboard.json file, not in the keymap config.h.
+    #[allow(clippy::cast_possible_truncation)]
     fn generate_merged_config_h(&self) -> Result<String> {
         use crate::models::HoldDecisionMode;
 

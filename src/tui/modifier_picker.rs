@@ -2,9 +2,7 @@
 //!
 //! Used for `MT()` and `LM()` keycodes that require modifier selection.
 //!
-//! This module implements both:
-//! - Legacy rendering function: `render_modifier_picker()` for backward compatibility
-//! - Component trait: `ModifierPicker` for self-contained UI components
+//! This module implements the Component trait: `ModifierPicker` for self-contained UI components
 
 // Navigation uses separate match arms for left/right columns for clarity
 #![allow(clippy::match_same_arms)]
@@ -154,12 +152,6 @@ impl ModifierPickerState {
         }
     }
 
-    /// Reset to initial state
-    pub const fn reset(&mut self) {
-        self.selected_mods = 0;
-        self.focus = 0;
-    }
-
     /// Toggle a modifier by its bit value
     pub const fn toggle_mod(&mut self, mod_bit: u8) {
         self.selected_mods ^= mod_bit;
@@ -294,6 +286,7 @@ impl ModifierPicker {
 
     /// Create a new ModifierPicker initialized with specific modifiers
     #[must_use]
+    #[allow(dead_code)]
     pub fn with_modifiers(mod_bits: u8) -> Self {
         Self {
             state: ModifierPickerState {
@@ -304,17 +297,20 @@ impl ModifierPicker {
     }
 
     /// Get the internal state (for legacy rendering)
+    #[allow(dead_code)]
     pub fn state(&self) -> &ModifierPickerState {
         &self.state
     }
 
     /// Get mutable access to state (for legacy rendering)
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut ModifierPickerState {
         &mut self.state
     }
 
     /// Get the selected modifiers as a QMK modifier string
     #[must_use]
+    #[allow(dead_code)]
     pub fn get_mod_string(&self) -> String {
         self.state.to_mod_string()
     }
@@ -454,121 +450,6 @@ fn render_modifier_picker_component(f: &mut Frame, picker: &ModifierPicker, them
     // Selected display
     let selected_text = if picker.state.has_selection() {
         format!(" Selected: {}", picker.state.to_mod_string())
-    } else {
-        " Selected: (none)".to_string()
-    };
-    let selected = Paragraph::new(selected_text).style(Style::default().fg(theme.accent));
-    f.render_widget(selected, chunks[6]);
-
-    // Help text
-    let help_spans = vec![
-        Span::styled(
-            "↑↓←→",
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(StyleModifier::BOLD),
-        ),
-        Span::raw(" Navigate  "),
-        Span::styled(
-            "Space",
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(StyleModifier::BOLD),
-        ),
-        Span::raw(" Toggle  "),
-        Span::styled(
-            "Enter",
-            Style::default()
-                .fg(theme.success)
-                .add_modifier(StyleModifier::BOLD),
-        ),
-        Span::raw(" Confirm  "),
-        Span::styled(
-            "Esc",
-            Style::default()
-                .fg(theme.error)
-                .add_modifier(StyleModifier::BOLD),
-        ),
-        Span::raw(" Cancel"),
-    ];
-    let help = Paragraph::new(Line::from(help_spans)).style(Style::default().fg(theme.text_muted));
-    f.render_widget(help, chunks[7]);
-}
-
-/// Render the modifier picker popup (legacy - for backward compatibility)
-pub fn render_modifier_picker(f: &mut Frame, state: &ModifierPickerState, theme: &Theme) {
-    let area = centered_rect(50, 60, f.size());
-
-    // Clear background
-    f.render_widget(Clear, area);
-    f.render_widget(
-        Block::default().style(Style::default().bg(theme.background)),
-        area,
-    );
-
-    // Main layout
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Title
-            Constraint::Length(1), // Spacer
-            Constraint::Length(6), // Modifier grid (4 rows)
-            Constraint::Length(1), // Spacer
-            Constraint::Length(3), // Presets row
-            Constraint::Length(1), // Spacer
-            Constraint::Length(2), // Selected display
-            Constraint::Min(2),    // Help text
-        ])
-        .split(area);
-
-    // Title
-    let title = Paragraph::new(" Select Modifier(s) ")
-        .style(
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(StyleModifier::BOLD),
-        )
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(title, chunks[0]);
-
-    // Modifier grid - split into left and right columns
-    let grid_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(chunks[2]);
-
-    // Left column header + modifiers
-    render_modifier_column(f, grid_chunks[0], state, true, theme);
-
-    // Right column header + modifiers
-    render_modifier_column(f, grid_chunks[1], state, false, theme);
-
-    // Presets row
-    let preset_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(chunks[4]);
-
-    render_preset(
-        f,
-        preset_chunks[0],
-        ModifierPreset::Meh,
-        state.focus == 8,
-        state,
-        theme,
-    );
-    render_preset(
-        f,
-        preset_chunks[1],
-        ModifierPreset::Hyper,
-        state.focus == 9,
-        state,
-        theme,
-    );
-
-    // Selected display
-    let selected_text = if state.has_selection() {
-        format!(" Selected: {}", state.to_mod_string())
     } else {
         " Selected: (none)".to_string()
     };
@@ -836,15 +717,4 @@ mod tests {
         assert_eq!(state.focus, 8);
     }
 
-    #[test]
-    fn test_reset() {
-        let mut state = ModifierPickerState::new();
-        state.toggle_mod(QmkModifier::LCtrl as u8);
-        state.focus = 5;
-
-        state.reset();
-
-        assert_eq!(state.selected_mods, 0);
-        assert_eq!(state.focus, 0);
-    }
 }

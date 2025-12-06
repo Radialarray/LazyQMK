@@ -83,7 +83,8 @@ pub enum Action {
 impl Action {
     /// Get the action ID string used in help.toml
     #[must_use]
-    pub const fn id(&self) -> &'static str {
+    #[allow(dead_code)]
+    pub const fn id(self) -> &'static str {
         match self {
             // Navigation
             Self::NavigateUp => "navigate_up",
@@ -295,6 +296,7 @@ impl ShortcutRegistry {
 
     /// Check if a key event matches a specific action in the given context.
     #[must_use]
+    #[allow(dead_code)]
     pub fn matches(&self, context: &str, event: KeyEvent, action: Action) -> bool {
         self.lookup(context, event) == Some(action)
     }

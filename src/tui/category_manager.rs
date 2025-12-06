@@ -19,15 +19,6 @@ use crate::tui::Theme;
 /// Events emitted by the CategoryManager component
 #[derive(Debug, Clone)]
 pub enum CategoryManagerEvent {
-    /// User created a new category
-    CategoryAdded {
-        /// Category ID
-        id: String,
-        /// Category name
-        name: String,
-        /// Category color
-        color: RgbColor,
-    },
     /// User deleted a category
     CategoryDeleted(String),
     /// User updated a category
@@ -154,6 +145,7 @@ impl CategoryManagerState {
 
     /// Get the current input text (for name entry or renaming)
     #[must_use]
+    #[allow(dead_code)]
     pub fn get_input(&self) -> Option<&str> {
         match &self.mode {
             ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
@@ -164,6 +156,7 @@ impl CategoryManagerState {
     }
 
     /// Get mutable reference to current input text
+    #[allow(dead_code)]
     pub const fn get_input_mut(&mut self) -> Option<&mut String> {
         match &mut self.mode {
             ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
@@ -218,12 +211,6 @@ impl CategoryManager {
     /// Get mutable reference to the internal state (for backward compatibility)
     pub fn state_mut(&mut self) -> &mut CategoryManagerState {
         &mut self.state
-    }
-
-    /// Get the cached categories
-    #[must_use]
-    pub fn categories(&self) -> &[Category] {
-        &self.cached_categories
     }
 }
 

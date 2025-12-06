@@ -545,6 +545,7 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
 }
 
 /// Render custom RGB mode instructions
+#[allow(dead_code)]
 fn render_rgb_instructions(f: &mut Frame, area: Rect, theme: &Theme) {
     let instructions = vec![Line::from(vec![
         Span::styled("↑↓", Style::default().fg(theme.accent)),

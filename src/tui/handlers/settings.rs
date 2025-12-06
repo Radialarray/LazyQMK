@@ -319,7 +319,7 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     apply_path_setting(state, *setting, value.to_string())?;
                 }
             }
-            _ => {}
+            crate::tui::settings_manager::ManagerMode::Browsing => {}
         }
     }
     Ok(())

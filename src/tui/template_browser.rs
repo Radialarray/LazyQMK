@@ -20,7 +20,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::config::Config;
-use crate::models::{Layout, LayoutMetadata};
+use crate::models::LayoutMetadata;
 use crate::parser::layout as layout_parser;
 
 /// Template metadata with file path for loading.
@@ -38,6 +38,7 @@ pub enum TemplateBrowserEvent {
     /// User selected a template to load
     TemplateSelected(PathBuf),
     /// User wants to save current layout as template
+    #[allow(dead_code)]
     SaveAsTemplate,
     /// User cancelled the browser
     Cancelled,
@@ -173,20 +174,6 @@ impl TemplateBrowserState {
         filtered.get(self.selected).copied()
     }
 
-    /// Loads the selected template as a Layout.
-    pub fn load_selected_template(&self) -> Result<Layout> {
-        let template = self
-            .get_selected_template()
-            .context("No template selected")?;
-
-        let layout = layout_parser::parse_markdown_layout(&template.path).context(format!(
-            "Failed to load template: {}",
-            template.path.display()
-        ))?;
-
-        Ok(layout)
-    }
-
     /// Moves selection up in the filtered list.
     pub const fn select_previous(&mut self) {
         if self.selected > 0 {
@@ -257,12 +244,14 @@ impl TemplateBrowser {
 
     /// Get reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &TemplateBrowserState {
         &self.state
     }
 
     /// Get mutable reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut TemplateBrowserState {
         &mut self.state
     }
@@ -289,11 +278,7 @@ impl crate::tui::component::Component for TemplateBrowser {
                 }
                 KeyCode::Enter => {
                     // Load selected template
-                    if let Some(template) = self.state.get_selected_template() {
-                        Some(TemplateBrowserEvent::TemplateSelected(template.path.clone()))
-                    } else {
-                        None
-                    }
+                    self.state.get_selected_template().map(|t| TemplateBrowserEvent::TemplateSelected(t.path.clone()))
                 }
                 KeyCode::Backspace => {
                     self.state.search_pop();
@@ -311,11 +296,7 @@ impl crate::tui::component::Component for TemplateBrowser {
                 KeyCode::Esc | KeyCode::Char('q') => Some(TemplateBrowserEvent::Cancelled),
                 KeyCode::Enter => {
                     // Load selected template
-                    if let Some(template) = self.state.get_selected_template() {
-                        Some(TemplateBrowserEvent::TemplateSelected(template.path.clone()))
-                    } else {
-                        None
-                    }
+                    self.state.get_selected_template().map(|t| TemplateBrowserEvent::TemplateSelected(t.path.clone()))
                 }
                 KeyCode::Char('/') => {
                     self.state.toggle_search();
@@ -349,157 +330,6 @@ fn render_template_browser_component(
 ) {
     let state = &browser.state;
 
-    // Center the popup (60% width, 80% height)
-    let popup_width = (f32::from(area.width) * 0.6) as u16;
-    let popup_height = (f32::from(area.height) * 0.8) as u16;
-
-    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
-    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
-
-    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
-
-    // Clear the background area first
-    f.render_widget(Clear, popup_area);
-
-    // Render opaque background
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, popup_area);
-
-    // Split into title, search, list, and details sections
-    let chunks = RatatuiLayout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Title
-            Constraint::Length(3), // Search bar
-            Constraint::Min(10),   // Template list
-            Constraint::Length(8), // Template details
-            Constraint::Length(2), // Help line
-        ])
-        .split(popup_area);
-
-    // Render title
-    let title_style = if state.search_active {
-        Style::default()
-            .fg(theme.accent)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default()
-            .fg(theme.primary)
-            .add_modifier(Modifier::BOLD)
-    };
-
-    let title = Paragraph::new("Template Browser")
-        .block(Block::default().borders(Borders::ALL).style(title_style));
-    f.render_widget(title, chunks[0]);
-
-    // Render search bar
-    let search_text = if state.search_active {
-        format!("Search: {}█", state.search)
-    } else {
-        format!("Search: {} (Press / to search)", state.search)
-    };
-
-    let search_style = if state.search_active {
-        Style::default().fg(theme.accent)
-    } else {
-        Style::default().fg(theme.text_muted)
-    };
-
-    let search = Paragraph::new(search_text)
-        .block(Block::default().borders(Borders::ALL).style(search_style));
-    f.render_widget(search, chunks[1]);
-
-    // Get filtered templates
-    let filtered = state.filtered_templates();
-
-    // Render template list
-    let items: Vec<ListItem> = filtered
-        .iter()
-        .enumerate()
-        .map(|(i, template)| {
-            let tags_str = if template.metadata.tags.is_empty() {
-                String::new()
-            } else {
-                format!(" [{}]", template.metadata.tags.join(", "))
-            };
-
-            let content = format!("{}{}", template.metadata.name, tags_str);
-
-            let style = if i == state.selected {
-                Style::default()
-                    .fg(theme.background)
-                    .bg(theme.primary)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(theme.text)
-            };
-
-            ListItem::new(Line::from(Span::styled(content, style)))
-        })
-        .collect();
-
-    let list_title = format!("Templates ({})", filtered.len());
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(list_title));
-    f.render_widget(list, chunks[2]);
-
-    // Render selected template details
-    let details_content = if let Some(template) = state.get_selected_template() {
-        vec![
-            Line::from(vec![
-                Span::styled("Name: ", Style::default().fg(theme.primary)),
-                Span::raw(&template.metadata.name),
-            ]),
-            Line::from(vec![
-                Span::styled("Author: ", Style::default().fg(theme.primary)),
-                Span::raw(&template.metadata.author),
-            ]),
-            Line::from(vec![
-                Span::styled("Description: ", Style::default().fg(theme.primary)),
-                Span::raw(&template.metadata.description),
-            ]),
-            Line::from(vec![
-                Span::styled("Tags: ", Style::default().fg(theme.primary)),
-                Span::raw(template.metadata.tags.join(", ")),
-            ]),
-            Line::from(vec![
-                Span::styled("Created: ", Style::default().fg(theme.primary)),
-                Span::raw(template.metadata.created.format("%Y-%m-%d").to_string()),
-            ]),
-        ]
-    } else if filtered.is_empty() {
-        vec![Line::from(Span::styled(
-            "No templates found. Create one with Shift+T",
-            Style::default().fg(theme.warning),
-        ))]
-    } else {
-        vec![Line::from(Span::raw("No template selected"))]
-    };
-
-    let details = Paragraph::new(details_content)
-        .block(Block::default().borders(Borders::ALL).title("Details"));
-    f.render_widget(details, chunks[3]);
-
-    // Render help line
-    let help_text = if state.search_active {
-        "Type to search | Esc: exit search | Enter: load template | q: cancel"
-    } else {
-        "↑/↓: navigate | /: search | Enter: load template | Esc/q: cancel"
-    };
-
-    let help = Paragraph::new(help_text)
-        .style(Style::default().fg(theme.text_muted))
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(help, chunks[4]);
-}
-
-/// Renders the template browser popup (legacy - for backward compatibility during migration)
-#[allow(clippy::too_many_lines)]
-pub fn render(
-    f: &mut Frame,
-    state: &TemplateBrowserState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
     // Center the popup (60% width, 80% height)
     let popup_width = (f32::from(area.width) * 0.6) as u16;
     let popup_height = (f32::from(area.height) * 0.8) as u16;

@@ -154,12 +154,14 @@ impl LayoutPicker {
 
     /// Get reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &LayoutPickerState {
         &self.state
     }
 
     /// Get mutable reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut LayoutPickerState {
         &mut self.state
     }
@@ -415,7 +417,7 @@ pub enum LayoutPickerEvent {
     /// User chose to create a new layout
     CreateNew,
     /// User selected an existing layout to load
-    LayoutSelected(PathBuf),
+    LayoutSelected(#[allow(dead_code)] PathBuf),
     /// User cancelled the picker
     Cancelled,
 }

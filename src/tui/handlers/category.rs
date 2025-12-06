@@ -3,7 +3,6 @@
 use anyhow::Result;
 use crossterm::event::{self, KeyModifiers};
 
-use crate::models::Category;
 use crate::tui::category_manager::{CategoryManagerEvent, ManagerMode};
 use crate::tui::component::Component;
 use crate::tui::{ActiveComponent, AppState};
@@ -22,10 +21,10 @@ pub fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent)
     manager.set_categories(state.layout.categories.clone());
 
     // Handle special case: Shift+L to assign category to layer (not handled by component)
+    #[allow(clippy::collapsible_if)]
     if key.code == event::KeyCode::Char('L') && key.modifiers.contains(KeyModifiers::SHIFT) {
         if matches!(manager.state().mode, ManagerMode::Browsing) {
-            let selected_idx = manager.state().selected;
-            if let Some(category) = state.layout.categories.get(selected_idx) {
+            if let Some(category) = state.layout.categories.get(manager.state().selected) {
                 let category_id = category.id.clone();
                 let category_name = category.name.clone();
                 if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
@@ -71,18 +70,6 @@ pub fn handle_category_manager_input(state: &mut AppState, key: event::KeyEvent)
     // Process events emitted by the component
     if let Some(event) = event {
         match event {
-            CategoryManagerEvent::CategoryAdded { id, name, color } => {
-                // Create new category (T107, T108)
-                if let Ok(category) = Category::new(&id, &name, color) {
-                    state.layout.categories.push(category);
-                    state.mark_dirty();
-                    state.set_status(format!("Created category '{name}'"));
-                } else {
-                    state.set_error("Failed to create category");
-                }
-                // Update component with new categories
-                manager.set_categories(state.layout.categories.clone());
-            }
             CategoryManagerEvent::CategoryDeleted(category_id) => {
                 // Delete category and clean up references (T111, T112)
                 state.layout.categories.retain(|c| c.id != category_id);

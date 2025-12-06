@@ -570,7 +570,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires QMK firmware"]
     fn test_check_deprecated_options_clean() {
         // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         // after migration to standard QMK
@@ -588,7 +588,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires QMK firmware"]
     fn test_check_deprecated_options_vial_enable() {
         // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires QMK firmware"]
     fn test_check_deprecated_options_vial_keyboard_uid() {
         // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
@@ -632,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires QMK firmware"]
     fn test_check_deprecated_options_both() {
         // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();
@@ -653,7 +653,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires QMK firmware"]
     fn test_check_deprecated_options_no_files() {
         // DEPRECATED: This test is skipped as Vial-specific checks are no longer used
         let temp_dir = TempDir::new().unwrap();

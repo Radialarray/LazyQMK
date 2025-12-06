@@ -65,17 +65,7 @@ impl LayerPickerState {
         }
     }
 
-    /// Initialize with a keycode prefix and extra parameter (for LT, LM).
-    /// Note: Currently the flow sets `extra_param` after layer selection,
-    /// but this method is kept for API consistency and potential future use.
-    #[allow(dead_code)]
-    pub fn with_prefix_and_extra(prefix: impl Into<String>, extra: impl Into<String>) -> Self {
-        Self {
-            selected: 0,
-            keycode_prefix: prefix.into(),
-            extra_param: Some(extra.into()),
-        }
-    }
+
 
     /// Reset to initial state
     pub fn reset(&mut self) {
@@ -129,13 +119,7 @@ impl LayerPicker {
         }
     }
 
-    /// Create a new LayerPicker with a keycode prefix and extra parameter
-    #[must_use]
-    pub fn with_prefix_and_extra(prefix: impl Into<String>, extra: impl Into<String>) -> Self {
-        Self {
-            state: LayerPickerState::with_prefix_and_extra(prefix, extra),
-        }
-    }
+
 }
 
 impl crate::tui::component::ContextualComponent for LayerPicker {
@@ -171,11 +155,13 @@ impl LayerPicker {
     }
 
     /// Get mutable state (for updating selection)
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut LayerPickerState {
         &mut self.state
     }
 
     /// Handle navigation with layer count
+    #[allow(dead_code)]
     pub fn handle_navigation(&mut self, layers_count: usize, up: bool) {
         if up {
             self.state.select_previous(layers_count);
@@ -420,28 +406,10 @@ mod tests {
     }
 
     #[test]
-    fn test_layer_picker_with_prefix_and_extra() {
-        let state = LayerPickerState::with_prefix_and_extra("LT", "KC_SPC");
-        assert_eq!(state.keycode_prefix, "LT");
-        assert_eq!(state.extra_param.as_deref(), Some("KC_SPC"));
-    }
-
-    #[test]
-    fn test_build_keycode_simple() {
-        let layers = create_test_layers();
-        let mut state = LayerPickerState::with_prefix("MO");
-        state.selected = 1;
-
-        let keycode = state.build_keycode(&layers[1]);
-        assert!(keycode.starts_with("MO(@"));
-        assert!(keycode.ends_with(')'));
-        assert!(keycode.contains(&layers[1].id));
-    }
-
-    #[test]
     fn test_build_keycode_with_extra() {
         let layers = create_test_layers();
-        let mut state = LayerPickerState::with_prefix_and_extra("LT", "KC_SPC");
+        let mut state = LayerPickerState::with_prefix("LT");
+        state.extra_param = Some("KC_SPC".to_string());
         state.selected = 2;
 
         let keycode = state.build_keycode(&layers[2]);

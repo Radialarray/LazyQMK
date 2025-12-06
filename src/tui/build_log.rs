@@ -79,12 +79,6 @@ impl Default for BuildLogState {
 
 use super::Theme;
 
-/// Context required by BuildLog component
-pub struct BuildLogContext<'a> {
-    /// Build state containing log lines and status
-    pub build_state: &'a BuildState,
-}
-
 /// BuildLog component that implements the ContextualComponent trait
 #[derive(Debug, Clone)]
 pub struct BuildLog {
@@ -103,12 +97,14 @@ impl BuildLog {
 
     /// Get reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub const fn state(&self) -> &BuildLogState {
         &self.state
     }
 
     /// Get mutable reference to the internal state
     #[must_use]
+    #[allow(dead_code)]
     pub fn state_mut(&mut self) -> &mut BuildLogState {
         &mut self.state
     }
@@ -120,7 +116,7 @@ impl Default for BuildLog {
     }
 }
 
-impl<'a> crate::tui::component::ContextualComponent for BuildLog {
+impl crate::tui::component::ContextualComponent for BuildLog {
     type Context = BuildState;
     type Event = BuildLogEvent;
 
@@ -169,86 +165,6 @@ fn render_build_log_component(
 ) {
     let log_state = &log.state;
 
-    // Calculate centered area (80% width, 60% height)
-    let area = centered_rect(80, 60, f.size());
-
-    // Clear the background area first
-    f.render_widget(Clear, area);
-
-    // Render opaque background
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, area);
-
-    // Get log lines
-    let log_lines = &build_state.log_lines;
-    let total_lines = log_lines.len();
-
-    // Calculate visible area height (subtract borders and title)
-    let visible_lines = (area.height.saturating_sub(2)) as usize;
-
-    // Apply scroll offset
-    let start_idx = log_state.scroll_offset.min(total_lines.saturating_sub(1));
-    let end_idx = (start_idx + visible_lines).min(total_lines);
-
-    // Create list items with colored text based on log level
-    let items: Vec<ListItem> = log_lines[start_idx..end_idx]
-        .iter()
-        .map(|(level, message)| {
-            let color = match level {
-                crate::firmware::builder::LogLevel::Info => theme.text,
-                crate::firmware::builder::LogLevel::Ok => theme.success,
-                crate::firmware::builder::LogLevel::Error => theme.error,
-            };
-
-            ListItem::new(Line::from(Span::styled(
-                message.clone(),
-                Style::default().fg(color),
-            )))
-        })
-        .collect();
-
-    // Build status in title
-    let title = format!(
-        " Build Log - {} ({}/{} lines) ",
-        build_state.status,
-        start_idx + 1,
-        total_lines
-    );
-
-    let list = List::new(items).block(
-        Block::default()
-            .title(title)
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.primary)),
-    );
-
-    f.render_widget(list, area);
-
-    // Render help text at bottom
-    let help_text = "↑↓: Scroll | Home/End: Jump | Ctrl+C: Copy | Esc/Shift+B: Close";
-    let help_area = Rect {
-        x: area.x + 2,
-        y: area.y + area.height - 1,
-        width: area.width.saturating_sub(4),
-        height: 1,
-    };
-
-    let help = Paragraph::new(help_text).style(
-        Style::default()
-            .fg(theme.text_muted)
-            .add_modifier(Modifier::DIM),
-    );
-
-    f.render_widget(help, help_area);
-}
-
-/// Renders the build log viewer overlay (legacy - for backward compatibility during migration).
-pub fn render_build_log(
-    f: &mut Frame,
-    build_state: &BuildState,
-    log_state: &BuildLogState,
-    theme: &Theme,
-) {
     // Calculate centered area (80% width, 60% height)
     let area = centered_rect(80, 60, f.size());
 

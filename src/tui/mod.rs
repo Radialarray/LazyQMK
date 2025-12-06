@@ -64,34 +64,34 @@ use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 use crate::services::geometry::{build_geometry_for_layout, extract_base_keyboard, GeometryContext};
 
 // Re-export TUI components
-pub use build_log::{BuildLog, BuildLogContext, BuildLogEvent, BuildLogState};
-pub use category_manager::{CategoryManager, CategoryManagerEvent, CategoryManagerState};
-pub use category_picker::{CategoryPicker, CategoryPickerEvent, CategoryPickerState};
-pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerState};
-pub use component::{ColorPickerContext as ComponentColorPickerContext, Component, ContextualComponent};
+pub use build_log::BuildLog;
+pub use category_manager::{CategoryManager, CategoryManagerState};
+pub use category_picker::{CategoryPicker, CategoryPickerEvent};
+pub use color_picker::ColorPicker;
+pub use component::{Component, ContextualComponent};
 pub use config_dialogs::{
-    KeyboardPicker, KeyboardPickerEvent, KeyboardPickerState,
+    KeyboardPicker,
     LayoutPicker as LayoutVariantPicker, LayoutPickerEvent as LayoutVariantPickerEvent,
-    LayoutPickerState,
 };
-pub use help_overlay::{HelpOverlay, HelpOverlayEvent, HelpOverlayState};
-pub use key_editor::{KeyEditorEvent, KeyEditorState};
+pub use help_overlay::HelpOverlay;
+pub use key_editor::KeyEditorState;
 pub use keyboard::KeyboardWidget;
-pub use keycode_picker::{KeycodePicker, KeycodePickerEvent, KeycodePickerState};
-pub use layer_manager::{LayerManager, LayerManagerEvent, LayerManagerState};
-pub use layer_picker::{LayerPicker, LayerPickerEvent, LayerPickerState};
-pub use layout_picker::{LayoutPicker, LayoutPickerEvent, LayoutPickerState as LayoutPickerDialogState};
+pub use keycode_picker::{KeycodePicker, KeycodePickerState};
+pub use layer_manager::{LayerManager, LayerManagerEvent};
+pub use layer_picker::{LayerPicker, LayerPickerState};
+pub use layout_picker::LayoutPicker;
 // MetadataEditor component migrated in Wave 4c - uses Component trait pattern
 // SettingsManager component migrated in Wave 8 - uses custom ContextualComponent pattern
-pub use modifier_picker::{ModifierPicker, ModifierPickerEvent, ModifierPickerState};
+pub use modifier_picker::ModifierPicker;
 pub use status_bar::StatusBar;
-pub use template_browser::{TemplateBrowser, TemplateBrowserEvent, TemplateBrowserState};
+pub use template_browser::TemplateBrowser;
 pub use theme::Theme;
 
 // Import handler functions from the handlers module
 
 /// Color picker context - what are we setting the color for?
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ColorPickerContext {
     /// Setting color for individual key
     IndividualKey,
@@ -112,6 +112,7 @@ pub enum CategoryPickerContext {
 
 /// Type of parameterized keycode being built
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ParameterizedKeycodeType {
     /// LT(layer, kc) - Hold for layer, tap for keycode
     LayerTap,
@@ -288,6 +289,7 @@ pub enum TemplateSaveField {
 
 /// Popup types that can be displayed over the main UI
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum PopupType {
     /// Keycode picker popup
     KeycodePicker,
@@ -346,6 +348,7 @@ pub enum SelectionMode {
 /// This enum wraps all component types that implement the Component or ContextualComponent trait.
 /// Only one component can be active at a time.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ActiveComponent {
     /// Color picker component
     ColorPicker(ColorPicker),
@@ -413,8 +416,6 @@ pub struct AppState {
     // Legacy component states (to be removed incrementally during migration)
     /// Keycode picker component state
     pub keycode_picker_state: KeycodePickerState,
-    /// Category picker component state
-    pub category_picker_state: CategoryPickerState,
     /// Context for category picker (what's being categorized)
     pub category_picker_context: Option<CategoryPickerContext>,
     /// Category manager component state (preserved across color picker interactions)
@@ -506,7 +507,6 @@ impl AppState {
             error_message: None,
             active_component: None,
             keycode_picker_state: KeycodePickerState::new(),
-            category_picker_state: CategoryPickerState::new(),
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
@@ -692,19 +692,12 @@ impl AppState {
         self.active_popup = Some(PopupType::LayerPicker);
     }
 
-    /// Open the category picker component
-    pub fn open_category_picker(&mut self, context: CategoryPickerContext) {
-        let picker = CategoryPicker::new(context);
-        self.active_component = Some(ActiveComponent::CategoryPicker(picker));
-        self.active_popup = Some(PopupType::CategoryPicker);
-    }
-
-    /// Open the modifier picker component
-    pub fn open_modifier_picker(&mut self) {
-        let picker = ModifierPicker::new();
-        self.active_component = Some(ActiveComponent::ModifierPicker(picker));
-        self.active_popup = Some(PopupType::ModifierPicker);
-    }
+     /// Open the modifier picker component
+     pub fn open_modifier_picker(&mut self) {
+         let picker = ModifierPicker::new();
+         self.active_component = Some(ActiveComponent::ModifierPicker(picker));
+         self.active_popup = Some(PopupType::ModifierPicker);
+     }
 
     /// Open the category manager component
     pub fn open_category_manager(&mut self) {
@@ -728,37 +721,23 @@ impl AppState {
         self.active_popup = Some(PopupType::MetadataEditor);
     }
 
-    /// Open the template browser component
-    pub fn open_template_browser(&mut self) {
-        let browser = TemplateBrowser::new();
-        self.active_component = Some(ActiveComponent::TemplateBrowser(browser));
-        self.active_popup = Some(PopupType::TemplateBrowser);
-    }
+     /// Open the template browser component
+     pub fn open_template_browser(&mut self) {
+         let browser = TemplateBrowser::new();
+         self.active_component = Some(ActiveComponent::TemplateBrowser(browser));
+         self.active_popup = Some(PopupType::TemplateBrowser);
+     }
 
-    /// Open the layout picker component (for loading saved layout files)
-    pub fn open_layout_picker(&mut self) {
-        let picker = LayoutPicker::new();
-        self.active_component = Some(ActiveComponent::LayoutPicker(picker));
-        self.active_popup = Some(PopupType::LayoutPicker);
-    }
+     /// Open the layout variant picker component (for switching QMK keyboard layout variants)
+     pub fn open_layout_variant_picker(&mut self, qmk_path: &PathBuf, keyboard: &str) -> Result<()> {
+         let picker = LayoutVariantPicker::new(qmk_path, keyboard);
+         self.active_component = Some(ActiveComponent::LayoutVariantPicker(picker));
+         self.active_popup = Some(PopupType::LayoutPicker);
+         Ok(())
+     }
 
-    /// Open the layout variant picker component (for switching QMK keyboard layout variants)
-    pub fn open_layout_variant_picker(&mut self, qmk_path: &PathBuf, keyboard: &str) -> Result<()> {
-        let picker = LayoutVariantPicker::new(qmk_path, keyboard);
-        self.active_component = Some(ActiveComponent::LayoutVariantPicker(picker));
-        self.active_popup = Some(PopupType::LayoutPicker);
-        Ok(())
-    }
-
-    /// Open the keyboard picker component
-    pub fn open_keyboard_picker(&mut self, config_path: &PathBuf) {
-        let picker = KeyboardPicker::new(config_path);
-        self.active_component = Some(ActiveComponent::KeyboardPicker(picker));
-        self.active_popup = Some(PopupType::KeyboardPicker);
-    }
-
-    /// Open the build log component
-    pub fn open_build_log(&mut self) {
+     /// Open the build log component
+     pub fn open_build_log(&mut self) {
         let log = BuildLog::new();
         self.active_component = Some(ActiveComponent::BuildLog(log));
         self.active_popup = Some(PopupType::BuildLog);
