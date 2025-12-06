@@ -23,6 +23,19 @@ use ratatui::{
 };
 
 use crate::models::{ColorPalette, RgbColor};
+use crate::tui::component::{Component, ColorPickerContext};
+use crate::tui::Theme;
+
+/// Events emitted by the ColorPicker component
+#[derive(Debug, Clone)]
+pub enum ColorPickerEvent {
+    /// User selected a color
+    ColorSelected(RgbColor),
+    /// User cleared/reset the color
+    ColorCleared,
+    /// User cancelled without making changes
+    Cancelled,
+}
 
 /// RGB channel being edited
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -250,27 +263,199 @@ impl Default for ColorPickerState {
     }
 }
 
-/// Render the color picker dialog
-pub fn render_color_picker(f: &mut Frame, state: &super::AppState) {
-    let theme = &state.theme;
-    let picker_state = &state.color_picker_state;
-
-    match picker_state.mode {
-        ColorPickerMode::Palette => render_palette_mode(f, state),
-        ColorPickerMode::CustomRgb => render_rgb_mode(f, state),
-    }
-
-    // Border around everything
-    let area = centered_rect(70, 70, f.size());
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.primary));
-    f.render_widget(block, area);
+/// ColorPicker component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct ColorPicker {
+    /// Internal state of the color picker
+    state: ColorPickerState,
+    /// Context - what is being colored
+    context: ColorPickerContext,
 }
 
-/// Render palette selection mode
-fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
-    let theme = &state.theme;
+impl ColorPicker {
+    /// Create a new ColorPicker with default white color
+    #[must_use]
+    pub fn new(context: ColorPickerContext, color: RgbColor) -> Self {
+        Self {
+            state: ColorPickerState::with_color(color),
+            context,
+        }
+    }
+
+    /// Get the context of what is being colored
+    #[must_use]
+    pub const fn get_context(&self) -> ColorPickerContext {
+        self.context
+    }
+
+    /// Get the current picker mode (Palette or CustomRgb)
+    #[must_use]
+    pub const fn get_mode(&self) -> ColorPickerMode {
+        self.state.mode
+    }
+
+    /// Get the context-aware title text
+    fn title_text(&self) -> &'static str {
+        match self.context {
+            ColorPickerContext::IndividualKey => "Individual Key Color Picker",
+            ColorPickerContext::LayerDefault => "Layer Color Picker",
+            ColorPickerContext::Category => "Category Color Picker",
+        }
+    }
+
+    /// Get the context-aware title text for RGB mode
+    fn title_text_rgb(&self) -> &'static str {
+        match self.context {
+            ColorPickerContext::IndividualKey => "Individual Key Color Picker (Custom RGB)",
+            ColorPickerContext::LayerDefault => "Layer Color Picker (Custom RGB)",
+            ColorPickerContext::Category => "Category Color Picker (Custom RGB)",
+        }
+    }
+}
+
+impl Component for ColorPicker {
+    type Event = ColorPickerEvent;
+
+    fn handle_input(&mut self, key: KeyEvent) -> Option<Self::Event> {
+        match self.state.mode {
+            ColorPickerMode::Palette => self.handle_palette_input(key),
+            ColorPickerMode::CustomRgb => self.handle_rgb_input(key),
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme) {
+        match self.state.mode {
+            ColorPickerMode::Palette => render_palette_mode_component(f, self, theme),
+            ColorPickerMode::CustomRgb => render_rgb_mode_component(f, self, theme),
+        }
+
+        // Border around everything
+        let area = centered_rect(70, 70, f.size());
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.primary));
+        f.render_widget(block, area);
+    }
+}
+
+impl ColorPicker {
+    /// Handle input in palette mode
+    fn handle_palette_input(&mut self, key: KeyEvent) -> Option<ColorPickerEvent> {
+        match key.code {
+            KeyCode::Esc => Some(ColorPickerEvent::Cancelled),
+            KeyCode::Enter => Some(ColorPickerEvent::ColorSelected(self.state.get_color())),
+            KeyCode::Char('x') | KeyCode::Delete => {
+                // Only allow clearing for non-category contexts
+                if self.context == ColorPickerContext::Category {
+                    None // Categories must have a color
+                } else {
+                    Some(ColorPickerEvent::ColorCleared)
+                }
+            }
+            KeyCode::Char('c' | 'C') => {
+                // Switch to custom RGB mode
+                self.state.mode = ColorPickerMode::CustomRgb;
+                None
+            }
+            KeyCode::Tab => {
+                // Toggle between colors and shades
+                self.state.toggle_palette_focus();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                match self.state.palette_focus {
+                    PaletteFocus::Colors => self.state.navigate_palette(0, -1),
+                    PaletteFocus::Shades => {
+                        // Move back to colors when pressing up in shades
+                        self.state.palette_focus = PaletteFocus::Colors;
+                    }
+                }
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                match self.state.palette_focus {
+                    PaletteFocus::Colors => {
+                        // Check if we should move to shades or next row
+                        let columns = self.state.palette.columns();
+                        let current_row = self.state.selected_color / columns;
+                        let rows = self.state.palette.rows();
+
+                        if current_row >= rows - 1 {
+                            // At bottom row, move to shades
+                            self.state.palette_focus = PaletteFocus::Shades;
+                        } else {
+                            self.state.navigate_palette(0, 1);
+                        }
+                    }
+                    PaletteFocus::Shades => {
+                        // Already at bottom, do nothing
+                    }
+                }
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.navigate_palette(-1, 0);
+                None
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.navigate_palette(1, 0);
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input in custom RGB mode
+    fn handle_rgb_input(&mut self, key: KeyEvent) -> Option<ColorPickerEvent> {
+        match key.code {
+            KeyCode::Esc => Some(ColorPickerEvent::Cancelled),
+            KeyCode::Enter => Some(ColorPickerEvent::ColorSelected(self.state.get_color())),
+            KeyCode::Char('x') | KeyCode::Delete => {
+                // Only allow clearing for non-category contexts
+                if self.context == ColorPickerContext::Category {
+                    None // Categories must have a color
+                } else {
+                    Some(ColorPickerEvent::ColorCleared)
+                }
+            }
+            KeyCode::Char('p' | 'P') => {
+                // Switch to palette mode
+                self.state.mode = ColorPickerMode::Palette;
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.increase_value(10);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.decrease_value(10);
+                None
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.increase_value(1);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.decrease_value(1);
+                None
+            }
+            KeyCode::Tab => {
+                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.state.previous_channel();
+                } else {
+                    self.state.next_channel();
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+}
+
+
+
+/// Render palette selection mode (for Component)
+fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme) {
     let area = centered_rect(70, 70, f.size());
 
     // Clear the background area first
@@ -280,7 +465,7 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
     let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
-    let picker_state = &state.color_picker_state;
+    let picker_state = &picker.state;
 
     // Split into sections with spacing
     let chunks = Layout::default()
@@ -301,12 +486,7 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
         .split(area);
 
     // Title - context-aware
-    let title_text = match state.color_picker_context {
-        Some(super::ColorPickerContext::IndividualKey) => "Individual Key Color Picker",
-        Some(super::ColorPickerContext::LayerDefault) => "Layer Color Picker",
-        Some(super::ColorPickerContext::Category) => "Category Color Picker",
-        None => "Color Picker",
-    };
+    let title_text = picker.title_text();
     let title = Paragraph::new(title_text).style(
         Style::default()
             .fg(theme.primary)
@@ -343,7 +523,7 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
     render_shade_bar(f, chunks[5], picker_state, theme);
 
     // Preview
-    render_preview(f, chunks[7], picker_state, theme);
+    render_preview_component(f, chunks[7], picker_state, theme);
 
     // Instructions (at bottom)
     let instructions = vec![Line::from(vec![
@@ -364,12 +544,34 @@ fn render_palette_mode(f: &mut Frame, state: &super::AppState) {
     f.render_widget(instructions_widget, chunks[9]);
 }
 
+/// Render custom RGB mode instructions
+fn render_rgb_instructions(f: &mut Frame, area: Rect, theme: &Theme) {
+    let instructions = vec![Line::from(vec![
+        Span::styled("↑↓", Style::default().fg(theme.accent)),
+        Span::raw(" ±10  "),
+        Span::styled("←→", Style::default().fg(theme.accent)),
+        Span::raw(" ±1  "),
+        Span::styled("Tab", Style::default().fg(theme.accent)),
+        Span::raw(" Channel  "),
+        Span::styled("p", Style::default().fg(theme.accent)),
+        Span::raw(" Palette  "),
+        Span::styled("x", Style::default().fg(theme.accent)),
+        Span::raw(" Clear  "),
+        Span::styled("Enter", Style::default().fg(theme.accent)),
+        Span::raw(" Apply  "),
+        Span::styled("Esc", Style::default().fg(theme.accent)),
+        Span::raw(" Cancel"),
+    ])];
+    let instructions_widget = Paragraph::new(instructions);
+    f.render_widget(instructions_widget, area);
+}
+
 /// Render the color grid (4x3)
 fn render_color_grid(
     f: &mut Frame,
     area: Rect,
     picker_state: &ColorPickerState,
-    theme: &super::Theme,
+    theme: &Theme,
 ) {
     let columns = picker_state.palette.columns();
     let rows = picker_state.palette.rows();
@@ -444,7 +646,7 @@ fn render_shade_bar(
     f: &mut Frame,
     area: Rect,
     picker_state: &ColorPickerState,
-    theme: &super::Theme,
+    theme: &Theme,
 ) {
     if let Some(color) = picker_state.palette.color_at(picker_state.selected_color) {
         let shade_count = color.shade_count();
@@ -503,12 +705,12 @@ fn render_shade_bar(
     }
 }
 
-/// Render preview section
-fn render_preview(
+/// Render preview section (for Component)
+fn render_preview_component(
     f: &mut Frame,
     area: Rect,
     picker_state: &ColorPickerState,
-    theme: &super::Theme,
+    theme: &Theme,
 ) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -559,9 +761,8 @@ fn render_preview(
     f.render_widget(info, chunks[1]);
 }
 
-/// Render custom RGB mode
-fn render_rgb_mode(f: &mut Frame, state: &super::AppState) {
-    let theme = &state.theme;
+/// Render custom RGB mode (for Component)
+fn render_rgb_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme) {
     let area = centered_rect(70, 70, f.size());
 
     // Clear the background area first
@@ -586,17 +787,10 @@ fn render_rgb_mode(f: &mut Frame, state: &super::AppState) {
         ])
         .split(area);
 
-    let picker_state = &state.color_picker_state;
+    let picker_state = &picker.state;
 
     // Title - context-aware
-    let title_text = match state.color_picker_context {
-        Some(super::ColorPickerContext::IndividualKey) => {
-            "Individual Key Color Picker (Custom RGB)"
-        }
-        Some(super::ColorPickerContext::LayerDefault) => "Layer Color Picker (Custom RGB)",
-        Some(super::ColorPickerContext::Category) => "Category Color Picker (Custom RGB)",
-        None => "Custom RGB",
-    };
+    let title_text = picker.title_text_rgb();
     let title = Paragraph::new(title_text).style(
         Style::default()
             .fg(theme.primary)
@@ -701,242 +895,7 @@ fn render_channel_slider(
     f.render_widget(gauge, area);
 }
 
-/// Handle input for color picker
-pub fn handle_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Result<bool> {
-    match state.color_picker_state.mode {
-        ColorPickerMode::Palette => handle_palette_input(state, key),
-        ColorPickerMode::CustomRgb => handle_rgb_input(state, key),
-    }
-}
 
-/// Handle input in palette mode
-fn handle_palette_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            state.active_popup = None;
-            state.color_picker_context = None;
-            state.set_status("Cancelled");
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            apply_color(state);
-            Ok(false)
-        }
-        KeyCode::Char('x') | KeyCode::Delete => {
-            // Clear/reset the color
-            clear_color(state);
-            Ok(false)
-        }
-        KeyCode::Char('c' | 'C') => {
-            // Switch to custom RGB mode
-            state.color_picker_state.mode = ColorPickerMode::CustomRgb;
-            Ok(false)
-        }
-        KeyCode::Tab => {
-            // Toggle between colors and shades
-            state.color_picker_state.toggle_palette_focus();
-            Ok(false)
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            match state.color_picker_state.palette_focus {
-                PaletteFocus::Colors => state.color_picker_state.navigate_palette(0, -1),
-                PaletteFocus::Shades => {
-                    // Move back to colors when pressing up in shades
-                    state.color_picker_state.palette_focus = PaletteFocus::Colors;
-                }
-            }
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            match state.color_picker_state.palette_focus {
-                PaletteFocus::Colors => {
-                    // Check if we should move to shades or next row
-                    let columns = state.color_picker_state.palette.columns();
-                    let current_row = state.color_picker_state.selected_color / columns;
-                    let rows = state.color_picker_state.palette.rows();
-
-                    if current_row >= rows - 1 {
-                        // At bottom row, move to shades
-                        state.color_picker_state.palette_focus = PaletteFocus::Shades;
-                    } else {
-                        state.color_picker_state.navigate_palette(0, 1);
-                    }
-                }
-                PaletteFocus::Shades => {
-                    // Already at bottom, do nothing
-                }
-            }
-            Ok(false)
-        }
-        KeyCode::Left | KeyCode::Char('h') => {
-            state.color_picker_state.navigate_palette(-1, 0);
-            Ok(false)
-        }
-        KeyCode::Right | KeyCode::Char('l') => {
-            state.color_picker_state.navigate_palette(1, 0);
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
-/// Handle input in custom RGB mode
-fn handle_rgb_input(state: &mut super::AppState, key: KeyEvent) -> anyhow::Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            state.active_popup = None;
-            state.color_picker_context = None;
-            state.set_status("Cancelled");
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            apply_color(state);
-            Ok(false)
-        }
-        KeyCode::Char('x') | KeyCode::Delete => {
-            // Clear/reset the color
-            clear_color(state);
-            Ok(false)
-        }
-        KeyCode::Char('p' | 'P') => {
-            // Switch to palette mode
-            state.color_picker_state.mode = ColorPickerMode::Palette;
-            Ok(false)
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            state.color_picker_state.increase_value(10);
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            state.color_picker_state.decrease_value(10);
-            Ok(false)
-        }
-        KeyCode::Right | KeyCode::Char('l') => {
-            state.color_picker_state.increase_value(1);
-            Ok(false)
-        }
-        KeyCode::Left | KeyCode::Char('h') => {
-            state.color_picker_state.decrease_value(1);
-            Ok(false)
-        }
-        KeyCode::Tab => {
-            if key.modifiers.contains(KeyModifiers::SHIFT) {
-                state.color_picker_state.previous_channel();
-            } else {
-                state.color_picker_state.next_channel();
-            }
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
-/// Apply the selected color based on context
-fn apply_color(state: &mut super::AppState) {
-    let color = state.color_picker_state.get_color();
-
-    match state.color_picker_context {
-        Some(super::ColorPickerContext::IndividualKey) => {
-            if let Some(key) = state.get_selected_key_mut() {
-                key.color_override = Some(color);
-                state.mark_dirty();
-                state.set_status(format!("Set key color to {}", color.to_hex()));
-            }
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-        Some(super::ColorPickerContext::LayerDefault) => {
-            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
-                layer.default_color = color;
-                state.mark_dirty();
-                state.set_status(format!("Set layer default color to {}", color.to_hex()));
-            }
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-        Some(super::ColorPickerContext::Category) => {
-            use super::category_manager::ManagerMode;
-
-            match &state.category_manager_state.mode {
-                ManagerMode::CreatingColor { name } => {
-                    let name = name.clone();
-                    let id = name.to_lowercase().replace(' ', "-");
-
-                    if let Ok(category) = crate::models::Category::new(&id, &name, color) {
-                        state.layout.categories.push(category);
-                        state.mark_dirty();
-                        state.set_status(format!("Created category '{name}'"));
-                    } else {
-                        state.set_error("Failed to create category");
-                    }
-
-                    // Always reset mode back to browsing after color selection
-                    state.category_manager_state.cancel();
-                    state.active_popup = Some(super::PopupType::CategoryManager);
-                    state.color_picker_context = None;
-                }
-                ManagerMode::Browsing => {
-                    let selected_idx = state.category_manager_state.selected;
-                    if let Some(category) = state.layout.categories.get_mut(selected_idx) {
-                        let name = category.name.clone();
-                        category.set_color(color);
-                        state.mark_dirty();
-                        state.set_status(format!("Updated color for '{name}'"));
-                    }
-
-                    state.active_popup = Some(super::PopupType::CategoryManager);
-                    state.color_picker_context = None;
-                }
-                _ => {
-                    state.set_error("Invalid category manager state");
-                    state.active_popup = Some(super::PopupType::CategoryManager);
-                    state.color_picker_context = None;
-                }
-            }
-        }
-        None => {
-            state.set_error("No color context set");
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-    }
-}
-
-/// Clear/reset the color based on context
-fn clear_color(state: &mut super::AppState) {
-    match state.color_picker_context {
-        Some(super::ColorPickerContext::IndividualKey) => {
-            // Clear individual key color override - key will inherit layer default
-            if let Some(key) = state.get_selected_key_mut() {
-                key.color_override = None;
-                state.mark_dirty();
-                state.set_status("Cleared key color (using layer default)");
-            }
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-        Some(super::ColorPickerContext::LayerDefault) => {
-            // Reset layer default to white
-            let default_color = crate::models::RgbColor::new(255, 255, 255);
-            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
-                layer.default_color = default_color;
-                state.mark_dirty();
-                state.set_status("Reset layer color to white");
-            }
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-        Some(super::ColorPickerContext::Category) => {
-            // Categories must have a color - clearing is not allowed
-            state.set_error("Categories must have a color");
-        }
-        None => {
-            state.set_error("No color context set");
-            state.active_popup = None;
-            state.color_picker_context = None;
-        }
-    }
-}
 
 /// Helper to create a centered rectangle
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

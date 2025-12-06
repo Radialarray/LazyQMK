@@ -5,6 +5,8 @@
 //! The selected layer is stored as a UUID reference (@`layer_id`) rather
 //! than a numeric index, making it stable across layer reordering.
 
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -16,6 +18,15 @@ use ratatui::{
 use crate::models::Layer;
 
 use super::Theme;
+
+/// Events emitted by the LayerPicker component
+#[derive(Debug, Clone)]
+pub enum LayerPickerEvent {
+    /// User selected a layer
+    LayerSelected(usize),
+    /// User cancelled without making changes
+    Cancelled,
+}
 
 /// Layer picker state
 #[derive(Debug, Clone)]
@@ -102,7 +113,172 @@ impl LayerPickerState {
     }
 }
 
-/// Render the layer picker popup
+/// LayerPicker component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct LayerPicker {
+    /// Internal state of the layer picker
+    state: LayerPickerState,
+}
+
+impl LayerPicker {
+    /// Create a new LayerPicker with a given keycode prefix
+    #[must_use]
+    pub fn new(prefix: impl Into<String>) -> Self {
+        Self {
+            state: LayerPickerState::with_prefix(prefix),
+        }
+    }
+
+    /// Create a new LayerPicker with a keycode prefix and extra parameter
+    #[must_use]
+    pub fn with_prefix_and_extra(prefix: impl Into<String>, extra: impl Into<String>) -> Self {
+        Self {
+            state: LayerPickerState::with_prefix_and_extra(prefix, extra),
+        }
+    }
+}
+
+impl crate::tui::component::ContextualComponent for LayerPicker {
+    type Context = Vec<crate::models::Layer>;
+    type Event = LayerPickerEvent;
+
+    fn handle_input(&mut self, key: KeyEvent, layers: &Self::Context) -> Option<Self::Event> {
+        match key.code {
+            KeyCode::Esc => Some(LayerPickerEvent::Cancelled),
+            KeyCode::Enter => Some(LayerPickerEvent::LayerSelected(self.state.selected)),
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.select_previous(layers.len());
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.select_next(layers.len());
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme, layers: &Self::Context) {
+        render_layer_picker_component(f, self, layers, theme);
+    }
+}
+
+impl LayerPicker {
+    /// Get the current state (for rendering with parent context)
+    #[must_use]
+    pub const fn state(&self) -> &LayerPickerState {
+        &self.state
+    }
+
+    /// Get mutable state (for updating selection)
+    pub fn state_mut(&mut self) -> &mut LayerPickerState {
+        &mut self.state
+    }
+
+    /// Handle navigation with layer count
+    pub fn handle_navigation(&mut self, layers_count: usize, up: bool) {
+        if up {
+            self.state.select_previous(layers_count);
+        } else {
+            self.state.select_next(layers_count);
+        }
+    }
+}
+
+/// Render the layer picker popup using the Component
+pub fn render_layer_picker_component(
+    f: &mut Frame,
+    picker: &LayerPicker,
+    layers: &[Layer],
+    theme: &Theme,
+) {
+    let state = picker.state();
+    let area = centered_rect(50, 60, f.size());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background with theme color
+    let background = Block::default().style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(5),    // Layer list
+            Constraint::Length(3), // Help text
+        ])
+        .split(area);
+
+    // Title with keycode preview
+    let preview = if let Some(layer) = layers.get(state.selected) {
+        state.build_keycode(layer)
+    } else {
+        format!("{}(?)", state.keycode_prefix)
+    };
+
+    let title = format!(" Select Layer for {} ", state.keycode_prefix);
+    let title_block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .style(Style::default().bg(theme.background));
+
+    let preview_text = Paragraph::new(format!("Preview: {preview}"))
+        .block(title_block)
+        .style(Style::default().fg(theme.text));
+    f.render_widget(preview_text, chunks[0]);
+
+    // Build list items
+    let list_items: Vec<ListItem> = layers
+        .iter()
+        .enumerate()
+        .map(|(idx, layer)| {
+            let content = Line::from(vec![
+                Span::styled(
+                    format!("Layer {idx}: "),
+                    Style::default().fg(theme.text_muted),
+                ),
+                Span::styled(&layer.name, Style::default().fg(theme.text)),
+            ]);
+            ListItem::new(content)
+        })
+        .collect();
+
+    // Create list widget with stateful selection
+    let list = List::new(list_items)
+        .block(
+            Block::default()
+                .title(format!(" Layers ({}) ", layers.len()))
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(theme.surface)
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ");
+
+    // Create list state for highlighting
+    let mut list_state = ListState::default();
+    list_state.select(Some(state.selected.min(layers.len().saturating_sub(1))));
+
+    f.render_stateful_widget(list, chunks[1], &mut list_state);
+
+    // Help text
+    let help = Paragraph::new("^|v: Navigate | Enter: Select | Esc: Cancel")
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
+        )
+        .style(Style::default().fg(theme.text_muted));
+    f.render_widget(help, chunks[2]);
+}
+
+/// Render the layer picker popup (legacy - for backward compatibility)
 pub fn render_layer_picker(
     f: &mut Frame,
     state: &LayerPickerState,

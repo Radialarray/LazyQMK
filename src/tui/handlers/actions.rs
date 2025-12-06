@@ -7,10 +7,9 @@ use crate::models::{Position, VisualLayoutMapping};
 use crate::services::LayoutService;
 use crate::shortcuts::Action;
 use crate::tui::{
-    clipboard, key_editor, onboarding_wizard, AppState, CategoryPickerContext,
-    CategoryPickerState, CategoryManagerState, ColorPickerContext, ColorPickerState,
-    KeycodePickerState, LayerManagerState, MetadataEditorState, PopupType, SelectionMode,
-    SettingsManagerState, TemplateBrowserState, TemplateSaveDialogState,
+    clipboard, key_editor, onboarding_wizard, ActiveComponent, AppState, CategoryPickerContext,
+    PopupType, SelectionMode,
+    TemplateSaveDialogState,
 };
 
 /// Calculate all positions within a rectangle defined by two corner positions.
@@ -163,9 +162,9 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::ToggleHelp => {
             if state.active_popup == Some(PopupType::HelpOverlay) {
-                state.active_popup = None;
+                state.close_component();
             } else {
-                state.active_popup = Some(PopupType::HelpOverlay);
+                state.open_help_overlay();
             }
             Ok(false)
         }
@@ -183,39 +182,33 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
                     state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
                 } else {
                     // Key is empty (KC_NO, KC_TRNS) - open keycode picker
-                    state.active_popup = Some(PopupType::KeycodePicker);
-                    state.keycode_picker_state = KeycodePickerState::new();
+                    state.open_keycode_picker();
                     state.set_status("Select keycode - Type to search, Enter to apply");
                 }
             } else {
                 // No key selected - open keycode picker
-                state.active_popup = Some(PopupType::KeycodePicker);
-                state.keycode_picker_state = KeycodePickerState::new();
+                state.open_keycode_picker();
                 state.set_status("Select keycode - Type to search, Enter to apply");
             }
             Ok(false)
         }
         Action::OpenLayerManager => {
-            state.layer_manager_state = LayerManagerState::new();
-            state.active_popup = Some(PopupType::LayerManager);
+            state.open_layer_manager();
             state.set_status("Layer Manager - n: new, d: delete, r: rename");
             Ok(false)
         }
         Action::OpenCategoryManager => {
-            state.category_manager_state = CategoryManagerState::new();
-            state.active_popup = Some(PopupType::CategoryManager);
+            state.open_category_manager();
             state.set_status("Category Manager - n: new, r: rename, c: color, d: delete");
             Ok(false)
         }
         Action::OpenSettings => {
-            state.settings_manager_state = SettingsManagerState::new();
-            state.active_popup = Some(PopupType::SettingsManager);
+            state.open_settings_manager();
             state.set_status("Settings Manager - Enter: edit, Esc: close");
             Ok(false)
         }
         Action::EditMetadata => {
-            state.metadata_editor_state = MetadataEditorState::new(&state.layout.metadata);
-            state.active_popup = Some(PopupType::MetadataEditor);
+            state.open_metadata_editor();
             state.set_status("Edit Metadata - Tab: next field, Enter: save");
             Ok(false)
         }
@@ -249,12 +242,10 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::ViewBuildLog => {
             if state.build_state.is_some() {
-                if state.build_log_state.visible {
-                    state.active_popup = None;
-                    state.build_log_state.visible = false;
+                if state.active_component.as_ref().map_or(false, |c| matches!(c, ActiveComponent::BuildLog(_))) {
+                    state.close_component();
                 } else {
-                    state.active_popup = Some(PopupType::BuildLog);
-                    state.build_log_state.visible = true;
+                    state.open_build_log();
                 }
                 state.set_status("Build log toggled");
             } else {
@@ -263,13 +254,8 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
             Ok(false)
         }
         Action::BrowseTemplates => {
-            state.template_browser_state = TemplateBrowserState::new();
-            if let Err(e) = state.template_browser_state.scan_templates() {
-                state.set_error(format!("Failed to scan templates: {e}"));
-            } else {
-                state.active_popup = Some(PopupType::TemplateBrowser);
-                state.set_status("Template Browser - Enter: load, /: search");
-            }
+            state.open_template_browser();
+            state.set_status("Template Browser - Enter: load, /: search");
             Ok(false)
         }
         Action::SaveAsTemplate => {
@@ -290,15 +276,11 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
             let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
             let base_keyboard = AppState::extract_base_keyboard(keyboard);
 
-            if let Err(e) = state
-                .layout_picker_state
-                .load_layouts(&qmk_path, &base_keyboard)
-            {
+            if let Err(e) = state.open_layout_variant_picker(&qmk_path, &base_keyboard) {
                 state.set_error(format!("Failed to load layouts: {e}"));
                 return Ok(false);
             }
 
-            state.active_popup = Some(PopupType::LayoutPicker);
             state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
             Ok(false)
         }
@@ -713,7 +695,8 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         Action::AssignCategoryToKey => {
             // Assign category to individual key (Ctrl+K)
             if state.get_selected_key().is_some() {
-                state.category_picker_state = CategoryPickerState::new();
+                let picker = crate::tui::CategoryPicker::new(CategoryPickerContext::IndividualKey);
+                state.active_component = Some(ActiveComponent::CategoryPicker(picker));
                 state.category_picker_context = Some(CategoryPickerContext::IndividualKey);
                 state.active_popup = Some(PopupType::CategoryPicker);
                 state.set_status("Select category for key - Enter to apply");
@@ -725,7 +708,8 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         }
         Action::AssignCategoryToLayer => {
             // Assign category to layer (Shift+L or Ctrl+L)
-            state.category_picker_state = CategoryPickerState::new();
+            let picker = crate::tui::CategoryPicker::new(CategoryPickerContext::Layer);
+            state.active_component = Some(ActiveComponent::CategoryPicker(picker));
             state.category_picker_context = Some(CategoryPickerContext::Layer);
             state.active_popup = Some(PopupType::CategoryPicker);
             state.set_status("Select category for layer - Enter to apply");
@@ -736,9 +720,10 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
             if let Some(key) = state.get_selected_key() {
                 // Initialize color picker with current key color
                 let current_color = state.layout.resolve_key_color(state.current_layer, key);
-                state.color_picker_state = ColorPickerState::with_color(current_color);
-                state.color_picker_context = Some(ColorPickerContext::IndividualKey);
-                state.active_popup = Some(PopupType::ColorPicker);
+                state.open_color_picker(
+                    crate::tui::component::ColorPickerContext::IndividualKey,
+                    current_color,
+                );
                 state
                     .set_status("Adjust color with arrows, Tab to switch channels, Enter to apply");
             } else {
@@ -750,9 +735,10 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
             // Set layer default color (c)
             if let Some(layer) = state.layout.layers.get(state.current_layer) {
                 // Initialize color picker with current layer default color
-                state.color_picker_state = ColorPickerState::with_color(layer.default_color);
-                state.color_picker_context = Some(ColorPickerContext::LayerDefault);
-                state.active_popup = Some(PopupType::ColorPicker);
+                state.open_color_picker(
+                    crate::tui::component::ColorPickerContext::LayerDefault,
+                    layer.default_color,
+                );
                 state.set_status("Setting layer default color - Enter to apply");
             }
             Ok(false)

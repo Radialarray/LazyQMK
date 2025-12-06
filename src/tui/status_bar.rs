@@ -187,10 +187,14 @@ impl StatusBar {
             }
             Some(PopupType::ColorPicker) => {
                 // Check color picker mode
-                if state.color_picker_state.mode == super::color_picker::ColorPickerMode::Palette {
-                    help_registry::contexts::COLOR_PICKER_PALETTE
+                if let Some(super::ActiveComponent::ColorPicker(picker)) = &state.active_component {
+                    if picker.get_mode() == super::color_picker::ColorPickerMode::Palette {
+                        help_registry::contexts::COLOR_PICKER_PALETTE
+                    } else {
+                        help_registry::contexts::COLOR_PICKER_RGB
+                    }
                 } else {
-                    help_registry::contexts::COLOR_PICKER_RGB
+                    help_registry::contexts::COLOR_PICKER_PALETTE
                 }
             }
             Some(PopupType::CategoryManager) => help_registry::contexts::CATEGORY_MANAGER,
@@ -198,6 +202,7 @@ impl StatusBar {
             Some(PopupType::LayerManager) => help_registry::contexts::LAYER_MANAGER,
             Some(PopupType::LayerPicker) => help_registry::contexts::LAYER_PICKER,
             Some(PopupType::LayoutPicker) => help_registry::contexts::LAYOUT_PICKER,
+            Some(PopupType::KeyboardPicker) => help_registry::contexts::KEYBOARD_PICKER,
             Some(PopupType::HelpOverlay) => help_registry::contexts::HELP,
             Some(PopupType::BuildLog) => help_registry::contexts::BUILD_LOG,
             Some(PopupType::MetadataEditor) => help_registry::contexts::METADATA_EDITOR,
@@ -260,6 +265,9 @@ impl StatusBar {
             }
             Some(PopupType::KeyEditor) => {
                 "Enter: Reassign | D: Description | C: Color | Esc: Close"
+            }
+            Some(PopupType::KeyboardPicker) => {
+                "↑↓: Navigate | Enter: Select | Type: Filter | Esc: Cancel"
             }
             None => {
                 // Main keyboard editing mode

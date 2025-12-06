@@ -1,12 +1,17 @@
 //! Modifier picker dialog for selecting QMK modifiers
 //!
 //! Used for `MT()` and `LM()` keycodes that require modifier selection.
+//!
+//! This module implements both:
+//! - Legacy rendering function: `render_modifier_picker()` for backward compatibility
+//! - Component trait: `ModifierPicker` for self-contained UI components
 
 // Navigation uses separate match arms for left/right columns for clarity
 #![allow(clippy::match_same_arms)]
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
+use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier as StyleModifier, Style},
@@ -15,6 +20,7 @@ use ratatui::{
     Frame,
 };
 
+use super::component::Component;
 use super::theme::Theme;
 
 /// QMK modifier bit flags
@@ -261,7 +267,235 @@ impl ModifierPickerState {
     }
 }
 
-/// Render the modifier picker popup
+/// Events emitted by the ModifierPicker component
+#[derive(Debug, Clone)]
+pub enum ModifierPickerEvent {
+    /// User selected modifiers and wants to apply them
+    ModifiersSelected(Vec<String>),
+    /// User cancelled without making changes
+    Cancelled,
+}
+
+/// ModifierPicker component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct ModifierPicker {
+    /// Internal state of the modifier picker
+    state: ModifierPickerState,
+}
+
+impl ModifierPicker {
+    /// Create a new ModifierPicker with empty selection
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: ModifierPickerState::new(),
+        }
+    }
+
+    /// Create a new ModifierPicker initialized with specific modifiers
+    #[must_use]
+    pub fn with_modifiers(mod_bits: u8) -> Self {
+        Self {
+            state: ModifierPickerState {
+                selected_mods: mod_bits,
+                focus: 0,
+            },
+        }
+    }
+
+    /// Get the internal state (for legacy rendering)
+    pub fn state(&self) -> &ModifierPickerState {
+        &self.state
+    }
+
+    /// Get mutable access to state (for legacy rendering)
+    pub fn state_mut(&mut self) -> &mut ModifierPickerState {
+        &mut self.state
+    }
+
+    /// Get the selected modifiers as a QMK modifier string
+    #[must_use]
+    pub fn get_mod_string(&self) -> String {
+        self.state.to_mod_string()
+    }
+
+    /// Get the selected modifiers as individual strings
+    fn get_modifiers_list(&self) -> Vec<String> {
+        if self.state.selected_mods == 0 {
+            return Vec::new();
+        }
+
+        let mut parts = Vec::new();
+        for modifier in &QmkModifier::ALL {
+            if self.state.is_selected(*modifier as u8) {
+                parts.push(modifier.qmk_name().to_string());
+            }
+        }
+
+        parts
+    }
+}
+
+impl Default for ModifierPicker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Component for ModifierPicker {
+    type Event = ModifierPickerEvent;
+
+    fn handle_input(&mut self, key: KeyEvent) -> Option<Self::Event> {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Esc => Some(ModifierPickerEvent::Cancelled),
+            KeyCode::Enter => Some(ModifierPickerEvent::ModifiersSelected(self.get_modifiers_list())),
+            KeyCode::Char(' ') => {
+                self.state.toggle_focused();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.focus_up();
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.focus_down();
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.focus_left();
+                None
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.focus_right();
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &Theme) {
+        render_modifier_picker_component(f, self, theme);
+    }
+}
+
+/// Render the modifier picker popup (Component version)
+fn render_modifier_picker_component(f: &mut Frame, picker: &ModifierPicker, theme: &Theme) {
+    let area = centered_rect(50, 60, f.size());
+
+    // Clear background
+    f.render_widget(Clear, area);
+    f.render_widget(
+        Block::default().style(Style::default().bg(theme.background)),
+        area,
+    );
+
+    // Main layout
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Length(1), // Spacer
+            Constraint::Length(6), // Modifier grid (4 rows)
+            Constraint::Length(1), // Spacer
+            Constraint::Length(3), // Presets row
+            Constraint::Length(1), // Spacer
+            Constraint::Length(2), // Selected display
+            Constraint::Min(2),    // Help text
+        ])
+        .split(area);
+
+    // Title
+    let title = Paragraph::new(" Select Modifier(s) ")
+        .style(
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(StyleModifier::BOLD),
+        )
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
+    // Modifier grid - split into left and right columns
+    let grid_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(chunks[2]);
+
+    // Left column header + modifiers
+    render_modifier_column(f, grid_chunks[0], &picker.state, true, theme);
+
+    // Right column header + modifiers
+    render_modifier_column(f, grid_chunks[1], &picker.state, false, theme);
+
+    // Presets row
+    let preset_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(chunks[4]);
+
+    render_preset(
+        f,
+        preset_chunks[0],
+        ModifierPreset::Meh,
+        picker.state.focus == 8,
+        &picker.state,
+        theme,
+    );
+    render_preset(
+        f,
+        preset_chunks[1],
+        ModifierPreset::Hyper,
+        picker.state.focus == 9,
+        &picker.state,
+        theme,
+    );
+
+    // Selected display
+    let selected_text = if picker.state.has_selection() {
+        format!(" Selected: {}", picker.state.to_mod_string())
+    } else {
+        " Selected: (none)".to_string()
+    };
+    let selected = Paragraph::new(selected_text).style(Style::default().fg(theme.accent));
+    f.render_widget(selected, chunks[6]);
+
+    // Help text
+    let help_spans = vec![
+        Span::styled(
+            "↑↓←→",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(StyleModifier::BOLD),
+        ),
+        Span::raw(" Navigate  "),
+        Span::styled(
+            "Space",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(StyleModifier::BOLD),
+        ),
+        Span::raw(" Toggle  "),
+        Span::styled(
+            "Enter",
+            Style::default()
+                .fg(theme.success)
+                .add_modifier(StyleModifier::BOLD),
+        ),
+        Span::raw(" Confirm  "),
+        Span::styled(
+            "Esc",
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(StyleModifier::BOLD),
+        ),
+        Span::raw(" Cancel"),
+    ];
+    let help = Paragraph::new(Line::from(help_spans)).style(Style::default().fg(theme.text_muted));
+    f.render_widget(help, chunks[7]);
+}
+
+/// Render the modifier picker popup (legacy - for backward compatibility)
 pub fn render_modifier_picker(f: &mut Frame, state: &ModifierPickerState, theme: &Theme) {
     let area = centered_rect(50, 60, f.size());
 

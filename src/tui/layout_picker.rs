@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout as RatatuiLayout},
+    layout::{Alignment, Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -135,7 +135,194 @@ impl Default for LayoutPickerState {
     }
 }
 
-/// Renders the layout picker dialog.
+/// LayoutPicker component that implements the Component trait
+#[derive(Debug, Clone)]
+pub struct LayoutPicker {
+    /// Internal state of the layout picker
+    state: LayoutPickerState,
+}
+
+impl LayoutPicker {
+    /// Create a new LayoutPicker
+    #[must_use]
+    pub fn new() -> Self {
+        let mut state = LayoutPickerState::new();
+        // Attempt to scan layouts on creation (ignore errors)
+        let _ = state.scan_layouts();
+        Self { state }
+    }
+
+    /// Get reference to the internal state
+    #[must_use]
+    pub const fn state(&self) -> &LayoutPickerState {
+        &self.state
+    }
+
+    /// Get mutable reference to the internal state
+    #[must_use]
+    pub fn state_mut(&mut self) -> &mut LayoutPickerState {
+        &mut self.state
+    }
+}
+
+impl Default for LayoutPicker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl crate::tui::component::Component for LayoutPicker {
+    type Event = LayoutPickerEvent;
+
+    fn handle_input(&mut self, key: crossterm::event::KeyEvent) -> Option<Self::Event> {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                if self.state.create_new {
+                    // Move from "Create New" to last layout
+                    if !self.state.layouts.is_empty() {
+                        self.state.create_new = false;
+                        self.state.selected = self.state.layouts.len() - 1;
+                    }
+                } else if self.state.selected > 0 {
+                    self.state.selected -= 1;
+                } else {
+                    // Wrap to "Create New"
+                    self.state.create_new = true;
+                }
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if self.state.create_new {
+                    // Move from "Create New" to first layout
+                    if !self.state.layouts.is_empty() {
+                        self.state.create_new = false;
+                        self.state.selected = 0;
+                    }
+                } else if self.state.selected < self.state.layouts.len() - 1 {
+                    self.state.selected += 1;
+                } else {
+                    // Wrap to "Create New"
+                    self.state.create_new = true;
+                }
+                None
+            }
+            KeyCode::Enter => {
+                // User made a selection
+                if self.state.create_new {
+                    Some(LayoutPickerEvent::CreateNew)
+                } else if let Some(layout_info) = self.state.layouts.get(self.state.selected) {
+                    Some(LayoutPickerEvent::LayoutSelected(layout_info.path.clone()))
+                } else {
+                    // No layouts available, default to creating new
+                    Some(LayoutPickerEvent::CreateNew)
+                }
+            }
+            KeyCode::Esc => Some(LayoutPickerEvent::Cancelled),
+            _ => None,
+        }
+    }
+
+    fn render(&self, f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
+        render_layout_picker_component(f, self, area, theme);
+    }
+}
+
+/// Renders the layout picker dialog (for Component)
+fn render_layout_picker_component(
+    f: &mut Frame,
+    picker: &LayoutPicker,
+    _area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
+    let size = f.size();
+    let state = &picker.state;
+
+    // Create centered dialog
+    let vertical_chunks = RatatuiLayout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(10),   // List
+            Constraint::Length(3), // Instructions
+        ])
+        .split(size);
+
+    // Render title
+    let title = Paragraph::new("Select a Layout")
+        .style(
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, vertical_chunks[0]);
+
+    // Build list items
+    let mut items: Vec<ListItem> = Vec::new();
+
+    // Add "Create New" option first
+    let create_new_style = if state.create_new {
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.success)
+    };
+    items.push(ListItem::new("+ Create New Layout").style(create_new_style));
+
+    // Add saved layouts
+    for (i, layout_info) in state.layouts.iter().enumerate() {
+        let is_selected = !state.create_new && i == state.selected;
+
+        let style = if is_selected {
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        let modified = layout_info
+            .metadata
+            .modified
+            .format("%Y-%m-%d %H:%M")
+            .to_string();
+
+        let text = format!("{} ({})", layout_info.metadata.name, modified);
+
+        items.push(ListItem::new(text).style(style));
+    }
+
+    let list_title = if state.layouts.is_empty() {
+        "No saved layouts found".to_string()
+    } else {
+        format!("Saved Layouts ({} total)", state.layouts.len())
+    };
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title(list_title))
+        .highlight_style(
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    f.render_widget(list, vertical_chunks[1]);
+
+    // Render instructions
+    let instructions = "↑↓: Navigate  |  Enter: Select  |  Esc: Cancel";
+    let paragraph = Paragraph::new(instructions)
+        .style(Style::default().fg(theme.text_muted))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(paragraph, vertical_chunks[2]);
+}
+
+/// Renders the layout picker dialog (legacy - for backward compatibility during migration).
 pub fn render(f: &mut Frame, state: &LayoutPickerState, theme: &crate::tui::theme::Theme) {
     let size = f.size();
 
@@ -222,7 +409,18 @@ pub fn render(f: &mut Frame, state: &LayoutPickerState, theme: &crate::tui::them
     f.render_widget(paragraph, vertical_chunks[2]);
 }
 
-/// Action returned by layout picker when user makes a choice.
+/// Events emitted by the LayoutPicker component
+#[derive(Debug, Clone)]
+pub enum LayoutPickerEvent {
+    /// User chose to create a new layout
+    CreateNew,
+    /// User selected an existing layout to load
+    LayoutSelected(PathBuf),
+    /// User cancelled the picker
+    Cancelled,
+}
+
+/// Action returned by layout picker when user makes a choice (legacy alias for backward compatibility).
 #[derive(Debug, Clone)]
 pub enum PickerAction {
     /// User chose to create a new layout

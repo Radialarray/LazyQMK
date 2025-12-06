@@ -5,214 +5,527 @@ use crossterm::event::{self, KeyCode, KeyModifiers};
 
 use crate::services::LayoutService;
 use crate::tui::{
-    key_editor, keycode_picker, metadata_editor, onboarding_wizard, AppState,
-    ParameterizedKeycodeType, PopupType,
+    build_log::BuildLogEvent, color_picker::ColorPickerEvent, component::{Component, ContextualComponent}, key_editor, keycode_picker,
+    metadata_editor, onboarding_wizard, ActiveComponent, AppState, LayoutVariantPickerEvent, ParameterizedKeycodeType,
+    PopupType, keycode_picker::KeycodePickerEvent,
 };
 
-/// Handle input for build log viewer
-pub fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match key.code {
-        KeyCode::Esc | KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            state.active_popup = None;
-            state.build_log_state.visible = false;
-            state.set_status("Build log closed");
-            Ok(false)
-        }
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            // Copy build log to clipboard
-            if let Some(build_state) = &state.build_state {
-                let log_text = build_state
-                    .log_lines
-                    .iter()
-                    .map(|(_, message)| message.as_str())
-                    .collect::<Vec<_>>()
-                    .join("\n");
-
-                match arboard::Clipboard::new()
-                    .and_then(|mut clipboard| clipboard.set_text(log_text))
-                {
-                    Ok(()) => state.set_status("Build log copied to clipboard"),
-                    Err(e) => state.set_error(format!("Failed to copy to clipboard: {e}")),
-                }
-            } else {
-                state.set_error("No build log available");
+/// Handle keycode picker events
+fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) -> Result<bool> {
+    match event {
+        KeycodePickerEvent::KeycodeSelected(keycode) => {
+            // Check if we're in a parameterized keycode flow
+            if state.pending_keycode.keycode_type.is_some() {
+                // This is handled by the tap keycode picker flow
+                // Should not happen in normal keycode picker
             }
-            Ok(false)
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            state.build_log_state.scroll_up();
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            if let Some(build_state) = &state.build_state {
-                let max_lines = build_state.log_lines.len();
-                state.build_log_state.scroll_down(max_lines, 20); // Approximate visible lines
+            
+            // Normal keycode assignment
+            if let Some(key) = state.get_selected_key_mut() {
+                key.keycode = keycode.clone();
+                state.mark_dirty();
+                state.set_status(format!("Assigned: {keycode}"));
             }
-            Ok(false)
+            
+            state.close_component();
         }
-        KeyCode::Home => {
-            state.build_log_state.scroll_to_top();
-            Ok(false)
-        }
-        KeyCode::End => {
-            if let Some(build_state) = &state.build_state {
-                let max_lines = build_state.log_lines.len();
-                state.build_log_state.scroll_to_bottom(max_lines, 20); // Approximate visible lines
-            }
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
-/// Handle input for help overlay
-pub fn handle_help_overlay_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match key.code {
-        // Close help with Escape or '?'
-        KeyCode::Esc | KeyCode::Char('?') => {
-            state.active_popup = None;
-            state.set_status("Press ? for help");
-            Ok(false)
-        }
-        // Scroll up
-        KeyCode::Up | KeyCode::Char('k') => {
-            state.help_overlay_state.scroll_up();
-            Ok(false)
-        }
-        // Scroll down
-        KeyCode::Down | KeyCode::Char('j') => {
-            state.help_overlay_state.scroll_down();
-            Ok(false)
-        }
-        // Page up
-        KeyCode::PageUp => {
-            state.help_overlay_state.page_up(20); // Approximate visible height
-            Ok(false)
-        }
-        // Page down
-        KeyCode::PageDown => {
-            state.help_overlay_state.page_down(20); // Approximate visible height
-            Ok(false)
-        }
-        // Home - scroll to top
-        KeyCode::Home => {
-            state.help_overlay_state.scroll_to_top();
-            Ok(false)
-        }
-        // End - scroll to bottom
-        KeyCode::End => {
-            state.help_overlay_state.scroll_to_bottom();
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
-
-/// Handle input for metadata editor
-pub fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    let action =
-        metadata_editor::handle_metadata_editor_input(&mut state.metadata_editor_state, key);
-
-    match action {
-        metadata_editor::MetadataEditorAction::Confirm => {
-            // Check if name changed before applying (need to do this before apply mutates state)
-            let name_changed = state.metadata_editor_state.name_changed();
-            let new_name = state.metadata_editor_state.name.clone();
-
-            // Validate and apply changes
-            match state
-                .metadata_editor_state
-                .apply_to_layout(&mut state.layout)
-            {
-                Ok(()) => {
-                    state.mark_dirty();
-
-                    // If name changed and we have a source file, rename it
-                    if name_changed {
-                        if let Some(ref old_path) = state.source_path {
-                            match LayoutService::rename_file_if_needed(old_path, &new_name) {
-                                Ok(Some(new_path)) => {
-                                    state.source_path = Some(new_path);
-                                    state.set_status(format!("Layout renamed to '{new_name}'"));
-                                }
-                                Ok(None) => {
-                                    state.set_status("Metadata updated");
-                                }
-                                Err(e) => {
-                                    state.set_error(format!("Failed to rename file: {e}"));
-                                }
-                            }
-                        } else {
-                            state.set_status("Metadata updated");
-                        }
-                    } else {
-                        state.set_status("Metadata updated");
-                    }
-
-                    state.active_popup = None;
-                }
-                Err(err) => {
-                    state.set_error(format!("Validation failed: {err}"));
-                }
-            }
-            Ok(false)
-        }
-        metadata_editor::MetadataEditorAction::Cancel => {
-            state.active_popup = None;
-            state.set_status("Metadata editing cancelled");
-            Ok(false)
-        }
-        metadata_editor::MetadataEditorAction::Continue => Ok(false),
-    }
-}
-
-/// Handle input for layout picker
-pub fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    use crate::tui::config_dialogs;
-    
-    if let Some(selected) =
-        config_dialogs::handle_layout_picker_input(&mut state.layout_picker_state, key)
-    {
-        if selected.is_empty() {
-            // User cancelled
-            if state.return_to_settings_after_picker {
-                state.return_to_settings_after_picker = false;
-                state.active_popup = Some(PopupType::SettingsManager);
-                state.set_status("Layout selection cancelled");
-            } else {
-                state.active_popup = None;
-                state.set_status("Layout selection cancelled");
-            }
-            return Ok(false);
-        }
-
-        // User selected a layout - rebuild geometry and mapping
-        match state.rebuild_geometry(&selected) {
-            Ok(()) => {
-                if state.return_to_settings_after_picker {
-                    state.return_to_settings_after_picker = false;
-                    state.active_popup = Some(PopupType::SettingsManager);
-                    state.set_status(format!("Switched to layout: {selected}"));
-                } else {
-                    state.active_popup = None;
-                    state.set_status(format!("Switched to layout: {selected}"));
-                }
-                state.mark_dirty(); // Config change requires save
-            }
-            Err(e) => {
-                state.set_error(format!("Failed to switch layout: {e}"));
-                if state.return_to_settings_after_picker {
-                    state.return_to_settings_after_picker = false;
-                    state.active_popup = Some(PopupType::SettingsManager);
-                }
-            }
+        KeycodePickerEvent::Cancelled => {
+            state.close_component();
+            state.set_status("Cancelled");
         }
     }
     Ok(false)
 }
 
+/// Handle category picker events
+fn handle_category_picker_event(state: &mut AppState, event: crate::tui::CategoryPickerEvent) -> Result<bool> {
+    match event {
+        crate::tui::CategoryPickerEvent::CategorySelected(category_id) => {
+            // Apply category based on context
+            match state.category_picker_context {
+                Some(crate::tui::CategoryPickerContext::IndividualKey) => {
+                    if let Some(key) = state.get_selected_key_mut() {
+                        key.category_id.clone_from(&category_id);
+                        state.mark_dirty();
+
+                        if let Some(id) = category_id {
+                            state.set_status(format!("Assigned key category '{id}'"));
+                        } else {
+                            state.set_status("Removed key category");
+                        }
+                    }
+                }
+                Some(crate::tui::CategoryPickerContext::Layer) => {
+                    if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                        layer.category_id.clone_from(&category_id);
+                        state.mark_dirty();
+
+                        if let Some(id) = category_id {
+                            state.set_status(format!("Assigned layer category '{id}'"));
+                        } else {
+                            state.set_status("Removed layer category");
+                        }
+                    }
+                }
+                None => {
+                    state.set_error("No category context set");
+                }
+            }
+
+            state.close_component();
+            state.category_picker_context = None;
+        }
+        crate::tui::CategoryPickerEvent::Cancelled => {
+            state.close_component();
+            state.category_picker_context = None;
+            state.set_status("Cancelled");
+        }
+    }
+    Ok(false)
+}
+
+/// Handle color picker input using Component trait pattern
+fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Get mutable reference to the ColorPicker component
+    if let Some(ActiveComponent::ColorPicker(ref mut picker)) = state.active_component {
+        // Handle input and get event
+        if let Some(event) = picker.handle_input(key) {
+            // Process the event
+            match event {
+                ColorPickerEvent::ColorSelected(color) => {
+                    // Get context before closing component
+                    let context = picker.get_context();
+                    
+                    // Apply color based on context
+                    match context {
+                        crate::tui::component::ColorPickerContext::IndividualKey => {
+                            if let Some(key) = state.get_selected_key_mut() {
+                                key.color_override = Some(color);
+                                state.mark_dirty();
+                                state.set_status(format!("Set key color to {}", color.to_hex()));
+                            }
+                        }
+                        crate::tui::component::ColorPickerContext::LayerDefault => {
+                            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                                layer.default_color = color;
+                                state.mark_dirty();
+                                state.set_status(format!("Set layer default color to {}", color.to_hex()));
+                            }
+                        }
+                        crate::tui::component::ColorPickerContext::Category => {
+                            use crate::tui::category_manager::ManagerMode;
+                            use crate::tui::CategoryManager;
+                            
+                            match &state.category_manager_state.mode {
+                                ManagerMode::CreatingColor { name } => {
+                                    let name = name.clone();
+                                    let id = name.to_lowercase().replace(' ', "-");
+                                    
+                                    if let Ok(category) = crate::models::Category::new(&id, &name, color) {
+                                        state.layout.categories.push(category);
+                                        state.mark_dirty();
+                                        state.set_status(format!("Created category '{name}'"));
+                                    } else {
+                                        state.set_error("Failed to create category");
+                                    }
+                                    
+                                    state.category_manager_state.cancel();
+                                }
+                                ManagerMode::Browsing => {
+                                    let selected_idx = state.category_manager_state.selected;
+                                    if let Some(category) = state.layout.categories.get_mut(selected_idx) {
+                                        let name = category.name.clone();
+                                        category.set_color(color);
+                                        state.mark_dirty();
+                                        state.set_status(format!("Updated color for '{name}'"));
+                                    }
+                                }
+                                _ => {
+                                    state.set_error("Invalid category manager state");
+                                }
+                            }
+                            
+                            // Recreate CategoryManager component with updated categories and synced state
+                            let mut manager = CategoryManager::new(state.layout.categories.clone());
+                            *manager.state_mut() = state.category_manager_state.clone();
+                            state.active_component = Some(ActiveComponent::CategoryManager(manager));
+                            state.active_popup = Some(PopupType::CategoryManager);
+                        }
+                    }
+                    
+                    // Close the color picker
+                    state.close_component();
+                }
+                ColorPickerEvent::ColorCleared => {
+                    // Get context before closing component
+                    let context = picker.get_context();
+                    
+                    match context {
+                        crate::tui::component::ColorPickerContext::IndividualKey => {
+                            if let Some(key) = state.get_selected_key_mut() {
+                                key.color_override = None;
+                                state.mark_dirty();
+                                state.set_status("Cleared key color (using layer default)");
+                            }
+                        }
+                        crate::tui::component::ColorPickerContext::LayerDefault => {
+                            let default_color = crate::models::RgbColor::new(255, 255, 255);
+                            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                                layer.default_color = default_color;
+                                state.mark_dirty();
+                                state.set_status("Reset layer color to white");
+                            }
+                        }
+                        crate::tui::component::ColorPickerContext::Category => {
+                            state.set_error("Categories must have a color");
+                            return Ok(false); // Don't close
+                        }
+                    }
+                    
+                    // Close the color picker
+                    state.close_component();
+                }
+                ColorPickerEvent::Cancelled => {
+                    state.close_component();
+                    state.set_status("Cancelled");
+                }
+            }
+        }
+    }
+    
+    Ok(false)
+}
+
+/// Handle input for build log viewer
+pub fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Handle clipboard copy separately as it's not part of the component
+    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+        if let Some(build_state) = &state.build_state {
+            let log_text = build_state
+                .log_lines
+                .iter()
+                .map(|(_, message)| message.as_str())
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            match arboard::Clipboard::new()
+                .and_then(|mut clipboard| clipboard.set_text(log_text))
+            {
+                Ok(()) => state.set_status("Build log copied to clipboard"),
+                Err(e) => state.set_error(format!("Failed to copy to clipboard: {e}")),
+            }
+        } else {
+            state.set_error("No build log available");
+        }
+        return Ok(false);
+    }
+
+    // Use ContextualComponent trait pattern
+    if let Some(ActiveComponent::BuildLog(ref mut log)) = state.active_component {
+        if let Some(ref build_state) = state.build_state {
+            if let Some(event) = log.handle_input(key, build_state) {
+                return handle_build_log_event(state, event);
+            }
+        }
+    }
+    
+    Ok(false)
+}
+
+/// Handle events from BuildLog component
+fn handle_build_log_event(state: &mut AppState, event: BuildLogEvent) -> Result<bool> {
+    match event {
+        BuildLogEvent::Closed => {
+            state.close_component();
+            state.set_status("Build log closed");
+        }
+    }
+    
+    Ok(false)
+}
+
+/// Handle input for help overlay
+pub fn handle_help_overlay_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Use Component trait pattern
+    if let Some(ActiveComponent::HelpOverlay(ref mut help)) = state.active_component {
+        if let Some(event) = help.handle_input(key) {
+            return handle_help_overlay_event(state, event);
+        }
+    }
+    Ok(false)
+}
+
+/// Handle help overlay events
+fn handle_help_overlay_event(state: &mut AppState, event: crate::tui::help_overlay::HelpOverlayEvent) -> Result<bool> {
+    use crate::tui::help_overlay::HelpOverlayEvent;
+    
+    match event {
+        HelpOverlayEvent::Closed => {
+            state.close_component();
+            state.set_status("Press ? for help");
+        }
+    }
+    Ok(false)
+}
+
+/// Handle input for metadata editor
+pub fn handle_metadata_editor_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Use Component trait pattern
+    if let Some(ActiveComponent::MetadataEditor(ref mut editor)) = state.active_component {
+        if let Some(event) = editor.handle_input(key) {
+            return handle_metadata_editor_event(state, event);
+        }
+    }
+    Ok(false)
+}
+
+/// Handle metadata editor events
+fn handle_metadata_editor_event(
+    state: &mut AppState,
+    event: metadata_editor::MetadataEditorEvent,
+) -> Result<bool> {
+    use metadata_editor::MetadataEditorEvent;
+
+    match event {
+        MetadataEditorEvent::MetadataUpdated {
+            name,
+            description,
+            author,
+            tags,
+            name_changed,
+        } => {
+            // Apply changes to layout
+            state.layout.metadata.name = name.clone();
+            state.layout.metadata.description = description;
+            state.layout.metadata.author = author;
+            state.layout.metadata.tags = tags;
+            state.layout.metadata.modified = chrono::Utc::now();
+            state.mark_dirty();
+
+            // If name changed and we have a source file, rename it
+            if name_changed {
+                if let Some(ref old_path) = state.source_path {
+                    match LayoutService::rename_file_if_needed(old_path, &name) {
+                        Ok(Some(new_path)) => {
+                            state.source_path = Some(new_path);
+                            state.set_status(format!("Layout renamed to '{name}'"));
+                        }
+                        Ok(None) => {
+                            state.set_status("Metadata updated");
+                        }
+                        Err(e) => {
+                            state.set_error(format!("Failed to rename file: {e}"));
+                        }
+                    }
+                } else {
+                    state.set_status("Metadata updated");
+                }
+            } else {
+                state.set_status("Metadata updated");
+            }
+
+            state.active_popup = None;
+            state.active_component = None;
+            Ok(false)
+        }
+        MetadataEditorEvent::Cancelled => {
+            state.active_popup = None;
+            state.active_component = None;
+            state.set_status("Metadata editing cancelled");
+            Ok(false)
+        }
+        MetadataEditorEvent::Closed => {
+            state.active_popup = None;
+            state.active_component = None;
+            Ok(false)
+        }
+    }
+}
+
+/// Handle input for layout variant picker
+pub fn handle_layout_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    use crate::tui::ActiveComponent;
+
+    // Extract the component from active_component
+    let mut component = match state.active_component.take() {
+        Some(ActiveComponent::LayoutVariantPicker(picker)) => picker,
+        _ => {
+            // Component not found - close popup
+            state.active_popup = None;
+            return Ok(false);
+        }
+    };
+
+    // Handle input and get event
+    if let Some(event) = component.handle_input(key) {
+        // Process the event
+        handle_layout_variant_picker_event(state, event)?;
+    } else {
+        // No event - restore component and continue
+        state.active_component = Some(ActiveComponent::LayoutVariantPicker(component));
+    }
+
+    Ok(false)
+}
+
+/// Handle events from the layout variant picker component
+fn handle_layout_variant_picker_event(
+    state: &mut AppState,
+    event: LayoutVariantPickerEvent,
+) -> Result<()> {
+    match event {
+        LayoutVariantPickerEvent::LayoutSelected(selected) => {
+            // User selected a layout - rebuild geometry and mapping
+            match state.rebuild_geometry(&selected) {
+                Ok(()) => {
+                    if state.return_to_settings_after_picker {
+                        state.return_to_settings_after_picker = false;
+                        state.open_settings_manager();
+                        state.set_status(format!("Switched to layout: {selected}"));
+                    } else {
+                        state.active_popup = None;
+                        state.set_status(format!("Switched to layout: {selected}"));
+                    }
+                    state.mark_dirty(); // Config change requires save
+                }
+                Err(e) => {
+                    state.set_error(format!("Failed to switch layout: {e}"));
+                    if state.return_to_settings_after_picker {
+                        state.return_to_settings_after_picker = false;
+                        state.open_settings_manager();
+                    }
+                }
+            }
+            state.active_component = None;
+        }
+        LayoutVariantPickerEvent::Cancelled => {
+            // User cancelled
+            if state.return_to_settings_after_picker {
+                state.return_to_settings_after_picker = false;
+                state.open_settings_manager();
+                state.set_status("Layout selection cancelled");
+            } else {
+                state.active_popup = None;
+                state.set_status("Layout selection cancelled");
+            }
+            state.active_component = None;
+        }
+    }
+    Ok(())
+}
+
 /// Handle input for layer picker (for layer-switching keycodes)
 pub fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Extract the component from active_component
+    let mut component = match state.active_component.take() {
+        Some(ActiveComponent::LayerPicker(picker)) => picker,
+        _ => {
+            // Component not found - fall back to legacy handling
+            return handle_layer_picker_legacy(state, key);
+        }
+    };
+
+    // Handle input and get event
+    if let Some(event) = component.handle_input(key, &state.layout.layers) {
+        // Process the event
+        handle_layer_picker_event(state, event)?;
+    } else {
+        // No event - restore component and continue
+        state.active_component = Some(ActiveComponent::LayerPicker(component));
+    }
+
+    Ok(false)
+}
+
+/// Handle events from the LayerPicker component
+fn handle_layer_picker_event(state: &mut AppState, event: crate::tui::layer_picker::LayerPickerEvent) -> Result<()> {
+    use crate::tui::layer_picker::LayerPickerEvent;
+
+    match event {
+        LayerPickerEvent::LayerSelected(selected_idx) => {
+            // Get the selected layer
+            if let Some(layer) = state.layout.layers.get(selected_idx) {
+                let layer_ref = format!("@{}", layer.id);
+
+                // Check if we're editing a combo keycode part
+                if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
+                    let new_combo = match part {
+                        key_editor::ComboEditPart::Hold => combo_type.with_hold(&layer_ref),
+                        key_editor::ComboEditPart::Tap => combo_type.with_tap(&layer_ref),
+                    };
+                    let new_keycode = new_combo.to_keycode();
+
+                    if let Some(key) = state.get_selected_key_mut() {
+                        key.keycode = new_keycode.clone();
+                        state.mark_dirty();
+                        state.set_status(format!("Updated: {new_keycode}"));
+                    }
+
+                    state.active_popup = Some(PopupType::KeyEditor);
+                    state.active_component = None;
+                    return Ok(());
+                }
+
+                // Check if we're in a parameterized keycode flow
+                match &state.pending_keycode.keycode_type {
+                    Some(ParameterizedKeycodeType::LayerTap) => {
+                        // LT: Store layer, go to tap keycode picker
+                        state.pending_keycode.param1 = Some(layer_ref);
+                        state.active_popup = Some(PopupType::TapKeycodePicker);
+                        state.keycode_picker_state = keycode_picker::KeycodePickerState::new();
+                        state.active_component = None;
+                        state.set_status("Select tap keycode for LT");
+                        return Ok(());
+                    }
+                    Some(ParameterizedKeycodeType::LayerMod) => {
+                        // LM: Store layer, go to modifier picker
+                        state.pending_keycode.param1 = Some(layer_ref);
+                        state.open_modifier_picker();
+                        state.active_component = None;
+                        state.set_status("Select modifier(s) for LM");
+                        return Ok(());
+                    }
+                    _ => {
+                        // Regular layer keycode (MO, TG, TO, etc.) - assign directly
+                        // Need to get the picker's state to build the keycode
+                        // Since we consumed the component, we need to use layer_picker_state
+                        let keycode = state.layer_picker_state.build_keycode(layer);
+
+                        if let Some(key) = state.get_selected_key_mut() {
+                            key.keycode = keycode.clone();
+                            state.mark_dirty();
+                            state.set_status(format!("Assigned: {keycode}"));
+                        }
+                    }
+                }
+            }
+
+            state.active_popup = None;
+            state.active_component = None;
+        }
+        LayerPickerEvent::Cancelled => {
+            // Check if we were editing a combo part
+            if state.key_editor_state.combo_edit.is_some() {
+                state.key_editor_state.combo_edit = None;
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.active_component = None;
+                state.set_status("Cancelled - back to key editor");
+                return Ok(());
+            }
+            // Check if this was part of a parameterized keycode flow
+            if state.pending_keycode.keycode_type.is_some() {
+                state.pending_keycode.reset();
+            }
+            state.active_popup = None;
+            state.active_component = None;
+            state.set_status("Layer selection cancelled");
+        }
+    }
+    Ok(())
+}
+
+/// Legacy handler for layer picker (when no component is active)
+fn handle_layer_picker_legacy(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
         KeyCode::Esc => {
             // Check if we were editing a combo part
@@ -281,7 +594,7 @@ pub fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> 
                     Some(ParameterizedKeycodeType::LayerMod) => {
                         // LM: Store layer, go to modifier picker
                         state.pending_keycode.param1 = Some(layer_ref);
-                        state.active_popup = Some(PopupType::ModifierPicker);
+                        state.open_modifier_picker();
                         state.layer_picker_state.reset();
                         state.set_status("Select modifier(s) for LM");
                         return Ok(false);
@@ -361,51 +674,22 @@ pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEven
 /// Handle input for modifier picker (for MT/LM keycodes)
 #[allow(clippy::too_many_lines)]
 pub fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            // Check if we were editing a combo part
-            if state.key_editor_state.combo_edit.is_some() {
-                state.key_editor_state.combo_edit = None;
-                state.active_popup = Some(PopupType::KeyEditor);
-                state.modifier_picker_state.reset();
-                state.set_status("Cancelled - back to key editor");
-                return Ok(false);
-            }
-            state.pending_keycode.reset();
-            state.modifier_picker_state.reset();
-            state.active_popup = None;
-            state.set_status("Cancelled");
-            Ok(false)
+    // Use Component trait pattern
+    if let Some(ActiveComponent::ModifierPicker(ref mut picker)) = state.active_component {
+        if let Some(event) = picker.handle_input(key) {
+            return handle_modifier_picker_event(state, event);
         }
-        KeyCode::Up | KeyCode::Char('k') => {
-            state.modifier_picker_state.focus_up();
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            state.modifier_picker_state.focus_down();
-            Ok(false)
-        }
-        KeyCode::Left | KeyCode::Char('h') => {
-            state.modifier_picker_state.focus_left();
-            Ok(false)
-        }
-        KeyCode::Right | KeyCode::Char('l') => {
-            state.modifier_picker_state.focus_right();
-            Ok(false)
-        }
-        KeyCode::Char(' ') => {
-            // Toggle the focused modifier
-            state.modifier_picker_state.toggle_focused();
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            // Confirm selection - need at least one modifier
-            if !state.modifier_picker_state.has_selection() {
-                state.set_error("Select at least one modifier");
-                return Ok(false);
-            }
+    }
+    Ok(false)
+}
 
-            let mod_string = state.modifier_picker_state.to_mod_string();
+/// Handle modifier picker events
+fn handle_modifier_picker_event(state: &mut AppState, event: crate::tui::modifier_picker::ModifierPickerEvent) -> Result<bool> {
+    use crate::tui::modifier_picker::ModifierPickerEvent;
+    
+    match event {
+        ModifierPickerEvent::ModifiersSelected(modifiers) => {
+            let mod_string = modifiers.join(" | ");
 
             // Check if we're editing a combo keycode part
             if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
@@ -422,7 +706,7 @@ pub fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) 
                 }
 
                 state.active_popup = Some(PopupType::KeyEditor);
-                state.modifier_picker_state.reset();
+                state.close_component();
                 return Ok(false);
             }
 
@@ -432,7 +716,7 @@ pub fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) 
                     state.pending_keycode.param1 = Some(mod_string);
                     state.active_popup = Some(PopupType::TapKeycodePicker);
                     state.keycode_picker_state = keycode_picker::KeycodePickerState::new();
-                    state.modifier_picker_state.reset();
+                    state.close_component();
                     state.set_status("Select tap keycode for MT");
                 }
                 Some(ParameterizedKeycodeType::LayerMod) => {
@@ -448,8 +732,7 @@ pub fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) 
                     }
 
                     state.pending_keycode.reset();
-                    state.modifier_picker_state.reset();
-                    state.active_popup = None;
+                    state.close_component();
                 }
                 Some(ParameterizedKeycodeType::SingleMod) => {
                     // OSM and similar: Store modifier as param2, build and assign
@@ -464,21 +747,32 @@ pub fn handle_modifier_picker_input(state: &mut AppState, key: event::KeyEvent) 
                     }
 
                     state.pending_keycode.reset();
-                    state.modifier_picker_state.reset();
-                    state.active_popup = None;
+                    state.close_component();
                 }
                 _ => {
                     // Unexpected state - cancel
                     state.pending_keycode.reset();
-                    state.modifier_picker_state.reset();
-                    state.active_popup = None;
+                    state.close_component();
                     state.set_error("Unexpected state");
                 }
             }
-            Ok(false)
         }
-        _ => Ok(false),
+        ModifierPickerEvent::Cancelled => {
+            // Check if we were editing a combo part
+            if state.key_editor_state.combo_edit.is_some() {
+                state.key_editor_state.combo_edit = None;
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.close_component();
+                state.set_status("Cancelled - back to key editor");
+                return Ok(false);
+            }
+            
+            state.pending_keycode.reset();
+            state.close_component();
+            state.set_status("Cancelled");
+        }
     }
+    Ok(false)
 }
 
 /// Check if a keycode is a basic keycode (not parameterized)
@@ -528,7 +822,7 @@ pub fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> 
                         }
 
                         // Return to settings manager
-                        state.active_popup = Some(PopupType::SettingsManager);
+                        state.open_settings_manager();
                     } else {
                         // Full wizard - build and save the new config
                         match state.wizard_state.build_config() {
@@ -553,7 +847,7 @@ pub fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> 
                     // Wizard cancelled
                     if state.wizard_state.keyboard_change_only {
                         // Return to settings manager
-                        state.active_popup = Some(PopupType::SettingsManager);
+                        state.open_settings_manager();
                         state.set_status("Keyboard selection cancelled");
                     } else {
                         state.active_popup = None;
@@ -571,6 +865,39 @@ pub fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> 
             Ok(false)
         }
     }
+}
+
+/// Handle keyboard picker input using Component trait pattern
+pub fn handle_keyboard_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Use Component trait pattern
+    if let Some(ActiveComponent::KeyboardPicker(ref mut picker)) = state.active_component {
+        if let Some(event) = picker.handle_input(key) {
+            return handle_keyboard_picker_event(state, event);
+        }
+    }
+    Ok(false)
+}
+
+/// Handle keyboard picker events
+fn handle_keyboard_picker_event(state: &mut AppState, event: crate::tui::config_dialogs::KeyboardPickerEvent) -> Result<bool> {
+    use crate::tui::config_dialogs::KeyboardPickerEvent;
+    
+    match event {
+        KeyboardPickerEvent::KeyboardSelected(keyboard) => {
+            // Update layout metadata with selected keyboard
+            state.layout.metadata.keyboard = Some(keyboard.clone());
+            state.mark_dirty();
+            state.set_status(format!("Selected keyboard: {keyboard}"));
+            
+            // Close the picker
+            state.close_component();
+        }
+        KeyboardPickerEvent::Cancelled => {
+            state.close_component();
+            state.set_status("Cancelled");
+        }
+    }
+    Ok(false)
 }
 
 /// Handle input for unsaved changes prompt
@@ -603,14 +930,31 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
 
 /// Handle input when popup is active (dispatcher)
 pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    use crate::tui::{category_picker, color_picker};
-    
     let popup_type = state.active_popup.clone();
 
     match popup_type {
-        Some(PopupType::KeycodePicker) => keycode_picker::handle_input(state, key),
-        Some(PopupType::ColorPicker) => color_picker::handle_input(state, key),
-        Some(PopupType::CategoryPicker) => category_picker::handle_input(state, key),
+        Some(PopupType::KeycodePicker) => {
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::KeycodePicker(ref mut picker)) = state.active_component {
+                if let Some(event) = picker.handle_input(key, &state.keycode_db) {
+                    return handle_keycode_picker_event(state, event);
+                }
+            }
+            Ok(false)
+        }
+        Some(PopupType::ColorPicker) => {
+            // Use Component trait pattern
+            handle_color_picker_event(state, key)
+        }
+        Some(PopupType::CategoryPicker) => {
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::CategoryPicker(ref mut picker)) = state.active_component {
+                if let Some(event) = picker.handle_input(key, &state.layout.categories) {
+                    return handle_category_picker_event(state, event);
+                }
+            }
+            Ok(false)
+        }
         Some(PopupType::CategoryManager) => super::handle_category_manager_input(state, key),
         Some(PopupType::LayerManager) => super::handle_layer_manager_input(state, key),
         Some(PopupType::LayerPicker) => handle_layer_picker_input(state, key),
@@ -626,6 +970,7 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
         Some(PopupType::TapKeycodePicker) => handle_tap_keycode_picker_input(state, key),
         Some(PopupType::ModifierPicker) => handle_modifier_picker_input(state, key),
         Some(PopupType::KeyEditor) => key_editor::handle_input(state, key),
+        Some(PopupType::KeyboardPicker) => handle_keyboard_picker_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {

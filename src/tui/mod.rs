@@ -19,6 +19,7 @@ pub mod category_manager;
 pub mod category_picker;
 pub mod clipboard;
 pub mod color_picker;
+pub mod component;
 pub mod config_dialogs;
 pub mod handlers;
 pub mod help_overlay;
@@ -63,20 +64,28 @@ use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 use crate::services::geometry::{build_geometry_for_layout, extract_base_keyboard, GeometryContext};
 
 // Re-export TUI components
-pub use category_manager::CategoryManagerState;
-pub use category_picker::CategoryPickerState;
-pub use color_picker::ColorPickerState;
-pub use help_overlay::HelpOverlayState;
-pub use key_editor::KeyEditorState;
+pub use build_log::{BuildLog, BuildLogContext, BuildLogEvent, BuildLogState};
+pub use category_manager::{CategoryManager, CategoryManagerEvent, CategoryManagerState};
+pub use category_picker::{CategoryPicker, CategoryPickerEvent, CategoryPickerState};
+pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerState};
+pub use component::{ColorPickerContext as ComponentColorPickerContext, Component, ContextualComponent};
+pub use config_dialogs::{
+    KeyboardPicker, KeyboardPickerEvent, KeyboardPickerState,
+    LayoutPicker as LayoutVariantPicker, LayoutPickerEvent as LayoutVariantPickerEvent,
+    LayoutPickerState,
+};
+pub use help_overlay::{HelpOverlay, HelpOverlayEvent, HelpOverlayState};
+pub use key_editor::{KeyEditorEvent, KeyEditorState};
 pub use keyboard::KeyboardWidget;
-pub use keycode_picker::KeycodePickerState;
-pub use layer_manager::LayerManagerState;
-pub use layer_picker::LayerPickerState;
-pub use metadata_editor::MetadataEditorState;
-pub use modifier_picker::ModifierPickerState;
-pub use settings_manager::SettingsManagerState;
+pub use keycode_picker::{KeycodePicker, KeycodePickerEvent, KeycodePickerState};
+pub use layer_manager::{LayerManager, LayerManagerEvent, LayerManagerState};
+pub use layer_picker::{LayerPicker, LayerPickerEvent, LayerPickerState};
+pub use layout_picker::{LayoutPicker, LayoutPickerEvent, LayoutPickerState as LayoutPickerDialogState};
+// MetadataEditor component migrated in Wave 4c - uses Component trait pattern
+// SettingsManager component migrated in Wave 8 - uses custom ContextualComponent pattern
+pub use modifier_picker::{ModifierPicker, ModifierPickerEvent, ModifierPickerState};
 pub use status_bar::StatusBar;
-pub use template_browser::TemplateBrowserState;
+pub use template_browser::{TemplateBrowser, TemplateBrowserEvent, TemplateBrowserState};
 pub use theme::Theme;
 
 // Import handler functions from the handlers module
@@ -93,7 +102,7 @@ pub enum ColorPickerContext {
 }
 
 /// Category picker context - what are we setting the category for?
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CategoryPickerContext {
     /// Setting category for individual key
     IndividualKey,
@@ -316,6 +325,8 @@ pub enum PopupType {
     ModifierPicker,
     /// Key editor popup for viewing/editing key properties
     KeyEditor,
+    /// Keyboard picker popup
+    KeyboardPicker,
 }
 
 /// Selection mode for multi-key operations
@@ -328,6 +339,44 @@ pub enum SelectionMode {
         /// Starting corner of the rectangle
         start: Position,
     },
+}
+
+/// Active component - holds the currently active popup component
+///
+/// This enum wraps all component types that implement the Component or ContextualComponent trait.
+/// Only one component can be active at a time.
+#[derive(Debug)]
+pub enum ActiveComponent {
+    /// Color picker component
+    ColorPicker(ColorPicker),
+    /// Keycode picker component
+    KeycodePicker(KeycodePicker),
+    /// Layer picker component
+    LayerPicker(LayerPicker),
+    /// Category picker component
+    CategoryPicker(CategoryPicker),
+    /// Modifier picker component
+    ModifierPicker(ModifierPicker),
+    /// Category manager component
+    CategoryManager(CategoryManager),
+    /// Layer manager component
+    LayerManager(LayerManager),
+    /// Metadata editor component
+    MetadataEditor(metadata_editor::MetadataEditor),
+    /// Template browser component
+    TemplateBrowser(TemplateBrowser),
+    /// Layout picker component (for loading saved layouts)
+    LayoutPicker(LayoutPicker),
+    /// Layout variant picker component (for switching QMK keyboard layout variants)
+    LayoutVariantPicker(LayoutVariantPicker),
+    /// Keyboard picker component
+    KeyboardPicker(KeyboardPicker),
+    /// Build log component
+    BuildLog(BuildLog),
+    /// Help overlay component
+    HelpOverlay(HelpOverlay),
+    /// Settings manager component
+    SettingsManager(settings_manager::SettingsManager),
 }
 
 /// Application state - single source of truth
@@ -357,43 +406,29 @@ pub struct AppState {
     /// Error message to display
     pub error_message: Option<String>,
 
-    // Component states
+    // Active component (Component trait pattern - replaces individual state fields)
+    /// Currently active component (if any)
+    pub active_component: Option<ActiveComponent>,
+
+    // Legacy component states (to be removed incrementally during migration)
     /// Keycode picker component state
     pub keycode_picker_state: KeycodePickerState,
-    /// Color picker component state
-    pub color_picker_state: ColorPickerState,
-    /// Context for color picker (what's being colored)
-    pub color_picker_context: Option<ColorPickerContext>,
     /// Category picker component state
     pub category_picker_state: CategoryPickerState,
     /// Context for category picker (what's being categorized)
     pub category_picker_context: Option<CategoryPickerContext>,
-    /// Category manager component state
+    /// Category manager component state (preserved across color picker interactions)
+    /// NOTE: Unlike fully migrated components, this state is synced with the component
+    /// to preserve mode/selection when color picker opens (replacing the component)
     pub category_manager_state: CategoryManagerState,
-    /// Layer manager component state
-    pub layer_manager_state: LayerManagerState,
-    /// Build log component state
-    pub build_log_state: build_log::BuildLogState,
-    /// Template browser component state
-    pub template_browser_state: TemplateBrowserState,
     /// Template save dialog component state
     pub template_save_dialog_state: TemplateSaveDialogState,
-    /// Metadata editor component state
-    pub metadata_editor_state: MetadataEditorState,
-    /// Help overlay component state
-    pub help_overlay_state: HelpOverlayState,
-    /// Layout picker component state
-    pub layout_picker_state: config_dialogs::LayoutPickerState,
     /// Setup wizard component state
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
-    /// Settings manager component state
-    pub settings_manager_state: SettingsManagerState,
     /// Layer picker component state
     pub layer_picker_state: LayerPickerState,
     /// Pending parameterized keycode state (for multi-stage keycode building)
     pub pending_keycode: PendingKeycodeState,
-    /// Modifier picker component state
-    pub modifier_picker_state: ModifierPickerState,
     /// Key editor component state
     pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
@@ -469,24 +504,15 @@ impl AppState {
             active_popup: None,
             status_message: "Press ? for help".to_string(),
             error_message: None,
+            active_component: None,
             keycode_picker_state: KeycodePickerState::new(),
-            color_picker_state: ColorPickerState::new(),
-            color_picker_context: None,
             category_picker_state: CategoryPickerState::new(),
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
-            layer_manager_state: LayerManagerState::new(),
-            build_log_state: build_log::BuildLogState::new(),
-            template_browser_state: TemplateBrowserState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
-            metadata_editor_state: MetadataEditorState::default(),
-            help_overlay_state: HelpOverlayState::new(),
-            layout_picker_state: config_dialogs::LayoutPickerState::new(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
-            settings_manager_state: SettingsManagerState::new(),
             layer_picker_state: LayerPickerState::new(),
             pending_keycode: PendingKeycodeState::new(),
-            modifier_picker_state: ModifierPickerState::new(),
             key_editor_state: KeyEditorState::new(),
             clipboard: clipboard::KeyClipboard::new(),
             flash_highlight: None,
@@ -642,6 +668,121 @@ impl AppState {
     pub fn clear_error(&mut self) {
         self.error_message = None;
     }
+
+    // === Component Management Methods (Component Trait Pattern) ===
+
+    /// Open the color picker component
+    pub fn open_color_picker(&mut self, context: component::ColorPickerContext, color: crate::models::RgbColor) {
+        let picker = ColorPicker::new(context, color);
+        self.active_component = Some(ActiveComponent::ColorPicker(picker));
+        self.active_popup = Some(PopupType::ColorPicker);
+    }
+
+    /// Open the keycode picker component
+    pub fn open_keycode_picker(&mut self) {
+        let picker = KeycodePicker::new();
+        self.active_component = Some(ActiveComponent::KeycodePicker(picker));
+        self.active_popup = Some(PopupType::KeycodePicker);
+    }
+
+    /// Open the layer picker component
+    pub fn open_layer_picker(&mut self, keycode_type: &str) {
+        let picker = LayerPicker::new(keycode_type);
+        self.active_component = Some(ActiveComponent::LayerPicker(picker));
+        self.active_popup = Some(PopupType::LayerPicker);
+    }
+
+    /// Open the category picker component
+    pub fn open_category_picker(&mut self, context: CategoryPickerContext) {
+        let picker = CategoryPicker::new(context);
+        self.active_component = Some(ActiveComponent::CategoryPicker(picker));
+        self.active_popup = Some(PopupType::CategoryPicker);
+    }
+
+    /// Open the modifier picker component
+    pub fn open_modifier_picker(&mut self) {
+        let picker = ModifierPicker::new();
+        self.active_component = Some(ActiveComponent::ModifierPicker(picker));
+        self.active_popup = Some(PopupType::ModifierPicker);
+    }
+
+    /// Open the category manager component
+    pub fn open_category_manager(&mut self) {
+        self.category_manager_state.reset();
+        let manager = CategoryManager::new(self.layout.categories.clone());
+        self.active_component = Some(ActiveComponent::CategoryManager(manager));
+        self.active_popup = Some(PopupType::CategoryManager);
+    }
+
+    /// Open the layer manager component
+    pub fn open_layer_manager(&mut self) {
+        let manager = LayerManager::new(self.layout.layers.clone(), self.current_layer);
+        self.active_component = Some(ActiveComponent::LayerManager(manager));
+        self.active_popup = Some(PopupType::LayerManager);
+    }
+
+    /// Open the metadata editor component
+    pub fn open_metadata_editor(&mut self) {
+        let editor = metadata_editor::MetadataEditor::new(&self.layout.metadata);
+        self.active_component = Some(ActiveComponent::MetadataEditor(editor));
+        self.active_popup = Some(PopupType::MetadataEditor);
+    }
+
+    /// Open the template browser component
+    pub fn open_template_browser(&mut self) {
+        let browser = TemplateBrowser::new();
+        self.active_component = Some(ActiveComponent::TemplateBrowser(browser));
+        self.active_popup = Some(PopupType::TemplateBrowser);
+    }
+
+    /// Open the layout picker component (for loading saved layout files)
+    pub fn open_layout_picker(&mut self) {
+        let picker = LayoutPicker::new();
+        self.active_component = Some(ActiveComponent::LayoutPicker(picker));
+        self.active_popup = Some(PopupType::LayoutPicker);
+    }
+
+    /// Open the layout variant picker component (for switching QMK keyboard layout variants)
+    pub fn open_layout_variant_picker(&mut self, qmk_path: &PathBuf, keyboard: &str) -> Result<()> {
+        let picker = LayoutVariantPicker::new(qmk_path, keyboard);
+        self.active_component = Some(ActiveComponent::LayoutVariantPicker(picker));
+        self.active_popup = Some(PopupType::LayoutPicker);
+        Ok(())
+    }
+
+    /// Open the keyboard picker component
+    pub fn open_keyboard_picker(&mut self, config_path: &PathBuf) {
+        let picker = KeyboardPicker::new(config_path);
+        self.active_component = Some(ActiveComponent::KeyboardPicker(picker));
+        self.active_popup = Some(PopupType::KeyboardPicker);
+    }
+
+    /// Open the build log component
+    pub fn open_build_log(&mut self) {
+        let log = BuildLog::new();
+        self.active_component = Some(ActiveComponent::BuildLog(log));
+        self.active_popup = Some(PopupType::BuildLog);
+    }
+
+    /// Open the help overlay component
+    pub fn open_help_overlay(&mut self) {
+        let help = HelpOverlay::new();
+        self.active_component = Some(ActiveComponent::HelpOverlay(help));
+        self.active_popup = Some(PopupType::HelpOverlay);
+    }
+
+    /// Open the settings manager component
+    pub fn open_settings_manager(&mut self) {
+        let manager = settings_manager::SettingsManager::new();
+        self.active_component = Some(ActiveComponent::SettingsManager(manager));
+        self.active_popup = Some(PopupType::SettingsManager);
+    }
+
+    /// Close the currently active component
+    pub fn close_component(&mut self) {
+        self.active_component = None;
+        self.active_popup = None;
+    }
 }
 
 /// Initialize terminal for TUI
@@ -766,42 +907,53 @@ fn render_main_content(f: &mut Frame, area: Rect, state: &AppState) {
 fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
     match popup_type {
         PopupType::KeycodePicker => {
-            keycode_picker::render_keycode_picker(f, state);
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::KeycodePicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme, &state.keycode_db);
+            }
         }
         PopupType::ColorPicker => {
-            color_picker::render_color_picker(f, state);
+            // Use Component trait pattern
+            if let Some(ActiveComponent::ColorPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::CategoryPicker => {
-            category_picker::render_category_picker(f, state);
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::CategoryPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme, &state.layout.categories);
+            }
         }
         PopupType::CategoryManager => {
-            category_manager::render_category_manager(
-                f,
-                f.size(),
-                &state.category_manager_state,
-                &state.layout.categories,
-                &state.theme,
-            );
+            // Use Component trait pattern
+            if let Some(ActiveComponent::CategoryManager(ref manager)) = state.active_component {
+                manager.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::LayerManager => {
-            layer_manager::render_layer_manager(
-                f,
-                f.size(),
-                &state.layer_manager_state,
-                &state.layout.layers,
-                &state.theme,
-            );
+            // Use Component trait pattern
+            if let Some(ActiveComponent::LayerManager(ref manager)) = state.active_component {
+                manager.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::LayerPicker => {
-            layer_picker::render_layer_picker(
-                f,
-                &state.layer_picker_state,
-                &state.layout.layers,
-                &state.theme,
-            );
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::LayerPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme, &state.layout.layers);
+            } else {
+                // Fallback to legacy rendering
+                layer_picker::render_layer_picker(
+                    f,
+                    &state.layer_picker_state,
+                    &state.layout.layers,
+                    &state.theme,
+                );
+            }
         }
         PopupType::TemplateBrowser => {
-            template_browser::render(f, &state.template_browser_state, f.size(), &state.theme);
+            if let Some(ActiveComponent::TemplateBrowser(ref browser)) = state.active_component {
+                browser.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::TemplateSaveDialog => {
             render_template_save_dialog(f, state);
@@ -810,42 +962,44 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             render_unsaved_prompt(f, &state.theme);
         }
         PopupType::BuildLog => {
-            if let Some(build_state) = &state.build_state {
-                build_log::render_build_log(f, build_state, &state.build_log_state, &state.theme);
+            // Use ContextualComponent trait pattern
+            if let Some(ActiveComponent::BuildLog(ref log)) = state.active_component {
+                if let Some(ref build_state) = state.build_state {
+                    log.render(f, f.size(), &state.theme, build_state);
+                }
             }
         }
         PopupType::HelpOverlay => {
-            state.help_overlay_state.render(f, f.size(), &state.theme);
+            if let Some(ActiveComponent::HelpOverlay(ref help)) = state.active_component {
+                help.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::LayoutPicker => {
-            let keyboard = state.layout.metadata.keyboard.as_deref().unwrap_or("");
-            config_dialogs::render_layout_picker(
-                f,
-                &state.layout_picker_state,
-                keyboard,
-                &state.theme,
-            );
+            if let Some(ActiveComponent::LayoutVariantPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::MetadataEditor => {
-            metadata_editor::render_metadata_editor(f, &state.metadata_editor_state, &state.theme);
+            if let Some(ActiveComponent::MetadataEditor(ref editor)) = state.active_component {
+                editor.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::SetupWizard => {
             onboarding_wizard::render(f, &state.wizard_state, &state.theme);
         }
         PopupType::SettingsManager => {
-            settings_manager::render_settings_manager(
-                f,
-                f.size(),
-                &state.settings_manager_state,
-                state.layout.rgb_enabled,
-                state.layout.rgb_brightness,
-                state.layout.rgb_timeout_ms,
-                state.layout.uncolored_key_behavior,
-                &state.layout.tap_hold_settings,
-                &state.config,
-                &state.layout,
-                &state.theme,
-            );
+            if let Some(ActiveComponent::SettingsManager(ref manager)) = state.active_component {
+                let context = settings_manager::SettingsManagerContext {
+                    rgb_enabled: state.layout.rgb_enabled,
+                    rgb_brightness: state.layout.rgb_brightness,
+                    rgb_timeout_ms: state.layout.rgb_timeout_ms,
+                    uncolored_key_behavior: state.layout.uncolored_key_behavior,
+                    tap_hold_settings: state.layout.tap_hold_settings.clone(),
+                    config: state.config.clone(),
+                    layout: state.layout.clone(),
+                };
+                manager.render_with_context(f, f.size(), &state.theme, &context);
+            }
         }
         PopupType::TapKeycodePicker => {
             // Reuse keycode picker rendering with custom title context
@@ -853,10 +1007,18 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             keycode_picker::render_keycode_picker(f, state);
         }
         PopupType::ModifierPicker => {
-            modifier_picker::render_modifier_picker(f, &state.modifier_picker_state, &state.theme);
+            if let Some(ActiveComponent::ModifierPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme);
+            }
         }
         PopupType::KeyEditor => {
             key_editor::render_key_editor(f, state);
+        }
+        PopupType::KeyboardPicker => {
+            // Use Component trait pattern
+            if let Some(ActiveComponent::KeyboardPicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme);
+            }
         }
     }
 }

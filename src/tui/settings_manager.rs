@@ -4,6 +4,7 @@
 //! and tap-hold timing configuration.
 //! Accessible via Shift+S shortcut.
 
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Alignment, Constraint, Rect},
     style::{Modifier, Style},
@@ -582,6 +583,302 @@ impl Default for SettingsManagerState {
         Self::new()
     }
 }
+
+/// Events emitted by the SettingsManager component
+#[derive(Debug, Clone)]
+pub enum SettingsManagerEvent {
+    /// Settings were updated (settings applied and dialog should close)
+    SettingsUpdated,
+    /// User cancelled without making changes
+    Cancelled,
+    /// Component closed naturally
+    Closed,
+}
+
+/// Context data needed for SettingsManager to render and handle input
+#[derive(Debug, Clone)]
+pub struct SettingsManagerContext {
+    /// RGB enabled flag
+    pub rgb_enabled: bool,
+    /// RGB brightness
+    pub rgb_brightness: RgbBrightness,
+    /// RGB timeout in milliseconds
+    pub rgb_timeout_ms: u32,
+    /// Uncolored key behavior
+    pub uncolored_key_behavior: UncoloredKeyBehavior,
+    /// Tap-hold settings
+    pub tap_hold_settings: TapHoldSettings,
+    /// Application config
+    pub config: crate::config::Config,
+    /// Current layout (for layout-specific settings)
+    pub layout: crate::models::Layout,
+}
+
+/// SettingsManager component that implements the Component trait
+///
+/// This wraps `SettingsManagerState` to provide a self-contained component
+/// that handles its own input and rendering. Due to the complexity of settings
+/// (needing access to both config and layout data), this component needs context
+/// passed through render and handle_input methods.
+#[derive(Debug, Clone)]
+pub struct SettingsManager {
+    /// Internal state
+    state: SettingsManagerState,
+}
+
+impl SettingsManager {
+    /// Create a new SettingsManager
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: SettingsManagerState::new(),
+        }
+    }
+
+    /// Get a reference to the internal state (for backward compatibility)
+    #[must_use]
+    pub const fn state(&self) -> &SettingsManagerState {
+        &self.state
+    }
+
+    /// Get a mutable reference to the internal state (for backward compatibility)
+    pub fn state_mut(&mut self) -> &mut SettingsManagerState {
+        &mut self.state
+    }
+
+    /// Handle input with access to context data
+    ///
+    /// Returns Some(Event) if the component wants to signal something to the parent
+    pub fn handle_input_with_context(
+        &mut self,
+        key: KeyEvent,
+        context: &SettingsManagerContext,
+    ) -> Option<SettingsManagerEvent> {
+        match &self.state.mode.clone() {
+            ManagerMode::Browsing => self.handle_browsing_input(key, context),
+            ManagerMode::SelectingTapHoldPreset { .. } => self.handle_preset_selection(key, context),
+            ManagerMode::SelectingHoldMode { .. } => self.handle_hold_mode_selection(key, context),
+            ManagerMode::EditingNumeric { .. } => self.handle_numeric_editing(key),
+            ManagerMode::TogglingBoolean { .. } => self.handle_boolean_toggle(key),
+            ManagerMode::EditingString { .. } => self.handle_string_editing(key),
+            ManagerMode::SelectingOutputFormat { .. } => self.handle_output_format_selection(key),
+            ManagerMode::EditingPath { .. } => self.handle_path_editing(key),
+        }
+    }
+
+    /// Render with access to context data
+    pub fn render_with_context(&self, f: &mut Frame, area: Rect, theme: &Theme, context: &SettingsManagerContext) {
+        render_settings_manager(
+            f,
+            area,
+            &self.state,
+            context.rgb_enabled,
+            context.rgb_brightness,
+            context.rgb_timeout_ms,
+            context.uncolored_key_behavior,
+            &context.tap_hold_settings,
+            &context.config,
+            &context.layout,
+            theme,
+        );
+    }
+
+    // Input handling methods
+    fn handle_browsing_input(&mut self, key: KeyEvent, _context: &SettingsManagerContext) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => Some(SettingsManagerEvent::Cancelled),
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = SettingItem::all().len();
+                self.state.select_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = SettingItem::all().len();
+                self.state.select_next(count);
+                None
+            }
+            KeyCode::Enter => {
+                // Note: Actual setting editing is complex and involves opening
+                // sub-dialogs or other popups. This is handled by the parent.
+                // We just signal that Enter was pressed on a setting.
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_preset_selection(&mut self, key: KeyEvent, _context: &SettingsManagerContext) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = TapHoldPreset::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = TapHoldPreset::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => {
+                // Signal that a selection was made
+                // Parent will extract the value from state
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_hold_mode_selection(&mut self, key: KeyEvent, _context: &SettingsManagerContext) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = HoldDecisionMode::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = HoldDecisionMode::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_numeric_editing(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.increment_numeric(10);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.decrement_numeric(10);
+                None
+            }
+            KeyCode::Char(c) if c.is_ascii_digit() => {
+                self.state.handle_char_input(c);
+                None
+            }
+            KeyCode::Backspace => {
+                self.state.handle_backspace();
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_boolean_toggle(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Down | KeyCode::Char('k') | KeyCode::Char('j') => {
+                self.state.option_previous(2);
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_string_editing(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Char(c) => {
+                self.state.handle_string_char_input(c);
+                None
+            }
+            KeyCode::Backspace => {
+                self.state.handle_string_backspace();
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_output_format_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.option_previous(3);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.option_next(3);
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+
+    fn handle_path_editing(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Char(c) => {
+                self.state.handle_string_char_input(c);
+                None
+            }
+            KeyCode::Backspace => {
+                self.state.handle_string_backspace();
+                None
+            }
+            KeyCode::Enter => {
+                Some(SettingsManagerEvent::SettingsUpdated)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl Default for SettingsManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// Note: SettingsManager does NOT implement the standard Component trait
+// because it requires complex contextual data (Config + Layout) that doesn't
+// fit the simple trait signature. Instead, it provides custom methods
+// `handle_input_with_context` and `render_with_context`.
+//
+// This is an intentional design decision: Some components are complex enough
+// that they need custom handling, and forcing them into a simple trait would
+// be counterproductive.
 
 /// Render the settings manager dialog
 pub fn render_settings_manager(

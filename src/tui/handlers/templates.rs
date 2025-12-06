@@ -4,88 +4,52 @@ use anyhow::{Context, Result};
 use crossterm::event::{self, KeyCode, KeyModifiers};
 
 use crate::services::LayoutService;
-use crate::tui::{template_browser::TemplateBrowserState, AppState};
+use crate::tui::{template_browser::TemplateBrowserState, AppState, component::Component};
 
 /// Handle input for template browser
 pub fn handle_template_browser_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    let browser_state = &mut state.template_browser_state;
-
-    if browser_state.search_active {
-        // Search mode
-        match key.code {
-            KeyCode::Char(c) => {
-                browser_state.search_push(c);
-                Ok(false)
-            }
-            KeyCode::Backspace => {
-                browser_state.search_pop();
-                Ok(false)
-            }
-            KeyCode::Esc => {
-                browser_state.toggle_search();
-                state.set_status("Search mode exited");
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                // Load selected template
-                match browser_state.load_selected_template() {
-                    Ok(layout) => {
-                        state.layout = layout;
-                        state.source_path = None; // New layout from template
-                        state.mark_dirty(); // Mark as dirty since it's unsaved
-                        state.active_popup = None;
-                        state.set_status("Template loaded");
-                        Ok(false)
-                    }
-                    Err(e) => {
-                        state.set_error(format!("Failed to load template: {e}"));
-                        Ok(false)
-                    }
-                }
-            }
-            _ => Ok(false),
-        }
-    } else {
-        // Navigation mode
-        match key.code {
-            KeyCode::Up | KeyCode::Char('k') => {
-                browser_state.select_previous();
-                Ok(false)
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                browser_state.select_next();
-                Ok(false)
-            }
-            KeyCode::Char('/') => {
-                browser_state.toggle_search();
-                state.set_status("Search mode - type to filter templates");
-                Ok(false)
-            }
-            KeyCode::Enter => {
-                // Load selected template
-                match browser_state.load_selected_template() {
-                    Ok(layout) => {
-                        state.layout = layout;
-                        state.source_path = None; // New layout from template
-                        state.mark_dirty(); // Mark as dirty since it's unsaved
-                        state.active_popup = None;
-                        state.set_status("Template loaded");
-                        Ok(false)
-                    }
-                    Err(e) => {
-                        state.set_error(format!("Failed to load template: {e}"));
-                        Ok(false)
-                    }
-                }
-            }
-            KeyCode::Esc | KeyCode::Char('q') => {
-                state.active_popup = None;
-                state.set_status("Template browser closed");
-                Ok(false)
-            }
-            _ => Ok(false),
+    // Use Component trait pattern
+    use crate::tui::ActiveComponent;
+    
+    if let Some(ActiveComponent::TemplateBrowser(ref mut browser)) = state.active_component {
+        if let Some(event) = browser.handle_input(key) {
+            return handle_template_browser_event(state, event);
         }
     }
+    Ok(false)
+}
+
+/// Handle template browser events
+fn handle_template_browser_event(state: &mut AppState, event: crate::tui::template_browser::TemplateBrowserEvent) -> Result<bool> {
+    use crate::tui::template_browser::TemplateBrowserEvent;
+    
+    match event {
+        TemplateBrowserEvent::TemplateSelected(path) => {
+            // Load the template
+            match LayoutService::load(&path).with_context(|| format!("Loading template from {}", path.display())) {
+                Ok(layout) => {
+                    state.layout = layout;
+                    state.source_path = None; // New layout from template
+                    state.mark_dirty(); // Mark as dirty since it's unsaved
+                    state.close_component();
+                    state.set_status("Template loaded");
+                }
+                Err(e) => {
+                    state.set_error(format!("Failed to load template: {e}"));
+                }
+            }
+        }
+        TemplateBrowserEvent::SaveAsTemplate => {
+            // Open save dialog (existing functionality - this event is not currently used)
+            state.close_component();
+            state.set_status("Save as template feature coming soon");
+        }
+        TemplateBrowserEvent::Cancelled => {
+            state.close_component();
+            state.set_status("Template browser closed");
+        }
+    }
+    Ok(false)
 }
 
 /// Handle input for template save dialog

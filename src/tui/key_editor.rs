@@ -17,7 +17,26 @@ use ratatui::{
     Frame,
 };
 
-use super::{AppState, ColorPickerContext, PopupType};
+use super::{AppState, PopupType};
+
+/// Events emitted by the KeyEditor component
+#[derive(Debug, Clone)]
+pub enum KeyEditorEvent {
+    /// User wants to reassign the entire keycode
+    ReassignKeycode,
+    /// User wants to edit the hold part of a combo keycode
+    EditHoldPart(ComboKeycodeType),
+    /// User wants to edit the tap part of a combo keycode
+    EditTapPart(ComboKeycodeType),
+    /// User wants to set the key color
+    SetColor,
+    /// User wants to set the key category
+    SetCategory,
+    /// User saved the description
+    DescriptionSaved(Option<String>),
+    /// User closed the editor
+    Closed,
+}
 
 /// Mode of the key editor dialog
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -829,7 +848,7 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
             KeyCode::Enter => {
                 // Open keycode picker to reassign entirely
                 state.key_editor_state.combo_edit = None; // Clear any combo edit state
-                state.active_popup = Some(PopupType::KeycodePicker);
+                state.open_keycode_picker();
                 state.set_status("Select new keycode");
             }
             KeyCode::Char('d' | 'D') => {
@@ -839,9 +858,14 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
             }
             KeyCode::Char('c' | 'C') => {
                 // Open color picker
-                state.color_picker_context = Some(ColorPickerContext::IndividualKey);
-                state.active_popup = Some(PopupType::ColorPicker);
-                state.set_status("Select color for key");
+                if let Some(key) = state.get_selected_key() {
+                    let current_color = state.layout.resolve_key_color(state.current_layer, key);
+                    state.open_color_picker(
+                        crate::tui::component::ColorPickerContext::IndividualKey,
+                        current_color,
+                    );
+                    state.set_status("Select color for key");
+                }
             }
             KeyCode::Char('h' | 'H') => {
                 // Edit hold part of combo keycode
@@ -856,15 +880,14 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                                 state.key_editor_state.combo_edit =
                                     Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.layer_picker_state.reset();
-                                state.active_popup = Some(PopupType::LayerPicker);
+                                state.open_layer_picker("");
                                 state.set_status("Select layer for hold action");
                             }
                             ComboKeycodeType::ModTapNamed { .. }
                             | ComboKeycodeType::ModTapCustom { .. } => {
                                 state.key_editor_state.combo_edit =
                                     Some((ComboEditPart::Hold, combo_type.clone()));
-                                state.modifier_picker_state.reset();
-                                state.active_popup = Some(PopupType::ModifierPicker);
+                                state.open_modifier_picker();
                                 state.set_status("Select modifier for hold action");
                             }
                             ComboKeycodeType::ModCombo { .. } => {
@@ -891,13 +914,10 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
 
                         // Open keycode picker for tap action (or modifier picker for LM)
                         if let ComboKeycodeType::LayerMod { .. } = &combo_type {
-                            state.active_popup = Some(PopupType::ModifierPicker);
-                            state.modifier_picker_state.reset();
+                            state.open_modifier_picker();
                             state.set_status("Select modifier for layer-mod");
                         } else {
-                            state.active_popup = Some(PopupType::KeycodePicker);
-                            state.keycode_picker_state =
-                                super::keycode_picker::KeycodePickerState::new();
+                            state.open_keycode_picker();
                             state.set_status("Select tap keycode");
                         }
                     } else {
