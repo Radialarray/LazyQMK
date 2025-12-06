@@ -96,20 +96,34 @@ pub fn handle_jump_to_last(_state: &mut AppState) -> Result<bool> {
 
 /// Handle next layer action
 pub fn handle_next_layer(state: &mut AppState) -> Result<bool> {
+    if state.layout.layers.is_empty() {
+        return Ok(false);
+    }
+    
+    // Cycle forward: if at last layer, wrap to 0
     if state.current_layer < state.layout.layers.len() - 1 {
         state.current_layer += 1;
-        state.set_status(format!("Layer {}", state.current_layer));
-        state.clear_error();
+    } else {
+        state.current_layer = 0;
     }
+    state.set_status(format!("Layer {}", state.current_layer));
+    state.clear_error();
     Ok(false)
 }
 
 /// Handle previous layer action
 pub fn handle_previous_layer(state: &mut AppState) -> Result<bool> {
+    if state.layout.layers.is_empty() {
+        return Ok(false);
+    }
+    
+    // Cycle backward: if at layer 0, wrap to last layer
     if state.current_layer > 0 {
         state.current_layer -= 1;
-        state.set_status(format!("Layer {}", state.current_layer));
-        state.clear_error();
+    } else {
+        state.current_layer = state.layout.layers.len() - 1;
     }
+    state.set_status(format!("Layer {}", state.current_layer));
+    state.clear_error();
     Ok(false)
 }

@@ -221,6 +221,10 @@ impl ShortcutRegistry {
         // === LAYERS ===
         self.register(ctx, K::Tab, M::NONE, Action::NextLayer);
         self.register(ctx, K::BackTab, M::NONE, Action::PreviousLayer);
+        // Some terminals send Tab+SHIFT instead of BackTab
+        self.register(ctx, K::Tab, M::SHIFT, Action::PreviousLayer);
+        // Some terminals emit BackTab with the SHIFT modifier set
+        self.register(ctx, K::BackTab, M::SHIFT, Action::PreviousLayer);
 
         // === KEY EDITING ===
         self.register(ctx, K::Enter, M::NONE, Action::OpenKeycodePicker);
@@ -407,6 +411,35 @@ mod tests {
                 KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)
             ),
             Some(Action::NavigateRight)
+        );
+    }
+
+    #[test]
+    fn test_layer_navigation_shortcuts() {
+        let registry = ShortcutRegistry::new();
+
+        // Tab should go to next layer
+        let tab_event = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+        assert_eq!(
+            registry.lookup("main", tab_event),
+            Some(Action::NextLayer),
+            "Tab should be mapped to NextLayer"
+        );
+
+        // BackTab (Shift+Tab) should go to previous layer
+        let backtab_event = KeyEvent::new(KeyCode::BackTab, KeyModifiers::NONE);
+        assert_eq!(
+            registry.lookup("main", backtab_event),
+            Some(Action::PreviousLayer),
+            "BackTab should be mapped to PreviousLayer"
+        );
+
+        // Some terminals send Tab+SHIFT instead of BackTab
+        let shift_tab_event = KeyEvent::new(KeyCode::Tab, KeyModifiers::SHIFT);
+        assert_eq!(
+            registry.lookup("main", shift_tab_event),
+            Some(Action::PreviousLayer),
+            "Tab+SHIFT should also be mapped to PreviousLayer"
         );
     }
 }
