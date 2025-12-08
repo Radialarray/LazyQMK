@@ -118,7 +118,7 @@ pub enum CategoryPickerContext {
 pub struct PendingKeycodeState {
     /// The original keycode template (e.g., "LT()", "MT()", "LCTL_T()")
     pub keycode_template: Option<String>,
-    /// Collected parameters in order (e.g., ["@layer-id", "KC_SPC"] for LT)
+    /// Collected parameters in order (e.g., `["@layer-id", "KC_SPC"]` for LT)
     pub params: Vec<String>,
 }
 
