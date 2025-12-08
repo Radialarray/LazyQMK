@@ -144,6 +144,33 @@ fn handle_parameter_collected(state: &mut AppState, param_value: String) {
 fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) -> Result<bool> {
     match event {
         KeycodePickerEvent::KeycodeSelected(keycode) => {
+            // Check if we're editing a combo keycode part
+            if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
+                // Validate that the new keycode is basic
+                if !is_basic_keycode(&keycode) {
+                    state.set_error("Only basic keycodes allowed inside a combo");
+                    // Restore the combo edit state
+                    state.key_editor_state.combo_edit = Some((part, combo_type));
+                    return Ok(false);
+                }
+
+                let new_combo = match part {
+                    key_editor::ComboEditPart::Hold => combo_type.with_hold(&keycode),
+                    key_editor::ComboEditPart::Tap => combo_type.with_tap(&keycode),
+                };
+                let new_keycode = new_combo.to_keycode();
+
+                if let Some(key) = state.get_selected_key_mut() {
+                    key.keycode = new_keycode.clone();
+                    state.mark_dirty();
+                    state.set_status(format!("Updated: {new_keycode}"));
+                }
+
+                state.active_popup = Some(PopupType::KeyEditor);
+                state.close_component();
+                return Ok(false);
+            }
+
             // Parameterized keycodes (LT/MT/LM/SH_T/OSM/XXX_T)
             if start_parameterized_keycode_flow(state, &keycode) {
                 return Ok(false);
@@ -1039,5 +1066,120 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
             }
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Layout, LayoutMetadata};
+    use crate::tui::key_editor::{ComboEditPart, ComboKeycodeType as ComboType};
+    use crate::tui::AppState;
+
+    fn create_test_state() -> AppState {
+        let layout = Layout {
+            metadata: LayoutMetadata::default(),
+            layers: vec![],
+            categories: vec![],
+            rgb_enabled: true,
+            rgb_brightness: crate::models::RgbBrightness::default(),
+            rgb_timeout_ms: 0,
+            uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+            tap_hold_settings: crate::models::TapHoldSettings::default(),
+        };
+        let mut state = AppState::new(
+            layout,
+            None,
+            crate::models::KeyboardGeometry::new("test", "test", 4, 12),
+            crate::models::VisualLayoutMapping::default(),
+            crate::config::Config::default(),
+        )
+        .unwrap();
+        // Add a dummy key to select
+        state.selected_position = crate::models::Position::new(0, 0);
+        state
+    }
+
+    #[test]
+    fn test_combo_edit_preserves_hold_behavior() {
+        let mut state = create_test_state();
+        
+        // Setup: We are editing the TAP part of a Layer Tap (LT)
+        state.key_editor_state.combo_edit = Some((
+            ComboEditPart::Tap,
+            ComboType::LayerTap { layer: "1".to_string(), tap_key: "KC_TRNS".to_string() }
+        ));
+
+        // Action: Select a basic keycode 'KC_A'
+        let event = KeycodePickerEvent::KeycodeSelected("KC_A".to_string());
+        
+        // Setup layout
+        use crate::models::{Layer, KeyDefinition, Position};
+        let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
+        state.layout.layers.push(layer);
+        state.current_layer = 0;
+        state.selected_position = Position::new(0, 0);
+
+        // Run handler
+        let _ = handle_keycode_picker_event(&mut state, event);
+
+        // Assert: The keycode should be LT(1, KC_A), NOT just KC_A
+        let key = state.get_selected_key_mut().unwrap();
+        assert_eq!(key.keycode, "LT(1, KC_A)");
+        
+        // Assert: Combo edit state is cleared
+        assert!(state.key_editor_state.combo_edit.is_none());
+    }
+
+    #[test]
+    fn test_combo_edit_rejects_non_basic_keycode() {
+        let mut state = create_test_state();
+        
+        // Setup: Editing Tap part
+        state.key_editor_state.combo_edit = Some((
+            ComboEditPart::Tap,
+            ComboType::LayerTap { layer: "1".to_string(), tap_key: "KC_TRNS".to_string() }
+        ));
+
+        // Action: Try to select a parameterized keycode 'MO(1)'
+        let event = KeycodePickerEvent::KeycodeSelected("MO(1)".to_string());
+        
+        let _ = handle_keycode_picker_event(&mut state, event);
+
+        // Assert: Error set
+        assert!(state.error_message.as_deref().unwrap_or("").contains("Only basic keycodes allowed"));
+        
+        // Assert: Combo edit state is PRESERVED (not cleared)
+        assert!(state.key_editor_state.combo_edit.is_some());
+    }
+    
+    #[test]
+    fn test_mod_tap_edit_preserves_modifiers() {
+        let mut state = create_test_state();
+        
+        // Setup: We are editing the TAP part of a Mod Tap (MT)
+        // MT(MOD_LSFT, KC_Z)
+        state.key_editor_state.combo_edit = Some((
+            ComboEditPart::Tap,
+            ComboType::ModTapCustom { modifier: "MOD_LSFT".to_string(), tap_key: "KC_Z".to_string() }
+        ));
+        
+        // Setup layout
+        use crate::models::{Layer, KeyDefinition, Position};
+        let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
+        state.layout.layers.push(layer);
+        state.current_layer = 0;
+        state.selected_position = Position::new(0, 0);
+
+        // Action: Select 'KC_ENTER'
+        let event = KeycodePickerEvent::KeycodeSelected("KC_ENTER".to_string());
+        
+        let _ = handle_keycode_picker_event(&mut state, event);
+
+        // Assert: The keycode should be MT(MOD_LSFT, KC_ENTER)
+        let key = state.get_selected_key_mut().unwrap();
+        assert_eq!(key.keycode, "MT(MOD_LSFT, KC_ENTER)");
     }
 }
