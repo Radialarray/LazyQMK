@@ -4,8 +4,12 @@
 //! between different parts of the application (TUI, config, parsing, etc.)
 //! without containing detailed implementation logic.
 
+/// Editor initialization and startup with keyboard layout configuration
 pub mod launch;
+
+/// Layout selection interface for creating or loading existing layouts
 pub mod layout_picker;
+
 pub mod onboarding;
 
 // Re-export commonly used functions for convenience

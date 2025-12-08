@@ -14,69 +14,107 @@ use std::collections::HashMap;
 #[allow(dead_code)]
 pub enum Action {
     // === NAVIGATION ===
+    /// Move cursor up in the current context.
     NavigateUp,
+    /// Move cursor down in the current context.
     NavigateDown,
+    /// Move cursor left in the current context.
     NavigateLeft,
+    /// Move cursor right in the current context.
     NavigateRight,
+    /// Jump to the first item in the current context.
     JumpToFirst,
+    /// Jump to the last item in the current context.
     JumpToLast,
 
     // === LAYER SWITCHING ===
+    /// Switch to the next layer.
     NextLayer,
+    /// Switch to the previous layer.
     PreviousLayer,
 
     // === KEY EDITING ===
+    /// Open the keycode picker dialog for editing a key.
     OpenKeycodePicker,
+    /// Clear the current key, removing its keycode.
     ClearKey,
 
     // === CLIPBOARD ===
+    /// Copy the current key to the clipboard.
     CopyKey,
+    /// Cut the current key to the clipboard.
     CutKey,
+    /// Paste the clipboard contents to the current key.
     PasteKey,
+    /// Undo the last paste operation.
     UndoPaste,
 
     // === SELECTION ===
+    /// Toggle selection mode for multiple keys.
     ToggleSelectionMode,
+    /// Toggle selection of the current key.
     ToggleCurrentKey,
+    /// Start a rectangle selection of multiple keys.
     StartRectangleSelect,
 
     // === COLORS ===
+    /// Open color picker to set color for the individual key.
     SetIndividualKeyColor,
+    /// Open color picker to set color for the entire layer.
     SetLayerColor,
+    /// Toggle the visibility of layer colors.
     ToggleLayerColors,
+    /// Toggle the visibility of colors for all layers.
     ToggleAllLayerColors,
 
     // === CATEGORIES ===
+    /// Open the category manager dialog.
     OpenCategoryManager,
+    /// Assign a category to the current key.
     AssignCategoryToKey,
+    /// Assign a category to the current layer.
     AssignCategoryToLayer,
 
     // === MANAGERS & DIALOGS ===
+    /// Open the layer manager dialog.
     OpenLayerManager,
+    /// Open the application settings dialog.
     OpenSettings,
+    /// Open the metadata editor dialog.
     EditMetadata,
 
     // === FILE OPERATIONS ===
+    /// Save the current keyboard configuration.
     Save,
+    /// Quit the application.
     Quit,
 
     // === BUILD & FIRMWARE ===
+    /// Build the firmware for the current keyboard.
     BuildFirmware,
+    /// Generate the firmware code for the current keyboard.
     GenerateFirmware,
+    /// View the build log from the last firmware build.
     ViewBuildLog,
 
     // === TEMPLATES ===
+    /// Open the template browser to load a template configuration.
     BrowseTemplates,
+    /// Save the current configuration as a template.
     SaveAsTemplate,
 
     // === CONFIGURATION ===
+    /// Open the setup wizard for initial configuration.
     SetupWizard,
+    /// Switch to a different layout variant.
     SwitchLayoutVariant,
 
     // === HELP ===
+    /// Toggle the help panel display.
     ToggleHelp,
 
     // === GENERAL ===
+    /// Cancel the current operation or close dialogs.
     Cancel,
 }
 
@@ -166,7 +204,9 @@ pub struct ShortcutRegistry {
 /// A key binding (key + modifiers).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct KeyBinding {
+    /// The key code (character, function key, arrow key, etc.).
     pub code: KeyCode,
+    /// The modifier keys (Ctrl, Shift, Alt) pressed with the key.
     pub modifiers: KeyModifiers,
 }
 
