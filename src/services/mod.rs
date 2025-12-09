@@ -6,5 +6,6 @@
 pub mod geometry;
 pub mod layouts;
 
-// Re-export commonly used types and functions
+// Re-export GeometryService if it exists, otherwise just re-export the module
+// pub use geometry::GeometryService;
 pub use layouts::LayoutService;

@@ -80,6 +80,7 @@ pub use key_editor::KeyEditorState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePicker;
 pub use layer_manager::{LayerManager, LayerManagerEvent};
+#[allow(unused_imports)]
 pub use layer_picker::{LayerPicker, LayerPickerState};
 pub use layout_picker::LayoutPicker;
 // MetadataEditor component migrated in Wave 4c - uses Component trait pattern

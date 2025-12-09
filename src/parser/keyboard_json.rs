@@ -113,13 +113,14 @@ pub struct RgbMatrixConfig {
 /// RGB LED entry from `rgb_matrix.layout` array
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RgbLedEntry {
-    /// Matrix position [row, col] for this LED
-    pub matrix: [u8; 2],
+    /// Matrix position [row, col] for this LED (optional for underglow/indicator LEDs)
+    #[serde(default)]
+    pub matrix: Option<[u8; 2]>,
     /// Physical X position
     pub x: u8,
     /// Physical Y position
     pub y: u8,
-    /// LED flags
+    /// LED flags (2 = indicator/underglow, 4 = per-key)
     pub flags: u8,
 }
 
@@ -196,14 +197,160 @@ pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
 /// # Returns
 ///
 /// Parsed QMK info.json structure
+/// 
+/// Uses JSON5 parser to handle QMK's non-standard JSON with comments.
 pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
     let content = fs::read_to_string(path)
         .context(format!("Failed to read info.json: {}", path.display()))?;
 
-    let info: QmkInfoJson = serde_json::from_str(&content)
+    let info: QmkInfoJson = json5::from_str(&content)
         .context(format!("Failed to parse info.json: {}", path.display()))?;
 
     Ok(info)
+}
+
+/// Discovered keyboard configuration files
+#[derive(Debug, Clone)]
+pub struct KeyboardConfig {
+    /// Keyboard name
+    pub keyboard_name: String,
+    /// Path to keyboard directory
+    pub keyboard_dir: std::path::PathBuf,
+    /// Path to info.json in variant directory (if exists)
+    pub info_json: Option<std::path::PathBuf>,
+    /// Path to keyboard.json in variant directory (if exists)
+    pub keyboard_json: Option<std::path::PathBuf>,
+    /// Path to parent's info.json (if exists)
+    pub parent_info_json: Option<std::path::PathBuf>,
+    /// Whether the keyboard has layouts defined
+    pub has_layouts: bool,
+}
+
+/// Discovers all configuration files for a keyboard.
+///
+/// This function systematically checks for info.json and keyboard.json files
+/// in the keyboard's directory and parent directories, building a complete
+/// picture of the keyboard's configuration structure.
+///
+/// # Arguments
+///
+/// * `qmk_path` - Path to QMK firmware root directory
+/// * `keyboard` - Keyboard name (e.g., "crkbd", "1upkeyboards/pi50/grid")
+///
+/// # Returns
+///
+/// `KeyboardConfig` with paths to all discovered configuration files
+///
+/// # Errors
+///
+/// Returns an error if no configuration files are found
+pub fn discover_keyboard_config(qmk_path: &Path, keyboard: &str) -> Result<KeyboardConfig> {
+    let keyboards_dir = qmk_path.join("keyboards");
+    let keyboard_dir = keyboards_dir.join(keyboard);
+    
+    let mut config = KeyboardConfig {
+        keyboard_name: keyboard.to_string(),
+        keyboard_dir: keyboard_dir.clone(),
+        info_json: None,
+        keyboard_json: None,
+        parent_info_json: None,
+        has_layouts: false,
+    };
+    
+    // Check variant directory for config files
+    let info_json_path = keyboard_dir.join("info.json");
+    let keyboard_json_path = keyboard_dir.join("keyboard.json");
+    
+    if info_json_path.exists() {
+        config.info_json = Some(info_json_path);
+    }
+    
+    if keyboard_json_path.exists() {
+        config.keyboard_json = Some(keyboard_json_path);
+    }
+    
+    // Check parent directories for info.json
+    if let Some((parent, _variant)) = keyboard.rsplit_once('/') {
+        let parent_info_json = keyboards_dir.join(parent).join("info.json");
+        if parent_info_json.exists() {
+            config.parent_info_json = Some(parent_info_json);
+        }
+    }
+    
+    // Verify at least one config file exists
+    if config.info_json.is_none() 
+        && config.keyboard_json.is_none() 
+        && config.parent_info_json.is_none() 
+    {
+        anyhow::bail!(
+            "No configuration files found for keyboard '{}' at {}",
+            keyboard,
+            keyboard_dir.display()
+        );
+    }
+    
+    // Determine if keyboard has layouts
+    config.has_layouts = check_for_layouts(&config);
+    
+    Ok(config)
+}
+
+/// Checks if the keyboard configuration has layout definitions.
+/// 
+/// This function is lenient - it only checks if layout sections exist in the JSON,
+/// not whether they can be fully parsed. This prevents false negatives from
+/// minor parsing issues.
+fn check_for_layouts(config: &KeyboardConfig) -> bool {
+    // Check info.json for layouts
+    if let Some(ref path) = config.info_json {
+        if let Ok(content) = fs::read_to_string(path) {
+            // Simple check: does the JSON contain a "layouts" key with content?
+            if content.contains("\"layouts\"") && content.contains("\"layout\"") {
+                return true;
+            }
+        }
+    }
+    
+    // Check keyboard.json for layouts
+    if let Some(ref path) = config.keyboard_json {
+        if let Ok(content) = fs::read_to_string(path) {
+            // Simple check: does the JSON contain a "layouts" key with content?
+            if content.contains("\"layouts\"") && content.contains("\"layout\"") {
+                return true;
+            }
+        }
+    }
+    
+    // Check parent info.json
+    if let Some(ref path) = config.parent_info_json {
+        if let Ok(content) = fs::read_to_string(path) {
+            // Simple check: does the JSON contain a "layouts" key with content?
+            if content.contains("\"layouts\"") && content.contains("\"layout\"") {
+                return true;
+            }
+        }
+    }
+    
+    false
+}
+
+/// Formats the list of found configuration files for error messages.
+fn format_found_files(config: &KeyboardConfig) -> String {
+    let mut files = Vec::new();
+    if config.info_json.is_some() {
+        files.push("info.json");
+    }
+    if config.keyboard_json.is_some() {
+        files.push("keyboard.json");
+    }
+    if config.parent_info_json.is_some() {
+        files.push("parent/info.json");
+    }
+    if files.is_empty() {
+        "none".to_string()
+    } else {
+        files.join(", ")
+    }
 }
 
 /// Parses a QMK info.json file by keyboard name.
@@ -232,94 +379,77 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 ///
 /// Parsed QMK info.json structure (potentially merged from multiple files)
 pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkInfoJson> {
-    let keyboards_dir = qmk_path.join("keyboards");
-    let keyboard_dir = keyboards_dir.join(keyboard);
-    let info_json_path = keyboard_dir.join("info.json");
-    let keyboard_json_path = keyboard_dir.join("keyboard.json");
-
-    // First try the path as given (this supports keyboards that keep
-    // their info.json inside a variant directory).
-    if info_json_path.exists() {
-        let mut info = parse_info_json(&info_json_path)?;
-        
-        // If info.json has no layouts but keyboard.json exists, merge layouts from it
-        if info.layouts.is_empty() && keyboard_json_path.exists() {
-            if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
-                if !variant.layouts.is_empty() {
-                    info.layouts = variant.layouts;
-                }
-            }
-        }
-        
-        return Ok(info);
+    // Step 1: Discover configuration files
+    let config = discover_keyboard_config(qmk_path, keyboard)?;
+    
+    // Step 2: Load and merge configuration
+    let info = load_merged_config(&config)?;
+    
+    // Step 3: Validate layouts exist
+    if info.layouts.is_empty() {
+        anyhow::bail!(
+            "Keyboard '{}' has no layouts defined.\nFound config files: {}\n\
+            This keyboard may not be fully configured in QMK firmware.",
+            keyboard,
+            format_found_files(&config)
+        );
     }
+    
+    Ok(info)
+}
 
-    // Check if variant has keyboard.json with layouts (even without info.json)
-    if keyboard_json_path.exists() {
-        if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
+/// Loads and merges configuration from discovered files.
+fn load_merged_config(config: &KeyboardConfig) -> Result<QmkInfoJson> {
+    // Try loading from variant directory first
+    let mut info = if let Some(ref path) = config.info_json {
+        parse_info_json(path)?
+    } else if let Some(ref parent_path) = config.parent_info_json {
+        parse_info_json(parent_path)?
+    } else if let Some(ref kb_path) = config.keyboard_json {
+        // Create QmkInfoJson from keyboard.json
+        let variant = parse_variant_json(kb_path)?;
+        QmkInfoJson {
+            keyboard_name: variant.keyboard_name,
+            manufacturer: None,
+            maintainer: None,
+            url: None,
+            layouts: variant.layouts,
+            matrix_pins: None,
+            encoder: variant.encoder,
+        }
+    } else {
+        anyhow::bail!(
+            "No configuration files found for keyboard '{}' at {}",
+            config.keyboard_name,
+            config.keyboard_dir.display()
+        );
+    };
+    
+    // Merge layouts from keyboard.json if present and info.json has no layouts
+    if info.layouts.is_empty() {
+        if let Some(ref kb_path) = config.keyboard_json {
+            let variant = parse_variant_json(kb_path)?;
             if !variant.layouts.is_empty() {
-                // Try to get parent info.json for additional config (encoder, etc.)
-                if let Some((base, _)) = keyboard.rsplit_once('/') {
-                    let base_info_json_path = keyboards_dir.join(base).join("info.json");
-                    if base_info_json_path.exists() {
-                        let mut parent_info = parse_info_json(&base_info_json_path)?;
-                        // Merge: layouts from variant, other config from parent
-                        parent_info.layouts = variant.layouts;
-                        // Also use encoder from variant if parent doesn't have it
-                        if parent_info.encoder.is_none() {
-                            parent_info.encoder = variant.encoder;
-                        }
-                        return Ok(parent_info);
-                    }
-                }
-                
-                // No parent info.json, create QmkInfoJson from variant keyboard.json
-                return Ok(QmkInfoJson {
-                    keyboard_name: variant.keyboard_name,
-                    manufacturer: None,
-                    maintainer: None,
-                    url: None,
-                    layouts: variant.layouts,
-                    matrix_pins: None,
-                    encoder: variant.encoder,
-                });
+                info.layouts = variant.layouts;
+            }
+            // Also merge encoder if parent doesn't have it
+            if info.encoder.is_none() {
+                info.encoder = variant.encoder;
             }
         }
     }
-
-    // Fall back to base keyboard directory if keyboard path includes a variant suffix
-    if let Some((base, _variant)) = keyboard.rsplit_once('/') {
-        let base_info_json_path = keyboards_dir.join(base).join("info.json");
-
-        if base_info_json_path.exists() {
-            let mut info = parse_info_json(&base_info_json_path)?;
-            
-            // Check if variant's keyboard.json has layouts
-            if info.layouts.is_empty() && keyboard_json_path.exists() {
-                if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
-                    if !variant.layouts.is_empty() {
-                        info.layouts = variant.layouts;
-                    }
-                }
-            }
-            
-            return Ok(info);
-        }
-    }
-
-    anyhow::bail!(
-        "info.json not found for keyboard '{}' under {}",
-        keyboard,
-        keyboards_dir.display()
-    );
+    
+    Ok(info)
 }
 
 /// Internal helper to parse a keyboard.json file.
+/// 
+/// Uses JSON5 parser to handle QMK's non-standard JSON with comments.
 fn parse_variant_json(path: &Path) -> Result<VariantKeyboardJson> {
     let content = fs::read_to_string(path)
         .context(format!("Failed to read keyboard.json: {}", path.display()))?;
 
-    let variant: VariantKeyboardJson = serde_json::from_str(&content)
+    let variant: VariantKeyboardJson = json5::from_str(&content)
         .context(format!("Failed to parse keyboard.json: {}", path.display()))?;
 
     Ok(variant)
@@ -338,6 +468,8 @@ fn parse_variant_json(path: &Path) -> Result<VariantKeyboardJson> {
 /// # Returns
 ///
 /// Parsed variant keyboard.json structure, or None if not found
+/// 
+/// Uses JSON5 parser to handle QMK's non-standard JSON with comments.
 #[must_use]
 pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<VariantKeyboardJson> {
     let keyboards_dir = qmk_path.join("keyboards");
@@ -348,7 +480,7 @@ pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<Va
     }
 
     let content = fs::read_to_string(&keyboard_json_path).ok()?;
-    serde_json::from_str(&content).ok()
+    json5::from_str(&content).ok()
 }
 
 /// Builds a mapping from matrix position (row, col) to physical LED index.
@@ -363,13 +495,17 @@ pub fn parse_variant_keyboard_json(qmk_path: &Path, keyboard: &str) -> Option<Va
 /// # Returns
 ///
 /// `HashMap` from (row, col) to LED index
+/// 
+/// Only includes LEDs with matrix positions (skips underglow/indicator LEDs).
 #[must_use]
 pub fn build_matrix_to_led_map(rgb_config: &RgbMatrixConfig) -> HashMap<(u8, u8), u8> {
     let mut map = HashMap::new();
     for (led_index, led_entry) in rgb_config.layout.iter().enumerate() {
-        let row = led_entry.matrix[0];
-        let col = led_entry.matrix[1];
-        map.insert((row, col), led_index as u8);
+        if let Some(matrix) = led_entry.matrix {
+            let row = matrix[0];
+            let col = matrix[1];
+            map.insert((row, col), led_index as u8);
+        }
     }
     map
 }

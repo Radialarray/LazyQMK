@@ -30,25 +30,25 @@ fn test_parse_crkbd_info_json() {
     }
 
     let qmk_path = get_qmk_path();
-    let result = parse_keyboard_info_json(&qmk_path, "crkbd");
+    let result = parse_keyboard_info_json(&qmk_path, "crkbd/rev1");
 
     assert!(
         result.is_ok(),
-        "Failed to parse crkbd info.json: {:?}",
+        "Failed to parse crkbd/rev1 info.json: {:?}",
         result.err()
     );
 
     let info = result.unwrap();
     assert!(
         !info.layouts.is_empty(),
-        "crkbd should have at least one layout"
+        "crkbd/rev1 should have at least one layout"
     );
 
     let layouts = extract_layout_names(&info);
-    println!("Available layouts for crkbd: {layouts:?}");
+    println!("Available layouts for crkbd/rev1: {layouts:?}");
 
     // crkbd typically has LAYOUT or LAYOUT_split_3x6_3
-    assert!(!layouts.is_empty(), "crkbd should have layout definitions");
+    assert!(!layouts.is_empty(), "crkbd/rev1 should have layout definitions");
 }
 
 #[test]
@@ -60,24 +60,24 @@ fn test_build_crkbd_geometry() {
 
     let qmk_path = get_qmk_path();
     let info =
-        parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
+        parse_keyboard_info_json(&qmk_path, "crkbd/rev1").expect("Failed to parse crkbd/rev1 info.json");
 
     let layouts = extract_layout_names(&info);
-    assert!(!layouts.is_empty(), "crkbd should have layouts");
+    assert!(!layouts.is_empty(), "crkbd/rev1 should have layouts");
 
     // Try to build geometry for the first available layout
     let layout_name = &layouts[0];
-    let geometry_result = build_keyboard_geometry(&info, "crkbd", layout_name);
+    let geometry_result = build_keyboard_geometry(&info, "crkbd/rev1", layout_name);
 
     assert!(
         geometry_result.is_ok(),
-        "Failed to build geometry for crkbd/{}: {:?}",
+        "Failed to build geometry for crkbd/rev1/{}: {:?}",
         layout_name,
         geometry_result.err()
     );
 
     let geometry = geometry_result.unwrap();
-    assert_eq!(geometry.keyboard_name, "crkbd");
+    assert_eq!(geometry.keyboard_name, "crkbd/rev1");
     assert_eq!(&geometry.layout_name, layout_name);
 
     // crkbd is a split keyboard with 42 keys (3x6 + 3 thumb keys per half)
@@ -106,12 +106,12 @@ fn test_build_crkbd_visual_mapping() {
 
     let qmk_path = get_qmk_path();
     let info =
-        parse_keyboard_info_json(&qmk_path, "crkbd").expect("Failed to parse crkbd info.json");
+        parse_keyboard_info_json(&qmk_path, "crkbd/rev1").expect("Failed to parse crkbd/rev1 info.json");
     let layouts = extract_layout_names(&info);
     let layout_name = &layouts[0];
 
     let geometry =
-        build_keyboard_geometry(&info, "crkbd", layout_name).expect("Failed to build geometry");
+        build_keyboard_geometry(&info, "crkbd/rev1", layout_name).expect("Failed to build geometry");
 
     let mapping = VisualLayoutMapping::build(&geometry);
 
@@ -431,4 +431,71 @@ fn test_scan_keyboards_finds_crkbd() {
             "splitkb keyboards should include revision paths"
         );
     }
+}
+
+/// Test for keyboards with JSON5 format (comments in keyboard.json).
+///
+/// This tests the splitkb/aurora/lily58/rev1 keyboard which has:
+/// - Parent info.json: manufacturer, USB vendor ID
+/// - Variant keyboard.json: layouts, RGB matrix with C++ style comments
+///
+/// QMK uses JSON5 format which allows comments, trailing commas, etc.
+/// Example: {"flags": 2, "x": 51, "y": 13},  // L RGB1
+#[test]
+fn test_parse_json5_keyboard() {
+    if !qmk_submodule_exists() {
+        eprintln!("Skipping test: QMK submodule not initialized");
+        return;
+    }
+
+    let qmk_path = get_qmk_path();
+    
+    // Test splitkb/aurora/lily58/rev1 which has JSON5 comments
+    let result = parse_keyboard_info_json(&qmk_path, "splitkb/aurora/lily58/rev1");
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse splitkb/aurora/lily58/rev1 (JSON5 with comments): {:?}",
+        result.err()
+    );
+
+    let info = result.unwrap();
+    
+    // Should have layouts from keyboard.json
+    assert!(
+        !info.layouts.is_empty(),
+        "splitkb/aurora/lily58/rev1 should have layouts from keyboard.json"
+    );
+    
+    let layouts = extract_layout_names(&info);
+    println!("splitkb/aurora/lily58/rev1 layouts: {:?}", layouts);
+    
+    // Should have LAYOUT
+    assert!(
+        layouts.contains(&"LAYOUT".to_string()),
+        "Should have LAYOUT from keyboard.json with JSON5 comments"
+    );
+    
+    // Build geometry to verify parsing worked correctly
+    let geometry_result = build_keyboard_geometry(&info, "splitkb/aurora/lily58/rev1", "LAYOUT");
+    assert!(
+        geometry_result.is_ok(),
+        "Failed to build geometry for splitkb/aurora/lily58/rev1: {:?}",
+        geometry_result.err()
+    );
+    
+    let geometry = geometry_result.unwrap();
+    // lily58 has 58 keys
+    assert_eq!(
+        geometry.keys.len(), 58,
+        "lily58 should have 58 keys, found {}",
+        geometry.keys.len()
+    );
+    
+    println!(
+        "splitkb/aurora/lily58/rev1: {} keys, {}x{} matrix (parsed from JSON5 with comments)",
+        geometry.keys.len(),
+        geometry.matrix_rows,
+        geometry.matrix_cols
+    );
 }

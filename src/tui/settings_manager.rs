@@ -32,6 +32,7 @@ pub enum SettingGroup {
 
     // === Per-Layout Settings (stored in layout .md file) ===
     /// General layout settings
+    #[allow(dead_code)] // Placeholder for future general settings UI
     General,
     /// RGB lighting settings
     Rgb,

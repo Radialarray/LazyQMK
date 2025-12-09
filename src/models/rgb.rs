@@ -143,6 +143,7 @@ impl RgbColor {
     /// assert!((v - 1.0).abs() < 0.01);
     /// ```
     #[must_use]
+    #[allow(clippy::many_single_char_names)] // Standard RGB/HSV color model uses single-char names
     pub fn to_hsv(&self) -> (f32, f32, f32) {
         let r = f32::from(self.r) / 255.0;
         let g = f32::from(self.g) / 255.0;
@@ -195,6 +196,7 @@ impl RgbColor {
     /// assert_eq!(green, RgbColor::new(0, 255, 0));
     /// ```
     #[must_use]
+    #[allow(clippy::many_single_char_names)] // Standard RGB/HSV color model uses single-char names
     pub fn from_hsv(h: f32, s: f32, v: f32) -> Self {
         // Clamp inputs
         let h = h.clamp(0.0, 360.0);
