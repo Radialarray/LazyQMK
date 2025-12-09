@@ -14,7 +14,17 @@ use crate::models::layout::Layout;
 use crate::models::visual_layout_mapping::VisualLayoutMapping;
 use anyhow::{Context, Result};
 use serde_json::json;
+use std::collections::HashSet;
 use std::fs;
+
+/// Maps keycode prefixes to their required QMK header files.
+/// These are language-specific keymap_extras headers.
+const KEYCODE_PREFIX_HEADERS: &[(&str, &str)] = &[
+    ("DE_", "keymap_extras/keymap_german.h"),
+    // Future: Add more language layouts as needed
+    // ("FR_", "keymap_extras/keymap_french.h"),
+    // ("ES_", "keymap_extras/keymap_spanish.h"),
+];
 
 /// Firmware generator for keymap.c and config.h.
 pub struct FirmwareGenerator<'a> {
@@ -96,7 +106,15 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
 
         // Includes
-        code.push_str("#include QMK_KEYBOARD_H\n\n");
+        code.push_str("#include QMK_KEYBOARD_H\n");
+
+        // Add language-specific keycode headers if needed
+        let required_headers = self.detect_required_headers();
+        for header in &required_headers {
+            code.push_str(&format!("#include \"{}\"\n", header));
+        }
+
+        code.push('\n');
 
         // Keymap definition
         code.push_str("const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {\n");
@@ -157,6 +175,31 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str(&self.generate_rgb_matrix_color_table()?);
 
         Ok(code)
+    }
+
+    /// Scans all keycodes in the layout and returns the set of additional
+    /// header files that need to be included for language-specific keycodes.
+    ///
+    /// This detects keycodes like `DE_Y`, `DE_UDIA` that require language-specific
+    /// headers from QMK's keymap_extras directory.
+    fn detect_required_headers(&self) -> Vec<&'static str> {
+        let mut headers = HashSet::new();
+
+        for layer in &self.layout.layers {
+            for key in &layer.keys {
+                let keycode = &key.keycode;
+                for (prefix, header) in KEYCODE_PREFIX_HEADERS {
+                    // Check if keycode starts with prefix (e.g., "DE_Y")
+                    // or contains it in parameterized form (e.g., "LT(1, DE_Y)")
+                    if keycode.starts_with(prefix) || keycode.contains(prefix) {
+                        headers.insert(*header);
+                        break;
+                    }
+                }
+            }
+        }
+
+        headers.into_iter().collect()
     }
 
     /// Generates a conditional `encoder_map` wrapped in #ifdef `ENCODER_MAP_ENABLE`.
@@ -1153,5 +1196,90 @@ mod tests {
         let config_h = generator.generate_merged_config_h().unwrap();
 
         assert!(config_h.contains("#define TAPPING_TOGGLE 3"));
+    }
+
+    #[test]
+    fn test_detect_required_headers_no_language_keycodes() {
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+
+        let headers = generator.detect_required_headers();
+        assert!(headers.is_empty());
+    }
+
+    #[test]
+    fn test_detect_required_headers_german_keycodes() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add German keycodes to layer
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 0))
+            .unwrap()
+            .keycode = "DE_Y".to_string();
+
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 1))
+            .unwrap()
+            .keycode = "DE_UDIA".to_string();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let headers = generator.detect_required_headers();
+
+        assert_eq!(headers.len(), 1);
+        assert!(headers.contains(&"keymap_extras/keymap_german.h"));
+    }
+
+    #[test]
+    fn test_detect_required_headers_german_in_layer_tap() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add German keycode inside LT()
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 0))
+            .unwrap()
+            .keycode = "LT(1, DE_A)".to_string();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let headers = generator.detect_required_headers();
+
+        assert_eq!(headers.len(), 1);
+        assert!(headers.contains(&"keymap_extras/keymap_german.h"));
+    }
+
+    #[test]
+    fn test_generate_keymap_c_includes_language_headers() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add German keycode
+        layout
+            .get_layer_mut(0)
+            .unwrap()
+            .get_key_mut(Position::new(0, 0))
+            .unwrap()
+            .keycode = "DE_Y".to_string();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Verify the German header is included
+        assert!(keymap_c.contains("#include QMK_KEYBOARD_H"));
+        assert!(keymap_c.contains("#include \"keymap_extras/keymap_german.h\""));
+    }
+
+    #[test]
+    fn test_generate_keymap_c_no_extra_headers_without_language_keycodes() {
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should only have the standard include
+        assert!(keymap_c.contains("#include QMK_KEYBOARD_H"));
+        assert!(!keymap_c.contains("keymap_extras"));
     }
 }

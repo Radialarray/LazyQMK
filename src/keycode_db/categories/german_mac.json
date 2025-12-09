@@ -1,0 +1,921 @@
+{
+  "category": {
+    "id": "german_mac",
+    "name": "German (macOS)",
+    "description": "German keyboard layout for macOS (QWERTZ)"
+  },
+  "keycodes": [
+    {
+      "code": "DE_CIRC",
+      "name": "^ (dead key)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_1",
+      "name": "1",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_2",
+      "name": "2",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_3",
+      "name": "3",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_4",
+      "name": "4",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_5",
+      "name": "5",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_6",
+      "name": "6",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_7",
+      "name": "7",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_8",
+      "name": "8",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_9",
+      "name": "9",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_0",
+      "name": "0",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SS",
+      "name": "ß (Sharp S)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ACUT",
+      "name": "´ (dead key)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_Q",
+      "name": "Q",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_W",
+      "name": "W",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_E",
+      "name": "E",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_R",
+      "name": "R",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_T",
+      "name": "T",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_Z",
+      "name": "Z (on Y position)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_U",
+      "name": "U",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_I",
+      "name": "I",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_O",
+      "name": "O",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_P",
+      "name": "P",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_UDIA",
+      "name": "Ü (U-Umlaut)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PLUS",
+      "name": "+",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_A",
+      "name": "A",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_S",
+      "name": "S",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_D",
+      "name": "D",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_F",
+      "name": "F",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_G",
+      "name": "G",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_H",
+      "name": "H",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_J",
+      "name": "J",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_K",
+      "name": "K",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_L",
+      "name": "L",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ODIA",
+      "name": "Ö (O-Umlaut)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ADIA",
+      "name": "Ä (A-Umlaut)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_HASH",
+      "name": "#",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LABK",
+      "name": "<",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_Y",
+      "name": "Y (on Z position)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_X",
+      "name": "X",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_C",
+      "name": "C",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_V",
+      "name": "V",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_B",
+      "name": "B",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_N",
+      "name": "N",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_M",
+      "name": "M",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_COMM",
+      "name": ",",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DOT",
+      "name": ".",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MINS",
+      "name": "-",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DEG",
+      "name": "° (Degree)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_EXLM",
+      "name": "!",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DQUO",
+      "name": "\" (Double Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SECT",
+      "name": "§ (Section)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DLR",
+      "name": "$",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PERC",
+      "name": "%",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_AMPR",
+      "name": "&",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SLSH",
+      "name": "/",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LPRN",
+      "name": "(",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RPRN",
+      "name": ")",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_EQL",
+      "name": "=",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_QUES",
+      "name": "?",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_GRV",
+      "name": "` (dead key)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ASTR",
+      "name": "*",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_QUOT",
+      "name": "'",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RABK",
+      "name": ">",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SCLN",
+      "name": ";",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_COLN",
+      "name": ":",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_UNDS",
+      "name": "_",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SUP2",
+      "name": "² (Superscript 2)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SUP3",
+      "name": "³ (Superscript 3)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DLQU",
+      "name": "„ (Double Low Quotation)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_IEXL",
+      "name": "¡ (Inverted Exclamation)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LDQU",
+      "name": "\" (Left Double Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PILC",
+      "name": "¶ (Pilcrow)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_CENT",
+      "name": "¢ (Cent)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LBRC",
+      "name": "[",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RBRC",
+      "name": "]",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PIPE",
+      "name": "|",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LCBR",
+      "name": "{",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RCBR",
+      "name": "}",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_NEQL",
+      "name": "≠ (Not Equal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_IQUE",
+      "name": "¿ (Inverted Question)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LDAQ",
+      "name": "« (Left Angle Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_NARS",
+      "name": "∑ (N-ary Summation)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_EURO",
+      "name": "€ (Euro)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_REGD",
+      "name": "® (Registered)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DAGG",
+      "name": "† (Dagger)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_OMEG",
+      "name": "Ω (Omega)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DIAE",
+      "name": "¨ (Diaeresis dead)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_FRSL",
+      "name": "⁄ (Fraction Slash)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_OSTR",
+      "name": "Ø (O-Stroke)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PI",
+      "name": "π (Pi)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_BULT",
+      "name": "• (Bullet)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PLMN",
+      "name": "± (Plus-Minus)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ARNG",
+      "name": "Å (A-Ring)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SLQU",
+      "name": "' (Single Low Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PDIF",
+      "name": "∂ (Partial Diff)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_FHK",
+      "name": "ƒ (Florin)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_COPY",
+      "name": "© (Copyright)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_FORD",
+      "name": "ª (Feminine Ordinal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MORD",
+      "name": "º (Masculine Ordinal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_INCR",
+      "name": "∆ (Increment)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_AT",
+      "name": "@",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_OE",
+      "name": "Œ (OE Ligature)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_AE",
+      "name": "Æ (AE Ligature)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LSQU",
+      "name": "' (Left Single Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LTEQ",
+      "name": "≤ (Less Than Equal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_YEN",
+      "name": "¥ (Yen)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_AEQL",
+      "name": "≈ (Almost Equal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_CCCE",
+      "name": "Ç (C-Cedilla)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_SQRT",
+      "name": "√ (Square Root)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_INTG",
+      "name": "∫ (Integral)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_TILD",
+      "name": "~ (Tilde dead)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MICR",
+      "name": "µ (Micro)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_INFN",
+      "name": "∞ (Infinity)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_ELLP",
+      "name": "… (Ellipsis)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_NDSH",
+      "name": "– (En Dash)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_NOT",
+      "name": "¬ (Not Sign)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RDQU",
+      "name": "\" (Right Double Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PND",
+      "name": "£ (Pound)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_FI",
+      "name": "ﬁ (FI Ligature)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_BSLS",
+      "name": "\\ (Backslash)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_STIL",
+      "name": "~ (Small Tilde)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MDDT",
+      "name": "· (Middle Dot)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MACR",
+      "name": "¯ (Macron)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DOTA",
+      "name": "˙ (Dot Above)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RNGA",
+      "name": "˚ (Ring Above)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RDAQ",
+      "name": "» (Right Angle Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_PERM",
+      "name": "‰ (Per Mille)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_CEDL",
+      "name": "¸ (Cedilla)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DACU",
+      "name": "˝ (Double Acute)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_CARN",
+      "name": "ˇ (Caron)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_AACU",
+      "name": "Á (A-Acute)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_UCIR",
+      "name": "Û (U-Circumflex)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_NARP",
+      "name": "∏ (N-ary Product)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_APPL",
+      "name": "Apple Logo",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_IACU",
+      "name": "Í (I-Acute)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_TM",
+      "name": "™ (Trademark)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_IDIA",
+      "name": "Ï (I-Diaeresis)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_IGRV",
+      "name": "Ì (I-Grave)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_OACU",
+      "name": "Ó (O-Acute)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DLSI",
+      "name": "ı (Dotless I)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_FL",
+      "name": "ﬂ (FL Ligature)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_GTEQ",
+      "name": "≥ (Greater Than Equal)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DDAG",
+      "name": "‡ (Double Dagger)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_UGRV",
+      "name": "Ù (U-Grave)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LOZN",
+      "name": "◊ (Lozenge)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_LSAQ",
+      "name": "‹ (Left Single Angle Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_RSAQ",
+      "name": "› (Right Single Angle Quote)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_BREV",
+      "name": "˘ (Breve)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_OGON",
+      "name": "˛ (Ogonek)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_DIV",
+      "name": "÷ (Division)",
+      "category": "german_mac",
+      "aliases": []
+    },
+    {
+      "code": "DE_MDSH",
+      "name": "— (Em Dash)",
+      "category": "german_mac",
+      "aliases": []
+    }
+  ]
+}

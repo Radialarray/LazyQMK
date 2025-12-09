@@ -165,6 +165,8 @@ impl KeycodeDb {
             ),
             ("advanced", include_str!("categories/advanced.json")),
             ("magic", include_str!("categories/magic.json")),
+            ("german", include_str!("categories/german.json")),
+            ("german_mac", include_str!("categories/german_mac.json")),
         ];
 
         for (cat_id, json_data) in category_files {

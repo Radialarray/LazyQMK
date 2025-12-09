@@ -100,6 +100,16 @@
       "id": "magic",
       "name": "Magic",
       "description": "NKRO, key swaps, and OS settings"
+    },
+    {
+      "id": "german",
+      "name": "German",
+      "description": "German keyboard layout (QWERTZ)"
+    },
+    {
+      "id": "german_mac",
+      "name": "German (macOS)",
+      "description": "German keyboard layout for macOS (QWERTZ)"
     }
   ]
 }
