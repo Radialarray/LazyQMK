@@ -753,8 +753,8 @@ pub fn run_tui(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
 ) -> Result<()> {
     loop {
-        // Re-detect OS theme on each loop iteration to respond to system theme changes
-        state.theme = Theme::detect();
+        // Apply theme based on user preference (Auto detects OS, Dark/Light are explicit)
+        state.theme = Theme::from_mode(state.config.ui.theme_mode);
 
         // Decrement flash highlight counter
         if let Some((layer, pos, frames)) = state.flash_highlight {
@@ -797,6 +797,11 @@ pub fn run_tui(
 
 /// Render the UI from current state
 fn render(f: &mut Frame, state: &AppState) {
+    // Fill entire screen with theme background color first
+    // This ensures consistent background regardless of terminal settings
+    let full_bg = Block::default().style(Style::default().bg(state.theme.background));
+    f.render_widget(full_bg, f.size());
+
     let chunks = RatatuiLayout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -830,8 +835,8 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     );
 
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(state.theme.primary))
-        .block(Block::default().borders(Borders::ALL));
+        .style(Style::default().fg(state.theme.primary).bg(state.theme.background))
+        .block(Block::default().borders(Borders::ALL).style(Style::default().bg(state.theme.background)));
 
     f.render_widget(title_widget, area);
 }
