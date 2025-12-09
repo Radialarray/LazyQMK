@@ -15,6 +15,7 @@ pub mod visual_layout_mapping;
 pub use category::Category;
 pub use color_palette::{ColorPalette, Shade};
 pub use keyboard_geometry::{KeyGeometry, KeyboardGeometry};
+#[allow(unused_imports)]
 pub use layer::{
     validate_layer_number, KeyDefinition, Layer, Position, DEFAULT_QMK_LAYER_LIMIT,
     MAX_QMK_LAYER_LIMIT,
