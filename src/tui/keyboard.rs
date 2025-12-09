@@ -53,7 +53,15 @@ impl KeyboardWidget {
     /// Render the keyboard widget
     #[allow(clippy::too_many_lines)]
     pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
+        use crate::models::keyboard_geometry::terminal_scale;
+        
         let theme = &state.theme;
+        
+        // Get unified scale factor from config (1.0 = 100%)
+        // Apply to base scale factors from keyboard_geometry
+        let scale_multiplier = state.config.ui.keyboard_scale;
+        let scale_x = terminal_scale::DEFAULT_X_SCALE * scale_multiplier;
+        let scale_y = terminal_scale::DEFAULT_Y_SCALE * scale_multiplier;
 
         // Get current layer
         let layer = if let Some(layer) = state.layout.layers.get(state.current_layer) {
@@ -70,7 +78,8 @@ impl KeyboardWidget {
         let outer_block = Block::default()
             .title(format!(" Layer {}: {} ", state.current_layer, layer.name))
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.primary));
+            .border_style(Style::default().fg(theme.primary))
+            .style(Style::default().bg(theme.background));
         f.render_widget(outer_block, area);
 
         // Calculate inner area for keys (inside the outer border)
@@ -81,11 +90,11 @@ impl KeyboardWidget {
             height: area.height.saturating_sub(2),
         };
 
-        // Default key dimensions (used when actual geometry not available)
-        // Each key needs: 7 chars width + 2 for borders = 9 total width
-        // Each key needs: 4 lines height (2 content + 2 borders) to support tap-hold display
-        let default_key_width: usize = 9;
-        let default_key_height: usize = 4;
+        // Calculate key dimensions from scaled values
+        // Base: 1u width = scale_x chars, 1u height = scale_y lines
+        // Add 2 for borders, enforce minimums for content visibility
+        let default_key_width: usize = ((scale_x + 2.0) as usize).max(7);
+        let default_key_height: usize = ((scale_y + 2.0) as usize).max(4);
 
         // Render each key as an individual block
         for key in &layer.keys {
@@ -102,9 +111,9 @@ impl KeyboardWidget {
             // For grid-based layouts (visual row/col), we still position based on grid
             // but can use actual key dimensions for sizing
             let (key_width, key_height) = if let Some(geom) = key_geometry {
-                // Use actual key dimensions from geometry, with minimum for borders
-                let w = (geom.terminal_width() as usize).max(default_key_width);
-                let h = (geom.terminal_height() as usize).max(default_key_height);
+                // Use actual key dimensions from geometry with custom scale, with minimum for borders
+                let w = (geom.terminal_width_with_scale(scale_x) as usize).max(default_key_width);
+                let h = (geom.terminal_height_with_scale(scale_y) as usize).max(default_key_height);
                 (w, h)
             } else {
                 (default_key_width, default_key_height)
