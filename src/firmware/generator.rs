@@ -17,14 +17,8 @@ use serde_json::json;
 use std::collections::HashSet;
 use std::fs;
 
-/// Maps keycode prefixes to their required QMK header files.
-/// These are language-specific keymap_extras headers.
-const KEYCODE_PREFIX_HEADERS: &[(&str, &str)] = &[
-    ("DE_", "keymap_extras/keymap_german.h"),
-    // Future: Add more language layouts as needed
-    // ("FR_", "keymap_extras/keymap_french.h"),
-    // ("ES_", "keymap_extras/keymap_spanish.h"),
-];
+// Language-specific keycode headers are now loaded dynamically from KeycodeDb.languages()
+// No more hardcoded KEYCODE_PREFIX_HEADERS constant needed!
 
 /// Firmware generator for keymap.c and config.h.
 pub struct FirmwareGenerator<'a> {
@@ -182,17 +176,27 @@ impl<'a> FirmwareGenerator<'a> {
     ///
     /// This detects keycodes like `DE_Y`, `DE_UDIA` that require language-specific
     /// headers from QMK's keymap_extras directory.
-    fn detect_required_headers(&self) -> Vec<&'static str> {
+    ///
+    /// Language prefix-to-header mappings are loaded dynamically from the KeycodeDb,
+    /// supporting all languages defined in the keycode database.
+    fn detect_required_headers(&self) -> Vec<String> {
         let mut headers = HashSet::new();
+
+        // Build prefix-to-header mapping from language database
+        let languages = self.keycode_db.languages();
+        let prefix_headers: Vec<(&str, &str)> = languages
+            .iter()
+            .map(|lang| (lang.prefix.as_str(), lang.header.as_str()))
+            .collect();
 
         for layer in &self.layout.layers {
             for key in &layer.keys {
                 let keycode = &key.keycode;
-                for (prefix, header) in KEYCODE_PREFIX_HEADERS {
+                for (prefix, header) in &prefix_headers {
                     // Check if keycode starts with prefix (e.g., "DE_Y")
                     // or contains it in parameterized form (e.g., "LT(1, DE_Y)")
                     if keycode.starts_with(prefix) || keycode.contains(prefix) {
-                        headers.insert(*header);
+                        headers.insert((*header).to_string());
                         break;
                     }
                 }
@@ -1249,7 +1253,7 @@ mod tests {
         let headers = generator.detect_required_headers();
 
         assert_eq!(headers.len(), 1);
-        assert!(headers.contains(&"keymap_extras/keymap_german.h"));
+        assert!(headers.iter().any(|h| h.contains("keymap_german")));
     }
 
     #[test]
@@ -1268,7 +1272,7 @@ mod tests {
         let headers = generator.detect_required_headers();
 
         assert_eq!(headers.len(), 1);
-        assert!(headers.contains(&"keymap_extras/keymap_german.h"));
+        assert!(headers.iter().any(|h| h.contains("keymap_german")));
     }
 
     #[test]

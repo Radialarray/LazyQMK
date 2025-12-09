@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "italian",
+    "name": "Italian",
+    "description": "Italian QWERTY layout",
+    "prefix": "IT_",
+    "header": "keymap_extras/keymap_italian.h"
+  },
+  "keycodes": [
+    { "code": "IT_A", "name": "A", "description": "A key" },
+    { "code": "IT_B", "name": "B", "description": "B key" },
+    { "code": "IT_C", "name": "C", "description": "C key" },
+    { "code": "IT_D", "name": "D", "description": "D key" },
+    { "code": "IT_E", "name": "E", "description": "E key" },
+    { "code": "IT_F", "name": "F", "description": "F key" },
+    { "code": "IT_G", "name": "G", "description": "G key" },
+    { "code": "IT_H", "name": "H", "description": "H key" },
+    { "code": "IT_I", "name": "I", "description": "I key" },
+    { "code": "IT_J", "name": "J", "description": "J key" },
+    { "code": "IT_K", "name": "K", "description": "K key" },
+    { "code": "IT_L", "name": "L", "description": "L key" },
+    { "code": "IT_M", "name": "M", "description": "M key" },
+    { "code": "IT_N", "name": "N", "description": "N key" },
+    { "code": "IT_O", "name": "O", "description": "O key" },
+    { "code": "IT_P", "name": "P", "description": "P key" },
+    { "code": "IT_AGRA", "name": "à", "description": "A with grave accent" },
+    { "code": "IT_EGRA", "name": "è", "description": "E with grave accent" },
+    { "code": "IT_EURO", "name": "€", "description": "Euro sign" },
+    { "code": "IT_SCLN", "name": ";", "description": "Semicolon" }
+  ]
+}

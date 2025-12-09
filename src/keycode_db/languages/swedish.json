@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "swedish",
+    "name": "Swedish",
+    "description": "Swedish QWERTY layout",
+    "prefix": "SE_",
+    "header": "keymap_extras/keymap_swedish.h"
+  },
+  "keycodes": [
+    { "code": "SE_A", "name": "A", "description": "A key" },
+    { "code": "SE_B", "name": "B", "description": "B key" },
+    { "code": "SE_C", "name": "C", "description": "C key" },
+    { "code": "SE_D", "name": "D", "description": "D key" },
+    { "code": "SE_E", "name": "E", "description": "E key" },
+    { "code": "SE_F", "name": "F", "description": "F key" },
+    { "code": "SE_G", "name": "G", "description": "G key" },
+    { "code": "SE_H", "name": "H", "description": "H key" },
+    { "code": "SE_I", "name": "I", "description": "I key" },
+    { "code": "SE_J", "name": "J", "description": "J key" },
+    { "code": "SE_K", "name": "K", "description": "K key" },
+    { "code": "SE_L", "name": "L", "description": "L key" },
+    { "code": "SE_M", "name": "M", "description": "M key" },
+    { "code": "SE_N", "name": "N", "description": "N key" },
+    { "code": "SE_O", "name": "O", "description": "O key" },
+    { "code": "SE_P", "name": "P", "description": "P key" },
+    { "code": "SE_ARNG", "name": "å", "description": "A with ring above" },
+    { "code": "SE_ADIA", "name": "ä", "description": "A with diaeresis" },
+    { "code": "SE_ODIA", "name": "ö", "description": "O with diaeresis" },
+    { "code": "SE_EURO", "name": "€", "description": "Euro sign" }
+  ]
+}

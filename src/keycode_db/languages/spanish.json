@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "spanish",
+    "name": "Spanish",
+    "description": "Spanish QWERTY layout",
+    "prefix": "ES_",
+    "header": "keymap_extras/keymap_spanish.h"
+  },
+  "keycodes": [
+    { "code": "ES_A", "name": "A", "description": "A key" },
+    { "code": "ES_B", "name": "B", "description": "B key" },
+    { "code": "ES_C", "name": "C", "description": "C key" },
+    { "code": "ES_D", "name": "D", "description": "D key" },
+    { "code": "ES_E", "name": "E", "description": "E key" },
+    { "code": "ES_F", "name": "F", "description": "F key" },
+    { "code": "ES_G", "name": "G", "description": "G key" },
+    { "code": "ES_H", "name": "H", "description": "H key" },
+    { "code": "ES_I", "name": "I", "description": "I key" },
+    { "code": "ES_J", "name": "J", "description": "J key" },
+    { "code": "ES_K", "name": "K", "description": "K key" },
+    { "code": "ES_L", "name": "L", "description": "L key" },
+    { "code": "ES_M", "name": "M", "description": "M key" },
+    { "code": "ES_N", "name": "N", "description": "N key" },
+    { "code": "ES_O", "name": "O", "description": "O key" },
+    { "code": "ES_P", "name": "P", "description": "P key" },
+    { "code": "ES_NTIL", "name": "ñ", "description": "N with tilde" },
+    { "code": "ES_ACUT", "name": "á", "description": "A with acute accent" },
+    { "code": "ES_EURO", "name": "€", "description": "Euro sign" },
+    { "code": "ES_EXCM", "name": "!", "description": "Exclamation mark" }
+  ]
+}

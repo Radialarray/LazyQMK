@@ -1,13 +1,7 @@
 //! Keycode picker dialog for selecting keycodes
 //!
-//! This module implements both:
-//! - Legacy rendering function: `render_keycode_picker()` for backward compatibility
-//! - Component trait: `KeycodePicker` for self-contained UI components
+//! This module implements the `KeycodePicker` component for self-contained keycode selection.
 
-// Input handlers use Result<bool> for consistency even when they never fail
-#![allow(clippy::unnecessary_wraps)]
-
-use anyhow::Result;
 use crossterm::event::{self, KeyCode, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -18,7 +12,6 @@ use ratatui::{
 };
 
 use super::component::ContextualComponent;
-use super::AppState;
 use crate::keycode_db::KeycodeDb;
 
 /// Events emitted by the KeycodePicker component
@@ -38,6 +31,8 @@ pub enum PickerFocus {
     /// Keycode list has focus (default - allows immediate search)
     #[default]
     Keycodes,
+    /// Language selector has focus (when Languages category is selected)
+    LanguageSelector,
 }
 
 /// Keycode picker state
@@ -47,12 +42,16 @@ pub struct KeycodePickerState {
     pub search: String,
     /// Selected keycode index in the list
     pub selected: usize,
-    /// Current category index (0 = All)
+    /// Current category index (0 = All, last = Languages)
     pub category_index: usize,
     /// Which pane has focus
     pub focus: PickerFocus,
     /// Sidebar scroll offset (for very tall category lists)
     pub sidebar_scroll: usize,
+    /// Selected language ID (when in Languages category)
+    pub selected_language: Option<String>,
+    /// Selected language index in language list
+    pub language_list_index: usize,
 }
 
 impl Default for KeycodePickerState {
@@ -71,6 +70,41 @@ impl KeycodePickerState {
             category_index: 0,
             focus: PickerFocus::Keycodes,
             sidebar_scroll: 0,
+            selected_language: None,
+            language_list_index: 0,
+        }
+    }
+
+    /// Creates a new keycode picker state with an initial language selection
+    ///
+    /// If `last_language` is Some, automatically sets the category to Languages
+    /// and positions to show that language's keycodes.
+    #[must_use]
+    pub fn with_language(last_language: Option<String>, keycode_db: &KeycodeDb) -> Self {
+        match last_language {
+            Some(ref lang_id) => {
+                // Find the language index in the list
+                let languages = keycode_db.languages();
+                let language_list_index = languages
+                    .iter()
+                    .position(|l| l.id == *lang_id)
+                    .unwrap_or(0);
+
+                // Languages category is at index: categories.len() + 1
+                // (index 0 = "All", then regular categories, then "Languages")
+                let languages_category_index = keycode_db.categories().len() + 1;
+
+                Self {
+                    search: String::new(),
+                    selected: 0,
+                    category_index: languages_category_index,
+                    focus: PickerFocus::Keycodes,
+                    sidebar_scroll: 0,
+                    selected_language: Some(lang_id.clone()),
+                    language_list_index,
+                }
+            }
+            None => Self::new(),
         }
     }
 
@@ -81,6 +115,8 @@ impl KeycodePickerState {
         self.category_index = 0;
         self.focus = PickerFocus::Keycodes;
         self.sidebar_scroll = 0;
+        self.selected_language = None;
+        self.language_list_index = 0;
     }
 }
 
@@ -97,6 +133,17 @@ impl KeycodePicker {
     pub fn new() -> Self {
         Self {
             state: KeycodePickerState::new(),
+        }
+    }
+
+    /// Create a new KeycodePicker with an initial language selection
+    ///
+    /// If `last_language` is Some, automatically sets the category to Languages
+    /// and positions to show that language's keycodes.
+    #[must_use]
+    pub fn with_language(last_language: Option<String>, keycode_db: &KeycodeDb) -> Self {
+        Self {
+            state: KeycodePickerState::with_language(last_language, keycode_db),
         }
     }
 
@@ -122,11 +169,12 @@ impl ContextualComponent for KeycodePicker {
         key: event::KeyEvent,
         context: &Self::Context,
     ) -> Option<Self::Event> {
-        let total_categories = context.categories().len() + 1; // +1 for "All"
+        let total_categories = context.categories().len() + 2; // +1 for "All", +1 for "Languages"
 
         match self.state.focus {
-            PickerFocus::Sidebar => self.handle_sidebar_input(key, total_categories),
+            PickerFocus::Sidebar => self.handle_sidebar_input(key, total_categories, context),
             PickerFocus::Keycodes => self.handle_keycodes_input(key, context),
+            PickerFocus::LanguageSelector => self.handle_language_selector_input(key, context),
         }
     }
 
@@ -136,11 +184,18 @@ impl ContextualComponent for KeycodePicker {
 }
 
 impl KeycodePicker {
+    /// Check if the Languages category is selected
+    fn is_languages_selected(&self, context: &KeycodeDb) -> bool {
+        // Languages is the last category (after all regular categories)
+        self.state.category_index == context.categories().len() + 1
+    }
+
     /// Handle input when sidebar has focus
     fn handle_sidebar_input(
         &mut self,
         key: event::KeyEvent,
         total_categories: usize,
+        context: &KeycodeDb,
     ) -> Option<KeycodePickerEvent> {
         match key.code {
             KeyCode::Esc => {
@@ -151,6 +206,7 @@ impl KeycodePicker {
                 if self.state.category_index > 0 {
                     self.state.category_index -= 1;
                     self.state.selected = 0; // Reset keycode selection
+                    self.state.selected_language = None; // Reset language selection
                 }
                 None
             }
@@ -158,22 +214,30 @@ impl KeycodePicker {
                 if self.state.category_index < total_categories - 1 {
                     self.state.category_index += 1;
                     self.state.selected = 0; // Reset keycode selection
+                    self.state.selected_language = None; // Reset language selection
                 }
                 None
             }
             KeyCode::Home => {
                 self.state.category_index = 0;
                 self.state.selected = 0;
+                self.state.selected_language = None;
                 None
             }
             KeyCode::End => {
                 self.state.category_index = total_categories - 1;
                 self.state.selected = 0;
+                self.state.selected_language = None;
                 None
             }
-            // Switch to keycodes pane
+            // Switch to keycodes pane or language selector
             KeyCode::Tab | KeyCode::Right | KeyCode::Enter => {
-                self.state.focus = PickerFocus::Keycodes;
+                if self.is_languages_selected(context) && self.state.selected_language.is_none() {
+                    // Go to language selector first
+                    self.state.focus = PickerFocus::LanguageSelector;
+                } else {
+                    self.state.focus = PickerFocus::Keycodes;
+                }
                 None
             }
             // Number keys for quick category jump
@@ -182,6 +246,64 @@ impl KeycodePicker {
                 if idx < total_categories {
                     self.state.category_index = idx;
                     self.state.selected = 0;
+                    self.state.selected_language = None;
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Handle input when language selector has focus
+    fn handle_language_selector_input(
+        &mut self,
+        key: event::KeyEvent,
+        context: &KeycodeDb,
+    ) -> Option<KeycodePickerEvent> {
+        let total_languages = context.language_count();
+
+        match key.code {
+            KeyCode::Esc => {
+                // Go back to sidebar
+                self.state.focus = PickerFocus::Sidebar;
+                self.state.language_list_index = 0;
+                None
+            }
+            KeyCode::Up => {
+                if self.state.language_list_index > 0 {
+                    self.state.language_list_index -= 1;
+                }
+                None
+            }
+            KeyCode::Down => {
+                if self.state.language_list_index < total_languages.saturating_sub(1) {
+                    self.state.language_list_index += 1;
+                }
+                None
+            }
+            KeyCode::Home => {
+                self.state.language_list_index = 0;
+                None
+            }
+            KeyCode::End => {
+                self.state.language_list_index = total_languages.saturating_sub(1);
+                None
+            }
+            KeyCode::Left | KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                self.state.focus = PickerFocus::Sidebar;
+                None
+            }
+            KeyCode::Tab => {
+                self.state.focus = PickerFocus::Sidebar;
+                None
+            }
+            KeyCode::Enter | KeyCode::Right => {
+                // Select language and go to keycodes
+                let languages = context.languages();
+                if let Some(lang) = languages.get(self.state.language_list_index) {
+                    self.state.selected_language = Some(lang.id.clone());
+                    self.state.selected = 0;
+                    self.state.focus = PickerFocus::Keycodes;
                 }
                 None
             }
@@ -200,13 +322,22 @@ impl KeycodePicker {
                 self.state.reset();
                 Some(KeycodePickerEvent::Cancelled)
             }
-            // Switch back to sidebar (arrow keys always work)
+            // Switch back to sidebar or language selector
             KeyCode::Left => {
-                self.state.focus = PickerFocus::Sidebar;
+                if self.is_languages_selected(context) && self.state.selected_language.is_some() {
+                    // Go back to language selector
+                    self.state.focus = PickerFocus::LanguageSelector;
+                } else {
+                    self.state.focus = PickerFocus::Sidebar;
+                }
                 None
             }
             KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                self.state.focus = PickerFocus::Sidebar;
+                if self.is_languages_selected(context) && self.state.selected_language.is_some() {
+                    self.state.focus = PickerFocus::LanguageSelector;
+                } else {
+                    self.state.focus = PickerFocus::Sidebar;
+                }
                 None
             }
             KeyCode::Tab => {
@@ -277,12 +408,23 @@ impl KeycodePicker {
 }
 
 /// Get filtered keycodes based on state and context (helper for component)
-fn get_filtered_keycodes_from_context<'a>(
+pub fn get_filtered_keycodes_from_context<'a>(
     picker_state: &KeycodePickerState,
     context: &'a KeycodeDb,
 ) -> Vec<&'a crate::keycode_db::KeycodeDefinition> {
     let categories = context.categories();
     let category_index = picker_state.category_index;
+
+    // Check if Languages category is selected
+    let languages_index = categories.len() + 1;
+    if category_index == languages_index {
+        // Return language-specific keycodes if a language is selected
+        if let Some(ref lang_id) = picker_state.selected_language {
+            return context.search_in_language(&picker_state.search, lang_id);
+        }
+        // No language selected yet, return empty
+        return Vec::new();
+    }
 
     let active_category = if category_index == 0 {
         None
@@ -304,7 +446,17 @@ fn render_keycode_picker_component(
     context: &KeycodeDb,
     theme: &super::Theme,
 ) {
-    let state = picker.state();
+    render_keycode_picker_internal(f, picker.state(), context, theme);
+}
+
+/// Internal shared rendering function for keycode picker
+#[allow(clippy::too_many_lines)]
+fn render_keycode_picker_internal(
+    f: &mut Frame,
+    picker_state: &KeycodePickerState,
+    context: &KeycodeDb,
+    theme: &super::Theme,
+) {
     let area = centered_rect(80, 85, f.size());
 
     // Clear the background area first
@@ -328,8 +480,8 @@ fn render_keycode_picker_component(
 
     // Get categories from database
     let categories = context.categories();
-    let category_index = state.category_index;
-    let focus = state.focus;
+    let category_index = picker_state.category_index;
+    let focus = picker_state.focus;
 
     // Render sidebar with categories
     render_sidebar(f, sidebar_area, categories, category_index, focus, theme);
@@ -344,143 +496,67 @@ fn render_keycode_picker_component(
         ])
         .split(content_area);
 
-    // Search box
-    let search_border_color = if focus == PickerFocus::Keycodes {
-        theme.primary
+    // Check if Languages category is selected
+    let languages_index = categories.len() + 1;
+    let is_languages_mode = category_index == languages_index;
+
+    // Search box (hide when in language selector mode without language selected)
+    let show_search = !is_languages_mode || picker_state.selected_language.is_some();
+    if show_search {
+        let search_border_color = if focus == PickerFocus::Keycodes {
+            theme.primary
+        } else {
+            theme.surface
+        };
+
+        let search_text = vec![Line::from(vec![
+            Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
+            Span::styled(
+                &picker_state.search,
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "_",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::SLOW_BLINK),
+            ),
+        ])];
+        let search = Paragraph::new(search_text).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(search_border_color))
+                .style(Style::default().bg(theme.background)),
+        );
+        f.render_widget(search, content_chunks[0]);
     } else {
-        theme.surface
-    };
-
-    let search_text = vec![Line::from(vec![
-        Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
-        Span::styled(
-            &state.search,
-            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            "_",
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(Modifier::SLOW_BLINK),
-        ),
-    ])];
-    let search = Paragraph::new(search_text).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(search_border_color))
-            .style(Style::default().bg(theme.background)),
-    );
-    f.render_widget(search, content_chunks[0]);
-
-    // Get filtered keycodes based on search and category
-    let active_category = if category_index == 0 {
-        None
-    } else {
-        categories.get(category_index - 1).map(|c| c.id.as_str())
-    };
-
-    let keycodes = if let Some(cat_id) = active_category {
-        context.search_in_category(&state.search, cat_id)
-    } else {
-        context.search(&state.search)
-    };
-
-    // Build list items with better formatting
-    let list_items: Vec<ListItem> = keycodes
-        .iter()
-        .map(|keycode| {
-            let code_style = Style::default()
-                .fg(theme.primary)
-                .add_modifier(Modifier::BOLD);
-            let name_style = Style::default().fg(theme.text);
-            let desc_style = Style::default().fg(theme.text_muted);
-
-            let mut spans = vec![
-                Span::styled(format!("{:16}", keycode.code), code_style),
-                Span::styled(&keycode.name, name_style),
-            ];
-
-            if let Some(desc) = &keycode.description {
-                spans.push(Span::styled(format!(" - {desc}"), desc_style));
-            }
-
-            ListItem::new(Line::from(spans))
-        })
-        .collect();
-
-    // Create list widget with stateful selection
-    let category_name = if category_index == 0 {
-        "All".to_string()
-    } else {
-        categories
-            .get(category_index - 1)
-            .map_or_else(|| "Unknown".to_string(), |c| c.name.clone())
-    };
-
-    let list_border_color = if focus == PickerFocus::Keycodes {
-        theme.primary
-    } else {
-        theme.surface
-    };
-
-    let list = List::new(list_items)
+        // Show "Select a language" prompt instead of search box
+        let prompt = Paragraph::new(Line::from(vec![Span::styled(
+            " Select a language to view keycodes",
+            Style::default().fg(theme.text_muted),
+        )]))
         .block(
             Block::default()
-                .title(format!(" {} ({}) ", category_name, keycodes.len()))
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(list_border_color))
+                .border_style(Style::default().fg(theme.surface))
                 .style(Style::default().bg(theme.background)),
-        )
-        .highlight_style(
-            Style::default()
-                .bg(theme.surface)
-                .fg(theme.text)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("► ");
-
-    // Create list state for highlighting
-    let mut list_state = ListState::default();
-    if focus == PickerFocus::Keycodes {
-        list_state.select(Some(state.selected.min(keycodes.len().saturating_sub(1))));
+        );
+        f.render_widget(prompt, content_chunks[0]);
     }
 
-    f.render_stateful_widget(list, content_chunks[1], &mut list_state);
+    // If in Languages mode without a language selected, show language selector
+    if is_languages_mode && picker_state.selected_language.is_none() {
+        render_language_selector(
+            f,
+            content_chunks[1],
+            context,
+            picker_state.language_list_index,
+            focus,
+            theme,
+        );
 
-    // Help text
-    let help_spans = if focus == PickerFocus::Sidebar {
-        vec![
-            Span::styled(
-                "↑↓",
-                Style::default()
-                    .fg(theme.primary)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Category  "),
-            Span::styled(
-                "Tab/→",
-                Style::default()
-                    .fg(theme.primary)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Keycodes  "),
-            Span::styled(
-                "Enter",
-                Style::default()
-                    .fg(theme.success)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Select  "),
-            Span::styled(
-                "Esc",
-                Style::default()
-                    .fg(theme.error)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Cancel"),
-        ]
-    } else {
-        vec![
+        // Language selector help text
+        let help_spans = vec![
             Span::styled(
                 "↑↓",
                 Style::default()
@@ -489,125 +565,54 @@ fn render_keycode_picker_component(
             ),
             Span::raw(" Navigate  "),
             Span::styled(
-                "Tab/←",
-                Style::default()
-                    .fg(theme.primary)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Categories  "),
-            Span::styled(
-                "Enter",
+                "Enter/→",
                 Style::default()
                     .fg(theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw(" Apply  "),
+            Span::raw(" Select  "),
+            Span::styled(
+                "←/Tab",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Back  "),
             Span::styled(
                 "Esc",
                 Style::default()
                     .fg(theme.error)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw(" Cancel  "),
-            Span::styled(
-                "Type",
-                Style::default()
-                    .fg(theme.accent)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" Search"),
-        ]
-    };
-    let help = Paragraph::new(Line::from(help_spans))
-        .style(Style::default().fg(theme.text_muted))
-        .block(Block::default().style(Style::default().bg(theme.background)));
-    f.render_widget(help, content_chunks[2]);
-}
-
-/// Render the keycode picker popup with sidebar layout (legacy - for backward compatibility)
-#[allow(clippy::too_many_lines)]
-pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
-    let theme = &state.theme;
-    let area = centered_rect(80, 85, f.size());
-
-    // Clear the background area first
-    f.render_widget(Clear, area);
-
-    // Render opaque background with theme color
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, area);
-
-    // Main horizontal split: sidebar (20%) | content (80%)
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(22), // Fixed width sidebar for category names
-            Constraint::Min(40),    // Keycode list takes remaining space
-        ])
-        .split(area);
-
-    let sidebar_area = main_chunks[0];
-    let content_area = main_chunks[1];
-
-    // Get categories from database
-    let categories = state.keycode_db.categories();
-    let category_index = state.keycode_picker_state.category_index;
-    let focus = state.keycode_picker_state.focus;
-
-    // Render sidebar with categories
-    render_sidebar(f, sidebar_area, categories, category_index, focus, theme);
-
-    // Content area: search box + keycode list + help
-    let content_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Search box
-            Constraint::Min(10),   // Keycode list
-            Constraint::Length(2), // Help text
-        ])
-        .split(content_area);
-
-    // Search box
-    let search_border_color = if focus == PickerFocus::Keycodes {
-        theme.primary
-    } else {
-        theme.surface
-    };
-
-    let search_text = vec![Line::from(vec![
-        Span::styled(" Search: ", Style::default().fg(theme.text_muted)),
-        Span::styled(
-            &state.keycode_picker_state.search,
-            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            "_",
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(Modifier::SLOW_BLINK),
-        ),
-    ])];
-    let search = Paragraph::new(search_text).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(search_border_color))
-            .style(Style::default().bg(theme.background)),
-    );
-    f.render_widget(search, content_chunks[0]);
+            Span::raw(" Cancel"),
+        ];
+        let help = Paragraph::new(Line::from(help_spans))
+            .style(Style::default().fg(theme.text_muted))
+            .block(Block::default().style(Style::default().bg(theme.background)));
+        f.render_widget(help, content_chunks[2]);
+        return;
+    }
 
     // Get filtered keycodes based on search and category
-    let active_category = if category_index == 0 {
-        None
+    let keycodes = if is_languages_mode {
+        // Language-specific keycodes
+        if let Some(ref lang_id) = picker_state.selected_language {
+            context.search_in_language(&picker_state.search, lang_id)
+        } else {
+            Vec::new()
+        }
     } else {
-        categories.get(category_index - 1).map(|c| c.id.as_str())
-    };
+        let active_category = if category_index == 0 {
+            None
+        } else {
+            categories.get(category_index - 1).map(|c| c.id.as_str())
+        };
 
-    let keycodes = if let Some(cat_id) = active_category {
-        state
-            .keycode_db
-            .search_in_category(&state.keycode_picker_state.search, cat_id)
-    } else {
-        state.keycode_db.search(&state.keycode_picker_state.search)
+        if let Some(cat_id) = active_category {
+            context.search_in_category(&picker_state.search, cat_id)
+        } else {
+            context.search(&picker_state.search)
+        }
     };
 
     // Build list items with better formatting
@@ -634,7 +639,16 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
         .collect();
 
     // Create list widget with stateful selection
-    let category_name = if category_index == 0 {
+    let category_name = if is_languages_mode {
+        // Show selected language name
+        if let Some(ref lang_id) = picker_state.selected_language {
+            context
+                .get_language(lang_id)
+                .map_or_else(|| "Unknown".to_string(), |l| l.name.clone())
+        } else {
+            "Languages".to_string()
+        }
+    } else if category_index == 0 {
         "All".to_string()
     } else {
         categories
@@ -668,10 +682,7 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     let mut list_state = ListState::default();
     if focus == PickerFocus::Keycodes {
         list_state.select(Some(
-            state
-                .keycode_picker_state
-                .selected
-                .min(keycodes.len().saturating_sub(1)),
+            picker_state.selected.min(keycodes.len().saturating_sub(1)),
         ));
     }
 
@@ -710,6 +721,13 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
             Span::raw(" Cancel"),
         ]
     } else {
+        // Check if we're in a language and show back option
+        let back_hint = if is_languages_mode && picker_state.selected_language.is_some() {
+            "← Back to Languages  "
+        } else {
+            ""
+        };
+
         vec![
             Span::styled(
                 "↑↓",
@@ -724,7 +742,7 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
                     .fg(theme.primary)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw(" Categories  "),
+            Span::raw(format!(" {back_hint}")),
             Span::styled(
                 "Enter",
                 Style::default()
@@ -754,6 +772,67 @@ pub fn render_keycode_picker(f: &mut Frame, state: &AppState) {
     f.render_widget(help, content_chunks[2]);
 }
 
+/// Render the language selector list
+fn render_language_selector(
+    f: &mut Frame,
+    area: Rect,
+    context: &KeycodeDb,
+    selected_index: usize,
+    focus: PickerFocus,
+    theme: &super::Theme,
+) {
+    let languages = context.languages();
+
+    let list_items: Vec<ListItem> = languages
+        .iter()
+        .map(|lang| {
+            let name_style = Style::default().fg(theme.text);
+            let prefix_style = Style::default().fg(theme.text_muted);
+            let desc_style = Style::default().fg(theme.text_muted);
+
+            let mut spans = vec![
+                Span::styled(format!("{:20}", lang.name), name_style),
+                Span::styled(format!("[{}] ", lang.prefix), prefix_style),
+            ];
+
+            if let Some(ref desc) = lang.description {
+                spans.push(Span::styled(desc.as_str(), desc_style));
+            }
+
+            ListItem::new(Line::from(spans))
+        })
+        .collect();
+
+    let border_color = if focus == PickerFocus::LanguageSelector {
+        theme.primary
+    } else {
+        theme.surface
+    };
+
+    let list = List::new(list_items)
+        .block(
+            Block::default()
+                .title(format!(" Languages ({}) ", languages.len()))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(border_color))
+                .style(Style::default().bg(theme.background)),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(theme.surface)
+                .fg(theme.text)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("► ");
+
+    let mut list_state = ListState::default();
+    if focus == PickerFocus::LanguageSelector {
+        list_state.select(Some(selected_index.min(languages.len().saturating_sub(1))));
+    }
+
+    f.render_stateful_widget(list, area, &mut list_state);
+}
+
 /// Render the category sidebar
 fn render_sidebar(
     f: &mut Frame,
@@ -769,8 +848,8 @@ fn render_sidebar(
         theme.surface
     };
 
-    // Build category list items: "All" + all categories
-    let mut items: Vec<ListItem> = Vec::with_capacity(categories.len() + 1);
+    // Build category list items: "All" + all categories + "Languages"
+    let mut items: Vec<ListItem> = Vec::with_capacity(categories.len() + 2);
 
     // "All" option
     let all_style = if selected == 0 {
@@ -806,6 +885,21 @@ fn render_sidebar(
         items.push(ListItem::new(Line::from(vec![Span::styled(name, style)])));
     }
 
+    // "Languages" option at the end
+    let languages_idx = categories.len() + 1;
+    let languages_style = if selected == languages_idx {
+        Style::default()
+            .fg(theme.background)
+            .bg(theme.accent) // Use accent color to distinguish from regular categories
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.accent)
+    };
+    items.push(ListItem::new(Line::from(vec![Span::styled(
+        " Languages ▸",
+        languages_style,
+    )])));
+
     let list = List::new(items)
         .block(
             Block::default()
@@ -827,139 +921,6 @@ fn render_sidebar(
     }
 
     f.render_stateful_widget(list, area, &mut list_state);
-}
-
-/// Get filtered keycodes based on current search and category
-#[must_use]
-pub fn get_filtered_keycodes(state: &AppState) -> Vec<&crate::keycode_db::KeycodeDefinition> {
-    let categories = state.keycode_db.categories();
-    let category_index = state.keycode_picker_state.category_index;
-
-    let active_category = if category_index == 0 {
-        None
-    } else {
-        categories.get(category_index - 1).map(|c| c.id.as_str())
-    };
-
-    if let Some(cat_id) = active_category {
-        state
-            .keycode_db
-            .search_in_category(&state.keycode_picker_state.search, cat_id)
-    } else {
-        state.keycode_db.search(&state.keycode_picker_state.search)
-    }
-}
-
-/// Handle navigation-only input for keycode picker (used by `TapKeycodePicker`)
-/// This handles all input except Enter (which is handled by caller)
-#[allow(clippy::too_many_lines)]
-pub fn handle_navigation(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    let total_categories = state.keycode_db.categories().len() + 1;
-    // Check if search is active (has content) - vim keys should type instead of navigate
-    let _search_active = !state.keycode_picker_state.search.is_empty();
-
-    match state.keycode_picker_state.focus {
-        PickerFocus::Sidebar => match key.code {
-            KeyCode::Up => {
-                if state.keycode_picker_state.category_index > 0 {
-                    state.keycode_picker_state.category_index -= 1;
-                    state.keycode_picker_state.selected = 0;
-                }
-                Ok(false)
-            }
-            KeyCode::Down => {
-                if state.keycode_picker_state.category_index < total_categories - 1 {
-                    state.keycode_picker_state.category_index += 1;
-                    state.keycode_picker_state.selected = 0;
-                }
-                Ok(false)
-            }
-            KeyCode::Home => {
-                state.keycode_picker_state.category_index = 0;
-                state.keycode_picker_state.selected = 0;
-                Ok(false)
-            }
-            KeyCode::End => {
-                state.keycode_picker_state.category_index = total_categories - 1;
-                state.keycode_picker_state.selected = 0;
-                Ok(false)
-            }
-            KeyCode::Tab | KeyCode::Right => {
-                state.keycode_picker_state.focus = PickerFocus::Keycodes;
-                Ok(false)
-            }
-            KeyCode::Char(c) if c.is_ascii_digit() => {
-                let idx = c.to_digit(10).unwrap() as usize;
-                if idx < total_categories {
-                    state.keycode_picker_state.category_index = idx;
-                    state.keycode_picker_state.selected = 0;
-                }
-                Ok(false)
-            }
-            _ => Ok(false),
-        },
-        PickerFocus::Keycodes => match key.code {
-            KeyCode::Left => {
-                state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                Ok(false)
-            }
-            KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                Ok(false)
-            }
-            KeyCode::Tab => {
-                state.keycode_picker_state.focus = PickerFocus::Sidebar;
-                Ok(false)
-            }
-            KeyCode::Up => {
-                if state.keycode_picker_state.selected > 0 {
-                    state.keycode_picker_state.selected -= 1;
-                }
-                Ok(false)
-            }
-            KeyCode::Down => {
-                let keycodes = get_filtered_keycodes(state);
-                if state.keycode_picker_state.selected < keycodes.len().saturating_sub(1) {
-                    state.keycode_picker_state.selected += 1;
-                }
-                Ok(false)
-            }
-            // NOTE: Vim navigation (h/j/k/l) removed from keycodes pane to allow typing these
-            // letters in search. Arrow keys, PageUp/Down, Home/End still work for navigation.
-            KeyCode::Home => {
-                state.keycode_picker_state.selected = 0;
-                Ok(false)
-            }
-            KeyCode::End => {
-                let keycodes = get_filtered_keycodes(state);
-                state.keycode_picker_state.selected = keycodes.len().saturating_sub(1);
-                Ok(false)
-            }
-            KeyCode::PageUp => {
-                state.keycode_picker_state.selected =
-                    state.keycode_picker_state.selected.saturating_sub(10);
-                Ok(false)
-            }
-            KeyCode::PageDown => {
-                let keycodes = get_filtered_keycodes(state);
-                state.keycode_picker_state.selected = (state.keycode_picker_state.selected + 10)
-                    .min(keycodes.len().saturating_sub(1));
-                Ok(false)
-            }
-            KeyCode::Char(c) => {
-                // Add to search (includes j, k, h, l when search is active)
-                state.keycode_picker_state.search.push(c);
-                state.keycode_picker_state.selected = 0;
-                Ok(false)
-            }
-            KeyCode::Backspace => {
-                state.keycode_picker_state.search.pop();
-                state.keycode_picker_state.selected = 0;
-                Ok(false)
-            }
-            _ => Ok(false),
-        },
-    }
 }
 
 /// Helper to create centered rectangle

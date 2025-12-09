@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "norwegian",
+    "name": "Norwegian",
+    "description": "Norwegian QWERTY layout",
+    "prefix": "NO_",
+    "header": "keymap_extras/keymap_norwegian.h"
+  },
+  "keycodes": [
+    { "code": "NO_A", "name": "A", "description": "A key" },
+    { "code": "NO_B", "name": "B", "description": "B key" },
+    { "code": "NO_C", "name": "C", "description": "C key" },
+    { "code": "NO_D", "name": "D", "description": "D key" },
+    { "code": "NO_E", "name": "E", "description": "E key" },
+    { "code": "NO_F", "name": "F", "description": "F key" },
+    { "code": "NO_G", "name": "G", "description": "G key" },
+    { "code": "NO_H", "name": "H", "description": "H key" },
+    { "code": "NO_I", "name": "I", "description": "I key" },
+    { "code": "NO_J", "name": "J", "description": "J key" },
+    { "code": "NO_K", "name": "K", "description": "K key" },
+    { "code": "NO_L", "name": "L", "description": "L key" },
+    { "code": "NO_M", "name": "M", "description": "M key" },
+    { "code": "NO_N", "name": "N", "description": "N key" },
+    { "code": "NO_O", "name": "O", "description": "O key" },
+    { "code": "NO_P", "name": "P", "description": "P key" },
+    { "code": "NO_ARNG", "name": "å", "description": "A with ring above" },
+    { "code": "NO_AE", "name": "æ", "description": "AE ligature" },
+    { "code": "NO_OSTR", "name": "ø", "description": "O with stroke" },
+    { "code": "NO_EURO", "name": "€", "description": "Euro sign" }
+  ]
+}

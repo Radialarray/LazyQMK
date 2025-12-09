@@ -83,6 +83,79 @@ struct CategoryFile {
     keycodes: Vec<KeycodeDefinition>,
 }
 
+/// Language definition with metadata about the keyboard layout.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LanguageDefinition {
+    /// Language ID (e.g., "german", "french")
+    pub id: String,
+    /// Display name (e.g., "German", "French")
+    pub name: String,
+    /// Description of the layout
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Keycode prefix (e.g., "DE_", "FR_")
+    pub prefix: String,
+    /// QMK header file path (e.g., "keymap_extras/keymap_german.h")
+    pub header: String,
+}
+
+/// Language index entry (from languages.json)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LanguageIndexEntry {
+    id: String,
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
+    prefix: String,
+    header: String,
+    file: String,
+}
+
+/// Languages index file schema (languages.json).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LanguagesIndex {
+    version: String,
+    #[serde(default)]
+    description: Option<String>,
+    languages: Vec<LanguageIndexEntry>,
+}
+
+/// Language file schema (languages/*.json).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LanguageFile {
+    language: LanguageFileMeta,
+    keycodes: Vec<LanguageKeycode>,
+}
+
+/// Language metadata in individual language files
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LanguageFileMeta {
+    id: String,
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
+    prefix: String,
+    header: String,
+}
+
+/// Keycode definition in language files (simplified, no category needed)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LanguageKeycode {
+    code: String,
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
+}
+
+/// Stored language keycodes with metadata
+#[derive(Debug, Clone)]
+pub struct LanguageKeycodes {
+    /// Language metadata
+    pub language: LanguageDefinition,
+    /// Keycodes for this language
+    pub keycodes: Vec<KeycodeDefinition>,
+}
+
 /// QMK keycode database with fast lookup and search capabilities.
 ///
 /// The database is embedded in the binary at compile time and loaded
@@ -98,6 +171,8 @@ pub struct KeycodeDb {
     lookup: HashMap<String, usize>,
     /// Compiled regex patterns for parameterized keycodes (MO(n), TG(n), etc.)
     patterns: Vec<(String, Regex)>,
+    /// Language-specific keycodes (loaded separately from main categories)
+    languages: Vec<LanguageKeycodes>,
 }
 
 /// Type of tap-hold keycode
@@ -165,8 +240,6 @@ impl KeycodeDb {
             ),
             ("advanced", include_str!("categories/advanced.json")),
             ("magic", include_str!("categories/magic.json")),
-            ("german", include_str!("categories/german.json")),
-            ("german_mac", include_str!("categories/german_mac.json")),
         ];
 
         for (cat_id, json_data) in category_files {
@@ -195,12 +268,67 @@ impl KeycodeDb {
             }
         }
 
+        // Load language-specific keycodes
+        let languages = Self::load_languages()?;
+
         Ok(Self {
             keycodes: all_keycodes,
             categories: index.categories,
             lookup,
             patterns,
+            languages,
         })
+    }
+
+    /// Loads language-specific keycode files.
+    fn load_languages() -> Result<Vec<LanguageKeycodes>> {
+        // Include all language files at compile time
+        let language_files: &[(&str, &str)] = &[
+            ("german", include_str!("languages/german.json")),
+            ("german_mac", include_str!("languages/german_mac.json")),
+            ("french", include_str!("languages/french.json")),
+            ("french_mac", include_str!("languages/french_mac.json")),
+            ("spanish", include_str!("languages/spanish.json")),
+            ("italian", include_str!("languages/italian.json")),
+            ("uk", include_str!("languages/uk.json")),
+            ("swedish", include_str!("languages/swedish.json")),
+            ("norwegian", include_str!("languages/norwegian.json")),
+            ("danish", include_str!("languages/danish.json")),
+        ];
+
+        let mut languages = Vec::new();
+
+        for (lang_id, json_data) in language_files {
+            let lang_file: LanguageFile = serde_json::from_str(json_data)
+                .with_context(|| format!("Failed to parse languages/{lang_id}.json"))?;
+
+            let language = LanguageDefinition {
+                id: lang_file.language.id,
+                name: lang_file.language.name,
+                description: lang_file.language.description,
+                prefix: lang_file.language.prefix.clone(),
+                header: lang_file.language.header,
+            };
+
+            // Convert language keycodes to KeycodeDefinition with a synthetic category
+            let keycodes: Vec<KeycodeDefinition> = lang_file
+                .keycodes
+                .into_iter()
+                .map(|kc| KeycodeDefinition {
+                    code: kc.code,
+                    name: kc.name,
+                    category: format!("lang_{}", lang_id),
+                    description: kc.description,
+                    pattern: None,
+                    aliases: Vec::new(),
+                    params: Vec::new(),
+                })
+                .collect();
+
+            languages.push(LanguageKeycodes { language, keycodes });
+        }
+
+        Ok(languages)
     }
 
     /// Validates a keycode against the database.
@@ -355,6 +483,87 @@ impl KeycodeDb {
     #[must_use]
     pub const fn category_count(&self) -> usize {
         self.categories.len()
+    }
+
+    /// Gets all available languages.
+    #[must_use]
+    pub fn languages(&self) -> Vec<&LanguageDefinition> {
+        self.languages.iter().map(|l| &l.language).collect()
+    }
+
+    /// Gets a language by ID.
+    #[must_use]
+    pub fn get_language(&self, id: &str) -> Option<&LanguageDefinition> {
+        self.languages
+            .iter()
+            .find(|l| l.language.id == id)
+            .map(|l| &l.language)
+    }
+
+    /// Gets all keycodes for a specific language.
+    #[must_use]
+    pub fn get_language_keycodes(&self, language_id: &str) -> Vec<&KeycodeDefinition> {
+        self.languages
+            .iter()
+            .find(|l| l.language.id == language_id)
+            .map(|l| l.keycodes.iter().collect())
+            .unwrap_or_default()
+    }
+
+    /// Gets the total number of languages.
+    #[must_use]
+    pub fn language_count(&self) -> usize {
+        self.languages.len()
+    }
+
+    /// Searches for keycodes within a specific language.
+    #[must_use]
+    pub fn search_in_language(&self, query: &str, language_id: &str) -> Vec<&KeycodeDefinition> {
+        let keycodes = self.get_language_keycodes(language_id);
+        if query.is_empty() {
+            return keycodes;
+        }
+
+        let query_lower = query.to_lowercase();
+        let mut results: Vec<(&KeycodeDefinition, i32)> = keycodes
+            .into_iter()
+            .filter_map(|keycode| {
+                let code_lower = keycode.code.to_lowercase();
+                let name_lower = keycode.name.to_lowercase();
+                let desc_lower = keycode
+                    .description
+                    .as_ref()
+                    .map(|d| d.to_lowercase())
+                    .unwrap_or_default();
+
+                // Exact match (highest priority)
+                if code_lower == query_lower || name_lower == query_lower {
+                    return Some((keycode, 100));
+                }
+
+                // Starts with query (high priority)
+                if code_lower.starts_with(&query_lower) || name_lower.starts_with(&query_lower) {
+                    return Some((keycode, 50));
+                }
+
+                // Contains query in code or name (medium priority)
+                if code_lower.contains(&query_lower) || name_lower.contains(&query_lower) {
+                    return Some((keycode, 10));
+                }
+
+                // Contains query in description (lower priority)
+                if desc_lower.contains(&query_lower) {
+                    return Some((keycode, 5));
+                }
+
+                None
+            })
+            .collect();
+
+        // Sort by relevance (descending)
+        results.sort_by(|a, b| b.1.cmp(&a.1));
+
+        results.into_iter().map(|(keycode, _)| keycode).collect()
     }
 
     /// Check if a keycode is parameterized (requires additional input).

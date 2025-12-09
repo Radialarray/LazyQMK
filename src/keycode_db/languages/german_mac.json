@@ -1,0 +1,771 @@
+{
+  "language": {
+    "id": "german_mac",
+    "name": "German (macOS)",
+    "description": "German keyboard layout for macOS (QWERTZ)",
+    "prefix": "DE_",
+    "header": "keymap_extras/keymap_german_mac_iso.h"
+  },
+  "keycodes": [
+    {
+      "code": "DE_CIRC",
+      "name": "^ (dead key)",
+      "description": ""
+    },
+    {
+      "code": "DE_1",
+      "name": "1",
+      "description": ""
+    },
+    {
+      "code": "DE_2",
+      "name": "2",
+      "description": ""
+    },
+    {
+      "code": "DE_3",
+      "name": "3",
+      "description": ""
+    },
+    {
+      "code": "DE_4",
+      "name": "4",
+      "description": ""
+    },
+    {
+      "code": "DE_5",
+      "name": "5",
+      "description": ""
+    },
+    {
+      "code": "DE_6",
+      "name": "6",
+      "description": ""
+    },
+    {
+      "code": "DE_7",
+      "name": "7",
+      "description": ""
+    },
+    {
+      "code": "DE_8",
+      "name": "8",
+      "description": ""
+    },
+    {
+      "code": "DE_9",
+      "name": "9",
+      "description": ""
+    },
+    {
+      "code": "DE_0",
+      "name": "0",
+      "description": ""
+    },
+    {
+      "code": "DE_SS",
+      "name": "\u00df (Sharp S)",
+      "description": ""
+    },
+    {
+      "code": "DE_ACUT",
+      "name": "\u00b4 (dead key)",
+      "description": ""
+    },
+    {
+      "code": "DE_Q",
+      "name": "Q",
+      "description": ""
+    },
+    {
+      "code": "DE_W",
+      "name": "W",
+      "description": ""
+    },
+    {
+      "code": "DE_E",
+      "name": "E",
+      "description": ""
+    },
+    {
+      "code": "DE_R",
+      "name": "R",
+      "description": ""
+    },
+    {
+      "code": "DE_T",
+      "name": "T",
+      "description": ""
+    },
+    {
+      "code": "DE_Z",
+      "name": "Z (on Y position)",
+      "description": ""
+    },
+    {
+      "code": "DE_U",
+      "name": "U",
+      "description": ""
+    },
+    {
+      "code": "DE_I",
+      "name": "I",
+      "description": ""
+    },
+    {
+      "code": "DE_O",
+      "name": "O",
+      "description": ""
+    },
+    {
+      "code": "DE_P",
+      "name": "P",
+      "description": ""
+    },
+    {
+      "code": "DE_UDIA",
+      "name": "\u00dc (U-Umlaut)",
+      "description": ""
+    },
+    {
+      "code": "DE_PLUS",
+      "name": "+",
+      "description": ""
+    },
+    {
+      "code": "DE_A",
+      "name": "A",
+      "description": ""
+    },
+    {
+      "code": "DE_S",
+      "name": "S",
+      "description": ""
+    },
+    {
+      "code": "DE_D",
+      "name": "D",
+      "description": ""
+    },
+    {
+      "code": "DE_F",
+      "name": "F",
+      "description": ""
+    },
+    {
+      "code": "DE_G",
+      "name": "G",
+      "description": ""
+    },
+    {
+      "code": "DE_H",
+      "name": "H",
+      "description": ""
+    },
+    {
+      "code": "DE_J",
+      "name": "J",
+      "description": ""
+    },
+    {
+      "code": "DE_K",
+      "name": "K",
+      "description": ""
+    },
+    {
+      "code": "DE_L",
+      "name": "L",
+      "description": ""
+    },
+    {
+      "code": "DE_ODIA",
+      "name": "\u00d6 (O-Umlaut)",
+      "description": ""
+    },
+    {
+      "code": "DE_ADIA",
+      "name": "\u00c4 (A-Umlaut)",
+      "description": ""
+    },
+    {
+      "code": "DE_HASH",
+      "name": "#",
+      "description": ""
+    },
+    {
+      "code": "DE_LABK",
+      "name": "<",
+      "description": ""
+    },
+    {
+      "code": "DE_Y",
+      "name": "Y (on Z position)",
+      "description": ""
+    },
+    {
+      "code": "DE_X",
+      "name": "X",
+      "description": ""
+    },
+    {
+      "code": "DE_C",
+      "name": "C",
+      "description": ""
+    },
+    {
+      "code": "DE_V",
+      "name": "V",
+      "description": ""
+    },
+    {
+      "code": "DE_B",
+      "name": "B",
+      "description": ""
+    },
+    {
+      "code": "DE_N",
+      "name": "N",
+      "description": ""
+    },
+    {
+      "code": "DE_M",
+      "name": "M",
+      "description": ""
+    },
+    {
+      "code": "DE_COMM",
+      "name": ",",
+      "description": ""
+    },
+    {
+      "code": "DE_DOT",
+      "name": ".",
+      "description": ""
+    },
+    {
+      "code": "DE_MINS",
+      "name": "-",
+      "description": ""
+    },
+    {
+      "code": "DE_DEG",
+      "name": "\u00b0 (Degree)",
+      "description": ""
+    },
+    {
+      "code": "DE_EXLM",
+      "name": "!",
+      "description": ""
+    },
+    {
+      "code": "DE_DQUO",
+      "name": "\" (Double Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_SECT",
+      "name": "\u00a7 (Section)",
+      "description": ""
+    },
+    {
+      "code": "DE_DLR",
+      "name": "$",
+      "description": ""
+    },
+    {
+      "code": "DE_PERC",
+      "name": "%",
+      "description": ""
+    },
+    {
+      "code": "DE_AMPR",
+      "name": "&",
+      "description": ""
+    },
+    {
+      "code": "DE_SLSH",
+      "name": "/",
+      "description": ""
+    },
+    {
+      "code": "DE_LPRN",
+      "name": "(",
+      "description": ""
+    },
+    {
+      "code": "DE_RPRN",
+      "name": ")",
+      "description": ""
+    },
+    {
+      "code": "DE_EQL",
+      "name": "=",
+      "description": ""
+    },
+    {
+      "code": "DE_QUES",
+      "name": "?",
+      "description": ""
+    },
+    {
+      "code": "DE_GRV",
+      "name": "` (dead key)",
+      "description": ""
+    },
+    {
+      "code": "DE_ASTR",
+      "name": "*",
+      "description": ""
+    },
+    {
+      "code": "DE_QUOT",
+      "name": "'",
+      "description": ""
+    },
+    {
+      "code": "DE_RABK",
+      "name": ">",
+      "description": ""
+    },
+    {
+      "code": "DE_SCLN",
+      "name": ";",
+      "description": ""
+    },
+    {
+      "code": "DE_COLN",
+      "name": ":",
+      "description": ""
+    },
+    {
+      "code": "DE_UNDS",
+      "name": "_",
+      "description": ""
+    },
+    {
+      "code": "DE_SUP2",
+      "name": "\u00b2 (Superscript 2)",
+      "description": ""
+    },
+    {
+      "code": "DE_SUP3",
+      "name": "\u00b3 (Superscript 3)",
+      "description": ""
+    },
+    {
+      "code": "DE_DLQU",
+      "name": "\u201e (Double Low Quotation)",
+      "description": ""
+    },
+    {
+      "code": "DE_IEXL",
+      "name": "\u00a1 (Inverted Exclamation)",
+      "description": ""
+    },
+    {
+      "code": "DE_LDQU",
+      "name": "\" (Left Double Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_PILC",
+      "name": "\u00b6 (Pilcrow)",
+      "description": ""
+    },
+    {
+      "code": "DE_CENT",
+      "name": "\u00a2 (Cent)",
+      "description": ""
+    },
+    {
+      "code": "DE_LBRC",
+      "name": "[",
+      "description": ""
+    },
+    {
+      "code": "DE_RBRC",
+      "name": "]",
+      "description": ""
+    },
+    {
+      "code": "DE_PIPE",
+      "name": "|",
+      "description": ""
+    },
+    {
+      "code": "DE_LCBR",
+      "name": "{",
+      "description": ""
+    },
+    {
+      "code": "DE_RCBR",
+      "name": "}",
+      "description": ""
+    },
+    {
+      "code": "DE_NEQL",
+      "name": "\u2260 (Not Equal)",
+      "description": ""
+    },
+    {
+      "code": "DE_IQUE",
+      "name": "\u00bf (Inverted Question)",
+      "description": ""
+    },
+    {
+      "code": "DE_LDAQ",
+      "name": "\u00ab (Left Angle Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_NARS",
+      "name": "\u2211 (N-ary Summation)",
+      "description": ""
+    },
+    {
+      "code": "DE_EURO",
+      "name": "\u20ac (Euro)",
+      "description": ""
+    },
+    {
+      "code": "DE_REGD",
+      "name": "\u00ae (Registered)",
+      "description": ""
+    },
+    {
+      "code": "DE_DAGG",
+      "name": "\u2020 (Dagger)",
+      "description": ""
+    },
+    {
+      "code": "DE_OMEG",
+      "name": "\u03a9 (Omega)",
+      "description": ""
+    },
+    {
+      "code": "DE_DIAE",
+      "name": "\u00a8 (Diaeresis dead)",
+      "description": ""
+    },
+    {
+      "code": "DE_FRSL",
+      "name": "\u2044 (Fraction Slash)",
+      "description": ""
+    },
+    {
+      "code": "DE_OSTR",
+      "name": "\u00d8 (O-Stroke)",
+      "description": ""
+    },
+    {
+      "code": "DE_PI",
+      "name": "\u03c0 (Pi)",
+      "description": ""
+    },
+    {
+      "code": "DE_BULT",
+      "name": "\u2022 (Bullet)",
+      "description": ""
+    },
+    {
+      "code": "DE_PLMN",
+      "name": "\u00b1 (Plus-Minus)",
+      "description": ""
+    },
+    {
+      "code": "DE_ARNG",
+      "name": "\u00c5 (A-Ring)",
+      "description": ""
+    },
+    {
+      "code": "DE_SLQU",
+      "name": "' (Single Low Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_PDIF",
+      "name": "\u2202 (Partial Diff)",
+      "description": ""
+    },
+    {
+      "code": "DE_FHK",
+      "name": "\u0192 (Florin)",
+      "description": ""
+    },
+    {
+      "code": "DE_COPY",
+      "name": "\u00a9 (Copyright)",
+      "description": ""
+    },
+    {
+      "code": "DE_FORD",
+      "name": "\u00aa (Feminine Ordinal)",
+      "description": ""
+    },
+    {
+      "code": "DE_MORD",
+      "name": "\u00ba (Masculine Ordinal)",
+      "description": ""
+    },
+    {
+      "code": "DE_INCR",
+      "name": "\u2206 (Increment)",
+      "description": ""
+    },
+    {
+      "code": "DE_AT",
+      "name": "@",
+      "description": ""
+    },
+    {
+      "code": "DE_OE",
+      "name": "\u0152 (OE Ligature)",
+      "description": ""
+    },
+    {
+      "code": "DE_AE",
+      "name": "\u00c6 (AE Ligature)",
+      "description": ""
+    },
+    {
+      "code": "DE_LSQU",
+      "name": "' (Left Single Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_LTEQ",
+      "name": "\u2264 (Less Than Equal)",
+      "description": ""
+    },
+    {
+      "code": "DE_YEN",
+      "name": "\u00a5 (Yen)",
+      "description": ""
+    },
+    {
+      "code": "DE_AEQL",
+      "name": "\u2248 (Almost Equal)",
+      "description": ""
+    },
+    {
+      "code": "DE_CCCE",
+      "name": "\u00c7 (C-Cedilla)",
+      "description": ""
+    },
+    {
+      "code": "DE_SQRT",
+      "name": "\u221a (Square Root)",
+      "description": ""
+    },
+    {
+      "code": "DE_INTG",
+      "name": "\u222b (Integral)",
+      "description": ""
+    },
+    {
+      "code": "DE_TILD",
+      "name": "~ (Tilde dead)",
+      "description": ""
+    },
+    {
+      "code": "DE_MICR",
+      "name": "\u00b5 (Micro)",
+      "description": ""
+    },
+    {
+      "code": "DE_INFN",
+      "name": "\u221e (Infinity)",
+      "description": ""
+    },
+    {
+      "code": "DE_ELLP",
+      "name": "\u2026 (Ellipsis)",
+      "description": ""
+    },
+    {
+      "code": "DE_NDSH",
+      "name": "\u2013 (En Dash)",
+      "description": ""
+    },
+    {
+      "code": "DE_NOT",
+      "name": "\u00ac (Not Sign)",
+      "description": ""
+    },
+    {
+      "code": "DE_RDQU",
+      "name": "\" (Right Double Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_PND",
+      "name": "\u00a3 (Pound)",
+      "description": ""
+    },
+    {
+      "code": "DE_FI",
+      "name": "\ufb01 (FI Ligature)",
+      "description": ""
+    },
+    {
+      "code": "DE_BSLS",
+      "name": "\\ (Backslash)",
+      "description": ""
+    },
+    {
+      "code": "DE_STIL",
+      "name": "~ (Small Tilde)",
+      "description": ""
+    },
+    {
+      "code": "DE_MDDT",
+      "name": "\u00b7 (Middle Dot)",
+      "description": ""
+    },
+    {
+      "code": "DE_MACR",
+      "name": "\u00af (Macron)",
+      "description": ""
+    },
+    {
+      "code": "DE_DOTA",
+      "name": "\u02d9 (Dot Above)",
+      "description": ""
+    },
+    {
+      "code": "DE_RNGA",
+      "name": "\u02da (Ring Above)",
+      "description": ""
+    },
+    {
+      "code": "DE_RDAQ",
+      "name": "\u00bb (Right Angle Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_PERM",
+      "name": "\u2030 (Per Mille)",
+      "description": ""
+    },
+    {
+      "code": "DE_CEDL",
+      "name": "\u00b8 (Cedilla)",
+      "description": ""
+    },
+    {
+      "code": "DE_DACU",
+      "name": "\u02dd (Double Acute)",
+      "description": ""
+    },
+    {
+      "code": "DE_CARN",
+      "name": "\u02c7 (Caron)",
+      "description": ""
+    },
+    {
+      "code": "DE_AACU",
+      "name": "\u00c1 (A-Acute)",
+      "description": ""
+    },
+    {
+      "code": "DE_UCIR",
+      "name": "\u00db (U-Circumflex)",
+      "description": ""
+    },
+    {
+      "code": "DE_NARP",
+      "name": "\u220f (N-ary Product)",
+      "description": ""
+    },
+    {
+      "code": "DE_APPL",
+      "name": "Apple Logo",
+      "description": ""
+    },
+    {
+      "code": "DE_IACU",
+      "name": "\u00cd (I-Acute)",
+      "description": ""
+    },
+    {
+      "code": "DE_TM",
+      "name": "\u2122 (Trademark)",
+      "description": ""
+    },
+    {
+      "code": "DE_IDIA",
+      "name": "\u00cf (I-Diaeresis)",
+      "description": ""
+    },
+    {
+      "code": "DE_IGRV",
+      "name": "\u00cc (I-Grave)",
+      "description": ""
+    },
+    {
+      "code": "DE_OACU",
+      "name": "\u00d3 (O-Acute)",
+      "description": ""
+    },
+    {
+      "code": "DE_DLSI",
+      "name": "\u0131 (Dotless I)",
+      "description": ""
+    },
+    {
+      "code": "DE_FL",
+      "name": "\ufb02 (FL Ligature)",
+      "description": ""
+    },
+    {
+      "code": "DE_GTEQ",
+      "name": "\u2265 (Greater Than Equal)",
+      "description": ""
+    },
+    {
+      "code": "DE_DDAG",
+      "name": "\u2021 (Double Dagger)",
+      "description": ""
+    },
+    {
+      "code": "DE_UGRV",
+      "name": "\u00d9 (U-Grave)",
+      "description": ""
+    },
+    {
+      "code": "DE_LOZN",
+      "name": "\u25ca (Lozenge)",
+      "description": ""
+    },
+    {
+      "code": "DE_LSAQ",
+      "name": "\u2039 (Left Single Angle Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_RSAQ",
+      "name": "\u203a (Right Single Angle Quote)",
+      "description": ""
+    },
+    {
+      "code": "DE_BREV",
+      "name": "\u02d8 (Breve)",
+      "description": ""
+    },
+    {
+      "code": "DE_OGON",
+      "name": "\u02db (Ogonek)",
+      "description": ""
+    },
+    {
+      "code": "DE_DIV",
+      "name": "\u00f7 (Division)",
+      "description": ""
+    },
+    {
+      "code": "DE_MDSH",
+      "name": "\u2014 (Em Dash)",
+      "description": ""
+    }
+  ]
+}

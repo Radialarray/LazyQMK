@@ -1,0 +1,30 @@
+{
+  "language": {
+    "id": "french_mac",
+    "name": "French macOS",
+    "description": "French AZERTY layout for macOS",
+    "prefix": "FR_",
+    "header": "keymap_extras/keymap_french_mac_iso.h"
+  },
+  "keycodes": [
+    { "code": "FR_A", "name": "A (Q position)", "description": "A key on French AZERTY" },
+    { "code": "FR_Z", "name": "Z (W position)", "description": "Z key on French AZERTY" },
+    { "code": "FR_E", "name": "E", "description": "E key" },
+    { "code": "FR_R", "name": "R", "description": "R key" },
+    { "code": "FR_T", "name": "T", "description": "T key" },
+    { "code": "FR_Y", "name": "Y", "description": "Y key" },
+    { "code": "FR_U", "name": "U", "description": "U key" },
+    { "code": "FR_I", "name": "I", "description": "I key" },
+    { "code": "FR_O", "name": "O", "description": "O key" },
+    { "code": "FR_P", "name": "P", "description": "P key" },
+    { "code": "FR_Q", "name": "Q (A position)", "description": "Q key on French AZERTY" },
+    { "code": "FR_S", "name": "S", "description": "S key" },
+    { "code": "FR_D", "name": "D", "description": "D key" },
+    { "code": "FR_COMM", "name": ", (Comma)", "description": "Comma" },
+    { "code": "FR_SCLN", "name": "; (Semicolon)", "description": "Semicolon" },
+    { "code": "FR_AGRV", "name": "à", "description": "A with grave accent" },
+    { "code": "FR_EACU", "name": "é", "description": "E with acute accent" },
+    { "code": "FR_EURO", "name": "€", "description": "Euro sign" },
+    { "code": "FR_DLR", "name": "$", "description": "Dollar sign" }
+  ]
+}

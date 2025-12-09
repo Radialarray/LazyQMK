@@ -1,483 +1,406 @@
 {
-  "category": {
+  "language": {
     "id": "german",
     "name": "German",
-    "description": "German keyboard layout (QWERTZ)"
+    "description": "German keyboard layout (QWERTZ)",
+    "prefix": "DE_",
+    "header": "keymap_extras/keymap_german.h"
   },
   "keycodes": [
     {
       "code": "DE_CIRC",
       "name": "^ (dead key)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_1",
       "name": "1",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_2",
       "name": "2",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_3",
       "name": "3",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_4",
       "name": "4",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_5",
       "name": "5",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_6",
       "name": "6",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_7",
       "name": "7",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_8",
       "name": "8",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_9",
       "name": "9",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_0",
       "name": "0",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_SS",
-      "name": "ß (Sharp S)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00df (Sharp S)",
+      "description": ""
     },
     {
       "code": "DE_ACUT",
-      "name": "´ (dead key)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00b4 (dead key)",
+      "description": ""
     },
     {
       "code": "DE_Q",
       "name": "Q",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_W",
       "name": "W",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_E",
       "name": "E",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_R",
       "name": "R",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_T",
       "name": "T",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_Z",
       "name": "Z (on Y position)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_U",
       "name": "U",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_I",
       "name": "I",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_O",
       "name": "O",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_P",
       "name": "P",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_UDIA",
-      "name": "Ü (U-Umlaut)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00dc (U-Umlaut)",
+      "description": ""
     },
     {
       "code": "DE_PLUS",
       "name": "+",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_A",
       "name": "A",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_S",
       "name": "S",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_D",
       "name": "D",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_F",
       "name": "F",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_G",
       "name": "G",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_H",
       "name": "H",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_J",
       "name": "J",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_K",
       "name": "K",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_L",
       "name": "L",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_ODIA",
-      "name": "Ö (O-Umlaut)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00d6 (O-Umlaut)",
+      "description": ""
     },
     {
       "code": "DE_ADIA",
-      "name": "Ä (A-Umlaut)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00c4 (A-Umlaut)",
+      "description": ""
     },
     {
       "code": "DE_HASH",
       "name": "#",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_LABK",
       "name": "<",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_Y",
       "name": "Y (on Z position)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_X",
       "name": "X",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_C",
       "name": "C",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_V",
       "name": "V",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_B",
       "name": "B",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_N",
       "name": "N",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_M",
       "name": "M",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_COMM",
       "name": ",",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_DOT",
       "name": ".",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_MINS",
       "name": "-",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_DEG",
-      "name": "° (Degree)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00b0 (Degree)",
+      "description": ""
     },
     {
       "code": "DE_EXLM",
       "name": "!",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_DQUO",
       "name": "\" (Double Quote)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_SECT",
-      "name": "§ (Section)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00a7 (Section)",
+      "description": ""
     },
     {
       "code": "DE_DLR",
       "name": "$",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_PERC",
       "name": "%",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_AMPR",
       "name": "&",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_SLSH",
       "name": "/",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_LPRN",
       "name": "(",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_RPRN",
       "name": ")",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_EQL",
       "name": "=",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_QUES",
       "name": "?",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_GRV",
       "name": "` (dead key)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_ASTR",
       "name": "*",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_QUOT",
       "name": "'",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_RABK",
       "name": ">",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_SCLN",
       "name": ";",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_COLN",
       "name": ":",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_UNDS",
       "name": "_",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_SUP2",
-      "name": "² (Superscript 2)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00b2 (Superscript 2)",
+      "description": ""
     },
     {
       "code": "DE_SUP3",
-      "name": "³ (Superscript 3)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00b3 (Superscript 3)",
+      "description": ""
     },
     {
       "code": "DE_LCBR",
       "name": "{",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_LBRC",
       "name": "[",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_RBRC",
       "name": "]",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_RCBR",
       "name": "}",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_BSLS",
       "name": "\\ (Backslash)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_AT",
       "name": "@",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_EURO",
-      "name": "€ (Euro)",
-      "category": "german",
-      "aliases": []
+      "name": "\u20ac (Euro)",
+      "description": ""
     },
     {
       "code": "DE_TILD",
       "name": "~ (Tilde)",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_PIPE",
       "name": "|",
-      "category": "german",
-      "aliases": []
+      "description": ""
     },
     {
       "code": "DE_MICR",
-      "name": "µ (Micro)",
-      "category": "german",
-      "aliases": []
+      "name": "\u00b5 (Micro)",
+      "description": ""
     }
   ]
 }
