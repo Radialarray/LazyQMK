@@ -144,7 +144,8 @@ impl StatusBar {
         status_text.push(help_line);
 
         let status = Paragraph::new(status_text)
-            .block(Block::default().borders(Borders::ALL).title(" Status "));
+            .style(Style::default().bg(theme.background))
+            .block(Block::default().borders(Borders::ALL).title(" Status ").style(Style::default().bg(theme.background)));
 
         f.render_widget(status, area);
     }
