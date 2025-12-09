@@ -29,4 +29,186 @@ Rust 1.75+: Follow standard conventions
 - 001-tui-complete-features: Added Rust 1.75+ + Ratatui 0.26 (TUI framework), Crossterm 0.27 (terminal backend), Serde 1.0 (serialization)
 
 <!-- MANUAL ADDITIONS START -->
+
+## Development Workflow
+
+### Testing Requirements
+- **Always run tests before and after changes**: `cargo test`
+- **Check for warnings**: `cargo clippy`
+- **Ensure all tests pass**: Target 100% pass rate
+- **Run tests after refactoring**: Verify no regressions
+
+### Code Quality Standards
+
+#### Dead Code Management
+- Remove truly unused code (functions, structs, enums that are never referenced)
+- Keep `#[allow(dead_code)]` annotations when:
+  - Compiler has false positives (public API that's unused internally)
+  - Code is part of a trait implementation
+  - Code is intentionally kept for future use
+- Document reasoning when keeping dead code
+
+#### Refactoring Best Practices
+1. **Analyze first**: Use `grep`/`rg` to understand code usage before removing
+2. **Start with safe removals**: Remove obviously unused code first
+3. **Test incrementally**: Run tests after each major removal phase
+4. **Avoid high-risk changes**: Skip complex state migrations unless necessary
+5. **Document decisions**: Explain why code was kept or removed
+
+#### Component Trait Pattern (Spec 017)
+- All TUI components should implement either `Component` or `ContextualComponent<T>` traits
+- Components encapsulate: state, rendering logic, and input handling
+- Use event-driven communication between components and AppState
+- Avoid exposing internal state via `state()`/`state_mut()` methods
+- Legacy patterns from pre-017 should be removed during cleanup
+
+### Git Workflow
+
+#### Commit Message Format
+Follow Conventional Commits specification:
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code restructuring (no behavior change)
+- `chore`: Maintenance tasks (dependencies, cleanup)
+- `docs`: Documentation changes
+- `test`: Test additions or modifications
+- `perf`: Performance improvements
+- `style`: Code style changes (formatting, missing semicolons)
+- `build`: Build system changes
+- `ci`: CI/CD configuration changes
+
+**Examples:**
+```
+feat(keycode-picker): add language keycodes with selector and persistence
+fix(ui): apply theme background color globally
+refactor(tui): remove legacy code from component trait migration
+chore: bump version to 0.6.0
+```
+
+**Guidelines:**
+- Use present tense, lowercase
+- Keep description under 72 characters
+- Add body for context when needed
+- Focus on "why" rather than "what"
+- Be specific, avoid generic messages like "Update files" or "Fix bug"
+
+#### Branch Naming
+- `feat/feature-name` - New features
+- `fix/bug-description` - Bug fixes
+- `refactor/refactor-name` - Code restructuring
+- `chore/task-name` - Maintenance tasks
+- `docs/doc-name` - Documentation updates
+
+#### Review Process
+- Always validate changes with tests before committing
+- Check `git diff` to review all modifications
+- Ensure no unintended changes are included
+- Exclude unrelated files (submodule changes, temp files, etc.)
+
+### Architecture Guidelines
+
+#### TUI Component Structure
+- **State Management**: Use centralized `AppState` as single source of truth
+- **Component Lifecycle**: Initialize → Handle Input → Render
+- **Event Communication**: Components emit events, handlers update state
+- **Rendering**: Immediate mode - rebuild UI every frame from state
+
+#### Coordinate Systems
+The project uses three coordinate systems:
+1. **Matrix Coordinates**: Electrical wiring (rows/columns)
+2. **LED Index**: Sequential RGB LED numbering
+3. **Visual Position**: User's mental model (what appears in UI)
+
+Always use `VisualLayoutMapping` for transformations between systems.
+
+#### File Formats
+- **Layouts**: Markdown with YAML frontmatter
+- **Configuration**: TOML
+- **Keycode Database**: JSON
+- **QMK Metadata**: JSON (parsed from `info.json`)
+
+### Performance Considerations
+- Target 60fps (16ms/frame), typical event-driven rendering
+- Pre-allocate fixed-size vectors where possible
+- Use buffered I/O (`BufReader`, `BufWriter`)
+- Spawn threads for long operations (firmware compilation)
+- Use message passing (`mpsc` channels) for thread communication
+
+### Common Patterns
+
+#### Error Handling
+```rust
+use anyhow::{Context, Result};
+
+fn operation() -> Result<T> {
+    something().context("Failed to do something")?
+}
+```
+
+#### Component Implementation
+```rust
+impl Component for MyComponent {
+    type Event = MyEvent;
+    
+    fn handle_input(&mut self, key: KeyEvent) -> Option<Self::Event> {
+        // Handle input, return event if action needed
+    }
+    
+    fn render(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        // Render component to frame
+    }
+}
+```
+
+#### State Updates
+```rust
+// Always set dirty flag when modifying layout data
+state.dirty = true;
+state.layout.layers[layer_idx].keys[idx].keycode = new_keycode;
+```
+
+### Code Review Checklist
+
+Before committing changes:
+- [ ] All tests pass (`cargo test`)
+- [ ] No compiler warnings (`cargo clippy`)
+- [ ] Code follows project patterns (Component trait, MVC)
+- [ ] No dead code (or justified with comments)
+- [ ] Error handling uses `anyhow` with context
+- [ ] Public APIs are documented
+- [ ] Complex logic has inline comments
+- [ ] Commit message follows convention
+- [ ] No unrelated changes included
+- [ ] git diff reviewed for accuracy
+
+### Troubleshooting
+
+#### Common Issues
+1. **Tests failing after refactor**: Check for removed methods still in use
+2. **Clippy warnings**: Address or justify with `#[allow(...)]` with comment
+3. **Coordinate system confusion**: Always use `VisualLayoutMapping` methods
+4. **Theme not applying**: Ensure all blocks use `bg(theme.background)`
+5. **Component not rendering**: Check `ActiveComponent` enum and popup routing
+
+#### Debug Techniques
+- Use `cargo test -- --nocapture` to see println! output
+- Add `eprintln!` for debugging (goes to stderr, not captured by tests)
+- Use `cargo check` for faster iteration than `cargo build`
+- Use `cargo clippy -- -W clippy::pedantic` for strict linting
+
+### Resources
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete technical architecture
+- [FEATURES.md](docs/FEATURES.md) - All implemented features
+- [QUICKSTART.md](QUICKSTART.md) - User guide
+- [specs/archived/](specs/archived/) - Historical specification documents
+
 <!-- MANUAL ADDITIONS END -->
