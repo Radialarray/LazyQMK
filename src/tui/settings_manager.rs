@@ -40,23 +40,6 @@ pub enum SettingGroup {
 }
 
 impl SettingGroup {
-    /// Returns all groups in display order.
-    /// Note: Kept for API completeness - useful for iterating over all groups.
-    #[allow(dead_code)]
-    #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
-            // Global settings first
-            Self::Paths,
-            Self::Build,
-            Self::Ui,
-            // Per-layout settings
-            Self::General,
-            Self::Rgb,
-            Self::TapHold,
-        ]
-    }
-
     /// Returns display name.
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
@@ -597,13 +580,7 @@ impl SettingsManagerState {
         self.mode = ManagerMode::Browsing;
     }
 
-    /// Check if we're in browsing mode.
-    /// Note: Kept for API completeness - pattern matching on mode is preferred in practice.
-    #[allow(dead_code)]
-    #[must_use]
-    pub const fn is_browsing(&self) -> bool {
-        matches!(self.mode, ManagerMode::Browsing)
-    }
+
 }
 
 impl Default for SettingsManagerState {

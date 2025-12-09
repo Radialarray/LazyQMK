@@ -116,17 +116,6 @@ impl LayoutPickerState {
     pub fn layouts_dir() -> Result<PathBuf> {
         Ok(Config::config_dir()?.join("layouts"))
     }
-
-    /// Gets the selected layout path, or None if "Create New" is selected.
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn get_selected_layout(&self) -> Option<&LayoutInfo> {
-        if self.create_new {
-            None
-        } else {
-            self.layouts.get(self.selected)
-        }
-    }
 }
 
 impl Default for LayoutPickerState {
@@ -143,29 +132,15 @@ pub struct LayoutPicker {
 }
 
 impl LayoutPicker {
-    /// Create a new LayoutPicker
-    #[must_use]
-    pub fn new() -> Self {
-        let mut state = LayoutPickerState::new();
-        // Attempt to scan layouts on creation (ignore errors)
-        let _ = state.scan_layouts();
-        Self { state }
-    }
-
-    /// Get reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &LayoutPickerState {
-        &self.state
-    }
-
-    /// Get mutable reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut LayoutPickerState {
-        &mut self.state
-    }
-}
+     /// Create a new LayoutPicker
+     #[must_use]
+     pub fn new() -> Self {
+         let mut state = LayoutPickerState::new();
+         // Attempt to scan layouts on creation (ignore errors)
+         let _ = state.scan_layouts();
+         Self { state }
+     }
+ }
 
 impl Default for LayoutPicker {
     fn default() -> Self {
@@ -417,7 +392,8 @@ pub enum LayoutPickerEvent {
     /// User chose to create a new layout
     CreateNew,
     /// User selected an existing layout to load
-    LayoutSelected(#[allow(dead_code)] PathBuf),
+    #[allow(dead_code)] // Used but compiler can't detect it through component event pattern
+    LayoutSelected(PathBuf),
     /// User cancelled the picker
     Cancelled,
 }

@@ -293,13 +293,6 @@ impl LayerManagerState {
         self.mode = ManagerMode::Browsing;
     }
 
-    /// Check if we're in browsing mode
-    #[allow(dead_code)]
-    #[must_use]
-    pub const fn is_browsing(&self) -> bool {
-        matches!(self.mode, ManagerMode::Browsing)
-    }
-
     /// Get the current input text (for name entry or renaming)
     #[must_use]
     pub fn get_input(&self) -> Option<&str> {
@@ -358,25 +351,7 @@ impl LayerManager {
         }
     }
 
-    /// Get the internal state (for backward compatibility)
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &LayerManagerState {
-        &self.state
-    }
 
-    /// Get mutable reference to the internal state (for backward compatibility)
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut LayerManagerState {
-        &mut self.state
-    }
-
-    /// Get the cached layers
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn layers(&self) -> &[Layer] {
-        &self.cached_layers
-    }
 }
 
 impl Component for LayerManager {

@@ -36,12 +36,6 @@ impl BuildLogState {
         }
     }
 
-    /// Toggles visibility of the build log viewer.
-    #[allow(dead_code)]
-    pub const fn toggle(&mut self) {
-        self.visible = !self.visible;
-    }
-
     /// Scrolls the log view up by one line.
     pub const fn scroll_up(&mut self) {
         if self.scroll_offset > 0 {
@@ -95,19 +89,7 @@ impl BuildLog {
         }
     }
 
-    /// Get reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &BuildLogState {
-        &self.state
-    }
 
-    /// Get mutable reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut BuildLogState {
-        &mut self.state
-    }
 }
 
 impl Default for BuildLog {

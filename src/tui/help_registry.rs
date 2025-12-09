@@ -211,8 +211,6 @@ pub mod contexts {
     pub const LAYER_PICKER: &str = "layer_picker";
     /// Layout picker popup
     pub const LAYOUT_PICKER: &str = "layout_picker";
-    /// Keyboard picker popup
-    pub const KEYBOARD_PICKER: &str = "keyboard_picker";
     /// Build log popup
     pub const BUILD_LOG: &str = "build_log";
     /// Help overlay

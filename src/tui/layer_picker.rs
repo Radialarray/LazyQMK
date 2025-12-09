@@ -148,26 +148,10 @@ impl LayerPicker {
     #[must_use]
     pub const fn state(&self) -> &LayerPickerState {
         &self.state
-    }
-
-    /// Get mutable state (for updating selection)
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut LayerPickerState {
-        &mut self.state
-    }
-
-    /// Handle navigation with layer count
-    #[allow(dead_code)]
-    pub fn handle_navigation(&mut self, layers_count: usize, up: bool) {
-        if up {
-            self.state.select_previous(layers_count);
-        } else {
-            self.state.select_next(layers_count);
-        }
-    }
-}
-
-/// Render the layer picker popup using the Component
+     }
+ }
+ 
+ /// Render the layer picker popup using the Component
 pub fn render_layer_picker_component(
     f: &mut Frame,
     picker: &LayerPicker,
@@ -260,97 +244,7 @@ pub fn render_layer_picker_component(
     f.render_widget(help, chunks[2]);
 }
 
-/// Render the layer picker popup (legacy - for backward compatibility)
-pub fn render_layer_picker(
-    f: &mut Frame,
-    state: &LayerPickerState,
-    layers: &[Layer],
-    theme: &Theme,
-) {
-    let area = centered_rect(50, 60, f.size());
 
-    // Clear the background area first
-    f.render_widget(Clear, area);
-
-    // Render opaque background with theme color
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, area);
-
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Title
-            Constraint::Min(5),    // Layer list
-            Constraint::Length(3), // Help text
-        ])
-        .split(area);
-
-    // Title with keycode preview
-    let preview = if let Some(layer) = layers.get(state.selected) {
-        state.build_keycode(layer)
-    } else {
-        format!("{}(?)", state.keycode_prefix)
-    };
-
-    let title = format!(" Select Layer for {} ", state.keycode_prefix);
-    let title_block = Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .style(Style::default().bg(theme.background));
-
-    let preview_text = Paragraph::new(format!("Preview: {preview}"))
-        .block(title_block)
-        .style(Style::default().fg(theme.text));
-    f.render_widget(preview_text, chunks[0]);
-
-    // Build list items
-    let list_items: Vec<ListItem> = layers
-        .iter()
-        .enumerate()
-        .map(|(idx, layer)| {
-            let content = Line::from(vec![
-                Span::styled(
-                    format!("Layer {idx}: "),
-                    Style::default().fg(theme.text_muted),
-                ),
-                Span::styled(&layer.name, Style::default().fg(theme.text)),
-            ]);
-            ListItem::new(content)
-        })
-        .collect();
-
-    // Create list widget with stateful selection
-    let list = List::new(list_items)
-        .block(
-            Block::default()
-                .title(format!(" Layers ({}) ", layers.len()))
-                .borders(Borders::ALL)
-                .style(Style::default().bg(theme.background)),
-        )
-        .highlight_style(
-            Style::default()
-                .bg(theme.surface)
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol(">> ");
-
-    // Create list state for highlighting
-    let mut list_state = ListState::default();
-    list_state.select(Some(state.selected.min(layers.len().saturating_sub(1))));
-
-    f.render_stateful_widget(list, chunks[1], &mut list_state);
-
-    // Help text
-    let help = Paragraph::new("^|v: Navigate | Enter: Select | Esc: Cancel")
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().bg(theme.background)),
-        )
-        .style(Style::default().fg(theme.text_muted));
-    f.render_widget(help, chunks[2]);
-}
 
 /// Helper to create a centered rectangle
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

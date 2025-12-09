@@ -31,22 +31,6 @@ pub struct TapHoldKeycode {
     pub hold: String,
     /// The tap action (e.g., "A" for `KC_A`)
     pub tap: String,
-    /// The type of tap-hold (for display purposes)
-    #[allow(dead_code)]
-    pub kind: TapHoldKind,
-}
-
-/// Types of tap-hold keycodes
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TapHoldKind {
-    /// LT(layer, keycode) - Layer on hold, keycode on tap
-    LayerTap,
-    /// MT(mod, keycode) - Modifier on hold, keycode on tap
-    ModTap,
-    /// LM(layer, mod) - Layer + modifier on hold
-    LayerMod,
-    /// `SH_T(keycode)` - Swap hands on hold, keycode on tap
-    SwapHandsTap,
 }
 
 impl KeyboardWidget {
@@ -433,7 +417,6 @@ impl KeyboardWidget {
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}"),
                     tap: tap_display,
-                    kind: TapHoldKind::LayerTap,
                 })
             }
             TapHoldType::ModTap => {
@@ -443,7 +426,6 @@ impl KeyboardWidget {
                 Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
-                    kind: TapHoldKind::ModTap,
                 })
             }
             TapHoldType::ModTapNamed => {
@@ -458,7 +440,6 @@ impl KeyboardWidget {
                 Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
-                    kind: TapHoldKind::ModTap,
                 })
             }
             TapHoldType::LayerMod => {
@@ -468,7 +449,6 @@ impl KeyboardWidget {
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}+"),
                     tap: mod_display,
-                    kind: TapHoldKind::LayerMod,
                 })
             }
             TapHoldType::SwapHands => {
@@ -477,7 +457,6 @@ impl KeyboardWidget {
                 Some(TapHoldKeycode {
                     hold: "SWAP".to_string(),
                     tap: tap_display,
-                    kind: TapHoldKind::SwapHandsTap,
                 })
             }
         }

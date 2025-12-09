@@ -203,7 +203,6 @@ impl StatusBar {
             Some(PopupType::LayerManager) => help_registry::contexts::LAYER_MANAGER,
             Some(PopupType::LayerPicker) => help_registry::contexts::LAYER_PICKER,
             Some(PopupType::LayoutPicker) => help_registry::contexts::LAYOUT_PICKER,
-            Some(PopupType::KeyboardPicker) => help_registry::contexts::KEYBOARD_PICKER,
             Some(PopupType::HelpOverlay) => help_registry::contexts::HELP,
             Some(PopupType::BuildLog) => help_registry::contexts::BUILD_LOG,
             Some(PopupType::MetadataEditor) => help_registry::contexts::METADATA_EDITOR,
@@ -266,9 +265,6 @@ impl StatusBar {
             }
             Some(PopupType::KeyEditor) => {
                 "Enter: Reassign | D: Description | C: Color | Esc: Close"
-            }
-            Some(PopupType::KeyboardPicker) => {
-                "↑↓: Navigate | Enter: Select | Type: Filter | Esc: Cancel"
             }
             None => {
                 // Main keyboard editing mode

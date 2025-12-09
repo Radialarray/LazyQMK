@@ -56,14 +56,3 @@ pub enum ColorPickerContext {
     /// Setting category color
     Category,
 }
-
-/// Context that contains what the category picker is modifying
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CategoryPickerContext {
-    /// Setting category for a single key
-    #[allow(dead_code)]
-    SingleKey,
-    /// Setting category for multiple selected keys
-    #[allow(dead_code)]
-    MultipleKeys,
-}

@@ -688,19 +688,6 @@ impl HelpOverlay {
         }
     }
 
-    /// Get reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &HelpOverlayState {
-        &self.state
-    }
-
-    /// Get mutable reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut HelpOverlayState {
-        &mut self.state
-    }
 }
 
 impl Default for HelpOverlay {
