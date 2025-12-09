@@ -46,16 +46,6 @@ pub struct Theme {
     pub inactive: Color,
 }
 
-/// Theme variant identifier.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ThemeVariant {
-    /// Dark theme optimized for dark terminal backgrounds
-    Dark,
-    /// Light theme optimized for light terminal backgrounds
-    Light,
-}
-
 impl Theme {
     /// Detects the OS theme and returns the appropriate Theme.
     ///
@@ -136,16 +126,6 @@ impl Theme {
         }
     }
 
-    /// Creates a theme from a variant enum.
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn from_variant(variant: ThemeVariant) -> Self {
-        match variant {
-            ThemeVariant::Dark => Self::dark(),
-            ThemeVariant::Light => Self::light(),
-        }
-    }
-
     /// Creates a theme based on the user's theme mode preference.
     ///
     /// - `Auto`: Detects OS dark/light mode and returns matching theme
@@ -157,20 +137,6 @@ impl Theme {
             crate::config::ThemeMode::Auto => Self::detect(),
             crate::config::ThemeMode::Dark => Self::dark(),
             crate::config::ThemeMode::Light => Self::light(),
-        }
-    }
-
-    /// Returns the theme variant for the current theme.
-    ///
-    /// This is determined by checking the background color.
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn variant(&self) -> ThemeVariant {
-        match self.background {
-            Color::White | Color::Rgb(255, 255, 255) | Color::Rgb(245, 245, 245) => {
-                ThemeVariant::Light
-            }
-            _ => ThemeVariant::Dark,
         }
     }
 }
@@ -207,21 +173,25 @@ mod tests {
     }
 
     #[test]
-    fn test_theme_from_variant() {
-        let dark = Theme::from_variant(ThemeVariant::Dark);
-        assert_eq!(dark, Theme::dark());
-
-        let light = Theme::from_variant(ThemeVariant::Light);
-        assert_eq!(light, Theme::light());
+    fn test_theme_constructors() {
+        // Test that dark() and light() create distinct themes
+        let dark = Theme::dark();
+        let light = Theme::light();
+        assert_ne!(dark, light);
+        assert_ne!(dark.background, light.background);
+        assert_ne!(dark.text, light.text);
     }
 
     #[test]
-    fn test_theme_variant_detection() {
+    fn test_theme_variants() {
+        // Test that dark and light themes have expected characteristics
         let dark = Theme::dark();
-        assert_eq!(dark.variant(), ThemeVariant::Dark);
+        assert_eq!(dark.background, Color::Black);
+        assert_eq!(dark.text, Color::White);
 
         let light = Theme::light();
-        assert_eq!(light.variant(), ThemeVariant::Light);
+        assert_eq!(light.background, Color::White);
+        assert_eq!(light.text, Color::Black);
     }
 
     #[test]
@@ -249,8 +219,7 @@ mod tests {
     #[test]
     fn test_theme_detect() {
         // Just verify detect() returns a valid theme without panicking
-        let theme = Theme::detect();
-        // Should be either dark or light variant
-        assert!(theme.variant() == ThemeVariant::Dark || theme.variant() == ThemeVariant::Light);
+        let _theme = Theme::detect();
+        // Test passes if detect() doesn't panic
     }
 }

@@ -72,7 +72,7 @@ pub use category_picker::{CategoryPicker, CategoryPickerEvent};
 pub use color_picker::ColorPicker;
 pub use component::{Component, ContextualComponent};
 pub use config_dialogs::{
-    KeyboardPicker, LayoutPicker as LayoutVariantPicker,
+    LayoutPicker as LayoutVariantPicker,
     LayoutPickerEvent as LayoutVariantPickerEvent,
 };
 pub use help_overlay::HelpOverlay;
@@ -91,17 +91,7 @@ pub use theme::Theme;
 
 // Import handler functions from the handlers module
 
-/// Color picker context - what are we setting the color for?
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ColorPickerContext {
-    /// Setting color for individual key
-    IndividualKey,
-    /// Setting layer default color
-    LayerDefault,
-    /// Setting color for new or existing category
-    Category,
-}
+
 
 /// Category picker context - what are we setting the category for?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -282,8 +272,6 @@ pub enum PopupType {
     ModifierPicker,
     /// Key editor popup for viewing/editing key properties
     KeyEditor,
-    /// Keyboard picker popup
-    KeyboardPicker,
 }
 
 /// Selection mode for multi-key operations
@@ -327,8 +315,6 @@ pub enum ActiveComponent {
     LayoutPicker(LayoutPicker),
     /// Layout variant picker component (for switching QMK keyboard layout variants)
     LayoutVariantPicker(LayoutVariantPicker),
-    /// Keyboard picker component
-    KeyboardPicker(KeyboardPicker),
     /// Build log component
     BuildLog(BuildLog),
     /// Help overlay component
@@ -379,8 +365,6 @@ pub struct AppState {
     pub template_save_dialog_state: TemplateSaveDialogState,
     /// Setup wizard component state
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
-    /// Layer picker component state
-    pub layer_picker_state: LayerPickerState,
     /// Pending parameterized keycode state (for multi-stage keycode building)
     pub pending_keycode: PendingKeycodeState,
     /// Key editor component state
@@ -463,7 +447,6 @@ impl AppState {
             category_manager_state: CategoryManagerState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
-            layer_picker_state: LayerPickerState::new(),
             pending_keycode: PendingKeycodeState::new(),
             key_editor_state: KeyEditorState::new(),
             clipboard: clipboard::KeyClipboard::new(),
@@ -881,14 +864,6 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             // Use ContextualComponent trait pattern
             if let Some(ActiveComponent::LayerPicker(ref picker)) = state.active_component {
                 picker.render(f, f.size(), &state.theme, &state.layout.layers);
-            } else {
-                // Fallback to legacy rendering
-                layer_picker::render_layer_picker(
-                    f,
-                    &state.layer_picker_state,
-                    &state.layout.layers,
-                    &state.theme,
-                );
             }
         }
         PopupType::TemplateBrowser => {
@@ -955,12 +930,6 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         }
         PopupType::KeyEditor => {
             key_editor::render_key_editor(f, state);
-        }
-        PopupType::KeyboardPicker => {
-            // Use Component trait pattern
-            if let Some(ActiveComponent::KeyboardPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme);
-            }
         }
     }
 }

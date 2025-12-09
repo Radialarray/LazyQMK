@@ -242,19 +242,6 @@ impl TemplateBrowser {
         Self { state }
     }
 
-    /// Get reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &TemplateBrowserState {
-        &self.state
-    }
-
-    /// Get mutable reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut TemplateBrowserState {
-        &mut self.state
-    }
 }
 
 impl Default for TemplateBrowser {

@@ -78,18 +78,10 @@ impl QmkModifier {
             Self::LCtrl | Self::RCtrl => "Ctrl",
             Self::LShift | Self::RShift => "Shift",
             Self::LAlt | Self::RAlt => "Alt",
-            Self::LGui | Self::RGui => "GUI",
-        }
-    }
-
-    /// Check if this is a left-side modifier.
-    /// Note: Kept for API completeness - useful for modifier display logic.
-    #[allow(dead_code)]
-    #[must_use]
-    pub const fn is_left(&self) -> bool {
-        matches!(self, Self::LCtrl | Self::LShift | Self::LAlt | Self::LGui)
-    }
-}
+             Self::LGui | Self::RGui => "GUI",
+         }
+     }
+ }
 
 /// Preset modifier combinations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,45 +270,14 @@ pub struct ModifierPicker {
 impl ModifierPicker {
     /// Create a new ModifierPicker with empty selection
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            state: ModifierPickerState::new(),
-        }
-    }
+     pub fn new() -> Self {
+         Self {
+             state: ModifierPickerState::new(),
+         }
+     }
 
-    /// Create a new ModifierPicker initialized with specific modifiers
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn with_modifiers(mod_bits: u8) -> Self {
-        Self {
-            state: ModifierPickerState {
-                selected_mods: mod_bits,
-                focus: 0,
-            },
-        }
-    }
-
-    /// Get the internal state (for legacy rendering)
-    #[allow(dead_code)]
-    pub fn state(&self) -> &ModifierPickerState {
-        &self.state
-    }
-
-    /// Get mutable access to state (for legacy rendering)
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut ModifierPickerState {
-        &mut self.state
-    }
-
-    /// Get the selected modifiers as a QMK modifier string
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn get_mod_string(&self) -> String {
-        self.state.to_mod_string()
-    }
-
-    /// Get the selected modifiers as individual strings
-    fn get_modifiers_list(&self) -> Vec<String> {
+     /// Get the selected modifiers as individual strings
+     fn get_modifiers_list(&self) -> Vec<String> {
         if self.state.selected_mods == 0 {
             return Vec::new();
         }

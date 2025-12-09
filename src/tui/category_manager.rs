@@ -135,36 +135,6 @@ impl CategoryManagerState {
     pub fn cancel(&mut self) {
         self.mode = ManagerMode::Browsing;
     }
-
-    /// Check if we're in browsing mode
-    #[allow(dead_code)]
-    #[must_use]
-    pub const fn is_browsing(&self) -> bool {
-        matches!(self.mode, ManagerMode::Browsing)
-    }
-
-    /// Get the current input text (for name entry or renaming)
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn get_input(&self) -> Option<&str> {
-        match &self.mode {
-            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
-                Some(input)
-            }
-            _ => None,
-        }
-    }
-
-    /// Get mutable reference to current input text
-    #[allow(dead_code)]
-    pub const fn get_input_mut(&mut self) -> Option<&mut String> {
-        match &mut self.mode {
-            ManagerMode::CreatingName { input } | ManagerMode::Renaming { input, .. } => {
-                Some(input)
-            }
-            _ => None,
-        }
-    }
 }
 
 impl Default for CategoryManagerState {

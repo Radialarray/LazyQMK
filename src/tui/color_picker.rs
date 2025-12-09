@@ -542,28 +542,7 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
     f.render_widget(instructions_widget, chunks[9]);
 }
 
-/// Render custom RGB mode instructions
-#[allow(dead_code)]
-fn render_rgb_instructions(f: &mut Frame, area: Rect, theme: &Theme) {
-    let instructions = vec![Line::from(vec![
-        Span::styled("↑↓", Style::default().fg(theme.accent)),
-        Span::raw(" ±10  "),
-        Span::styled("←→", Style::default().fg(theme.accent)),
-        Span::raw(" ±1  "),
-        Span::styled("Tab", Style::default().fg(theme.accent)),
-        Span::raw(" Channel  "),
-        Span::styled("p", Style::default().fg(theme.accent)),
-        Span::raw(" Palette  "),
-        Span::styled("x", Style::default().fg(theme.accent)),
-        Span::raw(" Clear  "),
-        Span::styled("Enter", Style::default().fg(theme.accent)),
-        Span::raw(" Apply  "),
-        Span::styled("Esc", Style::default().fg(theme.accent)),
-        Span::raw(" Cancel"),
-    ])];
-    let instructions_widget = Paragraph::new(instructions);
-    f.render_widget(instructions_widget, area);
-}
+
 
 /// Render the color grid (4x3)
 fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, theme: &Theme) {

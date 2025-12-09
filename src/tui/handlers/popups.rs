@@ -604,8 +604,9 @@ pub fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> 
     let mut component = match state.active_component.take() {
         Some(ActiveComponent::LayerPicker(picker)) => picker,
         _ => {
-            // Component not found - fall back to legacy handling
-            return handle_layer_picker_legacy(state, key);
+            // Component not found - close popup
+            state.active_popup = None;
+            return Ok(false);
         }
     };
 
@@ -660,9 +661,15 @@ fn handle_layer_picker_event(
                 }
 
                 // Regular layer keycode (MO, TG, TO, etc.) - assign directly
-                let keycode = state.layer_picker_state.build_keycode(layer);
-
+                // Get the keycode prefix from the layer picker component state (via pending keycode or default)
+                // Since the legacy layer_picker_state is removed, we build the keycode directly
+                // For parameterized keycodes, handle_parameter_collected() handles it above
+                // For regular layer keycodes like MO/TO/TG/etc, they're also handled via parameterized flow
+                // This code path is only reached if somehow a non-parameterized layer selection happens
+                // which shouldn't occur in practice, but we handle it gracefully
                 if let Some(key) = state.get_selected_key_mut() {
+                    // Default to MO() for momentary layer switch
+                    let keycode = format!("MO({})", layer_ref);
                     key.keycode = keycode.clone();
                     state.mark_dirty();
                     state.set_status(format!("Assigned: {keycode}"));
@@ -693,86 +700,7 @@ fn handle_layer_picker_event(
     Ok(())
 }
 
-/// Legacy handler for layer picker (when no component is active)
-fn handle_layer_picker_legacy(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            // Check if we were editing a combo part
-            if state.key_editor_state.combo_edit.is_some() {
-                state.key_editor_state.combo_edit = None;
-                state.active_popup = Some(PopupType::KeyEditor);
-                state.layer_picker_state.reset();
-                state.set_status("Cancelled - back to key editor");
-                return Ok(false);
-            }
-            // Check if this was part of a parameterized keycode flow
-            if state.pending_keycode.keycode_template.is_some() {
-                state.pending_keycode.reset();
-            }
-            state.active_popup = None;
-            state.layer_picker_state.reset();
-            state.set_status("Layer selection cancelled");
-            Ok(false)
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            let layer_count = state.layout.layers.len();
-            state.layer_picker_state.select_previous(layer_count);
-            Ok(false)
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            let layer_count = state.layout.layers.len();
-            state.layer_picker_state.select_next(layer_count);
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            // Get the selected layer
-            let selected_idx = state.layer_picker_state.selected;
-            if let Some(layer) = state.layout.layers.get(selected_idx) {
-                let layer_ref = format!("@{}", layer.id);
 
-                // Check if we're editing a combo keycode part
-                if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
-                    let new_combo = match part {
-                        key_editor::ComboEditPart::Hold => combo_type.with_hold(&layer_ref),
-                        key_editor::ComboEditPart::Tap => combo_type.with_tap(&layer_ref),
-                    };
-                    let new_keycode = new_combo.to_keycode();
-
-                    if let Some(key) = state.get_selected_key_mut() {
-                        key.keycode = new_keycode.clone();
-                        state.mark_dirty();
-                        state.set_status(format!("Updated: {new_keycode}"));
-                    }
-
-                    state.active_popup = Some(PopupType::KeyEditor);
-                    state.layer_picker_state.reset();
-                    return Ok(false);
-                }
-
-                // Data-driven parameterized keycode flow
-                if state.pending_keycode.keycode_template.is_some() {
-                    handle_parameter_collected(state, layer_ref);
-                    state.layer_picker_state.reset();
-                    return Ok(false);
-                }
-
-                // Regular layer keycode (MO, TG, TO, etc.) - assign directly
-                let keycode = state.layer_picker_state.build_keycode(layer);
-
-                if let Some(key) = state.get_selected_key_mut() {
-                    key.keycode = keycode.clone();
-                    state.mark_dirty();
-                    state.set_status(format!("Assigned: {keycode}"));
-                }
-            }
-
-            state.active_popup = None;
-            state.layer_picker_state.reset();
-            Ok(false)
-        }
-        _ => Ok(false),
-    }
-}
 
 /// Handle input for tap keycode picker (second stage of `LT/MT/SH_T`)
 pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
@@ -977,41 +905,6 @@ pub fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> 
 }
 
 /// Handle keyboard picker input using Component trait pattern
-pub fn handle_keyboard_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    // Use Component trait pattern
-    if let Some(ActiveComponent::KeyboardPicker(ref mut picker)) = state.active_component {
-        if let Some(event) = picker.handle_input(key) {
-            return handle_keyboard_picker_event(state, event);
-        }
-    }
-    Ok(false)
-}
-
-/// Handle keyboard picker events
-fn handle_keyboard_picker_event(
-    state: &mut AppState,
-    event: crate::tui::config_dialogs::KeyboardPickerEvent,
-) -> Result<bool> {
-    use crate::tui::config_dialogs::KeyboardPickerEvent;
-
-    match event {
-        KeyboardPickerEvent::KeyboardSelected(keyboard) => {
-            // Update layout metadata with selected keyboard
-            state.layout.metadata.keyboard = Some(keyboard.clone());
-            state.mark_dirty();
-            state.set_status(format!("Selected keyboard: {keyboard}"));
-
-            // Close the picker
-            state.close_component();
-        }
-        KeyboardPickerEvent::Cancelled => {
-            state.close_component();
-            state.set_status("Cancelled");
-        }
-    }
-    Ok(false)
-}
-
 /// Handle input for unsaved changes prompt
 pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
@@ -1082,7 +975,6 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
         Some(PopupType::TapKeycodePicker) => handle_tap_keycode_picker_input(state, key),
         Some(PopupType::ModifierPicker) => handle_modifier_picker_input(state, key),
         Some(PopupType::KeyEditor) => key_editor::handle_input(state, key),
-        Some(PopupType::KeyboardPicker) => handle_keyboard_picker_input(state, key),
         _ => {
             // Escape closes any popup
             if key.code == KeyCode::Esc {

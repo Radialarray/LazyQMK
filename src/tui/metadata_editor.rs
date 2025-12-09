@@ -223,19 +223,6 @@ impl MetadataEditor {
             state: MetadataEditorState::new(metadata),
         }
     }
-
-    /// Get a reference to the internal state
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn state(&self) -> &MetadataEditorState {
-        &self.state
-    }
-
-    /// Get a mutable reference to the internal state
-    #[allow(dead_code)]
-    pub fn state_mut(&mut self) -> &mut MetadataEditorState {
-        &mut self.state
-    }
 }
 
 impl Component for MetadataEditor {

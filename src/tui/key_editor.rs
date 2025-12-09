@@ -860,7 +860,6 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                             | ComboKeycodeType::LayerMod { .. } => {
                                 state.key_editor_state.combo_edit =
                                     Some((ComboEditPart::Hold, combo_type.clone()));
-                                state.layer_picker_state.reset();
                                 state.open_layer_picker("");
                                 state.set_status("Select layer for hold action");
                             }
