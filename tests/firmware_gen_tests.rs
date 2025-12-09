@@ -253,6 +253,7 @@ fn create_test_geometry() -> KeyboardGeometry {
         matrix_rows: 2,
         matrix_cols: 3,
         keys,
+        encoder_count: 0,
     }
 }
 
@@ -290,6 +291,7 @@ fn create_test_mapping() -> VisualLayoutMapping {
         matrix_to_layout,
         matrix_to_visual,
         visual_to_matrix,
+        max_col: 2, // 3 columns means max_col = 2
     }
 }
 

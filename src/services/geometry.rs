@@ -51,16 +51,29 @@ pub struct GeometryResult {
 #[must_use]
 pub fn extract_base_keyboard(keyboard_path: &str) -> String {
     let keyboard_parts: Vec<&str> = keyboard_path.split('/').collect();
-    if keyboard_parts.len() > 2
-        && ["standard", "mini", "normal", "full", "compact"]
-            .contains(&keyboard_parts[keyboard_parts.len() - 1])
-    {
-        // Has variant subdirectory - use parent path
-        keyboard_parts[..keyboard_parts.len() - 1].join("/")
-    } else {
-        // No variant subdirectory
-        keyboard_path.to_string()
+    
+    // If path has 3+ components, check if last component looks like a variant
+    if keyboard_parts.len() >= 3 {
+        let last_part = keyboard_parts[keyboard_parts.len() - 1];
+        
+        // Check if the last component matches common variant patterns
+        let looks_like_variant = 
+            // Common variant names
+            matches!(last_part, "standard" | "mini" | "normal" | "full" | "compact" | 
+                               "rgb" | "wireless" | "ansi" | "iso" | "hotswap")
+            // Revision patterns: rev1, rev2, etc.
+            || last_part.starts_with("rev")
+            // Version patterns: v1, v2, v3, etc.
+            || (last_part.starts_with('v') && last_part.len() <= 3 && last_part[1..].chars().all(|c| c.is_ascii_digit()));
+        
+        if looks_like_variant {
+            // Has variant subdirectory - use parent path
+            return keyboard_parts[..keyboard_parts.len() - 1].join("/");
+        }
     }
+    
+    // No variant detected or not enough path components
+    keyboard_path.to_string()
 }
 
 /// Builds keyboard geometry and mapping for the given layout.
@@ -144,13 +157,21 @@ pub fn build_geometry_for_layout(
         .map(|rgb_config| build_matrix_to_led_map(&rgb_config));
 
     // Build geometry from the selected layout with RGB matrix mapping if available
-    let geometry = build_keyboard_geometry_with_rgb(
+    let mut geometry = build_keyboard_geometry_with_rgb(
         &keyboard_info,
         &base_keyboard,
         layout_name,
         matrix_to_led.as_ref(),
     )
     .context("Failed to build keyboard geometry")?;
+
+    // Extract encoder count from keyboard info (capped at u8::MAX)
+    geometry.encoder_count = keyboard_info
+        .encoder
+        .as_ref()
+        .and_then(|enc| enc.rotary.as_ref())
+        .map(|rotary| u8::try_from(rotary.len()).unwrap_or(u8::MAX))
+        .unwrap_or(0);
 
     // Build visual mapping
     let mapping = VisualLayoutMapping::build(&geometry);
@@ -188,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_extract_base_keyboard() {
-        // With variant subdirectory
+        // With standard variant names
         assert_eq!(
             extract_base_keyboard("keebart/corne_choc_pro/standard"),
             "keebart/corne_choc_pro"
@@ -196,6 +217,54 @@ mod tests {
 
         assert_eq!(
             extract_base_keyboard("manufacturer/keyboard/mini"),
+            "manufacturer/keyboard"
+        );
+
+        // With revision variants
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/rev1"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/rev2"),
+            "manufacturer/keyboard"
+        );
+
+        // With version variants
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/v1"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/v2"),
+            "manufacturer/keyboard"
+        );
+
+        // With other common variant names
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/rgb"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/wireless"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/ansi"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/iso"),
+            "manufacturer/keyboard"
+        );
+
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/hotswap"),
             "manufacturer/keyboard"
         );
 
@@ -207,8 +276,15 @@ mod tests {
 
         assert_eq!(extract_base_keyboard("crkbd"), "crkbd");
 
-        // Edge case: single directory with variant name
+        // Edge case: single directory with variant name (not enough path components)
         assert_eq!(extract_base_keyboard("standard"), "standard");
+        assert_eq!(extract_base_keyboard("rev1"), "rev1");
+
+        // Edge case: non-variant subdirectory (should not be stripped)
+        assert_eq!(
+            extract_base_keyboard("manufacturer/keyboard/custom"),
+            "manufacturer/keyboard/custom"
+        );
     }
 
     #[test]

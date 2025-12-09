@@ -1189,9 +1189,16 @@ mod tests {
 
     #[test]
     fn test_extract_base_keyboard_non_variant_subdirectory() {
-        // "rev2" is not a variant subdirectory, so it should be kept
+        // "custom" is not a recognized variant pattern, so it should be kept
+        let result = AppState::extract_base_keyboard("manufacturer/keyboard/custom");
+        assert_eq!(result, "manufacturer/keyboard/custom");
+    }
+
+    #[test]
+    fn test_extract_base_keyboard_revision_variant() {
+        // "rev2" IS recognized as a variant pattern (starts with "rev"), so it's stripped
         let result = AppState::extract_base_keyboard("manufacturer/keyboard/rev2");
-        assert_eq!(result, "manufacturer/keyboard/rev2");
+        assert_eq!(result, "manufacturer/keyboard");
     }
 
     #[test]

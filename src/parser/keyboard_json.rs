@@ -26,10 +26,29 @@ pub struct QmkInfoJson {
     pub maintainer: Option<String>,
     /// URL to keyboard information
     pub url: Option<String>,
-    /// Available layouts
+    /// Available layouts (may be empty if layouts are in keyboard.json or inherited)
+    #[serde(default)]
     pub layouts: HashMap<String, LayoutDefinition>,
     /// Matrix pins configuration
     pub matrix_pins: Option<MatrixPins>,
+    /// Encoder configuration
+    pub encoder: Option<EncoderConfig>,
+}
+
+/// Encoder configuration from info.json
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EncoderConfig {
+    /// Rotary encoder definitions
+    pub rotary: Option<Vec<RotaryEncoder>>,
+}
+
+/// Rotary encoder definition
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RotaryEncoder {
+    /// Pin A
+    pub pin_a: Option<String>,
+    /// Pin B  
+    pub pin_b: Option<String>,
 }
 
 /// Layout definition from info.json
@@ -68,13 +87,18 @@ pub struct MatrixPins {
     pub cols: Option<Vec<String>>,
 }
 
-/// Variant-specific keyboard.json structure (for RGB matrix info)
+/// Variant-specific keyboard.json structure (for RGB matrix info and layouts)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VariantKeyboardJson {
     /// Keyboard name
     pub keyboard_name: Option<String>,
     /// RGB matrix configuration
     pub rgb_matrix: Option<RgbMatrixConfig>,
+    /// Layout definitions (some keyboards define layouts here instead of info.json)
+    #[serde(default)]
+    pub layouts: HashMap<String, LayoutDefinition>,
+    /// Encoder configuration (can also be in keyboard.json)
+    pub encoder: Option<EncoderConfig>,
 }
 
 /// RGB matrix configuration from keyboard.json
@@ -185,10 +209,18 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 /// Parses a QMK info.json file by keyboard name.
 ///
 /// This helper supports both base keyboard paths (e.g., "crkbd") and
-/// variant paths (e.g., "`keebart/corne_choc_pro/standard`"). If the
-/// variant directory does not contain its own `info.json`, it falls back
-/// to the base keyboard directory so keyboards that store `info.json`
-/// only at the root still work.
+/// variant paths (e.g., "`keebart/corne_choc_pro/standard`"). It handles
+/// multiple QMK keyboard configuration patterns:
+///
+/// 1. **Single info.json**: Keyboard with `info.json` in variant directory
+/// 2. **Parent info.json only**: Variant inherits from parent's `info.json`
+/// 3. **Split configuration**: Parent `info.json` + variant `keyboard.json`
+///    (e.g., `1upkeyboards/pi50/grid` where parent has encoder config but
+///    layouts are in variant's `keyboard.json`)
+///
+/// When a split configuration is detected, this function merges data from both
+/// files: layouts come from `keyboard.json`, while other config (encoder, etc.)
+/// comes from the parent `info.json`.
 ///
 /// # Arguments
 ///
@@ -198,24 +230,80 @@ pub fn parse_info_json(path: &Path) -> Result<QmkInfoJson> {
 ///
 /// # Returns
 ///
-/// Parsed QMK info.json structure
+/// Parsed QMK info.json structure (potentially merged from multiple files)
 pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkInfoJson> {
+    let keyboards_dir = qmk_path.join("keyboards");
+    let keyboard_dir = keyboards_dir.join(keyboard);
+    let info_json_path = keyboard_dir.join("info.json");
+    let keyboard_json_path = keyboard_dir.join("keyboard.json");
+
     // First try the path as given (this supports keyboards that keep
     // their info.json inside a variant directory).
-    let keyboards_dir = qmk_path.join("keyboards");
-    let info_json_path = keyboards_dir.join(keyboard).join("info.json");
-
     if info_json_path.exists() {
-        return parse_info_json(&info_json_path);
+        let mut info = parse_info_json(&info_json_path)?;
+        
+        // If info.json has no layouts but keyboard.json exists, merge layouts from it
+        if info.layouts.is_empty() && keyboard_json_path.exists() {
+            if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
+                if !variant.layouts.is_empty() {
+                    info.layouts = variant.layouts;
+                }
+            }
+        }
+        
+        return Ok(info);
     }
 
-    // If that fails and the keyboard path looks like it includes a
-    // variant suffix, fall back to the base keyboard directory.
+    // Check if variant has keyboard.json with layouts (even without info.json)
+    if keyboard_json_path.exists() {
+        if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
+            if !variant.layouts.is_empty() {
+                // Try to get parent info.json for additional config (encoder, etc.)
+                if let Some((base, _)) = keyboard.rsplit_once('/') {
+                    let base_info_json_path = keyboards_dir.join(base).join("info.json");
+                    if base_info_json_path.exists() {
+                        let mut parent_info = parse_info_json(&base_info_json_path)?;
+                        // Merge: layouts from variant, other config from parent
+                        parent_info.layouts = variant.layouts;
+                        // Also use encoder from variant if parent doesn't have it
+                        if parent_info.encoder.is_none() {
+                            parent_info.encoder = variant.encoder;
+                        }
+                        return Ok(parent_info);
+                    }
+                }
+                
+                // No parent info.json, create QmkInfoJson from variant keyboard.json
+                return Ok(QmkInfoJson {
+                    keyboard_name: variant.keyboard_name,
+                    manufacturer: None,
+                    maintainer: None,
+                    url: None,
+                    layouts: variant.layouts,
+                    matrix_pins: None,
+                    encoder: variant.encoder,
+                });
+            }
+        }
+    }
+
+    // Fall back to base keyboard directory if keyboard path includes a variant suffix
     if let Some((base, _variant)) = keyboard.rsplit_once('/') {
         let base_info_json_path = keyboards_dir.join(base).join("info.json");
 
         if base_info_json_path.exists() {
-            return parse_info_json(&base_info_json_path);
+            let mut info = parse_info_json(&base_info_json_path)?;
+            
+            // Check if variant's keyboard.json has layouts
+            if info.layouts.is_empty() && keyboard_json_path.exists() {
+                if let Ok(variant) = parse_variant_json(&keyboard_json_path) {
+                    if !variant.layouts.is_empty() {
+                        info.layouts = variant.layouts;
+                    }
+                }
+            }
+            
+            return Ok(info);
         }
     }
 
@@ -224,6 +312,17 @@ pub fn parse_keyboard_info_json(qmk_path: &Path, keyboard: &str) -> Result<QmkIn
         keyboard,
         keyboards_dir.display()
     );
+}
+
+/// Internal helper to parse a keyboard.json file.
+fn parse_variant_json(path: &Path) -> Result<VariantKeyboardJson> {
+    let content = fs::read_to_string(path)
+        .context(format!("Failed to read keyboard.json: {}", path.display()))?;
+
+    let variant: VariantKeyboardJson = serde_json::from_str(&content)
+        .context(format!("Failed to parse keyboard.json: {}", path.display()))?;
+
+    Ok(variant)
 }
 
 /// Parses a variant-specific keyboard.json file for RGB matrix configuration.
@@ -439,6 +538,7 @@ pub fn build_keyboard_geometry_with_rgb(
         matrix_rows,
         matrix_cols,
         keys,
+        encoder_count: 0, // Will be set by caller if encoder info is available
     })
 }
 

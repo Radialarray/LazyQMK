@@ -206,6 +206,167 @@ fn test_parse_multiple_keyboards() {
     }
 }
 
+/// Test for keyboards with split configuration (parent info.json + variant keyboard.json).
+///
+/// This tests the 1upkeyboards/pi50/grid keyboard which has:
+/// - Parent info.json: encoder config, RGB matrix animations, NO layouts
+/// - Variant keyboard.json: layouts and RGB matrix LED positions
+#[test]
+fn test_parse_split_config_keyboard() {
+    if !qmk_submodule_exists() {
+        eprintln!("Skipping test: QMK submodule not initialized");
+        return;
+    }
+
+    let qmk_path = get_qmk_path();
+    
+    // Test 1upkeyboards/pi50/grid which has split configuration
+    let result = parse_keyboard_info_json(&qmk_path, "1upkeyboards/pi50/grid");
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse 1upkeyboards/pi50/grid: {:?}",
+        result.err()
+    );
+
+    let info = result.unwrap();
+    
+    // Layouts should come from variant's keyboard.json
+    assert!(
+        !info.layouts.is_empty(),
+        "1upkeyboards/pi50/grid should have layouts from keyboard.json"
+    );
+    
+    let layouts = extract_layout_names(&info);
+    println!("1upkeyboards/pi50/grid layouts: {:?}", layouts);
+    
+    // Should have LAYOUT_ortho_5x12
+    assert!(
+        layouts.contains(&"LAYOUT_ortho_5x12".to_string()),
+        "Should have LAYOUT_ortho_5x12 from keyboard.json"
+    );
+    
+    // Encoder should come from parent's info.json
+    assert!(
+        info.encoder.is_some(),
+        "1upkeyboards/pi50/grid should have encoder config from parent info.json"
+    );
+    
+    let encoder = info.encoder.as_ref().unwrap();
+    let rotary = encoder.rotary.as_ref().unwrap();
+    assert_eq!(rotary.len(), 1, "Should have 1 encoder");
+    
+    // Build geometry to verify it works end-to-end
+    let geometry_result = build_keyboard_geometry(&info, "1upkeyboards/pi50/grid", "LAYOUT_ortho_5x12");
+    assert!(
+        geometry_result.is_ok(),
+        "Failed to build geometry for 1upkeyboards/pi50/grid: {:?}",
+        geometry_result.err()
+    );
+    
+    let geometry = geometry_result.unwrap();
+    // pi50 grid has 61 keys (5x12 + encoder)
+    assert!(
+        geometry.keys.len() >= 60,
+        "pi50/grid should have at least 60 keys, found {}",
+        geometry.keys.len()
+    );
+    
+    println!(
+        "1upkeyboards/pi50/grid: {} keys, {}x{} matrix",
+        geometry.keys.len(),
+        geometry.matrix_rows,
+        geometry.matrix_cols
+    );
+}
+
+/// Test for keebart/corne_choc_pro keyboard variants.
+///
+/// This keyboard has a standard structure with info.json in the parent directory
+/// and variant subdirectories (standard, mini) that have their own keyboard.json
+/// files with RGB matrix configurations.
+#[test]
+fn test_parse_keebart_corne_choc_pro() {
+    if !qmk_submodule_exists() {
+        eprintln!("Skipping test: QMK submodule not initialized");
+        return;
+    }
+
+    let qmk_path = get_qmk_path();
+    
+    // Test keebart/corne_choc_pro/standard
+    let result = parse_keyboard_info_json(&qmk_path, "keebart/corne_choc_pro/standard");
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse keebart/corne_choc_pro/standard: {:?}",
+        result.err()
+    );
+
+    let info = result.unwrap();
+    
+    // Should have layouts
+    assert!(
+        !info.layouts.is_empty(),
+        "keebart/corne_choc_pro/standard should have layouts"
+    );
+    
+    let layouts = extract_layout_names(&info);
+    println!("keebart/corne_choc_pro/standard layouts: {:?}", layouts);
+    
+    // Corne typically has LAYOUT_split_3x6_3 or similar
+    assert!(
+        layouts.iter().any(|l| l.contains("split") || l == "LAYOUT"),
+        "Should have a split layout or LAYOUT"
+    );
+    
+    // Build geometry to verify it works end-to-end
+    let layout_name = &layouts[0];
+    let geometry_result = build_keyboard_geometry(&info, "keebart/corne_choc_pro", layout_name);
+    assert!(
+        geometry_result.is_ok(),
+        "Failed to build geometry for keebart/corne_choc_pro/standard/{}: {:?}",
+        layout_name,
+        geometry_result.err()
+    );
+    
+    let geometry = geometry_result.unwrap();
+    // Corne has 42 keys (3x6 + 3 thumb keys per half)
+    assert!(
+        geometry.keys.len() >= 36,
+        "keebart/corne_choc_pro should have at least 36 keys, found {}",
+        geometry.keys.len()
+    );
+    
+    println!(
+        "keebart/corne_choc_pro/standard/{}: {} keys, {}x{} matrix",
+        layout_name,
+        geometry.keys.len(),
+        geometry.matrix_rows,
+        geometry.matrix_cols
+    );
+    
+    // Also test the mini variant if it exists
+    let mini_result = parse_keyboard_info_json(&qmk_path, "keebart/corne_choc_pro/mini");
+    if let Ok(mini_info) = mini_result {
+        let mini_layouts = extract_layout_names(&mini_info);
+        println!("keebart/corne_choc_pro/mini layouts: {:?}", mini_layouts);
+        
+        if let Some(mini_layout_name) = mini_layouts.first() {
+            let mini_geometry = build_keyboard_geometry(&mini_info, "keebart/corne_choc_pro", mini_layout_name);
+            if let Ok(geom) = mini_geometry {
+                println!(
+                    "keebart/corne_choc_pro/mini/{}: {} keys, {}x{} matrix",
+                    mini_layout_name,
+                    geom.keys.len(),
+                    geom.matrix_rows,
+                    geom.matrix_cols
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn test_scan_keyboards_finds_crkbd() {
     if !qmk_submodule_exists() {
