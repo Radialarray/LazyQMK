@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "danish",
+    "name": "Danish",
+    "description": "Danish QWERTY layout",
+    "prefix": "DK_",
+    "header": "keymap_extras/keymap_danish.h"
+  },
+  "keycodes": [
+    { "code": "DK_A", "name": "A", "description": "A key" },
+    { "code": "DK_B", "name": "B", "description": "B key" },
+    { "code": "DK_C", "name": "C", "description": "C key" },
+    { "code": "DK_D", "name": "D", "description": "D key" },
+    { "code": "DK_E", "name": "E", "description": "E key" },
+    { "code": "DK_F", "name": "F", "description": "F key" },
+    { "code": "DK_G", "name": "G", "description": "G key" },
+    { "code": "DK_H", "name": "H", "description": "H key" },
+    { "code": "DK_I", "name": "I", "description": "I key" },
+    { "code": "DK_J", "name": "J", "description": "J key" },
+    { "code": "DK_K", "name": "K", "description": "K key" },
+    { "code": "DK_L", "name": "L", "description": "L key" },
+    { "code": "DK_M", "name": "M", "description": "M key" },
+    { "code": "DK_N", "name": "N", "description": "N key" },
+    { "code": "DK_O", "name": "O", "description": "O key" },
+    { "code": "DK_P", "name": "P", "description": "P key" },
+    { "code": "DK_AE", "name": "æ", "description": "AE ligature" },
+    { "code": "DK_OSLH", "name": "ø", "description": "O with stroke" },
+    { "code": "DK_AA", "name": "å", "description": "A with ring above" },
+    { "code": "DK_EURO", "name": "€", "description": "Euro sign" }
+  ]
+}

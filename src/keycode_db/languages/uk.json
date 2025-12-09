@@ -1,0 +1,31 @@
+{
+  "language": {
+    "id": "uk",
+    "name": "UK",
+    "description": "UK QWERTY layout",
+    "prefix": "UK_",
+    "header": "keymap_extras/keymap_uk.h"
+  },
+  "keycodes": [
+    { "code": "UK_A", "name": "A", "description": "A key" },
+    { "code": "UK_B", "name": "B", "description": "B key" },
+    { "code": "UK_C", "name": "C", "description": "C key" },
+    { "code": "UK_D", "name": "D", "description": "D key" },
+    { "code": "UK_E", "name": "E", "description": "E key" },
+    { "code": "UK_F", "name": "F", "description": "F key" },
+    { "code": "UK_G", "name": "G", "description": "G key" },
+    { "code": "UK_H", "name": "H", "description": "H key" },
+    { "code": "UK_I", "name": "I", "description": "I key" },
+    { "code": "UK_J", "name": "J", "description": "J key" },
+    { "code": "UK_K", "name": "K", "description": "K key" },
+    { "code": "UK_L", "name": "L", "description": "L key" },
+    { "code": "UK_M", "name": "M", "description": "M key" },
+    { "code": "UK_N", "name": "N", "description": "N key" },
+    { "code": "UK_O", "name": "O", "description": "O key" },
+    { "code": "UK_P", "name": "P", "description": "P key" },
+    { "code": "UK_PND", "name": "£", "description": "Pound sign" },
+    { "code": "UK_AT", "name": "@", "description": "At symbol" },
+    { "code": "UK_QUOT", "name": "'", "description": "Single quote" },
+    { "code": "UK_HASH", "name": "#", "description": "Hash" }
+  ]
+}

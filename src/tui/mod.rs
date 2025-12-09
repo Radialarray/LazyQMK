@@ -78,7 +78,7 @@ pub use config_dialogs::{
 pub use help_overlay::HelpOverlay;
 pub use key_editor::KeyEditorState;
 pub use keyboard::KeyboardWidget;
-pub use keycode_picker::{KeycodePicker, KeycodePickerState};
+pub use keycode_picker::KeycodePicker;
 pub use layer_manager::{LayerManager, LayerManagerEvent};
 pub use layer_picker::{LayerPicker, LayerPickerState};
 pub use layout_picker::LayoutPicker;
@@ -369,8 +369,6 @@ pub struct AppState {
     pub active_component: Option<ActiveComponent>,
 
     // Legacy component states (to be removed incrementally during migration)
-    /// Keycode picker component state
-    pub keycode_picker_state: KeycodePickerState,
     /// Context for category picker (what's being categorized)
     pub category_picker_context: Option<CategoryPickerContext>,
     /// Category manager component state (preserved across color picker interactions)
@@ -461,7 +459,6 @@ impl AppState {
             status_message: "Press ? for help".to_string(),
             error_message: None,
             active_component: None,
-            keycode_picker_state: KeycodePickerState::new(),
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
@@ -639,7 +636,8 @@ impl AppState {
 
     /// Open the keycode picker component
     pub fn open_keycode_picker(&mut self) {
-        let picker = KeycodePicker::new();
+        let picker =
+            KeycodePicker::with_language(self.config.ui.last_language.clone(), &self.keycode_db);
         self.active_component = Some(ActiveComponent::KeycodePicker(picker));
         self.active_popup = Some(PopupType::KeycodePicker);
     }
@@ -945,9 +943,10 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             }
         }
         PopupType::TapKeycodePicker => {
-            // Reuse keycode picker rendering with custom title context
-            // The title will show "Select Tap Keycode" based on pending_keycode state
-            keycode_picker::render_keycode_picker(f, state);
+            // Use component-based rendering (same as KeycodePicker)
+            if let Some(ActiveComponent::KeycodePicker(ref picker)) = state.active_component {
+                picker.render(f, f.size(), &state.theme, &state.keycode_db);
+            }
         }
         PopupType::ModifierPicker => {
             if let Some(ActiveComponent::ModifierPicker(ref picker)) = state.active_component {

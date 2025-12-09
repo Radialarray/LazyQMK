@@ -196,6 +196,9 @@ pub struct UiConfig {
     /// Unified keyboard scale factor (1.0 = default, <1.0 smaller, >1.0 larger)
     #[serde(default = "default_keyboard_scale")]
     pub keyboard_scale: f32,
+    /// Last selected language in the keycode picker (for convenience)
+    #[serde(default)]
+    pub last_language: Option<String>,
 }
 
 /// Default keyboard scale (1.0 = 100%)
@@ -209,6 +212,7 @@ impl Default for UiConfig {
             show_help_on_startup: true,
             theme_mode: ThemeMode::default(),
             keyboard_scale: default_keyboard_scale(),
+            last_language: None,
         }
     }
 }

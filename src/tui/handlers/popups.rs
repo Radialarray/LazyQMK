@@ -87,9 +87,10 @@ fn open_picker_for_param_index(state: &mut AppState, param_idx: usize) {
             state.set_status(&message);
         }
         ParamType::Keycode => {
+            // Use component-based picker (no last_language since tap keycodes are typically basic)
+            let picker = keycode_picker::KeycodePicker::new();
+            state.active_component = Some(ActiveComponent::KeycodePicker(picker));
             state.active_popup = Some(PopupType::TapKeycodePicker);
-            state.keycode_picker_state = keycode_picker::KeycodePickerState::new();
-            state.active_component = None;
             state.set_status(&message);
         }
     }
@@ -142,6 +143,21 @@ fn handle_parameter_collected(state: &mut AppState, param_value: String) {
 
 /// Handle keycode picker events
 fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) -> Result<bool> {
+    // Save last-used language to config if changed
+    // Get the selected language from the active component (not the legacy state)
+    let selected_language =
+        if let Some(ActiveComponent::KeycodePicker(ref picker)) = state.active_component {
+            picker.state().selected_language.clone()
+        } else {
+            None
+        };
+
+    if selected_language != state.config.ui.last_language {
+        state.config.ui.last_language = selected_language;
+        // Save config to persist the language preference
+        let _ = state.config.save();
+    }
+
     match event {
         KeycodePickerEvent::KeycodeSelected(keycode) => {
             // Check if we're editing a combo keycode part
@@ -760,32 +776,41 @@ fn handle_layer_picker_legacy(state: &mut AppState, key: event::KeyEvent) -> Res
 
 /// Handle input for tap keycode picker (second stage of `LT/MT/SH_T`)
 pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
-    match key.code {
-        KeyCode::Esc => {
-            // Cancel the whole parameterized keycode flow
-            state.pending_keycode.reset();
-            state.active_popup = None;
-            state.keycode_picker_state = keycode_picker::KeycodePickerState::new();
-            state.set_status("Cancelled");
-            Ok(false)
-        }
-        KeyCode::Enter => {
-            // Get the selected keycode
-            let keycodes = keycode_picker::get_filtered_keycodes(state);
-            if let Some(kc) = keycodes.get(state.keycode_picker_state.selected) {
-                // Only allow basic keycodes for tap action (no parameterized keycodes)
-                if is_basic_keycode(&kc.code) {
-                    // Data-driven approach: collect the parameter and continue the flow
-                    handle_parameter_collected(state, kc.code.clone());
-                    return Ok(false);
-                } else {
+    // Use the component-based picker
+    if let Some(ActiveComponent::KeycodePicker(ref mut picker)) = state.active_component {
+        match key.code {
+            KeyCode::Esc => {
+                // Cancel the whole parameterized keycode flow
+                state.pending_keycode.reset();
+                state.active_popup = None;
+                state.close_component();
+                state.set_status("Cancelled");
+                Ok(false)
+            }
+            KeyCode::Enter => {
+                // Get the selected keycode from the component
+                let keycodes =
+                    keycode_picker::get_filtered_keycodes_from_context(picker.state(), &state.keycode_db);
+                if let Some(kc) = keycodes.get(picker.state().selected) {
+                    // Only allow basic keycodes for tap action (no parameterized keycodes)
+                    if is_basic_keycode(&kc.code) {
+                        // Data-driven approach: collect the parameter and continue the flow
+                        handle_parameter_collected(state, kc.code.clone());
+                        return Ok(false);
+                    }
                     state.set_error("Only basic keycodes allowed for tap action");
                 }
+                Ok(false)
             }
-            Ok(false)
+            // Delegate all other input to the component
+            _ => {
+                // Let the picker handle navigation
+                let _ = picker.handle_input(key, &state.keycode_db);
+                Ok(false)
+            }
         }
-        // Delegate navigation to standard keycode picker
-        _ => keycode_picker::handle_navigation(state, key),
+    } else {
+        Ok(false)
     }
 }
 

@@ -1,0 +1,190 @@
+{
+  "version": "1.0",
+  "description": "Language-specific keyboard layouts with their keycode prefixes and QMK header files",
+  "languages": [
+    {
+      "id": "german",
+      "name": "German",
+      "description": "German QWERTZ layout",
+      "prefix": "DE_",
+      "header": "keymap_extras/keymap_german.h",
+      "file": "german.json"
+    },
+    {
+      "id": "german_mac",
+      "name": "German (macOS)",
+      "description": "German QWERTZ layout for macOS",
+      "prefix": "DE_",
+      "header": "keymap_extras/keymap_german_mac_iso.h",
+      "file": "german_mac.json"
+    },
+    {
+      "id": "french",
+      "name": "French",
+      "description": "French AZERTY layout",
+      "prefix": "FR_",
+      "header": "keymap_extras/keymap_french.h",
+      "file": "french.json"
+    },
+    {
+      "id": "french_mac",
+      "name": "French (macOS)",
+      "description": "French AZERTY layout for macOS",
+      "prefix": "FR_",
+      "header": "keymap_extras/keymap_french_mac_iso.h",
+      "file": "french_mac.json"
+    },
+    {
+      "id": "spanish",
+      "name": "Spanish",
+      "description": "Spanish layout",
+      "prefix": "ES_",
+      "header": "keymap_extras/keymap_spanish.h",
+      "file": "spanish.json"
+    },
+    {
+      "id": "italian",
+      "name": "Italian",
+      "description": "Italian layout",
+      "prefix": "IT_",
+      "header": "keymap_extras/keymap_italian.h",
+      "file": "italian.json"
+    },
+    {
+      "id": "uk",
+      "name": "UK",
+      "description": "United Kingdom ISO layout",
+      "prefix": "UK_",
+      "header": "keymap_extras/keymap_uk.h",
+      "file": "uk.json"
+    },
+    {
+      "id": "swedish",
+      "name": "Swedish",
+      "description": "Swedish layout",
+      "prefix": "SE_",
+      "header": "keymap_extras/keymap_swedish.h",
+      "file": "swedish.json"
+    },
+    {
+      "id": "norwegian",
+      "name": "Norwegian",
+      "description": "Norwegian layout",
+      "prefix": "NO_",
+      "header": "keymap_extras/keymap_norwegian.h",
+      "file": "norwegian.json"
+    },
+    {
+      "id": "danish",
+      "name": "Danish",
+      "description": "Danish layout",
+      "prefix": "DK_",
+      "header": "keymap_extras/keymap_danish.h",
+      "file": "danish.json"
+    },
+    {
+      "id": "finnish",
+      "name": "Finnish",
+      "description": "Finnish layout",
+      "prefix": "FI_",
+      "header": "keymap_extras/keymap_finnish.h",
+      "file": "finnish.json"
+    },
+    {
+      "id": "portuguese",
+      "name": "Portuguese",
+      "description": "Portuguese layout",
+      "prefix": "PT_",
+      "header": "keymap_extras/keymap_portuguese.h",
+      "file": "portuguese.json"
+    },
+    {
+      "id": "brazilian",
+      "name": "Brazilian Portuguese",
+      "description": "Brazilian Portuguese ABNT2 layout",
+      "prefix": "BR_",
+      "header": "keymap_extras/keymap_brazilian_abnt2.h",
+      "file": "brazilian.json"
+    },
+    {
+      "id": "swiss_german",
+      "name": "Swiss German",
+      "description": "Swiss German layout",
+      "prefix": "CH_",
+      "header": "keymap_extras/keymap_swiss_de.h",
+      "file": "swiss_german.json"
+    },
+    {
+      "id": "swiss_french",
+      "name": "Swiss French",
+      "description": "Swiss French layout",
+      "prefix": "CH_",
+      "header": "keymap_extras/keymap_swiss_fr.h",
+      "file": "swiss_french.json"
+    },
+    {
+      "id": "belgian",
+      "name": "Belgian",
+      "description": "Belgian layout",
+      "prefix": "BE_",
+      "header": "keymap_extras/keymap_belgian.h",
+      "file": "belgian.json"
+    },
+    {
+      "id": "canadian_french",
+      "name": "Canadian French",
+      "description": "Canadian French layout",
+      "prefix": "CF_",
+      "header": "keymap_extras/keymap_canadian_multilingual.h",
+      "file": "canadian_french.json"
+    },
+    {
+      "id": "czech",
+      "name": "Czech",
+      "description": "Czech QWERTZ layout",
+      "prefix": "CZ_",
+      "header": "keymap_extras/keymap_czech.h",
+      "file": "czech.json"
+    },
+    {
+      "id": "polish",
+      "name": "Polish",
+      "description": "Polish layout",
+      "prefix": "PL_",
+      "header": "keymap_extras/keymap_polish.h",
+      "file": "polish.json"
+    },
+    {
+      "id": "hungarian",
+      "name": "Hungarian",
+      "description": "Hungarian layout",
+      "prefix": "HU_",
+      "header": "keymap_extras/keymap_hungarian.h",
+      "file": "hungarian.json"
+    },
+    {
+      "id": "russian",
+      "name": "Russian",
+      "description": "Russian Cyrillic layout",
+      "prefix": "RU_",
+      "header": "keymap_extras/keymap_russian.h",
+      "file": "russian.json"
+    },
+    {
+      "id": "japanese",
+      "name": "Japanese",
+      "description": "Japanese JIS layout",
+      "prefix": "JP_",
+      "header": "keymap_extras/keymap_japanese.h",
+      "file": "japanese.json"
+    },
+    {
+      "id": "korean",
+      "name": "Korean",
+      "description": "Korean layout",
+      "prefix": "KR_",
+      "header": "keymap_extras/keymap_korean.h",
+      "file": "korean.json"
+    }
+  ]
+}
