@@ -122,6 +122,9 @@ pub struct KeyboardGeometry {
     pub matrix_cols: u8,
     /// Physical key definitions (one per key)
     pub keys: Vec<KeyGeometry>,
+    /// Number of rotary encoders (0 if no encoders)
+    #[serde(default)]
+    pub encoder_count: u8,
 }
 
 #[allow(dead_code)]
@@ -139,6 +142,7 @@ impl KeyboardGeometry {
             matrix_rows,
             matrix_cols,
             keys: Vec::new(),
+            encoder_count: 0,
         }
     }
 

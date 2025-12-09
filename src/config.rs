@@ -68,15 +68,10 @@ impl BuildConfig {
     ) -> Result<String> {
         let keyboard_dir = qmk_path.join("keyboards").join(base_keyboard);
 
-        // Check if keyboard has variant subdirectories with keyboard.json or info.json files
-        let has_variants = ["standard", "mini", "normal", "full", "compact"]
-            .iter()
-            .any(|variant| {
-                let variant_dir = keyboard_dir.join(variant);
-                variant_dir.join("keyboard.json").exists() || variant_dir.join("info.json").exists()
-            });
+        // Discover all variant subdirectories dynamically by scanning the filesystem
+        let discovered_variants = Self::discover_keyboard_variants(&keyboard_dir)?;
 
-        if !has_variants {
+        if discovered_variants.is_empty() {
             // No variants, return base keyboard path
             return Ok(base_keyboard.to_string());
         }
@@ -91,10 +86,19 @@ impl BuildConfig {
         // Common patterns:
         // - 44+ keys: typically "standard" variant
         // - Less than 44 keys: typically "mini" variant
-        let variant = if layout_key_count >= 44 {
+        let preferred_variant = if layout_key_count >= 44 {
             "standard"
         } else {
             "mini"
+        };
+
+        // Try to find the preferred variant in discovered variants
+        let variant = if discovered_variants.contains(&preferred_variant.to_string()) {
+            preferred_variant
+        } else {
+            // Fallback: use the first discovered variant
+            // This handles cases where keyboards use non-standard variant names
+            &discovered_variants[0]
         };
 
         let variant_path = format!("{base_keyboard}/{variant}");
@@ -110,6 +114,62 @@ impl BuildConfig {
         }
 
         Ok(variant_path)
+    }
+
+    /// Discovers all keyboard variant subdirectories by scanning the filesystem.
+    ///
+    /// A directory is considered a variant if it contains `keyboard.json` or `info.json`.
+    ///
+    /// # Arguments
+    ///
+    /// * `keyboard_dir` - Path to the keyboard directory to scan
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of variant names (just the directory names, not full paths).
+    /// Returns empty vector if no variants found or if the directory doesn't exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if filesystem operations fail (other than non-existent directory).
+    fn discover_keyboard_variants(keyboard_dir: &std::path::Path) -> Result<Vec<String>> {
+        let mut variants = Vec::new();
+
+        // If directory doesn't exist, return empty list (not an error)
+        if !keyboard_dir.exists() {
+            return Ok(variants);
+        }
+
+        // Read all subdirectories
+        let entries = fs::read_dir(keyboard_dir).context(format!(
+            "Failed to read keyboard directory: {}",
+            keyboard_dir.display()
+        ))?;
+
+        for entry in entries {
+            let entry = entry.context("Failed to read directory entry")?;
+            let path = entry.path();
+
+            // Check if it's a directory
+            if !path.is_dir() {
+                continue;
+            }
+
+            // Check if it contains keyboard.json or info.json
+            let has_keyboard_json = path.join("keyboard.json").exists();
+            let has_info_json = path.join("info.json").exists();
+
+            if has_keyboard_json || has_info_json {
+                // Extract just the directory name
+                if let Some(dir_name) = path.file_name() {
+                    if let Some(name_str) = dir_name.to_str() {
+                        variants.push(name_str.to_string());
+                    }
+                }
+            }
+        }
+
+        Ok(variants)
     }
 }
 
@@ -646,5 +706,127 @@ mod tests {
         // Should return None since directory doesn't exist anywhere
         let result = Config::try_fix_qmk_path(&missing_path);
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_discover_keyboard_variants_with_rev_variants() {
+        let temp_dir = TempDir::new().unwrap();
+        let keyboard_dir = temp_dir.path().join("keyboard");
+        fs::create_dir(&keyboard_dir).unwrap();
+
+        // Create rev1 and rev2 variant directories
+        let rev1_dir = keyboard_dir.join("rev1");
+        let rev2_dir = keyboard_dir.join("rev2");
+        fs::create_dir_all(&rev1_dir).unwrap();
+        fs::create_dir_all(&rev2_dir).unwrap();
+
+        // Add info.json to each variant
+        fs::write(rev1_dir.join("info.json"), "{}").unwrap();
+        fs::write(rev2_dir.join("keyboard.json"), "{}").unwrap();
+
+        let variants = BuildConfig::discover_keyboard_variants(&keyboard_dir).unwrap();
+        assert_eq!(variants.len(), 2);
+        assert!(variants.contains(&"rev1".to_string()));
+        assert!(variants.contains(&"rev2".to_string()));
+    }
+
+    #[test]
+    fn test_discover_keyboard_variants_with_rgb_wireless() {
+        let temp_dir = TempDir::new().unwrap();
+        let keyboard_dir = temp_dir.path().join("keyboard");
+        fs::create_dir(&keyboard_dir).unwrap();
+
+        // Create rgb and wireless variant directories
+        let rgb_dir = keyboard_dir.join("rgb");
+        let wireless_dir = keyboard_dir.join("wireless");
+        fs::create_dir_all(&rgb_dir).unwrap();
+        fs::create_dir_all(&wireless_dir).unwrap();
+
+        // Add keyboard.json to each variant
+        fs::write(rgb_dir.join("keyboard.json"), "{}").unwrap();
+        fs::write(wireless_dir.join("keyboard.json"), "{}").unwrap();
+
+        let variants = BuildConfig::discover_keyboard_variants(&keyboard_dir).unwrap();
+        assert_eq!(variants.len(), 2);
+        assert!(variants.contains(&"rgb".to_string()));
+        assert!(variants.contains(&"wireless".to_string()));
+    }
+
+    #[test]
+    fn test_discover_keyboard_variants_ignores_non_variant_dirs() {
+        let temp_dir = TempDir::new().unwrap();
+        let keyboard_dir = temp_dir.path().join("keyboard");
+        fs::create_dir(&keyboard_dir).unwrap();
+
+        // Create a variant directory with info.json
+        let standard_dir = keyboard_dir.join("standard");
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(standard_dir.join("info.json"), "{}").unwrap();
+
+        // Create directories without info.json or keyboard.json (should be ignored)
+        let keymaps_dir = keyboard_dir.join("keymaps");
+        let docs_dir = keyboard_dir.join("docs");
+        fs::create_dir_all(&keymaps_dir).unwrap();
+        fs::create_dir_all(&docs_dir).unwrap();
+
+        let variants = BuildConfig::discover_keyboard_variants(&keyboard_dir).unwrap();
+        assert_eq!(variants.len(), 1);
+        assert!(variants.contains(&"standard".to_string()));
+    }
+
+    #[test]
+    fn test_discover_keyboard_variants_nonexistent_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent = temp_dir.path().join("does_not_exist");
+
+        let variants = BuildConfig::discover_keyboard_variants(&nonexistent).unwrap();
+        assert!(variants.is_empty());
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_with_rev1() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("test_keyboard");
+        let rev1_dir = keyboard_dir.join("rev1");
+
+        // Create variant directory with keyboard.json
+        fs::create_dir_all(&rev1_dir).unwrap();
+        fs::write(rev1_dir.join("keyboard.json"), "{}").unwrap();
+
+        let build_config = BuildConfig::default();
+
+        // With 44 keys, it prefers "standard" but should fallback to "rev1" since standard doesn't exist
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "test_keyboard", 44)
+            .unwrap();
+
+        assert_eq!(result, "test_keyboard/rev1");
+    }
+
+    #[test]
+    fn test_determine_keyboard_variant_multiple_variants_prefers_standard() {
+        let temp_dir = TempDir::new().unwrap();
+        let qmk_path = temp_dir.path().join("qmk");
+        let keyboards_dir = qmk_path.join("keyboards");
+        let keyboard_dir = keyboards_dir.join("test_keyboard");
+        
+        // Create multiple variant directories
+        let rev1_dir = keyboard_dir.join("rev1");
+        let standard_dir = keyboard_dir.join("standard");
+        fs::create_dir_all(&rev1_dir).unwrap();
+        fs::create_dir_all(&standard_dir).unwrap();
+        fs::write(rev1_dir.join("keyboard.json"), "{}").unwrap();
+        fs::write(standard_dir.join("keyboard.json"), "{}").unwrap();
+
+        let build_config = BuildConfig::default();
+
+        // With 44 keys, should prefer "standard" when it exists
+        let result = build_config
+            .determine_keyboard_variant(&qmk_path, "test_keyboard", 44)
+            .unwrap();
+
+        assert_eq!(result, "test_keyboard/standard");
     }
 }

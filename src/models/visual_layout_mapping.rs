@@ -49,6 +49,8 @@ pub struct VisualLayoutMapping {
     pub matrix_to_visual: HashMap<(u8, u8), Position>,
     /// Visual → matrix position
     pub visual_to_matrix: HashMap<Position, (u8, u8)>,
+    /// Maximum column index in visual layout (cached for navigation efficiency)
+    pub max_col: u8,
 }
 
 #[allow(dead_code)]
@@ -63,6 +65,7 @@ impl VisualLayoutMapping {
             matrix_to_layout: HashMap::new(),
             matrix_to_visual: HashMap::new(),
             visual_to_matrix: HashMap::new(),
+            max_col: 0,
         }
     }
 
@@ -108,6 +111,14 @@ impl VisualLayoutMapping {
             mapping.matrix_to_visual.insert(matrix_pos, visual_pos);
             mapping.visual_to_matrix.insert(visual_pos, matrix_pos);
         }
+
+        // Compute max column for efficient navigation
+        mapping.max_col = mapping
+            .visual_to_matrix
+            .keys()
+            .map(|pos| pos.col)
+            .max()
+            .unwrap_or(0);
 
         mapping
     }
@@ -234,8 +245,8 @@ impl VisualLayoutMapping {
     #[must_use]
     pub fn find_position_right(&self, current: Position) -> Option<Position> {
         // Search rightward for next valid position in same row
-        // Use a reasonable max column (split keyboards can have up to 14 columns)
-        for col in (current.col + 1)..=20 {
+        // Use the actual max column from the mapping for proper navigation support
+        for col in (current.col + 1)..=self.max_col {
             let pos = Position::new(current.row, col);
             if self.is_valid_position(pos) {
                 return Some(pos);
@@ -391,5 +402,45 @@ mod tests {
             mapping.matrix_to_visual_pos(0, 1),
             Some(Position::new(1, 2))
         );
+    }
+
+    #[test]
+    fn test_find_position_right_large_keyboard() {
+        // Test navigation on a keyboard with more than 20 columns (e.g., full-size with numpad)
+        let mut geometry = KeyboardGeometry::new("fullsize", "LAYOUT", 5, 22);
+
+        // Add keys in a sparse grid (row 0: cols 0, 5, 10, 15, 20, 21)
+        geometry.add_key(KeyGeometry::new((0, 0), 0, 0.0, 0.0));
+        geometry.add_key(KeyGeometry::new((0, 5), 1, 5.0, 0.0));
+        geometry.add_key(KeyGeometry::new((0, 10), 2, 10.0, 0.0));
+        geometry.add_key(KeyGeometry::new((0, 15), 3, 15.0, 0.0));
+        geometry.add_key(KeyGeometry::new((0, 20), 4, 20.0, 0.0));
+        geometry.add_key(KeyGeometry::new((0, 21), 5, 21.0, 0.0));
+
+        let mapping = VisualLayoutMapping::build(&geometry);
+
+        // Verify max_col is set correctly
+        let (_, max_col) = mapping.get_bounds();
+        assert_eq!(max_col, 21);
+
+        // Test navigation from col 0
+        let pos = Position::new(0, 0);
+        let next = mapping.find_position_right(pos);
+        assert_eq!(next, Some(Position::new(0, 5)));
+
+        // Test navigation from col 15
+        let pos = Position::new(0, 15);
+        let next = mapping.find_position_right(pos);
+        assert_eq!(next, Some(Position::new(0, 20)));
+
+        // Test navigation from col 20 (should find 21, which is beyond old hardcoded limit of 20)
+        let pos = Position::new(0, 20);
+        let next = mapping.find_position_right(pos);
+        assert_eq!(next, Some(Position::new(0, 21)));
+
+        // Test navigation from col 21 (should return None, no more keys)
+        let pos = Position::new(0, 21);
+        let next = mapping.find_position_right(pos);
+        assert_eq!(next, None);
     }
 }

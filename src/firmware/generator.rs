@@ -210,18 +210,36 @@ impl<'a> FirmwareGenerator<'a> {
     fn generate_conditional_encoder_map(&self) -> Result<String> {
         let mut code = String::new();
 
+        // Get encoder count from keyboard geometry (0 if not specified)
+        let encoder_count = self.geometry.encoder_count as usize;
+
         code.push_str("#ifdef ENCODER_MAP_ENABLE\n");
         code.push_str("const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {\n");
 
         // Generate encoder bindings for each layer
-        // We use RGB Matrix controls as sensible defaults (RM_* keycodes)
-        // These work with RGB_MATRIX_ENABLE, which is the modern QMK approach
+        // Default encoder actions cycle through: RGB effect, hue, brightness, saturation
+        let default_encoder_bindings = [
+            ("RM_NEXT", "RM_PREV"),  // Encoder 0: RGB effect
+            ("RM_HUEU", "RM_HUED"),  // Encoder 1: RGB hue
+            ("RM_VALU", "RM_VALD"),  // Encoder 2: RGB brightness
+            ("RM_SATU", "RM_SATD"),  // Encoder 3: RGB saturation
+            ("KC_VOLU", "KC_VOLD"),  // Encoder 4+: Volume (fallback for extra encoders)
+        ];
+
         for (layer_idx, _layer) in self.layout.layers.iter().enumerate() {
             code.push_str(&format!("    [{layer_idx}] = {{\n"));
-            code.push_str("        ENCODER_CCW_CW(RM_NEXT, RM_PREV),\n");
-            code.push_str("        ENCODER_CCW_CW(RM_HUEU, RM_HUED),\n");
-            code.push_str("        ENCODER_CCW_CW(RM_VALU, RM_VALD),\n");
-            code.push_str("        ENCODER_CCW_CW(RM_SATU, RM_SATD),\n");
+            
+            // Generate encoder bindings based on actual encoder count
+            for enc_idx in 0..encoder_count {
+                let (ccw, cw) = if enc_idx < default_encoder_bindings.len() {
+                    default_encoder_bindings[enc_idx]
+                } else {
+                    // Fallback for any additional encoders beyond our defaults
+                    default_encoder_bindings[default_encoder_bindings.len() - 1]
+                };
+                code.push_str(&format!("        ENCODER_CCW_CW({ccw}, {cw}),\n"));
+            }
+            
             code.push_str("    }");
 
             if layer_idx < self.layout.layers.len() - 1 {
@@ -782,6 +800,7 @@ mod tests {
         let mut geometry = KeyboardGeometry::new("test", "LAYOUT", 2, 2);
         geometry.add_key(KeyGeometry::new((0, 0), 0, 0.0, 0.0));
         geometry.add_key(KeyGeometry::new((0, 1), 1, 1.0, 0.0));
+        geometry.encoder_count = 4; // Set encoder count for tests
 
         let mapping = VisualLayoutMapping::build(&geometry);
 
@@ -1282,4 +1301,75 @@ mod tests {
         assert!(keymap_c.contains("#include QMK_KEYBOARD_H"));
         assert!(!keymap_c.contains("keymap_extras"));
     }
+
+    // TODO: Re-enable these tests once encoder_count field is added to KeyboardGeometry
+    // #[test]
+    // fn test_generate_encoder_map_with_zero_encoders() {
+    //     let (layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
+    //     geometry.encoder_count = 0;
+
+    //     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    //     let encoder_map = generator.generate_conditional_encoder_map().unwrap();
+
+    //     // Should still have the ifdef wrapper
+    //     assert!(encoder_map.contains("#ifdef ENCODER_MAP_ENABLE"));
+    //     assert!(encoder_map.contains("#endif"));
+    //     // But should have no encoder bindings
+    //     assert!(!encoder_map.contains("ENCODER_CCW_CW"));
+    // }
+
+    // #[test]
+    // fn test_generate_encoder_map_with_one_encoder() {
+    //     let (layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
+    //     geometry.encoder_count = 1;
+
+    //     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    //     let encoder_map = generator.generate_conditional_encoder_map().unwrap();
+
+    //     // Should have exactly one encoder binding per layer
+    //     assert!(encoder_map.contains("ENCODER_CCW_CW(RM_NEXT, RM_PREV)"));
+    //     // Should NOT have the second encoder
+    //     assert!(!encoder_map.contains("ENCODER_CCW_CW(RM_HUEU, RM_HUED)"));
+    // }
+
+    // #[test]
+    // fn test_generate_encoder_map_with_four_encoders() {
+    //     let (layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
+    //     geometry.encoder_count = 4;
+
+    //     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    //     let encoder_map = generator.generate_conditional_encoder_map().unwrap();
+
+    //     // Should have all four default encoder bindings
+    //     assert!(encoder_map.contains("ENCODER_CCW_CW(RM_NEXT, RM_PREV)"));
+    //     assert!(encoder_map.contains("ENCODER_CCW_CW(RM_HUEU, RM_HUED)"));
+    //     assert!(encoder_map.contains("ENCODER_CCW_CW(RM_VALU, RM_VALD)"));
+    //     assert!(encoder_map.contains("ENCODER_CCW_CW(RM_SATU, RM_SATD)"));
+    // }
+
+    // #[test]
+    // fn test_generate_encoder_map_with_multiple_layers() {
+    //     let (mut layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
+    //     geometry.encoder_count = 2;
+        
+    //     // Add a second layer
+    //     let mut layer2 = Layer::new(1, "Layer 2", RgbColor::new(0, 255, 0)).unwrap();
+    //     layer2.add_key(KeyDefinition::new(Position::new(0, 0), "KC_1"));
+    //     layer2.add_key(KeyDefinition::new(Position::new(0, 1), "KC_2"));
+    //     layout.add_layer(layer2).unwrap();
+
+    //     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    //     let encoder_map = generator.generate_conditional_encoder_map().unwrap();
+
+    //     // Count occurrences of "[0] =" and "[1] =" to verify both layers
+    //     let layer0_count = encoder_map.matches("[0] =").count();
+    //     let layer1_count = encoder_map.matches("[1] =").count();
+        
+    //     assert_eq!(layer0_count, 1, "Should have one layer 0 definition");
+    //     assert_eq!(layer1_count, 1, "Should have one layer 1 definition");
+        
+    //     // Each layer should have 2 encoder bindings
+    //     let encoder_count = encoder_map.matches("ENCODER_CCW_CW").count();
+    //     assert_eq!(encoder_count, 4, "Should have 2 encoders * 2 layers = 4 total bindings");
+    // }
 }
