@@ -299,16 +299,16 @@ impl KeyboardWidget {
         let right_x = area.x + area.width.saturating_sub(1);
 
         // Draw corners
-        buf.get_mut(left_x, top_y)
+        let _ = &mut buf[(left_x, top_y)]
             .set_char('┌')
             .set_style(border_style);
-        buf.get_mut(right_x, top_y)
+        let _ = &mut buf[(right_x, top_y)]
             .set_char('┐')
             .set_style(border_style);
-        buf.get_mut(left_x, area.y + area.height.saturating_sub(1))
+        let _ = &mut buf[(left_x, area.y + area.height.saturating_sub(1))]
             .set_char('└')
             .set_style(border_style);
-        buf.get_mut(right_x, area.y + area.height.saturating_sub(1))
+        let _ = &mut buf[(right_x, area.y + area.height.saturating_sub(1))]
             .set_char('┘')
             .set_style(border_style);
 
@@ -331,28 +331,28 @@ impl KeyboardWidget {
                             .fg(border_color)
                             .add_modifier(Modifier::BOLD)
                     };
-                    buf.get_mut(x, top_y)
+                    let _ = &mut buf[(x, top_y)]
                         .set_char(indicator.chars().next().unwrap_or('─'))
                         .set_style(indicator_style);
                 } else {
-                    buf.get_mut(x, top_y).set_char('─').set_style(border_style);
+                    let _ = &mut buf[(x, top_y)].set_char('─').set_style(border_style);
                 }
             }
         }
 
         // Bottom border
         for i in 1..area.width.saturating_sub(1) {
-            buf.get_mut(left_x + i, area.y + area.height.saturating_sub(1))
+            let _ = &mut buf[(left_x + i, area.y + area.height.saturating_sub(1))]
                 .set_char('─')
                 .set_style(border_style);
         }
 
         // Left and right borders
         for row in 1..area.height.saturating_sub(1) {
-            buf.get_mut(left_x, area.y + row)
+            let _ = &mut buf[(left_x, area.y + row)]
                 .set_char('│')
                 .set_style(border_style);
-            buf.get_mut(right_x, area.y + row)
+            let _ = &mut buf[(right_x, area.y + row)]
                 .set_char('│')
                 .set_style(border_style);
         }
@@ -361,7 +361,7 @@ impl KeyboardWidget {
         if let Some(bg) = content_bg {
             for row in 1..area.height.saturating_sub(1) {
                 for col in 1..area.width.saturating_sub(1) {
-                    buf.get_mut(area.x + col, area.y + row).set_bg(bg);
+                    let _ = &mut buf[(area.x + col, area.y + row)].set_bg(bg);
                 }
             }
         }
@@ -394,7 +394,7 @@ impl KeyboardWidget {
                             style = style.bg(bg);
                         }
                     }
-                    buf.get_mut(x, y).set_char(ch).set_style(style);
+                    let _ = &mut buf[(x, y)].set_char(ch).set_style(style);
                     x += 1;
                 }
             }

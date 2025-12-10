@@ -489,7 +489,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 /// Render the key editor dialog
 #[allow(clippy::too_many_lines)]
 pub fn render_key_editor(f: &mut Frame, state: &AppState) {
-    let area = centered_rect(60, 50, f.size());
+    let area = centered_rect(60, 50, f.area());
     let theme = &state.theme;
     let editor_state = &state.key_editor_state;
 

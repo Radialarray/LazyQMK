@@ -147,7 +147,7 @@ pub fn render_category_picker_component(
     categories: &[crate::models::Category],
     theme: &Theme,
 ) {
-    let area = centered_rect(60, 60, f.size());
+    let area = centered_rect(60, 60, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

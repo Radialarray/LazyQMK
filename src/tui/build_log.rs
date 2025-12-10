@@ -149,7 +149,7 @@ fn render_build_log_component(
     let log_state = &log.state;
 
     // Calculate centered area (80% width, 60% height)
-    let area = centered_rect(80, 60, f.size());
+    let area = centered_rect(80, 60, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

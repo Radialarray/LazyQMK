@@ -330,7 +330,7 @@ impl Component for ColorPicker {
         }
 
         // Border around everything
-        let area = centered_rect(70, 70, f.size());
+        let area = centered_rect(70, 70, f.area());
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.primary));
@@ -454,7 +454,7 @@ impl ColorPicker {
 
 /// Render palette selection mode (for Component)
 fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme) {
-    let area = centered_rect(70, 70, f.size());
+    let area = centered_rect(70, 70, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);
@@ -731,7 +731,7 @@ fn render_preview_component(
 
 /// Render custom RGB mode (for Component)
 fn render_rgb_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme) {
-    let area = centered_rect(70, 70, f.size());
+    let area = centered_rect(70, 70, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

@@ -149,7 +149,7 @@ impl crate::tui::component::Component for LayoutPicker {
 fn render_layout_picker_component(f: &mut Frame, picker: &LayoutPicker, theme: &Theme) {
     let state = &picker.state;
     let keyboard = &picker.keyboard;
-    let area = centered_rect(70, 50, f.size());
+    let area = centered_rect(70, 50, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

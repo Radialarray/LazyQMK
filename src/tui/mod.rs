@@ -782,7 +782,7 @@ fn render(f: &mut Frame, state: &AppState) {
     // Fill entire screen with theme background color first
     // This ensures consistent background regardless of terminal settings
     let full_bg = Block::default().style(Style::default().bg(state.theme.background));
-    f.render_widget(full_bg, f.size());
+    f.render_widget(full_bg, f.area());
 
     let chunks = RatatuiLayout::default()
         .direction(Direction::Vertical)
@@ -791,7 +791,7 @@ fn render(f: &mut Frame, state: &AppState) {
             Constraint::Min(10),   // Main content
             Constraint::Length(6), // Status bar (increased for description + clipboard + build + help)
         ])
-        .split(f.size());
+        .split(f.area());
 
     // Title bar with dirty indicator
     render_title_bar(f, chunks[0], state);
@@ -834,42 +834,42 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::KeycodePicker => {
             // Use ContextualComponent trait pattern
             if let Some(ActiveComponent::KeycodePicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme, &state.keycode_db);
+                picker.render(f, f.area(), &state.theme, &state.keycode_db);
             }
         }
         PopupType::ColorPicker => {
             // Use Component trait pattern
             if let Some(ActiveComponent::ColorPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme);
+                picker.render(f, f.area(), &state.theme);
             }
         }
         PopupType::CategoryPicker => {
             // Use ContextualComponent trait pattern
             if let Some(ActiveComponent::CategoryPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme, &state.layout.categories);
+                picker.render(f, f.area(), &state.theme, &state.layout.categories);
             }
         }
         PopupType::CategoryManager => {
             // Use Component trait pattern
             if let Some(ActiveComponent::CategoryManager(ref manager)) = state.active_component {
-                manager.render(f, f.size(), &state.theme);
+                manager.render(f, f.area(), &state.theme);
             }
         }
         PopupType::LayerManager => {
             // Use Component trait pattern
             if let Some(ActiveComponent::LayerManager(ref manager)) = state.active_component {
-                manager.render(f, f.size(), &state.theme);
+                manager.render(f, f.area(), &state.theme);
             }
         }
         PopupType::LayerPicker => {
             // Use ContextualComponent trait pattern
             if let Some(ActiveComponent::LayerPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme, &state.layout.layers);
+                picker.render(f, f.area(), &state.theme, &state.layout.layers);
             }
         }
         PopupType::TemplateBrowser => {
             if let Some(ActiveComponent::TemplateBrowser(ref browser)) = state.active_component {
-                browser.render(f, f.size(), &state.theme);
+                browser.render(f, f.area(), &state.theme);
             }
         }
         PopupType::TemplateSaveDialog => {
@@ -882,23 +882,23 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
             // Use ContextualComponent trait pattern
             if let Some(ActiveComponent::BuildLog(ref log)) = state.active_component {
                 if let Some(ref build_state) = state.build_state {
-                    log.render(f, f.size(), &state.theme, build_state);
+                    log.render(f, f.area(), &state.theme, build_state);
                 }
             }
         }
         PopupType::HelpOverlay => {
             if let Some(ActiveComponent::HelpOverlay(ref help)) = state.active_component {
-                help.render(f, f.size(), &state.theme);
+                help.render(f, f.area(), &state.theme);
             }
         }
         PopupType::LayoutPicker => {
             if let Some(ActiveComponent::LayoutVariantPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme);
+                picker.render(f, f.area(), &state.theme);
             }
         }
         PopupType::MetadataEditor => {
             if let Some(ActiveComponent::MetadataEditor(ref editor)) = state.active_component {
-                editor.render(f, f.size(), &state.theme);
+                editor.render(f, f.area(), &state.theme);
             }
         }
         PopupType::SetupWizard => {
@@ -915,18 +915,18 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                     config: state.config.clone(),
                     layout: state.layout.clone(),
                 };
-                manager.render_with_context(f, f.size(), &state.theme, &context);
+                manager.render_with_context(f, f.area(), &state.theme, &context);
             }
         }
         PopupType::TapKeycodePicker => {
             // Use component-based rendering (same as KeycodePicker)
             if let Some(ActiveComponent::KeycodePicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme, &state.keycode_db);
+                picker.render(f, f.area(), &state.theme, &state.keycode_db);
             }
         }
         PopupType::ModifierPicker => {
             if let Some(ActiveComponent::ModifierPicker(ref picker)) = state.active_component {
-                picker.render(f, f.size(), &state.theme);
+                picker.render(f, f.area(), &state.theme);
             }
         }
         PopupType::KeyEditor => {
@@ -937,7 +937,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
 
 /// Render unsaved changes prompt
 fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
-    let area = centered_rect(60, 30, f.size());
+    let area = centered_rect(60, 30, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);
@@ -967,7 +967,7 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
 
 /// Render template save dialog
 fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
-    let area = centered_rect(70, 60, f.size());
+    let area = centered_rect(70, 60, f.area());
 
     let dialog_state = &state.template_save_dialog_state;
     let theme = &state.theme;

@@ -514,7 +514,7 @@ impl Default for OnboardingWizardState {
 
 /// Renders the onboarding wizard
 pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::theme::Theme) {
-    let size = f.size();
+    let size = f.area();
 
     // Clear the background area first
     f.render_widget(Clear, size);

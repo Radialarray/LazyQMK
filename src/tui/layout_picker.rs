@@ -213,7 +213,7 @@ fn render_layout_picker_component(
     _area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
-    let size = f.size();
+    let size = f.area();
     let state = &picker.state;
 
     // Create centered dialog
@@ -301,7 +301,7 @@ fn render_layout_picker_component(
 
 /// Renders the layout picker dialog (legacy - for backward compatibility during migration).
 pub fn render(f: &mut Frame, state: &LayoutPickerState, theme: &crate::tui::theme::Theme) {
-    let size = f.size();
+    let size = f.area();
 
     // Create centered dialog
     let vertical_chunks = RatatuiLayout::default()

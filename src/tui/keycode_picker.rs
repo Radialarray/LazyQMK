@@ -457,7 +457,7 @@ fn render_keycode_picker_internal(
     context: &KeycodeDb,
     theme: &super::Theme,
 ) {
-    let area = centered_rect(80, 85, f.size());
+    let area = centered_rect(80, 85, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

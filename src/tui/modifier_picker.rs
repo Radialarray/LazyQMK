@@ -341,7 +341,7 @@ impl Component for ModifierPicker {
 
 /// Render the modifier picker popup (Component version)
 fn render_modifier_picker_component(f: &mut Frame, picker: &ModifierPicker, theme: &Theme) {
-    let area = centered_rect(50, 60, f.size());
+    let area = centered_rect(50, 60, f.area());
 
     // Clear background
     f.render_widget(Clear, area);

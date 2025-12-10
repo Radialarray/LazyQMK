@@ -160,7 +160,7 @@ pub fn render_layer_picker_component(
     theme: &Theme,
 ) {
     let state = picker.state();
-    let area = centered_rect(50, 60, f.size());
+    let area = centered_rect(50, 60, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);

@@ -257,7 +257,7 @@ impl Component for MetadataEditor {
 
 /// Render the metadata editor dialog.
 pub fn render_metadata_editor(f: &mut Frame, state: &MetadataEditorState, theme: &Theme) {
-    let area = centered_rect(70, 60, f.size());
+    let area = centered_rect(70, 60, f.area());
 
     // Clear the background
     f.render_widget(Clear, area);
