@@ -79,7 +79,7 @@ pub fn generate_markdown(layout: &Layout) -> Result<String> {
 /// Generates YAML frontmatter from metadata.
 fn generate_frontmatter(layout: &Layout) -> Result<String> {
     let yaml =
-        serde_yaml::to_string(&layout.metadata).context("Failed to serialize metadata to YAML")?;
+        serde_yml::to_string(&layout.metadata).context("Failed to serialize metadata to YAML")?;
 
     Ok(format!("---\n{yaml}---\n"))
 }

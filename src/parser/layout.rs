@@ -157,7 +157,7 @@ fn parse_frontmatter(lines: &[&str]) -> Result<(LayoutMetadata, usize)> {
 
     // Parse YAML
     let metadata: LayoutMetadata =
-        serde_yaml::from_str(&yaml_content).context("Failed to parse YAML frontmatter")?;
+        serde_yml::from_str(&yaml_content).context("Failed to parse YAML frontmatter")?;
 
     // Validate metadata
     validate_metadata(&metadata)?;
