@@ -1,6 +1,6 @@
 [package]
 name = "keyboard-configurator"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 authors = ["Keyboard Configurator Contributors"]
 description = "Terminal-based keyboard layout editor for mechanical keyboards"
