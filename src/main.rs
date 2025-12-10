@@ -4,6 +4,7 @@
 //! allowing users to design layouts, assign keycodes, and generate QMK firmware.
 
 // Module declarations
+mod branding;
 mod app;
 mod config;
 mod constants;

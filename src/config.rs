@@ -280,7 +280,7 @@ impl Config {
     pub fn config_dir() -> Result<PathBuf> {
         let config_dir = dirs::config_dir()
             .context("Failed to determine config directory")?
-            .join("LazyQMK");
+            .join(crate::branding::APP_DATA_DIR);
 
         Ok(config_dir)
     }
