@@ -299,18 +299,18 @@ impl KeyboardWidget {
         let right_x = area.x + area.width.saturating_sub(1);
 
         // Draw corners
-        let _ = &mut buf[(left_x, top_y)]
-            .set_char('┌')
-            .set_style(border_style);
-        let _ = &mut buf[(right_x, top_y)]
-            .set_char('┐')
-            .set_style(border_style);
-        let _ = &mut buf[(left_x, area.y + area.height.saturating_sub(1))]
-            .set_char('└')
-            .set_style(border_style);
-        let _ = &mut buf[(right_x, area.y + area.height.saturating_sub(1))]
-            .set_char('┘')
-            .set_style(border_style);
+         buf[(left_x, top_y)]
+             .set_char('┌')
+             .set_style(border_style);
+         buf[(right_x, top_y)]
+             .set_char('┐')
+             .set_style(border_style);
+         buf[(left_x, area.y + area.height.saturating_sub(1))]
+             .set_char('└')
+             .set_style(border_style);
+         buf[(right_x, area.y + area.height.saturating_sub(1))]
+             .set_char('┘')
+             .set_style(border_style);
 
         // Top border with indicator in right corner (just before ┐)
         let top_width = area.width.saturating_sub(2) as usize;
@@ -323,48 +323,48 @@ impl KeyboardWidget {
                 if i == indicator_pos {
                     // Draw the indicator character with the border color
                     let indicator_style = if is_selected {
-                        Style::default()
-                            .fg(theme.accent)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default()
-                            .fg(border_color)
-                            .add_modifier(Modifier::BOLD)
-                    };
-                    let _ = &mut buf[(x, top_y)]
-                        .set_char(indicator.chars().next().unwrap_or('─'))
-                        .set_style(indicator_style);
-                } else {
-                    let _ = &mut buf[(x, top_y)].set_char('─').set_style(border_style);
+                         Style::default()
+                             .fg(theme.accent)
+                             .add_modifier(Modifier::BOLD)
+                     } else {
+                         Style::default()
+                             .fg(border_color)
+                             .add_modifier(Modifier::BOLD)
+                     };
+                     buf[(x, top_y)]
+                         .set_char(indicator.chars().next().unwrap_or('─'))
+                         .set_style(indicator_style);
+                 } else {
+                     buf[(x, top_y)].set_char('─').set_style(border_style);
                 }
             }
         }
 
         // Bottom border
-        for i in 1..area.width.saturating_sub(1) {
-            let _ = &mut buf[(left_x + i, area.y + area.height.saturating_sub(1))]
-                .set_char('─')
-                .set_style(border_style);
-        }
+         for i in 1..area.width.saturating_sub(1) {
+             buf[(left_x + i, area.y + area.height.saturating_sub(1))]
+                 .set_char('─')
+                 .set_style(border_style);
+         }
 
         // Left and right borders
-        for row in 1..area.height.saturating_sub(1) {
-            let _ = &mut buf[(left_x, area.y + row)]
-                .set_char('│')
-                .set_style(border_style);
-            let _ = &mut buf[(right_x, area.y + row)]
-                .set_char('│')
-                .set_style(border_style);
-        }
+         for row in 1..area.height.saturating_sub(1) {
+             buf[(left_x, area.y + row)]
+                 .set_char('│')
+                 .set_style(border_style);
+             buf[(right_x, area.y + row)]
+                 .set_char('│')
+                 .set_style(border_style);
+         }
 
-        // Fill content area background if selected
-        if let Some(bg) = content_bg {
-            for row in 1..area.height.saturating_sub(1) {
-                for col in 1..area.width.saturating_sub(1) {
-                    let _ = &mut buf[(area.x + col, area.y + row)].set_bg(bg);
-                }
-            }
-        }
+         // Fill content area background if selected
+         if let Some(bg) = content_bg {
+             for row in 1..area.height.saturating_sub(1) {
+                 for col in 1..area.width.saturating_sub(1) {
+                     buf[(area.x + col, area.y + row)].set_bg(bg);
+                 }
+             }
+         }
 
         // Render content lines
         let content_area = Rect {
@@ -388,14 +388,14 @@ impl KeyboardWidget {
                         break;
                     }
                     let mut style = span.style;
-                    if is_selected {
-                        style = style.fg(content_fg);
-                        if let Some(bg) = content_bg {
-                            style = style.bg(bg);
-                        }
-                    }
-                    let _ = &mut buf[(x, y)].set_char(ch).set_style(style);
-                    x += 1;
+                     if is_selected {
+                         style = style.fg(content_fg);
+                         if let Some(bg) = content_bg {
+                             style = style.bg(bg);
+                         }
+                     }
+                     buf[(x, y)].set_char(ch).set_style(style);
+                     x += 1;
                 }
             }
         }
