@@ -25,9 +25,8 @@ Comprehensive technical architecture and design decisions for the LazyQMK projec
 15. [Template System](#template-system)
 16. [Configuration Management](#configuration-management)
 17. [Performance Considerations](#performance-considerations)
-18. [Testing Strategy](#testing-strategy)
-19. [Project Structure](#project-structure)
-20. [Future Architectural Considerations](#future-architectural-considerations)
+18. [Project Structure](#project-structure)
+19. [Future Architectural Considerations](#future-architectural-considerations)
 
 ---
 
@@ -62,7 +61,6 @@ LazyQMK is a terminal-based keyboard layout editor built using **Model-View-Cont
 
 **Firmware Integration**
 - Generate QMK firmware C code from layouts
-- Generate Vial JSON configuration
 - Background compilation with progress tracking
 - Multiple output formats (UF2, HEX, BIN)
 
@@ -72,24 +70,24 @@ LazyQMK is a terminal-based keyboard layout editor built using **Model-View-Cont
 
 ### Core Framework
 - **Rust 1.75+** - Systems programming language (using 1.88.0)
-- **Ratatui 0.26** - TUI framework with immediate mode rendering
-- **Crossterm 0.27** - Cross-platform terminal manipulation library
+- **Ratatui 0.29** - TUI framework with immediate mode rendering
+- **Crossterm 0.29** - Cross-platform terminal manipulation library
 
 ### Data & Serialization
 - **Serde 1.0** - Serialization/deserialization framework
 - **serde_json 1.0** - JSON parsing (QMK info.json)
-- **serde_yaml 0.9** - YAML frontmatter parsing
-- **toml 0.8** - Configuration file format
+- **serde_yml 0.0.12** - YAML frontmatter parsing
+- **toml 0.9** - Configuration file format
 
 ### System Integration
-- **dirs 5.0** - Cross-platform directory paths
-- **arboard 3.0** - Clipboard integration
+- **dirs 6.0** - Cross-platform directory paths
+- **arboard 3.6** - Clipboard integration
 - **chrono 0.4** - Timestamp handling
 - **dark-light 2.0** - OS theme detection
 
 ### Error Handling & CLI
 - **anyhow 1.0** - Flexible error handling with context
-- **clap 4.0** - Command-line argument parsing
+- **clap 4.5** - Command-line argument parsing
 
 ---
 
@@ -659,6 +657,8 @@ Event Received
 
 ### Keyboard Shortcut Design
 
+**Note:** For the authoritative, up-to-date shortcut reference, press `?` in the application. The shortcuts below represent the conceptual design.
+
 **Principles:**
 - Ctrl for major operations (save, quit, build)
 - Shift for variations (Shift+C = key color, C = layer color)
@@ -691,14 +691,7 @@ Event Received
 **Build:**
 - `Ctrl+G` - Generate firmware
 - `Ctrl+B` - Build firmware
-- `Ctrl+F` - Flash firmware
 - `Ctrl+L` - View build log
-
-**Configuration:**
-- `Ctrl+P` - Set QMK path
-- `Ctrl+K` - Select keyboard
-- `Ctrl+Y` - Select layout
-- `Ctrl+U` - Configure output format
 
 **System:**
 - `Ctrl+T` - Category manager
@@ -904,15 +897,15 @@ layout_variant: "LAYOUT_split_3x6_3_ex2"
 qmk_firmware = "/path/to/qmk_firmware"
 
 [build]
-keyboard = "crkbd/rev1"
-layout = "LAYOUT_split_3x6_3"
-keymap = "default"
-output_format = "uf2"
 output_dir = ".build"
 
 [ui]
 theme = "auto"
+show_help_on_startup = true
+keyboard_scale = 1.0
 ```
+
+**Note:** Keyboard, layout variant, keymap name, output format, and firmware-specific settings are stored in each layout file's metadata, not in the global config.
 
 ### Template Directory
 
@@ -1087,7 +1080,6 @@ templates/
 **Code Generation**
 - Generate `keymap.c` with PROGMEM arrays
 - Generate `config.h` with custom settings
-- Support Vial JSON configuration
 - Layer-aware RGB matrix configuration
 
 **Background Compilation**
@@ -1361,38 +1353,6 @@ show_help_on_startup = true
 - Load once at startup
 - Index by category for fast filtering
 - Use HashMap for O(1) lookups
-
----
-
-## Testing Strategy
-
-### Test Coverage
-
-- **281/281 tests passing** (100% pass rate)
-- Unit tests for models (coordinate transforms, color parsing)
-- Integration tests for parsers (round-trip save/load)
-- UI behavior tests for components
-- Firmware generation validation tests
-
-### Test Categories
-
-**Unit Tests**
-- Position equality
-- Color parsing and priority
-- Coordinate transformations
-- Matrix mapping
-
-**Integration Tests**
-- File I/O (save/load layouts)
-- Parser round-trips (parse → write → parse)
-- Template operations
-- Config persistence
-
-**Manual Testing**
-- Visual appearance across terminals
-- Keyboard interaction
-- Terminal resize handling
-- Theme switching
 
 ---
 

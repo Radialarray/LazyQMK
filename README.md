@@ -13,7 +13,6 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange?style=flat-square)](https://www.rust-lang.org)
 [![Latest Release](https://img.shields.io/github/v/release/Radialarray/LazyQMK?style=flat-square)](https://github.com/Radialarray/LazyQMK/releases)
-[![Tests](https://img.shields.io/badge/tests-287%20passing-brightgreen?style=flat-square)](https://github.com/Radialarray/LazyQMK)
 
 [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation)
 
@@ -21,7 +20,7 @@
 
 ---
 
-**LazyQMK** is a modern terminal-based keyboard layout editor for QMK firmware. Built in **Rust** with **Ratatui**, it bridges the gap between the raw power of QMK and the ease of visual configuration. Design keymaps, manage layers, organize with colors and categories, and compile firmware—all without leaving your terminal.
+**LazyQMK – Keyboard Layout Editor** is a modern terminal-based keyboard layout editor for QMK firmware. Built in **Rust** with **Ratatui**, it bridges the gap between the raw power of QMK and the ease of visual configuration. Design keymaps, manage layers, organize with colors and categories, and compile firmware—all without leaving your terminal.
 
 Inspired by tools like `lazygit` and `lazydocker`, LazyQMK makes firmware configuration effortless for keyboard enthusiasts who love the CLI.
 
@@ -127,38 +126,17 @@ lazyqmk path/to/layout.md
 
 ## ⌨️ Keyboard Shortcuts
 
-### Navigation
-- `↑↓←→` or `hjkl` - Move cursor
-- `Tab` / `Shift+Tab` - Next/previous layer
-- `?` - Help overlay
+**Note:** Press `?` in the app for the complete, up-to-date shortcut reference.
 
-### Editing
+### Essential Shortcuts
+- `↑↓←→` or `hjkl` - Navigate keyboard
 - `Enter` - Open keycode picker
-- `x` / `Delete` - Clear key (KC_TRNS)
-- `Shift+C` - Set individual key color
-- `Shift+K` - Assign key to category
-- `c` - Set layer default color
-- `Shift+L` - Assign layer to category
-
-### File Operations
+- `Tab` / `Shift+Tab` - Switch between layers
 - `Ctrl+S` - Save layout
-- `Ctrl+Q` - Quit (prompts if unsaved)
-- `Shift+E` - Edit metadata
-
-### Templates
-- `t` - Browse and load templates
-- `Shift+T` - Save current layout as template
-
-### Firmware
-- `Ctrl+G` - Generate firmware files (`keymap.c`, `config.h`)
-- `Ctrl+B` - Build firmware (background compilation)
-- `Ctrl+L` - View build log
-
-### Configuration
-- `Ctrl+P` - Change QMK firmware path
-- `Ctrl+K` - Select keyboard
-- `Ctrl+Y` - Switch layout variant
-- `Ctrl+T` - Category manager
+- `Ctrl+Q` - Quit application
+- `Ctrl+B` - Build firmware
+- `Ctrl+G` - Generate firmware files
+- `?` - Show help overlay
 
 ## 📋 File Format
 
@@ -261,14 +239,6 @@ src/
 ### Specifications
 - **[Archived Specs](specs/archived/)** - Historical development specifications
 
-## 🧪 Quality Assurance
-
-- ✅ **287 tests passing** (100% pass rate)
-- ✅ **Zero compiler warnings**
-- ✅ **Zero clippy warnings**
-- ✅ **Component trait refactoring complete** (14/14 components migrated)
-- ✅ **50% AppState reduction** (eliminated duplicate fields)
-
 ## 🤝 Contributing
 
 We welcome contributions! This project is actively maintained and follows best practices:
@@ -276,7 +246,7 @@ We welcome contributions! This project is actively maintained and follows best p
 - **Conventional Commits** - Structured commit messages
 - **Comprehensive Testing** - All changes must pass tests
 - **Documentation** - User and technical docs kept up-to-date
-- **Code Quality** - Clippy lints enforced, zero warnings policy
+- **Code Quality** - Clippy lints enforced
 
 See [AGENTS.md](AGENTS.md) for development guidelines and workflow.
 

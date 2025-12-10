@@ -8,10 +8,7 @@ A comprehensive terminal-based keyboard layout editor for mechanical keyboards w
 
 ## Status
 
-**Development Phase**: Active Development  
-**Test Coverage**: 287 tests passing (100% pass rate)  
-**Architecture**: Component trait refactoring COMPLETE  
-**Current State**: All 14 active components migrated to trait-based architecture
+**Development Phase**: Active Development
 
 ---
 
@@ -119,22 +116,14 @@ Each key displays a color source indicator in its top-right corner.
 **Code Generation**
 - Generate `keymap.c` from layout
 - Generate `config.h` with settings
-- Support for Vial JSON configuration
 - Layer-aware RGB matrix configuration
-- Combo support (if applicable)
 
 **Background Compilation**
 - Non-blocking firmware builds (Ctrl+B)
 - Live progress updates during compilation
-- Build log viewer with scrolling (Ctrl+L)
+- Build log viewer with scrolling (Shift+B)
 - Copy build log to clipboard (Ctrl+C in log view)
 - Multiple output formats: UF2 (RP2040), HEX (AVR), BIN (ARM)
-
-**Build Configuration**
-- Configurable keyboard target (Ctrl+K)
-- Configurable keymap name (Ctrl+M)
-- Configurable output directory (Ctrl+O)
-- Configurable output format (Ctrl+U)
 
 ### Configuration & Setup
 
@@ -150,13 +139,7 @@ Each key displays a color source indicator in its top-right corner.
   - macOS: `~/Library/Application Support/LazyQMK/config.toml`
   - Windows: `%APPDATA%\LazyQMK\config.toml`
 - Persistent across sessions
-- All settings accessible via keyboard shortcuts:
-  - Ctrl+P: QMK firmware path
-  - Ctrl+K: Keyboard selection
-  - Ctrl+Y: Layout variant
-  - Ctrl+U: Output format
-  - Ctrl+O: Output directory
-  - Ctrl+M: Keymap name
+- Settings are managed through the Settings Manager (Shift+S) and Setup Wizard (Ctrl+W). See in-app help (?) for all configuration shortcuts.
 
 ### User Interface
 
@@ -293,44 +276,9 @@ Layout
 
 ## Keyboard Shortcuts
 
-### Navigation
-- `↑↓←→` or `hjkl` - Move cursor
-- `Tab` - Next layer
-- `Shift+Tab` - Previous layer
+**Note:** Press `?` in the app for the complete, up-to-date shortcut reference.
 
-### Editing
-- `Enter` - Keycode picker
-- `x` / `Delete` - Clear key
-- `Shift+C` - Key color
-- `Shift+K` - Key category
-- `c` - Layer color
-- `Shift+L` - Layer category
-
-### File Operations
-- `Ctrl+S` - Save
-- `Ctrl+Q` - Quit (twice if unsaved)
-- `Shift+E` - Edit metadata
-
-### Templates
-- `t` - Load template
-- `Shift+T` - Save as template
-
-### Firmware
-- `Ctrl+G` - Generate files
-- `Ctrl+B` - Build firmware
-- `Ctrl+L` - Build log
-
-### Configuration
-- `Ctrl+P` - QMK path
-- `Ctrl+K` - Keyboard
-- `Ctrl+Y` - Layout variant
-- `Ctrl+U` - Output format
-- `Ctrl+O` - Output directory
-- `Ctrl+M` - Keymap name
-- `Ctrl+T` - Category manager
-
-### Help
-- `?` - Help overlay
+Essential shortcuts include navigation (arrow keys/hjkl), keycode picker (Enter), layer switching (Tab), saving (Ctrl+S), and firmware building (Ctrl+B/G). The in-app help provides context-sensitive guidance for all features.
 
 ---
 
@@ -395,7 +343,6 @@ src/
 - **Component trait pattern** implemented across 14 active components
 - **~50% AppState reduction** by eliminating duplicate state fields
 - **Event-driven architecture** with clear separation of concerns
-- **287 tests passing** with zero regressions
 - **Performance maintained** at 60fps UI target
 - **Handler refactoring** with new `action_handlers/` directory structure
 - **ActiveComponent enum** providing type-safe component management

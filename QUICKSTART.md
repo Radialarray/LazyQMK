@@ -1,6 +1,6 @@
-# Keyboard Configurator - Quick Start Guide
+# LazyQMK – Keyboard Layout Editor - Quick Start Guide
 
-A terminal-based keyboard layout editor for mechanical keyboards with standard QMK firmware support.
+A terminal-based keyboard layout editor for QMK firmware.
 
 ## Installation
 
@@ -32,8 +32,9 @@ The wizard will prompt you for:
 3. **Layout variant** - Select layout if your keyboard has multiple options
 
 Configuration is saved to:
-- Unix/Linux/macOS: `~/.config/layout_tools/config.toml`
-- Windows: `%APPDATA%\layout_tools\config.toml`
+- Linux: `~/.config/LazyQMK/config.toml`
+- macOS: `~/Library/Application Support/LazyQMK/config.toml`
+- Windows: `%APPDATA%\LazyQMK\config.toml`
 
 ## Basic Usage
 
@@ -109,7 +110,7 @@ Categories help organize keys by function (navigation, symbols, modifiers, etc.)
 
 **Build firmware:**
 1. Press `Ctrl+B` to start background build
-2. Press `Ctrl+L` to view build log with live progress
+2. Press `Shift+B` to view build log with live progress
 3. Build runs in background - you can continue editing
 
 ### 6. Templates
@@ -131,45 +132,17 @@ Categories help organize keys by function (navigation, symbols, modifiers, etc.)
 - **Quit** - Press `Ctrl+Q` to quit (prompts if unsaved changes)
 - **Auto-save prompt** - Application warns before quitting with unsaved changes
 
-## Keyboard Shortcuts Reference
+## Keyboard Shortcuts
 
-### Navigation
-- `Arrow Keys` or `hjkl` - Move cursor between keys
-- `Tab` - Next layer
-- `Shift+Tab` - Previous layer
+**Note:** Press `?` in the app for the complete, up-to-date shortcut reference with context-sensitive help.
 
-### Editing
-- `Enter` - Open keycode picker
-- `x` or `Delete` - Clear key (KC_TRNS)
-- `Shift+C` - Set individual key color
-- `Shift+K` - Assign key to category
-
-### Layer Operations
-- `c` - Set layer default color
-- `Shift+L` - Assign layer to category
-
-### File Operations
+**Essential shortcuts to get started:**
+- Arrow keys / `hjkl` - Navigate between keys
+- `Enter` - Open keycode picker  
+- `Tab` / `Shift+Tab` - Switch layers
 - `Ctrl+S` - Save layout
-- `Ctrl+Q` - Quit
-
-### Firmware
-- `Ctrl+G` - Generate firmware files (keymap.c and config.h)
-- `Ctrl+B` - Build firmware in background
-- `Ctrl+L` - View build log
-
-### Configuration
-- `Ctrl+P` - Change QMK firmware path
-- `Ctrl+K` - Select different keyboard
-- `Ctrl+Y` - Switch layout variant
-- `Ctrl+T` - Category manager
-- `Shift+E` - Edit layout metadata
-
-### Templates
-- `t` - Browse and load templates
-- `Shift+T` - Save as template
-
-### Help
-- `?` - Open help overlay with all shortcuts
+- `Ctrl+B` - Build firmware
+- `?` - Help overlay
 
 ## File Format
 
@@ -201,8 +174,9 @@ version: "1.0"
 
 ## Next Steps
 
-- Read [TUI_ARCHITECTURE_GUIDE.md](TUI_ARCHITECTURE_GUIDE.md) for technical architecture
-- See [specs/001-tui-complete-features/spec.md](specs/001-tui-complete-features/spec.md) for detailed requirements
+- Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for technical architecture
+- Read [docs/FEATURES.md](docs/FEATURES.md) for comprehensive feature documentation
+- See [specs/archived/](specs/archived/) for historical development specifications
 - Check [README.md](README.md) for installation and development info
 
 ## Troubleshooting
@@ -214,15 +188,16 @@ version: "1.0"
 
 **Configuration not persisting:**
 - Check write permissions in config directory
-- Unix: `~/.config/layout_tools/`
-- Windows: `%APPDATA%\layout_tools\`
+- Linux: `~/.config/LazyQMK/`
+- macOS: `~/Library/Application Support/LazyQMK/`
+- Windows: `%APPDATA%\LazyQMK\`
 
 **QMK build fails:**
 - Verify QMK firmware path in configuration
 - Ensure QMK toolchain is installed
-- Check build log with `Ctrl+L` for specific errors
+- Check build log with `Shift+B` for specific errors
 
 **Cannot find keyboard:**
 - Ensure QMK firmware path points to valid QMK repository
 - Verify keyboard exists in QMK: `qmk list-keyboards`
-- Try re-running onboarding wizard with `Ctrl+K`
+- Try re-running setup wizard (`Ctrl+W`) to reconfigure keyboard selection
