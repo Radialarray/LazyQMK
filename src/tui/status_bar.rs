@@ -226,14 +226,14 @@ impl StatusBar {
         let context_name = Self::get_current_context(state);
         let registry = HelpRegistry::default();
         
-        // Get next set of hints for help line (offset by 5 to avoid duplicating top hints)
+        // Get hints for help line (show up to 5, always include "?: Help" at end)
         let all_hints = registry.get_status_bar_hints(context_name);
         
-        // Skip the first 5 (already shown in top hints) and take next 6
+        // Take up to 5 hints (or 4 if we need to add "?: Help")
+        let max_hints = if context_name == help_registry::contexts::MAIN { 4 } else { 5 };
         let help_hints: Vec<_> = all_hints
             .iter()
-            .skip(5)
-            .take(6)
+            .take(max_hints)
             .map(|binding| {
                 let key = if !binding.alt_keys.is_empty() {
                     format!("{}/{}", binding.keys.join(","), binding.alt_keys.join(","))
@@ -246,16 +246,15 @@ impl StatusBar {
             })
             .collect();
 
-        if help_hints.is_empty() {
-            return Line::from(vec![
-                Span::styled("Help: ", Style::default().fg(theme.primary)),
-                Span::raw("Press ? for help"),
-            ]);
-        }
-
         let mut spans: Vec<Span<'static>> = Vec::new();
         spans.push(Span::styled("Help: ", Style::default().fg(theme.primary)));
 
+        if help_hints.is_empty() {
+            spans.push(Span::raw("Press ? for help"));
+            return Line::from(spans);
+        }
+
+        // Add all hints
         for (i, (key, action)) in help_hints.into_iter().enumerate() {
             if i > 0 {
                 spans.push(Span::raw(" | "));
@@ -266,6 +265,17 @@ impl StatusBar {
             ));
             spans.push(Span::raw(": "));
             spans.push(Span::raw(action.to_string()));
+        }
+
+        // Always add "?: Help" at the end for main context
+        if context_name == help_registry::contexts::MAIN {
+            spans.push(Span::raw(" | "));
+            spans.push(Span::styled(
+                "?".to_string(),
+                Style::default().fg(theme.accent),
+            ));
+            spans.push(Span::raw(": "));
+            spans.push(Span::raw("Help"));
         }
 
         Line::from(spans)
