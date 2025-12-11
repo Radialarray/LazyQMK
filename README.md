@@ -14,6 +14,8 @@ I created LazyQMK because I wanted to edit my keyboard firmware for my **Keebart
 
 This led me to add custom code to my QMK fork and implement visual layer-aware coloring in a terminal UI editor. Why a TUI? Because I love having small, focused utilities in the terminal—like `lazygit` and `neovim`. LazyQMK follows that philosophy: stay in the terminal, work efficiently, and keep it simple.
 
+You can find my current layout as an example in the `examples` folder.
+
 > [!IMPORTANT]
 > **Project Status**: This is an experimental project testing how far AI-guided coding can go, so expect some rough edges! It's been mostly tested on my Corne Choc Pro, and I can't guarantee it'll work smoothly with other keyboards. The codebase may be unstable or break with other keyboards.
 That said, if you're interested in helping make this more robust, broaden hardware support, or refine functionality, contributions and support from the community are highly appreciated. PRs and feedback are very welcome!. 
