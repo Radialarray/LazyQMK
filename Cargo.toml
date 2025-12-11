@@ -2,7 +2,7 @@
 name = "lazyqmk"
 version = "0.7.0"
 edition = "2021"
-authors = ["Keyboard Configurator Contributors"]
+authors = ["LazyQMK Contributors"]
 description = "Interactive terminal workspace for QMK firmware for mechanical keyboards"
 license = "MIT"
 repository = "https://github.com/Radialarray/LazyQMK"
