@@ -3,9 +3,9 @@
 Auto-generated from all feature plans. Last updated: 2025-11-24
 
 ## Active Technologies
-- Rust 1.75+ (using Rust 1.88.0 per startup_errors.md) + Ratatui 0.29 (TUI framework), Crossterm 0.29 (terminal backend), Serde 1.0 (serialization) (021-dependency-updates)
-- Human-readable files (Markdown layouts, TOML 0.9 configuration, JSON5 1.3 parsing, serde_yml 0.0.12 for YAML) (021-dependency-updates)
-- CLI: Clap 4.5, Config: dirs 6.0, Clipboard: arboard 3.6, UUID: 1.19 (021-dependency-updates)
+- Rust 1.75+ (using Rust 1.88.0 per startup_errors.md) + Ratatui 0.29 (TUI framework), Crossterm 0.29 (terminal backend), Serde 1.0 (serialization) (archived/021-dependency-updates)
+- Human-readable files (Markdown layouts, TOML 0.9 configuration, JSON5 1.3 parsing, serde_yml 0.0.12 for YAML) (archived/021-dependency-updates)
+- CLI: Clap 4.5, Config: dirs 6.0, Clipboard: arboard 3.6, UUID: 1.19 (archived/021-dependency-updates)
 
 ## Project Structure
 
@@ -23,9 +23,9 @@ cargo test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECH
 Rust 1.75+: Follow standard conventions
 
 ## Recent Changes
-- 021-dependency-updates: Updated all dependencies to latest versions (json5 1.3, dirs 6.0, ratatui 0.29, crossterm 0.29, clap 4.5, serde_yml, toml 0.9, arboard 3.6, uuid 1.19), fixed 43 ratatui deprecation warnings, migrated from deprecated serde_yaml to serde_yml
-- 020-robust-keyboard-picker: Added JSON5 parser support, robust QMK config discovery and merging
-- 002-fix-startup-warnings: Added Rust 1.75+ (using Rust 1.88.0 per startup_errors.md) + Ratatui 0.26 (TUI framework), Crossterm 0.27 (terminal backend), Serde 1.0 (serialization)
+- archived/021-dependency-updates: Updated all dependencies to latest versions (json5 1.3, dirs 6.0, ratatui 0.29, crossterm 0.29, clap 4.5, serde_yml, toml 0.9, arboard 3.6, uuid 1.19), fixed 43 ratatui deprecation warnings, migrated from deprecated serde_yaml to serde_yml
+- archived/020-robust-keyboard-picker: Added JSON5 parser support, robust QMK config discovery and merging
+- archived/002-fix-startup-warnings: Added Rust 1.75+ (using Rust 1.88.0 per startup_errors.md) + Ratatui 0.26 (TUI framework), Crossterm 0.27 (terminal backend), Serde 1.0 (serialization)
 
 <!-- MANUAL ADDITIONS START -->
 

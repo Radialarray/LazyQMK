@@ -1,34 +1,23 @@
-<div align="center">
 
-<pre>
-   __                  ____  __  ________
-  / /   ____ _____  __/ __ \/ |/ / //_/
- / /   / __ `/_ / // / / / / /|_/ / ,<   
-/ /___/ /_/ / / /_/ /_/ / / /  / / /| |  
-/_____/\__,_/ /___/\___/_/_/  /_/_/ |_|  
-</pre>
+# LazyQMK
+### Terminal Keyboard Layout Editor for QMK Firmware
 
-### The Interactive Terminal Workspace for QMK Firmware
-
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange?style=flat-square)](https://www.rust-lang.org)
-[![Latest Release](https://img.shields.io/github/v/release/Radialarray/LazyQMK?style=flat-square)](https://github.com/Radialarray/LazyQMK/releases)
-
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation)
-
-</div>
+**LazyQMK** is a terminal-based keyboard layout editor for QMK firmware. Design keymaps, manage layers, organize with colors and categories, and compile firmware—all without leaving your terminal.
 
 ---
 
-**LazyQMK – Keyboard Layout Editor** is a modern terminal-based keyboard layout editor for QMK firmware. Built in **Rust** with **Ratatui**, it bridges the gap between the raw power of QMK and the ease of visual configuration. Design keymaps, manage layers, organize with colors and categories, and compile firmware—all without leaving your terminal.
+![LazyQMK Screen](docs/LazyQMK.png)
 
-Inspired by tools like `lazygit` and `lazydocker`, LazyQMK makes firmware configuration effortless for keyboard enthusiasts who love the CLI.
+## 💡 Motivation
 
-## 🎯 Why LazyQMK?
+I created LazyQMK because I wanted to edit my keyboard firmware for my **Keebart Corne Choc Pro** directly without diving into code every time I needed to tweak a keymap. At the same time, I wanted to support complex coloring of layers and individual keys for better visual organization.
 
-| 🎨 Visual & Interactive | 🛡️ Type-Safe | 📝 Human-Readable |
-| :--- | :--- | :--- |
-| Rich TUI with visual keyboard layout, intuitive navigation, and live feedback. | Validates keycodes and layout before compilation. Catches errors instantly. | Plain Markdown files with YAML frontmatter. Perfect for version control. |
+This led me to add custom code to my QMK fork and implement visual layer-aware coloring in a terminal UI editor. Why a TUI? Because I love having small, focused utilities in the terminal—like `lazygit` and `neovim`. LazyQMK follows that philosophy: stay in the terminal, work efficiently, and keep it simple.
+
+> [!IMPORTANT]
+> **Project Status**: This is an experimental project testing how far AI-guided coding can go, so expect some rough edges! It's been mostly tested on my Corne Choc Pro, and I can't guarantee it'll work smoothly with other keyboards. The codebase may be unstable or break with other keyboards.
+That said, if you're interested in helping make this more robust, broaden hardware support, or refine functionality, contributions and support from the community are highly appreciated. PRs and feedback are very welcome!. 
+
 
 ## ✨ Features
 
@@ -38,19 +27,15 @@ Inspired by tools like `lazygit` and `lazydocker`, LazyQMK makes firmware config
 - **Smart Color System** - Four-level priority system (key → key category → layer category → layer default)
 - **Category Organization** - Group keys by function (navigation, symbols, modifiers, etc.)
 - **Searchable Keycode Picker** - Fuzzy search through 600+ QMK keycodes with instant filtering
-- **Language-Specific Keycodes** - Support for 10+ keyboard layouts (QWERTY, QWERTZ, AZERTY, Colemak, etc.)
+- **Language-Specific Keycodes** - Support for german keycodes
 
 ### Firmware Integration
-- **Direct QMK Integration** - Uses official QMK firmware with full keyboard database access
-- **JSON5 Parser** - Handles complex QMK configs with C++ style comments
-- **Background Compilation** - Build firmware without blocking the UI, with live progress updates
-- **Smart Config Discovery** - Automatically merges parent `info.json` + variant `keyboard.json` files
-- **Universal Keyboard Support** - Works with split keyboards, ortholinear, ergonomic, and standard layouts
+- **Direct QMK Integration** - Uses custom QMK firmware fork with full keyboard database access (I added support for lighting in the custom firmware fork you can find here: [Custom QMK Firmware Fork](https://github.com/Radialarray/qmk_firmware)). It could potentially work with normal QMK firmware, but LEDs are not supported.
 
 ### Developer-Friendly
 - **Human-Readable Markdown** - Layouts stored as `.md` files with YAML frontmatter
-- **Version Control Ready** - Plain text format perfect for git
-- **Template System** - Save and reuse common layouts across keyboards
+- **Version Control Ready** - Plain text format perfect for git or a dotfile manager like [chezmoi](https://github.com/twpayne/chezmoi)
+- **Template System** - Save and share common layouts across keyboards
 - **OS Theme Integration** - Automatic dark/light mode detection from system settings
 
 ## 📦 Installation
@@ -94,7 +79,7 @@ lazyqmk
 ```
 
 You'll configure:
-1. **QMK Firmware Path** - Path to your local QMK repository
+1. **QMK Firmware Path** - Path to your local QMK repository (needed to compile the created firmware)
 2. **Keyboard Selection** - Choose from QMK's extensive keyboard database
 3. **Layout Variant** - Select your physical layout (if multiple options)
 
@@ -102,17 +87,6 @@ Configuration saved to:
 - **Linux**: `~/.config/LazyQMK/config.toml`
 - **macOS**: `~/Library/Application Support/LazyQMK/config.toml`
 - **Windows**: `%APPDATA%\LazyQMK\config.toml`
-
-### Creating a Layout
-
-```bash
-# Create new layout file
-touch my_layout.md
-lazyqmk my_layout.md
-
-# Or load existing layout
-lazyqmk path/to/layout.md
-```
 
 ### Basic Workflow
 
@@ -189,123 +163,8 @@ tags: ["colemak", "programming"]
 
 Each key displays its color source indicator in the top-right corner.
 
-## 🏗️ Architecture
 
-### Tech Stack
-
-- **Rust 1.88.0** - Systems programming language
-- **Ratatui 0.29** - Terminal UI framework with immediate mode rendering
-- **Crossterm 0.29** - Cross-platform terminal manipulation
-- **Serde 1.0** - Serialization/deserialization
-- **JSON5 1.3** - QMK config parsing (supports C++ comments)
-- **Clap 4.5** - CLI argument parsing
-
-### Design Patterns
-
-- **MVC Architecture** - Clean separation of models, views, and controllers
-- **Component Trait Pattern** - All 14 active components use standardized `Component` trait
-- **Event-Driven** - Components communicate via events, handlers update state
-- **Immediate Mode Rendering** - UI rebuilt every frame from centralized `AppState`
-
-### Project Structure
-
-```
-src/
-├── app/          # Application entry point and launch logic
-├── models/       # Data structures (Layout, Layer, KeyDefinition)
-├── parser/       # File parsing (Markdown, QMK info.json, JSON5)
-├── tui/          # Terminal UI components
-│   ├── handlers/ # Input handlers (actions, categories, layers)
-│   └── [components] # UI widgets (keyboard, pickers, editors)
-├── keycode_db/   # QMK keycode database (600+ keycodes)
-├── firmware/     # Code generation and compilation
-├── services/     # Business logic (geometry, layouts)
-└── main.rs       # Entry point
-```
-
-## 📚 Documentation
-
-### User Guides
-- **[Quick Start Guide](QUICKSTART.md)** - Getting started, workflows, shortcuts
-- **[Features Overview](docs/FEATURES.md)** - Comprehensive feature documentation
-
-### Technical Documentation
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Deep dive into technical design
-- **[Shortcut System](docs/SHORTCUT_SYSTEM_ANALYSIS.md)** - Keyboard shortcut design
-
-### Component Guides
-- **[Settings Manager](docs/components/SETTINGS_MANAGER.md)** - Configuration management
-
-### Specifications
-- **[Archived Specs](specs/archived/)** - Historical development specifications
-
-## 🤝 Contributing
-
-We welcome contributions! This project is actively maintained and follows best practices:
-
-- **Conventional Commits** - Structured commit messages
-- **Comprehensive Testing** - All changes must pass tests
-- **Documentation** - User and technical docs kept up-to-date
-- **Code Quality** - Clippy lints enforced
-
-See [AGENTS.md](AGENTS.md) for development guidelines and workflow.
-
-## 🗺️ Roadmap
-
-**Completed (v0.7.0)**
-- ✅ Visual keyboard editor with accurate geometry
-- ✅ Multi-layer management
-- ✅ Color and category system
-- ✅ Template system
-- ✅ Background firmware compilation
-- ✅ QMK JSON5 parser with robust config discovery
-- ✅ Language-specific keycode support
-- ✅ OS theme integration
-- ✅ Complete dependency updates (ratatui 0.29, crossterm 0.29, etc.)
-
-**Future Enhancements**
-- Combo key configuration UI
-- Tap-dance configuration UI
-- Macro recording and playback
-- Layout analysis and heatmaps
-- Multi-keyboard profile management
-- ZMK firmware support
-
-## 🎯 Supported Keyboards
-
-LazyQMK works with **any keyboard in the QMK firmware repository**, including:
-
-- **Split Keyboards**: Corne (crkbd), Ferris Sweep, Lily58, Kyria, Sofle, Ergodox
-- **Ortholinear**: Planck, Preonic, Let's Split
-- **Standard**: DZ60, Tofu60, KBD67, etc.
-- **Sizes**: 36-key, 40%, 60%, 65%, 75%, TKL, and full-size
-
-Successfully tested with complex structures like `splitkb/aurora/lily58/rev1`.
-
-## 📈 Project Status
-
-**Current Version**: v0.7.0  
-**Status**: Active Development  
-**Test Coverage**: 287/287 passing  
-**Last Updated**: 2025-12-10
-
-### Recent Updates (v0.7.0)
-- 🎉 Major dependency updates (ratatui 0.29, crossterm 0.29, clap 4.5)
-- 🔧 Robust QMK keyboard parser with JSON5 support
-- 🐛 Fixed 43 deprecation warnings + 11 clippy warnings
-- 📦 Migrated from deprecated `serde_yaml` to `serde_yml`
-- ✨ Improved config discovery for complex QMK structures
 
 ## 📄 License
 
 This project is licensed under the **MIT License** - see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-**Built with ❤️ by keyboard enthusiasts, for keyboard enthusiasts**
-
-[Report Bug](https://github.com/Radialarray/LazyQMK/issues) • [Request Feature](https://github.com/Radialarray/LazyQMK/issues) • [View Releases](https://github.com/Radialarray/LazyQMK/releases)
-
-</div>
