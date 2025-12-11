@@ -4,8 +4,8 @@
 //! from the vial-qmk-keebart submodule. They ensure compatibility with actual
 //! keyboard definitions used in the QMK ecosystem.
 
-use keyboard_configurator::models::visual_layout_mapping::VisualLayoutMapping;
-use keyboard_configurator::parser::keyboard_json::{
+use lazyqmk::models::visual_layout_mapping::VisualLayoutMapping;
+use lazyqmk::parser::keyboard_json::{
     build_keyboard_geometry, extract_layout_names, parse_keyboard_info_json,
 };
 use std::path::PathBuf;
@@ -375,7 +375,7 @@ fn test_scan_keyboards_finds_crkbd() {
     }
 
     let qmk_path = get_qmk_path();
-    let keyboards = keyboard_configurator::parser::keyboard_json::scan_keyboards(&qmk_path)
+    let keyboards = lazyqmk::parser::keyboard_json::scan_keyboards(&qmk_path)
         .expect("Failed to scan keyboards");
 
     assert!(

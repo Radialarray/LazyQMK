@@ -5,12 +5,12 @@
 //! - Shift+Tab cycles backward through layers (0 -> 2 -> 1 -> 0)
 
 use chrono::Utc;
-use keyboard_configurator::config::{BuildConfig, Config, PathConfig, UiConfig};
-use keyboard_configurator::models::{
+use lazyqmk::config::{BuildConfig, Config, PathConfig, UiConfig};
+use lazyqmk::models::{
     KeyDefinition, KeyGeometry, KeyboardGeometry, Layer, Layout, LayoutMetadata, Position,
     RgbColor, VisualLayoutMapping,
 };
-use keyboard_configurator::tui::AppState;
+use lazyqmk::tui::AppState;
 use std::collections::HashMap;
 
 /// Creates a test layout with 3 layers for cycling tests
@@ -81,11 +81,11 @@ fn create_test_layout_with_layers() -> Layout {
         metadata,
         layers: vec![layer0, layer1, layer2],
         categories: vec![],
-        uncolored_key_behavior: keyboard_configurator::models::UncoloredKeyBehavior::default(),
-        tap_hold_settings: keyboard_configurator::models::TapHoldSettings::default(),
+        uncolored_key_behavior: lazyqmk::models::UncoloredKeyBehavior::default(),
+        tap_hold_settings: lazyqmk::models::TapHoldSettings::default(),
         rgb_enabled: true,
-        rgb_brightness: keyboard_configurator::models::RgbBrightness::default(),
-        rgb_saturation: keyboard_configurator::models::RgbSaturation::default(),
+        rgb_brightness: lazyqmk::models::RgbBrightness::default(),
+        rgb_saturation: lazyqmk::models::RgbSaturation::default(),
         rgb_timeout_ms: 0,
     }
 }
@@ -181,7 +181,7 @@ fn create_test_app_state() -> AppState {
 
 #[test]
 fn test_next_layer_cycles_forward() {
-    use keyboard_configurator::tui::handlers::action_handlers::navigation;
+    use lazyqmk::tui::handlers::action_handlers::navigation;
 
     let mut state = create_test_app_state();
     assert_eq!(state.layout.layers.len(), 3, "Should have 3 layers");
@@ -207,7 +207,7 @@ fn test_next_layer_cycles_forward() {
 
 #[test]
 fn test_previous_layer_cycles_backward() {
-    use keyboard_configurator::tui::handlers::action_handlers::navigation;
+    use lazyqmk::tui::handlers::action_handlers::navigation;
 
     let mut state = create_test_app_state();
     assert_eq!(state.layout.layers.len(), 3, "Should have 3 layers");
@@ -240,7 +240,7 @@ fn test_previous_layer_cycles_backward() {
 
 #[test]
 fn test_layer_cycling_bidirectional() {
-    use keyboard_configurator::tui::handlers::action_handlers::navigation;
+    use lazyqmk::tui::handlers::action_handlers::navigation;
 
     let mut state = create_test_app_state();
 
@@ -264,7 +264,7 @@ fn test_layer_cycling_bidirectional() {
 
 #[test]
 fn test_single_layer_no_cycling() {
-    use keyboard_configurator::tui::handlers::action_handlers::navigation;
+    use lazyqmk::tui::handlers::action_handlers::navigation;
 
     let mut state = create_test_app_state();
 
@@ -291,7 +291,7 @@ fn test_single_layer_no_cycling() {
 
 #[test]
 fn test_layer_cycling_with_two_layers() {
-    use keyboard_configurator::tui::handlers::action_handlers::navigation;
+    use lazyqmk::tui::handlers::action_handlers::navigation;
 
     let mut state = create_test_app_state();
 
