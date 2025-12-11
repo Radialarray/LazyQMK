@@ -5,8 +5,6 @@
 // Re-export branding constants for backward compatibility
 pub use crate::branding::{
     APP_BINARY_NAME, 
-    APP_DISPLAY_NAME as APP_NAME, 
-    APP_DATA_DIR,
+    APP_DISPLAY_NAME as APP_NAME,
     APP_DESCRIPTION,
-    GITHUB_URL
 };

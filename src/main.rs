@@ -18,7 +18,7 @@ mod tui;
 
 use anyhow::Result;
 use clap::Parser;
-use constants::{APP_BINARY_NAME, APP_NAME};
+use constants::{APP_BINARY_NAME, APP_DESCRIPTION, APP_NAME};
 use std::path::PathBuf;
 
 /// LazyQMK - Terminal-based keyboard layout editor
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     println!("{} v{}", APP_NAME, env!("CARGO_PKG_VERSION"));
-    println!("Terminal-based keyboard layout editor");
+    println!("{}", APP_DESCRIPTION);
     println!();
 
     if cli.init {
