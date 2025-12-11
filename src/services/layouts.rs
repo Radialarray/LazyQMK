@@ -30,7 +30,7 @@ impl LayoutService {
     ///
     /// ```no_run
     /// use std::path::Path;
-    /// use keyboard_configurator::services::LayoutService;
+    /// use lazyqmk::services::LayoutService;
     ///
     /// let layout = LayoutService::load(Path::new("my_layout.md"))?;
     /// # Ok::<(), anyhow::Error>(())
@@ -59,7 +59,7 @@ impl LayoutService {
     ///
     /// ```no_run
     /// use std::path::Path;
-    /// use keyboard_configurator::{models::Layout, services::LayoutService};
+    /// use lazyqmk::{models::Layout, services::LayoutService};
     ///
     /// # fn example() -> anyhow::Result<()> {
     /// let layout = Layout::new("My Layout")?;
@@ -92,7 +92,7 @@ impl LayoutService {
     ///
     /// ```no_run
     /// use std::path::Path;
-    /// use keyboard_configurator::services::LayoutService;
+    /// use lazyqmk::services::LayoutService;
     ///
     /// let old_path = Path::new("old_layout.md");
     /// if let Some(new_path) = LayoutService::rename_file_if_needed(old_path, "New Layout Name")? {
@@ -151,7 +151,7 @@ impl LayoutService {
 /// # Examples
 ///
 /// ```
-/// # use keyboard_configurator::services::layouts::sanitize_filename;
+/// # use lazyqmk::services::layouts::sanitize_filename;
 /// assert_eq!(sanitize_filename("My Layout"), "my_layout");
 /// assert_eq!(sanitize_filename("Layout/Name:Test"), "layout_name_test");
 /// ```

@@ -42,7 +42,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let color = RgbColor::from_hex("#FF0000").unwrap();
     /// assert_eq!(color, RgbColor::new(255, 0, 0));
@@ -77,7 +77,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let color = RgbColor::new(255, 0, 0);
     /// assert_eq!(color.to_hex(), "#FF0000");
@@ -106,7 +106,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let color = RgbColor::new(200, 100, 50);
     /// let dimmed = color.dim(50); // 50% brightness
@@ -134,7 +134,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let red = RgbColor::new(255, 0, 0);
     /// let (h, s, v) = red.to_hsv();
@@ -187,7 +187,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let red = RgbColor::from_hsv(0.0, 1.0, 1.0);
     /// assert_eq!(red, RgbColor::new(255, 0, 0));
@@ -238,7 +238,7 @@ impl RgbColor {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::RgbColor;
+    /// use lazyqmk::models::RgbColor;
     ///
     /// let color = RgbColor::new(200, 100, 100);
     /// let saturated = color.saturate(200); // Double saturation

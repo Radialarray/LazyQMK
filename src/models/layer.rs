@@ -36,7 +36,7 @@ pub const MAX_QMK_LAYER_LIMIT: u8 = 32;
 ///
 /// # Examples
 /// ```
-/// use keyboard_configurator::models::validate_layer_number;
+/// use lazyqmk::models::validate_layer_number;
 ///
 /// assert!(validate_layer_number(0, 8).is_ok());
 /// assert!(validate_layer_number(7, 8).is_ok());
@@ -214,7 +214,7 @@ impl Layer {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::{Layer, RgbColor};
+    /// use lazyqmk::models::{Layer, RgbColor};
     ///
     /// let layer = Layer::new(0, "Base", RgbColor::new(255, 0, 0)).unwrap();
     /// ```

@@ -54,7 +54,7 @@ impl Theme {
     ///
     /// # Examples
     /// ```
-    /// use keyboard_configurator::tui::theme::Theme;
+    /// use lazyqmk::tui::theme::Theme;
     ///
     /// let theme = Theme::detect();
     /// // Theme will match OS dark/light mode setting

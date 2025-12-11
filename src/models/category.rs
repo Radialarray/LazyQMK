@@ -31,7 +31,7 @@ impl Category {
     /// # Examples
     ///
     /// ```
-    /// use keyboard_configurator::models::{Category, RgbColor};
+    /// use lazyqmk::models::{Category, RgbColor};
     ///
     /// let category = Category::new(
     ///     "navigation",
