@@ -16,7 +16,11 @@ tests/
 
 ## Commands
 
-cargo test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] cargo clippy
+```bash
+cargo test                                    # Run all tests
+cargo clippy --all-features -- -D warnings   # Run clippy with zero tolerance for warnings
+cargo build --release                        # Build release binary
+```
 
 ## Code Style
 
@@ -34,7 +38,9 @@ Rust 1.75+: Follow standard conventions
 ### Testing Requirements
 - **Always run tests before and after changes**: `cargo test`
 - **All tests must pass locally before committing**: No exceptions
-- **Check for warnings**: `cargo clippy`
+- **Run clippy before committing**: `cargo clippy --all-features -- -D warnings`
+- **Clippy must pass with zero warnings**: No exceptions, fix all warnings
+- **Never use allow or ignore flags**: Fix the underlying issue instead
 - **Ensure all tests pass**: Target 100% pass rate
 - **Run tests after refactoring**: Verify no regressions
 - **Integration tests**: Tests requiring external dependencies (QMK CLI, etc.) should be marked with `#[ignore]`
@@ -196,7 +202,8 @@ state.layout.layers[layer_idx].keys[idx].keycode = new_keycode;
 
 Before committing changes:
 - [ ] All tests pass (`cargo test`)
-- [ ] No compiler warnings (`cargo clippy`)
+- [ ] No compiler warnings (`cargo clippy --all-features -- -D warnings`)
+- [ ] Clippy passes with zero warnings (never use allow/ignore flags)
 - [ ] Code follows project patterns (Component trait, MVC)
 - [ ] No dead code (or justified with comments)
 - [ ] Error handling uses `anyhow` with context
@@ -211,7 +218,7 @@ Before committing changes:
 
 #### Common Issues
 1. **Tests failing after refactor**: Check for removed methods still in use
-2. **Clippy warnings**: Address or justify with `#[allow(...)]` with comment
+2. **Clippy warnings**: Fix the underlying issue, never use allow/ignore flags
 3. **Coordinate system confusion**: Always use `VisualLayoutMapping` methods
 4. **Theme not applying**: Ensure all blocks use `bg(theme.background)`
 5. **Component not rendering**: Check `ActiveComponent` enum and popup routing
