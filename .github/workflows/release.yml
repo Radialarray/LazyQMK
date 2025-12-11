@@ -192,63 +192,45 @@ jobs:
           echo "## 🚀 What's New in ${TAG}" > changelog.md
           echo "" >> changelog.md
           
-          # Get commits and categorize them
+          # Get commits with better formatting
           if [ -z "$PREV_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s")
+            echo "### 📝 Changes" >> changelog.md
+            echo "" >> changelog.md
+            git log --pretty=format:"- %s" | while IFS= read -r line; do
+              # Format conventional commits nicely
+              echo "$line" | sed -E \
+                -e 's/^- feat(\([^)]+\))?: /- ✨ **Feature**: /' \
+                -e 's/^- fix(\([^)]+\))?: /- 🐛 **Fix**: /' \
+                -e 's/^- ci(\([^)]+\))?: /- 🔧 **CI**: /' \
+                -e 's/^- docs(\([^)]+\))?: /- 📚 **Docs**: /' \
+                -e 's/^- refactor(\([^)]+\))?: /- ♻️  **Refactor**: /' \
+                -e 's/^- test(\([^)]+\))?: /- 🧪 **Test**: /' \
+                -e 's/^- chore(\([^)]+\))?: /- 🔨 **Chore**: /' \
+                -e 's/^- perf(\([^)]+\))?: /- ⚡ **Performance**: /' \
+                -e 's/^- style(\([^)]+\))?: /- 💄 **Style**: /' \
+                -e 's/^- build(\([^)]+\))?: /- 📦 **Build**: /'
+            done >> changelog.md
           else
-            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s")
-          fi
-          
-          # Categorize commits
-          FEAT=$(echo "$COMMITS" | grep "^feat" || true)
-          FIX=$(echo "$COMMITS" | grep "^fix" || true)
-          CI=$(echo "$COMMITS" | grep "^ci" || true)
-          DOCS=$(echo "$COMMITS" | grep "^docs" || true)
-          REFACTOR=$(echo "$COMMITS" | grep "^refactor" || true)
-          CHORE=$(echo "$COMMITS" | grep "^chore" || true)
-          TEST=$(echo "$COMMITS" | grep "^test" || true)
-          
-          # Add categorized sections
-          if [ -n "$FEAT" ]; then
-            echo "### ✨ New Features" >> changelog.md
-            echo "$FEAT" | sed 's/^feat[^:]*: /- **Added:** /' >> changelog.md
+            echo "### 📝 Changes Since ${PREV_TAG}" >> changelog.md
             echo "" >> changelog.md
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" | while IFS= read -r line; do
+              # Format conventional commits nicely
+              echo "$line" | sed -E \
+                -e 's/^- feat(\([^)]+\))?: /- ✨ **Feature**: /' \
+                -e 's/^- fix(\([^)]+\))?: /- 🐛 **Fix**: /' \
+                -e 's/^- ci(\([^)]+\))?: /- 🔧 **CI**: /' \
+                -e 's/^- docs(\([^)]+\))?: /- 📚 **Docs**: /' \
+                -e 's/^- refactor(\([^)]+\))?: /- ♻️  **Refactor**: /' \
+                -e 's/^- test(\([^)]+\))?: /- 🧪 **Test**: /' \
+                -e 's/^- chore(\([^)]+\))?: /- 🔨 **Chore**: /' \
+                -e 's/^- perf(\([^)]+\))?: /- ⚡ **Performance**: /' \
+                -e 's/^- style(\([^)]+\))?: /- 💄 **Style**: /' \
+                -e 's/^- build(\([^)]+\))?: /- 📦 **Build**: /'
+            done >> changelog.md
           fi
           
-          if [ -n "$FIX" ]; then
-            echo "### 🐛 Bug Fixes" >> changelog.md
-            echo "$FIX" | sed 's/^fix[^:]*: /- **Fixed:** /' >> changelog.md
-            echo "" >> changelog.md
-          fi
-          
-          if [ -n "$CI" ]; then
-            echo "### 🔧 CI/CD & Build" >> changelog.md
-            echo "$CI" | sed 's/^ci[^:]*: /- **Improved:** /' >> changelog.md
-            echo "" >> changelog.md
-          fi
-          
-          if [ -n "$REFACTOR" ]; then
-            echo "### ♻️ Refactoring" >> changelog.md
-            echo "$REFACTOR" | sed 's/^refactor[^:]*: /- **Refactored:** /' >> changelog.md
-            echo "" >> changelog.md
-          fi
-          
-          if [ -n "$DOCS" ]; then
-            echo "### 📚 Documentation" >> changelog.md
-            echo "$DOCS" | sed 's/^docs[^:]*: /- **Updated:** /' >> changelog.md
-            echo "" >> changelog.md
-          fi
-          
-          if [ -n "$CHORE" ] || [ -n "$TEST" ]; then
-            echo "### 🔨 Maintenance" >> changelog.md
-            if [ -n "$CHORE" ]; then
-              echo "$CHORE" | sed 's/^chore[^:]*: /- /' >> changelog.md
-            fi
-            if [ -n "$TEST" ]; then
-              echo "$TEST" | sed 's/^test[^:]*: /- /' >> changelog.md
-            fi
-            echo "" >> changelog.md
-          fi
+          echo "" >> changelog.md
+          echo "" >> changelog.md
           
           # Add downloads section
           echo "---" >> changelog.md
