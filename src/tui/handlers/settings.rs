@@ -439,7 +439,7 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
             state.layout.rgb_timeout_ms = u32::from(value) * 1000;
             let display = if value == 0 {
                 "Disabled".to_string()
-            } else if value >= 60 && value % 60 == 0 {
+            } else if value >= 60 && value.is_multiple_of(60) {
                 format!("{} min", value / 60)
             } else {
                 format!("{value} sec")

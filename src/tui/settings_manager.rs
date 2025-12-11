@@ -1196,9 +1196,9 @@ fn get_setting_value_display(
         SettingItem::RgbTimeout => {
             if rgb_timeout_ms == 0 {
                 "Disabled".to_string()
-            } else if rgb_timeout_ms >= 60000 && rgb_timeout_ms % 60000 == 0 {
+            } else if rgb_timeout_ms >= 60000 && rgb_timeout_ms.is_multiple_of(60000) {
                 format!("{} min", rgb_timeout_ms / 60000)
-            } else if rgb_timeout_ms >= 1000 && rgb_timeout_ms % 1000 == 0 {
+            } else if rgb_timeout_ms >= 1000 && rgb_timeout_ms.is_multiple_of(1000) {
                 format!("{} sec", rgb_timeout_ms / 1000)
             } else {
                 format!("{rgb_timeout_ms}ms")

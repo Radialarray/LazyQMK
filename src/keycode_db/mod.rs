@@ -99,27 +99,6 @@ pub struct LanguageDefinition {
     pub header: String,
 }
 
-/// Language index entry (from languages.json)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LanguageIndexEntry {
-    id: String,
-    name: String,
-    #[serde(default)]
-    description: Option<String>,
-    prefix: String,
-    header: String,
-    file: String,
-}
-
-/// Languages index file schema (languages.json).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LanguagesIndex {
-    version: String,
-    #[serde(default)]
-    description: Option<String>,
-    languages: Vec<LanguageIndexEntry>,
-}
-
 /// Language file schema (languages/*.json).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LanguageFile {

@@ -314,10 +314,10 @@ fn generate_settings(layout: &Layout) -> Option<String> {
     if layout.rgb_timeout_ms > 0 {
         // Convert milliseconds to a human-readable format
         let timeout_ms = layout.rgb_timeout_ms;
-        if timeout_ms >= 60000 && timeout_ms % 60000 == 0 {
+        if timeout_ms >= 60000 && timeout_ms.is_multiple_of(60000) {
             // Whole minutes
             output.push_str(&format!("**RGB Timeout**: {} min\n", timeout_ms / 60000));
-        } else if timeout_ms >= 1000 && timeout_ms % 1000 == 0 {
+        } else if timeout_ms >= 1000 && timeout_ms.is_multiple_of(1000) {
             // Whole seconds
             output.push_str(&format!("**RGB Timeout**: {} sec\n", timeout_ms / 1000));
         } else {
