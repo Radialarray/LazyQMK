@@ -116,6 +116,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         rgb_saturation: crate::models::RgbSaturation::default(),
         rgb_timeout_ms: 0,
         uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+        idle_effect_settings: crate::models::IdleEffectSettings::default(),
         tap_hold_settings: crate::models::TapHoldSettings::default(),
     };
 
@@ -747,6 +748,88 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
             } else if let Ok(ms) = value.parse::<u32>() {
                 // Plain number, assume milliseconds
                 layout.rgb_timeout_ms = ms;
+            }
+        }
+
+        // === Idle Effect Settings ===
+
+        // Parse Idle Effect enabled/disabled
+        if line.starts_with("**Idle Effect**:") {
+            let value = line
+                .strip_prefix("**Idle Effect**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.idle_effect_settings.enabled = matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Idle Timeout
+        if line.starts_with("**Idle Timeout**:") {
+            let value = line
+                .strip_prefix("**Idle Timeout**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            // Parse various formats: "1 min", "60 sec", "60000ms", "disabled", "off", "0"
+            if value == "disabled" || value == "off" || value == "0" {
+                layout.idle_effect_settings.idle_timeout_ms = 0;
+            } else if let Some(mins) = value.strip_suffix(" min").or(value.strip_suffix("min")) {
+                if let Ok(m) = mins.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_timeout_ms = m * 60000;
+                }
+            } else if let Some(secs) = value.strip_suffix(" sec").or(value.strip_suffix("sec")) {
+                if let Ok(s) = secs.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_timeout_ms = s * 1000;
+                }
+            } else if let Some(ms) = value.strip_suffix("ms") {
+                if let Ok(m) = ms.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_timeout_ms = m;
+                }
+            } else if let Ok(ms) = value.parse::<u32>() {
+                // Plain number, assume milliseconds
+                layout.idle_effect_settings.idle_timeout_ms = ms;
+            }
+        }
+
+        // Parse Idle Effect Duration
+        if line.starts_with("**Idle Effect Duration**:") {
+            let value = line
+                .strip_prefix("**Idle Effect Duration**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+
+            // Parse various formats: "5 min", "300 sec", "300000ms", "0"
+            if value == "0" || value == "off" {
+                layout.idle_effect_settings.idle_effect_duration_ms = 0;
+            } else if let Some(mins) = value.strip_suffix(" min").or(value.strip_suffix("min")) {
+                if let Ok(m) = mins.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_effect_duration_ms = m * 60000;
+                }
+            } else if let Some(secs) = value.strip_suffix(" sec").or(value.strip_suffix("sec")) {
+                if let Ok(s) = secs.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_effect_duration_ms = s * 1000;
+                }
+            } else if let Some(ms) = value.strip_suffix("ms") {
+                if let Ok(m) = ms.trim().parse::<u32>() {
+                    layout.idle_effect_settings.idle_effect_duration_ms = m;
+                }
+            } else if let Ok(ms) = value.parse::<u32>() {
+                // Plain number, assume milliseconds
+                layout.idle_effect_settings.idle_effect_duration_ms = ms;
+            }
+        }
+
+        // Parse Idle Effect Mode
+        if line.starts_with("**Idle Effect Mode**:") {
+            let value = line
+                .strip_prefix("**Idle Effect Mode**:")
+                .unwrap()
+                .trim();
+
+            if let Some(effect) = crate::models::RgbMatrixEffect::from_name(value) {
+                layout.idle_effect_settings.idle_effect_mode = effect;
             }
         }
 

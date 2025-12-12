@@ -137,6 +137,7 @@ chore: bump version to 0.6.0
 - Check `git diff` to review all modifications
 - Ensure no unintended changes are included
 - Exclude unrelated files (submodule changes, temp files, etc.)
+- **qmk_firmware submodule:** never delete, replace, or commit changes here. If the submodule shows as modified or missing, restore with `git submodule update --init --recursive qmk_firmware` and do not stage its changes.
 
 ### Architecture Guidelines
 

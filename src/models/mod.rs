@@ -21,8 +21,8 @@ pub use layer::{
     MAX_QMK_LAYER_LIMIT,
 };
 pub use layout::{
-    HoldDecisionMode, Layout, LayoutMetadata, RgbBrightness, RgbSaturation, TapHoldPreset,
-    TapHoldSettings, UncoloredKeyBehavior,
+    HoldDecisionMode, IdleEffectSettings, Layout, LayoutMetadata, RgbBrightness, RgbMatrixEffect,
+    RgbSaturation, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;
