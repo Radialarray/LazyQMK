@@ -14,8 +14,13 @@ use ratatui::{
 };
 
 use crate::models::{
-    HoldDecisionMode, RgbBrightness, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, TapHoldPreset, TapHoldSettings,
+    UncoloredKeyBehavior,
 };
+
+
+
+
 
 use super::Theme;
 
@@ -97,10 +102,19 @@ pub enum SettingItem {
     RgbSaturation,
     /// RGB Matrix timeout (auto-off after inactivity)
     RgbTimeout,
+    /// Idle effect master switch (idle → effect → off)
+    IdleEffectEnabled,
+    /// Idle timeout before starting idle effect (ms)
+    IdleTimeout,
+    /// How long to run idle effect before turning off (ms)
+    IdleEffectDuration,
+    /// Idle effect mode (standard RGB effects)
+    IdleEffectMode,
     /// Brightness for keys without individual/category colors (0-100%)
     UncoloredKeyBehavior,
 
     // === Tap-Hold Settings (Per-Layout) ===
+
     /// Preset for common tap-hold configurations
     TapHoldPreset,
     /// Base timing for tap vs hold decision
@@ -141,6 +155,10 @@ impl SettingItem {
             Self::RgbBrightness,
             Self::RgbSaturation,
             Self::RgbTimeout,
+            Self::IdleEffectEnabled,
+            Self::IdleTimeout,
+            Self::IdleEffectDuration,
+            Self::IdleEffectMode,
             Self::UncoloredKeyBehavior,
             // Tap-Hold (Per-Layout)
             Self::TapHoldPreset,
@@ -171,6 +189,10 @@ impl SettingItem {
             | Self::RgbBrightness
             | Self::RgbSaturation
             | Self::RgbTimeout
+            | Self::IdleEffectEnabled
+            | Self::IdleTimeout
+            | Self::IdleEffectDuration
+            | Self::IdleEffectMode
             | Self::UncoloredKeyBehavior => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
@@ -200,6 +222,10 @@ impl SettingItem {
             Self::RgbBrightness => "RGB Brightness",
             Self::RgbSaturation => "RGB Saturation",
             Self::RgbTimeout => "RGB Timeout",
+            Self::IdleEffectEnabled => "Idle Effect Enabled",
+            Self::IdleTimeout => "Idle Timeout",
+            Self::IdleEffectDuration => "Idle Effect Duration",
+            Self::IdleEffectMode => "Idle Effect Mode",
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
             Self::TapHoldPreset => "Preset",
             Self::TappingTerm => "Tapping Term",
@@ -229,6 +255,10 @@ impl SettingItem {
             Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
             Self::RgbSaturation => "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)",
             Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
+            Self::IdleEffectEnabled => "Enable idle effect (triggers RGB animation before timeout)",
+            Self::IdleTimeout => "Delay before starting idle effect (0 = disabled)",
+            Self::IdleEffectDuration => "How long to run idle effect before turning off (0 = immediate)",
+            Self::IdleEffectMode => "RGB animation effect to use during idle period",
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
             }
@@ -306,6 +336,11 @@ pub enum ManagerMode {
         setting: SettingItem,
         /// Current value
         value: String,
+    },
+    /// Selecting idle effect mode
+    SelectingIdleEffectMode {
+        /// Currently highlighted option index
+        selected_option: usize,
     },
 }
 
@@ -397,7 +432,8 @@ impl SettingsManagerState {
             ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
-            | ManagerMode::SelectingThemeMode { selected_option } => {
+            | ManagerMode::SelectingThemeMode { selected_option }
+            | ManagerMode::SelectingIdleEffectMode { selected_option } => {
                 if *selected_option > 0 {
                     *selected_option -= 1;
                 } else {
@@ -417,7 +453,8 @@ impl SettingsManagerState {
             ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
-            | ManagerMode::SelectingThemeMode { selected_option } => {
+            | ManagerMode::SelectingThemeMode { selected_option }
+            | ManagerMode::SelectingIdleEffectMode { selected_option } => {
                 *selected_option = (*selected_option + 1) % option_count;
             }
             ManagerMode::TogglingBoolean { value, .. } => {
@@ -434,7 +471,8 @@ impl SettingsManagerState {
             ManagerMode::SelectingTapHoldPreset { selected_option }
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
-            | ManagerMode::SelectingThemeMode { selected_option } => Some(*selected_option),
+            | ManagerMode::SelectingThemeMode { selected_option }
+            | ManagerMode::SelectingIdleEffectMode { selected_option } => Some(*selected_option),
             _ => None,
         }
     }
@@ -535,6 +573,15 @@ impl SettingsManagerState {
         };
     }
 
+    /// Start selecting idle effect mode
+    pub fn start_selecting_idle_effect_mode(&mut self, current: RgbMatrixEffect) {
+        let selected_option = RgbMatrixEffect::all()
+            .iter()
+            .position(|&e| e == current)
+            .unwrap_or(0);
+        self.mode = ManagerMode::SelectingIdleEffectMode { selected_option };
+    }
+
     /// Handle character input for string/path editing
     pub fn handle_string_char_input(&mut self, c: char) {
         match &mut self.mode {
@@ -613,6 +660,8 @@ pub struct SettingsManagerContext {
     pub rgb_timeout_ms: u32,
     /// Uncolored key behavior
     pub uncolored_key_behavior: UncoloredKeyBehavior,
+    /// Idle effect settings
+    pub idle_effect_settings: IdleEffectSettings,
     /// Tap-hold settings
     pub tap_hold_settings: TapHoldSettings,
     /// Application config
@@ -673,6 +722,7 @@ impl SettingsManager {
             ManagerMode::SelectingOutputFormat { .. } => self.handle_output_format_selection(key),
             ManagerMode::SelectingThemeMode { .. } => self.handle_theme_mode_selection(key),
             ManagerMode::EditingPath { .. } => self.handle_path_editing(key),
+            ManagerMode::SelectingIdleEffectMode { .. } => self.handle_idle_effect_mode_selection(key),
         }
     }
 
@@ -692,6 +742,7 @@ impl SettingsManager {
             context.rgb_brightness,
             context.rgb_timeout_ms,
             context.uncolored_key_behavior,
+            &context.idle_effect_settings,
             &context.tap_hold_settings,
             &context.config,
             &context.layout,
@@ -898,6 +949,27 @@ impl SettingsManager {
             _ => None,
         }
     }
+
+    fn handle_idle_effect_mode_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = RgbMatrixEffect::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = RgbMatrixEffect::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
 }
 
 impl Default for SettingsManager {
@@ -924,6 +996,7 @@ pub fn render_settings_manager(
     rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
+    idle_effect_settings: &IdleEffectSettings,
     tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
     layout: &crate::models::Layout,
@@ -971,6 +1044,7 @@ pub fn render_settings_manager(
                 rgb_brightness,
                 rgb_timeout_ms,
                 uncolored_key_behavior,
+                idle_effect_settings,
                 tap_hold_settings,
                 config,
                 layout,
@@ -1006,6 +1080,9 @@ pub fn render_settings_manager(
         ManagerMode::EditingPath { setting, value } => {
             render_path_editor(f, inner_area, *setting, value, theme);
         }
+        ManagerMode::SelectingIdleEffectMode { selected_option } => {
+            render_idle_effect_mode_selector(f, inner_area, *selected_option, theme);
+        }
     }
 }
 
@@ -1018,6 +1095,7 @@ fn render_settings_list(
     rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
+    idle_effect_settings: &IdleEffectSettings,
     tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
     layout: &crate::models::Layout,
@@ -1070,6 +1148,7 @@ fn render_settings_list(
             rgb_brightness,
             rgb_timeout_ms,
             uncolored_key_behavior,
+            idle_effect_settings,
             tap_hold_settings,
             config,
             Some(layout),
@@ -1141,6 +1220,7 @@ fn get_setting_value_display(
     rgb_brightness: RgbBrightness,
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
+    idle_effect_settings: &IdleEffectSettings,
     tap_hold: &TapHoldSettings,
     config: &crate::config::Config,
     layout: Option<&crate::models::Layout>,
@@ -1203,6 +1283,36 @@ fn get_setting_value_display(
             } else {
                 format!("{rgb_timeout_ms}ms")
             }
+        }
+        SettingItem::IdleEffectEnabled => {
+            if idle_effect_settings.enabled { "On" } else { "Off" }.to_string()
+        }
+        SettingItem::IdleTimeout => {
+            let idle_timeout_ms = idle_effect_settings.idle_timeout_ms;
+            if idle_timeout_ms == 0 {
+                "Disabled".to_string()
+            } else if idle_timeout_ms >= 60000 && idle_timeout_ms.is_multiple_of(60000) {
+                format!("{} min", idle_timeout_ms / 60000)
+            } else if idle_timeout_ms >= 1000 && idle_timeout_ms.is_multiple_of(1000) {
+                format!("{} sec", idle_timeout_ms / 1000)
+            } else {
+                format!("{idle_timeout_ms}ms")
+            }
+        }
+        SettingItem::IdleEffectDuration => {
+            let duration_ms = idle_effect_settings.idle_effect_duration_ms;
+            if duration_ms == 0 {
+                "Disabled".to_string()
+            } else if duration_ms >= 60000 && duration_ms.is_multiple_of(60000) {
+                format!("{} min", duration_ms / 60000)
+            } else if duration_ms >= 1000 && duration_ms.is_multiple_of(1000) {
+                format!("{} sec", duration_ms / 1000)
+            } else {
+                format!("{duration_ms}ms")
+            }
+        }
+        SettingItem::IdleEffectMode => {
+            idle_effect_settings.idle_effect_mode.display_name().to_string()
         }
         SettingItem::UncoloredKeyBehavior => format!("{}%", uncolored_key_behavior.as_percent()),
         // Per-Layout: Tap-Hold
@@ -1723,6 +1833,23 @@ fn render_path_editor(f: &mut Frame, area: Rect, setting: SettingItem, value: &s
     f.render_widget(help_widget, chunks[3]);
 }
 
+/// Render idle effect mode selector
+fn render_idle_effect_mode_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
+    let options = RgbMatrixEffect::all();
+    render_enum_selector(
+        f,
+        area,
+        "Idle Effect Mode",
+        options
+            .iter()
+            .map(|o| (o.display_name(), "RGB animation during idle period"))
+            .collect::<Vec<_>>()
+            .as_slice(),
+        selected,
+        theme,
+    );
+}
+
 /// Render boolean toggle
 fn render_boolean_toggle(
     f: &mut Frame,
@@ -1796,4 +1923,194 @@ fn render_boolean_toggle(
         .style(Style::default().fg(theme.text_muted));
 
     f.render_widget(help_widget, chunks[2]);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_setting_item_all_includes_idle_effect_settings() {
+        let all_settings = SettingItem::all();
+        
+        // Verify idle effect settings are present
+        assert!(all_settings.contains(&SettingItem::IdleEffectEnabled));
+        assert!(all_settings.contains(&SettingItem::IdleTimeout));
+        assert!(all_settings.contains(&SettingItem::IdleEffectDuration));
+        assert!(all_settings.contains(&SettingItem::IdleEffectMode));
+    }
+
+    #[test]
+    fn test_idle_effect_settings_belong_to_rgb_group() {
+        assert_eq!(SettingItem::IdleEffectEnabled.group(), SettingGroup::Rgb);
+        assert_eq!(SettingItem::IdleTimeout.group(), SettingGroup::Rgb);
+        assert_eq!(SettingItem::IdleEffectDuration.group(), SettingGroup::Rgb);
+        assert_eq!(SettingItem::IdleEffectMode.group(), SettingGroup::Rgb);
+    }
+
+    #[test]
+    fn test_idle_effect_settings_have_display_names() {
+        assert_eq!(SettingItem::IdleEffectEnabled.display_name(), "Idle Effect Enabled");
+        assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Timeout");
+        assert_eq!(SettingItem::IdleEffectDuration.display_name(), "Idle Effect Duration");
+        assert_eq!(SettingItem::IdleEffectMode.display_name(), "Idle Effect Mode");
+    }
+
+    #[test]
+    fn test_idle_effect_settings_have_descriptions() {
+        let desc = SettingItem::IdleEffectEnabled.description();
+        assert!(!desc.is_empty());
+        assert!(desc.contains("idle"));
+
+        let desc = SettingItem::IdleTimeout.description();
+        assert!(!desc.is_empty());
+
+        let desc = SettingItem::IdleEffectDuration.description();
+        assert!(!desc.is_empty());
+
+        let desc = SettingItem::IdleEffectMode.description();
+        assert!(!desc.is_empty());
+    }
+
+    #[test]
+    fn test_get_setting_value_display_idle_effect_enabled() {
+        let idle_settings = IdleEffectSettings {
+            enabled: true,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleEffectEnabled,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "On");
+
+        let idle_settings = IdleEffectSettings {
+            enabled: false,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleEffectEnabled,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "Off");
+    }
+
+    #[test]
+    fn test_get_setting_value_display_idle_timeout() {
+        let idle_settings = IdleEffectSettings {
+            idle_timeout_ms: 0,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleTimeout,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "Disabled");
+
+        let idle_settings = IdleEffectSettings {
+            idle_timeout_ms: 60_000,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleTimeout,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "1 min");
+
+        let idle_settings = IdleEffectSettings {
+            idle_timeout_ms: 30_000,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleTimeout,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "30 sec");
+    }
+
+    #[test]
+    fn test_get_setting_value_display_idle_effect_mode() {
+        let idle_settings = IdleEffectSettings {
+            idle_effect_mode: RgbMatrixEffect::Breathing,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleEffectMode,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "Breathing");
+
+        let idle_settings = IdleEffectSettings {
+            idle_effect_mode: RgbMatrixEffect::RainbowBeacon,
+            ..Default::default()
+        };
+
+        let display = get_setting_value_display(
+            SettingItem::IdleEffectMode,
+            true,
+            RgbBrightness::from(100),
+            0,
+            UncoloredKeyBehavior::from(100),
+            &idle_settings,
+            &TapHoldSettings::default(),
+            &crate::config::Config::default(),
+            None,
+        );
+
+        assert_eq!(display, "Rainbow Beacon");
+    }
 }

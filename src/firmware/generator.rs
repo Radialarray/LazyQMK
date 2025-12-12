@@ -168,6 +168,10 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str(&self.generate_rgb_matrix_color_table()?);
 
+        // Add idle effect state machine code if enabled
+        code.push('\n');
+        code.push_str(&self.generate_idle_effect_code()?);
+
         Ok(code)
     }
 
@@ -662,6 +666,103 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(archive_path.display().to_string())
     }
 
+    /// Generates idle effect state machine code if enabled.
+    ///
+    /// Emits C code to manage idle timeout and transition between ACTIVE, IDLE_EFFECT, and OFF states.
+    /// The code tracks activity using timer_read/timer_elapsed and switches RGB effects accordingly.
+    #[allow(clippy::unnecessary_wraps)]
+    fn generate_idle_effect_code(&self) -> Result<String> {
+        // Only generate if idle effect is enabled and keyboard has RGB
+        if !self.layout.idle_effect_settings.enabled || !self.geometry.has_rgb_matrix() {
+            return Ok(String::new());
+        }
+
+        let mut code = String::new();
+
+        code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
+        code.push_str("#ifdef LQMK_IDLE_TIMEOUT_MS\n");
+        code.push('\n');
+        code.push_str("// Idle Effect State Machine\n");
+        code.push_str("typedef enum {\n");
+        code.push_str("    IDLE_STATE_ACTIVE,\n");
+        code.push_str("    IDLE_STATE_IDLE_EFFECT,\n");
+        code.push_str("    IDLE_STATE_OFF\n");
+        code.push_str("} idle_state_t;\n");
+        code.push('\n');
+        code.push_str("static idle_state_t idle_state = IDLE_STATE_ACTIVE;\n");
+        code.push_str("static uint32_t last_activity_time = 0;\n");
+        code.push('\n');
+
+        // Matrix scan hook to check idle timeout
+        code.push_str("void matrix_scan_user(void) {\n");
+        code.push_str("    uint32_t elapsed = timer_elapsed32(last_activity_time);\n");
+        code.push('\n');
+        code.push_str("    switch (idle_state) {\n");
+        code.push_str("        case IDLE_STATE_ACTIVE:\n");
+        code.push_str("            if (elapsed >= LQMK_IDLE_TIMEOUT_MS) {\n");
+        code.push_str("                // Transition to idle effect\n");
+        code.push_str("                rgb_matrix_mode_noeeprom(LQMK_IDLE_EFFECT_MODE);\n");
+        code.push_str("                idle_state = IDLE_STATE_IDLE_EFFECT;\n");
+        code.push_str("            }\n");
+        code.push_str("            break;\n");
+        code.push('\n');
+        code.push_str("        case IDLE_STATE_IDLE_EFFECT:\n");
+        code.push_str("            if (elapsed >= LQMK_IDLE_TIMEOUT_MS + LQMK_IDLE_EFFECT_DURATION_MS) {\n");
+        code.push_str("                // Transition to off\n");
+        code.push_str("                rgb_matrix_disable_noeeprom();\n");
+        code.push_str("                idle_state = IDLE_STATE_OFF;\n");
+        code.push_str("            }\n");
+        code.push_str("            break;\n");
+        code.push('\n');
+        code.push_str("        case IDLE_STATE_OFF:\n");
+        code.push_str("            // Stay off until activity\n");
+        code.push_str("            break;\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Process record hook to reset on activity
+        code.push_str("bool process_record_user(uint16_t keycode, keyrecord_t *record) {\n");
+        code.push_str("    if (record->event.pressed) {\n");
+        code.push_str("        // Reset activity timer\n");
+        code.push_str("        last_activity_time = timer_read32();\n");
+        code.push('\n');
+        code.push_str("        if (idle_state != IDLE_STATE_ACTIVE) {\n");
+        code.push_str("            // Re-enable RGB if it was disabled\n");
+        code.push_str("            if (idle_state == IDLE_STATE_OFF) {\n");
+        code.push_str("                rgb_matrix_enable_noeeprom();\n");
+        code.push_str("            }\n");
+        code.push('\n');
+
+        // Restore the appropriate mode based on whether layout has custom colors
+        if self.layout_has_custom_colors() {
+            code.push_str("            // Restore TUI layer colors mode\n");
+            code.push_str("            rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS);\n");
+        } else {
+            code.push_str("            // Restore default RGB mode\n");
+            code.push_str("            rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE);\n");
+        }
+
+        code.push_str("            idle_state = IDLE_STATE_ACTIVE;\n");
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    return true;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Keyboard post init hook to initialize timer
+        code.push_str("void keyboard_post_init_user(void) {\n");
+        code.push_str("    last_activity_time = timer_read32();\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        code.push_str("#endif // LQMK_IDLE_TIMEOUT_MS\n");
+        code.push_str("#endif // RGB_MATRIX_ENABLE\n");
+
+        Ok(code)
+    }
+
     /// Generates config.h for the keymap.
     ///
     /// This generates a minimal keymap-specific config.h.
@@ -747,13 +848,32 @@ impl<'a> FirmwareGenerator<'a> {
             ));
         }
 
-        // RGB Matrix timeout (auto-off after inactivity)
-        if self.layout.rgb_timeout_ms > 0 {
-            content.push_str("\n// RGB Matrix Timeout (auto-off after inactivity)\n");
+        // === Idle Effect Settings ===
+        // When idle effect is enabled, we use a custom state machine instead of RGB_MATRIX_TIMEOUT
+        let idle_settings = &self.layout.idle_effect_settings;
+        if idle_settings.enabled && self.geometry.has_rgb_matrix() {
+            content.push_str("\n// Idle Effect Configuration\n");
             content.push_str(&format!(
-                "#define RGB_MATRIX_TIMEOUT {}\n",
-                self.layout.rgb_timeout_ms
+                "#define LQMK_IDLE_TIMEOUT_MS {}\n",
+                idle_settings.idle_timeout_ms
             ));
+            content.push_str(&format!(
+                "#define LQMK_IDLE_EFFECT_DURATION_MS {}\n",
+                idle_settings.idle_effect_duration_ms
+            ));
+            content.push_str(&format!(
+                "#define LQMK_IDLE_EFFECT_MODE {}\n",
+                idle_settings.idle_effect_mode.qmk_mode_name()
+            ));
+        } else {
+            // RGB Matrix timeout (auto-off after inactivity) - only when idle effect is disabled
+            if self.layout.rgb_timeout_ms > 0 {
+                content.push_str("\n// RGB Matrix Timeout (auto-off after inactivity)\n");
+                content.push_str(&format!(
+                    "#define RGB_MATRIX_TIMEOUT {}\n",
+                    self.layout.rgb_timeout_ms
+                ));
+            }
         }
 
         // If the keyboard has RGB matrix and the layout defines
@@ -1304,6 +1424,139 @@ mod tests {
         // Should only have the standard include
         assert!(keymap_c.contains("#include QMK_KEYBOARD_H"));
         assert!(!keymap_c.contains("keymap_extras"));
+    }
+
+    // === Idle Effect Tests ===
+
+    #[test]
+    fn test_idle_effect_disabled_no_code() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = false;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should not contain idle effect code
+        assert!(!keymap_c.contains("idle_state_t"));
+        assert!(!keymap_c.contains("IDLE_STATE_ACTIVE"));
+    }
+
+    #[test]
+    fn test_idle_effect_enabled_generates_code() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = true;
+        layout.idle_effect_settings.idle_timeout_ms = 30_000;
+        layout.idle_effect_settings.idle_effect_duration_ms = 60_000;
+        layout.idle_effect_settings.idle_effect_mode = crate::models::RgbMatrixEffect::Breathing;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should contain idle effect state machine
+        assert!(keymap_c.contains("idle_state_t"));
+        assert!(keymap_c.contains("IDLE_STATE_ACTIVE"));
+        assert!(keymap_c.contains("IDLE_STATE_IDLE_EFFECT"));
+        assert!(keymap_c.contains("IDLE_STATE_OFF"));
+        assert!(keymap_c.contains("matrix_scan_user"));
+        assert!(keymap_c.contains("process_record_user"));
+        assert!(keymap_c.contains("keyboard_post_init_user"));
+        assert!(keymap_c.contains("last_activity_time"));
+    }
+
+    #[test]
+    fn test_idle_effect_config_defines() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = true;
+        layout.idle_effect_settings.idle_timeout_ms = 45_000;
+        layout.idle_effect_settings.idle_effect_duration_ms = 180_000;
+        layout.idle_effect_settings.idle_effect_mode = crate::models::RgbMatrixEffect::RainbowBeacon;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should contain idle effect defines
+        assert!(config_h.contains("#define LQMK_IDLE_TIMEOUT_MS 45000"));
+        assert!(config_h.contains("#define LQMK_IDLE_EFFECT_DURATION_MS 180000"));
+        assert!(config_h.contains("#define LQMK_IDLE_EFFECT_MODE RGB_MATRIX_RAINBOW_BEACON"));
+    }
+
+    #[test]
+    fn test_idle_effect_no_rgb_matrix_timeout_conflict() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = true;
+        layout.rgb_timeout_ms = 60_000; // This should be ignored when idle effect is enabled
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should contain idle effect defines
+        assert!(config_h.contains("LQMK_IDLE_TIMEOUT_MS"));
+        
+        // Should NOT contain RGB_MATRIX_TIMEOUT when idle effect is enabled
+        assert!(!config_h.contains("#define RGB_MATRIX_TIMEOUT"));
+    }
+
+    #[test]
+    fn test_rgb_matrix_timeout_when_idle_disabled() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = false;
+        layout.rgb_timeout_ms = 120_000;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should contain RGB_MATRIX_TIMEOUT when idle effect is disabled
+        assert!(config_h.contains("#define RGB_MATRIX_TIMEOUT 120000"));
+        
+        // Should NOT contain idle effect defines
+        assert!(!config_h.contains("LQMK_IDLE_TIMEOUT_MS"));
+    }
+
+    #[test]
+    fn test_idle_effect_restores_tui_colors() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        
+        // Add category to trigger custom colors
+        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+        
+        layout.idle_effect_settings.enabled = true;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should restore TUI layer colors mode on activity
+        assert!(keymap_c.contains("rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS)"));
+    }
+
+    #[test]
+    fn test_idle_effect_restores_default_mode() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.idle_effect_settings.enabled = true;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should restore default mode when no custom colors
+        assert!(keymap_c.contains("rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE)"));
+    }
+
+    #[test]
+    fn test_idle_effect_no_rgb_keyboard() {
+        let (mut layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
+        
+        // Remove keys to simulate non-RGB keyboard
+        geometry.keys.clear();
+        
+        layout.idle_effect_settings.enabled = true;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should not generate idle effect code for non-RGB keyboard
+        assert!(!keymap_c.contains("idle_state_t"));
+        assert!(!config_h.contains("LQMK_IDLE_TIMEOUT_MS"));
     }
 
     // TODO: Re-enable these tests once encoder_count field is added to KeyboardGeometry

@@ -82,6 +82,7 @@ fn create_test_layout_with_layers() -> Layout {
         layers: vec![layer0, layer1, layer2],
         categories: vec![],
         uncolored_key_behavior: lazyqmk::models::UncoloredKeyBehavior::default(),
+        idle_effect_settings: lazyqmk::models::IdleEffectSettings::default(),
         tap_hold_settings: lazyqmk::models::TapHoldSettings::default(),
         rgb_enabled: true,
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),

@@ -1003,6 +1003,7 @@ mod tests {
             rgb_saturation: crate::models::RgbSaturation::default(),
             rgb_timeout_ms: 0,
             uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+            idle_effect_settings: crate::models::IdleEffectSettings::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
         };
         let mut state = AppState::new(

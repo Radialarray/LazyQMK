@@ -3,7 +3,7 @@
 use anyhow::Result;
 use crossterm::event;
 
-use crate::models::{HoldDecisionMode, RgbBrightness, RgbSaturation, TapHoldPreset, UncoloredKeyBehavior};
+use crate::models::{HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, TapHoldPreset, UncoloredKeyBehavior};
 use crate::tui::settings_manager::{
     ManagerMode, SettingItem, SettingsManagerContext, SettingsManagerEvent,
 };
@@ -32,6 +32,7 @@ pub fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent)
             rgb_brightness: state.layout.rgb_brightness,
             rgb_timeout_ms: state.layout.rgb_timeout_ms,
             uncolored_key_behavior: state.layout.uncolored_key_behavior,
+            idle_effect_settings: state.layout.idle_effect_settings.clone(),
             tap_hold_settings: state.layout.tap_hold_settings.clone(),
             config: state.config.clone(),
             layout: state.layout.clone(),
@@ -255,6 +256,29 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         200, // 200% maximum
                     );
                 }
+                SettingItem::IdleEffectEnabled => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.idle_effect_settings.enabled,
+                    );
+                }
+                SettingItem::IdleTimeout => {
+                    let current_secs = (state.layout.idle_effect_settings.idle_timeout_ms / 1000) as u16;
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current_secs, 0, 3600);
+                }
+                SettingItem::IdleEffectDuration => {
+                    let current_secs = (state.layout.idle_effect_settings.idle_effect_duration_ms / 1000) as u16;
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current_secs, 0, 3600);
+                }
+                SettingItem::IdleEffectMode => {
+                    manager
+                        .state_mut()
+                        .start_selecting_idle_effect_mode(state.layout.idle_effect_settings.idle_effect_mode);
+                }
             }
             state.set_status("Select option with ↑↓, Enter to apply");
         }
@@ -373,6 +397,15 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     apply_path_setting(state, *setting, value.to_string())?;
                 }
             }
+            crate::tui::settings_manager::ManagerMode::SelectingIdleEffectMode { .. } => {
+                if let Some(selected_idx) = manager_state.get_selected_option() {
+                    if let Some(&mode) = RgbMatrixEffect::all().get(selected_idx) {
+                        state.layout.idle_effect_settings.idle_effect_mode = mode;
+                        state.mark_dirty();
+                        state.set_status(format!("Idle effect mode set to: {}", mode.display_name()));
+                    }
+                }
+            }
             crate::tui::settings_manager::ManagerMode::Browsing => {}
         }
     }
@@ -456,6 +489,30 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
                 state.set_status(format!("Keyboard scale set to: {:.0}%", scale * 100.0));
             }
         }
+        SettingItem::IdleTimeout => {
+            // value is in seconds, convert to milliseconds for storage
+            state.layout.idle_effect_settings.idle_timeout_ms = u32::from(value) * 1000;
+            let display = if value == 0 {
+                "Disabled".to_string()
+            } else if value >= 60 && value.is_multiple_of(60) {
+                format!("{} min", value / 60)
+            } else {
+                format!("{value} sec")
+            };
+            state.set_status(format!("Idle timeout set to: {display}"));
+        }
+        SettingItem::IdleEffectDuration => {
+            // value is in seconds, convert to milliseconds for storage
+            state.layout.idle_effect_settings.idle_effect_duration_ms = u32::from(value) * 1000;
+            let display = if value == 0 {
+                "Disabled".to_string()
+            } else if value >= 60 && value.is_multiple_of(60) {
+                format!("{} min", value / 60)
+            } else {
+                format!("{value} sec")
+            };
+            state.set_status(format!("Idle effect duration set to: {display}"));
+        }
         _ => {}
     }
 }
@@ -488,6 +545,11 @@ fn apply_boolean_setting(state: &mut AppState, setting: SettingItem, value: bool
                 let display = if value { "On" } else { "Off" };
                 state.set_status(format!("Show help on startup set to: {display}"));
             }
+        }
+        SettingItem::IdleEffectEnabled => {
+            state.layout.idle_effect_settings.enabled = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Idle effect enabled set to: {display}"));
         }
         _ => {}
     }

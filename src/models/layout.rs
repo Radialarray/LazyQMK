@@ -144,6 +144,190 @@ impl From<u8> for RgbSaturation {
 }
 
 // ============================================================================
+// RGB Matrix Effects
+// ============================================================================
+
+/// Standard RGB Matrix effect modes available in QMK.
+///
+/// These correspond to QMK's RGB_MATRIX_* modes and are used for idle effects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RgbMatrixEffect {
+    /// Solid color (no animation)
+    #[default]
+    #[serde(rename = "solid_color")]
+    SolidColor,
+    
+    /// Breathing animation
+    #[serde(rename = "breathing")]
+    Breathing,
+    
+    /// Rainbow moving chevron
+    #[serde(rename = "rainbow_moving_chevron")]
+    RainbowMovingChevron,
+    
+    /// Cycle all LEDs through hue
+    #[serde(rename = "cycle_all")]
+    CycleAll,
+    
+    /// Cycle left to right
+    #[serde(rename = "cycle_left_right")]
+    CycleLeftRight,
+    
+    /// Cycle up and down
+    #[serde(rename = "cycle_up_down")]
+    CycleUpDown,
+    
+    /// Rainbow beacon animation
+    #[serde(rename = "rainbow_beacon")]
+    RainbowBeacon,
+    
+    /// Rainbow pinwheels
+    #[serde(rename = "rainbow_pinwheels")]
+    RainbowPinwheels,
+    
+    /// Jellybean raindrops
+    #[serde(rename = "jellybean_raindrops")]
+    JellybeanRaindrops,
+}
+
+impl RgbMatrixEffect {
+    /// Returns all available effects.
+    #[must_use]
+    #[allow(dead_code)]
+    pub const fn all() -> &'static [Self] {
+        &[
+            Self::SolidColor,
+            Self::Breathing,
+            Self::RainbowMovingChevron,
+            Self::CycleAll,
+            Self::CycleLeftRight,
+            Self::CycleUpDown,
+            Self::RainbowBeacon,
+            Self::RainbowPinwheels,
+            Self::JellybeanRaindrops,
+        ]
+    }
+
+    /// Returns a human-readable name for this effect.
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
+        match self {
+            Self::SolidColor => "Solid Color",
+            Self::Breathing => "Breathing",
+            Self::RainbowMovingChevron => "Rainbow Moving Chevron",
+            Self::CycleAll => "Cycle All",
+            Self::CycleLeftRight => "Cycle Left/Right",
+            Self::CycleUpDown => "Cycle Up/Down",
+            Self::RainbowBeacon => "Rainbow Beacon",
+            Self::RainbowPinwheels => "Rainbow Pinwheels",
+            Self::JellybeanRaindrops => "Jellybean Raindrops",
+        }
+    }
+
+    /// Returns the QMK RGB_MATRIX_* mode identifier for code generation.
+    ///
+    /// These map to the RGB_MATRIX_* enum values defined in QMK's rgb_matrix_types.h.
+    /// The mode IDs are used in firmware to set the RGB effect mode.
+    #[must_use]
+    pub const fn qmk_mode_name(&self) -> &'static str {
+        match self {
+            Self::SolidColor => "RGB_MATRIX_SOLID_COLOR",
+            Self::Breathing => "RGB_MATRIX_BREATHING",
+            Self::RainbowMovingChevron => "RGB_MATRIX_RAINBOW_MOVING_CHEVRON",
+            Self::CycleAll => "RGB_MATRIX_CYCLE_ALL",
+            Self::CycleLeftRight => "RGB_MATRIX_CYCLE_LEFT_RIGHT",
+            Self::CycleUpDown => "RGB_MATRIX_CYCLE_UP_DOWN",
+            Self::RainbowBeacon => "RGB_MATRIX_RAINBOW_BEACON",
+            Self::RainbowPinwheels => "RGB_MATRIX_RAINBOW_PINWHEELS",
+            Self::JellybeanRaindrops => "RGB_MATRIX_JELLYBEAN_RAINDROPS",
+        }
+    }
+
+    /// Parses an effect from a string name (case-insensitive).
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        let name_lower = name.to_lowercase().replace([' ', '_', '-'], "");
+        match name_lower.as_str() {
+            "solidcolor" | "solid" => Some(Self::SolidColor),
+            "breathing" | "breath" => Some(Self::Breathing),
+            "rainbowmovingchevron" | "chevron" => Some(Self::RainbowMovingChevron),
+            "cycleall" | "cycle" => Some(Self::CycleAll),
+            "cycleleftright" | "leftright" => Some(Self::CycleLeftRight),
+            "cycleupdown" | "updown" => Some(Self::CycleUpDown),
+            "rainbowbeacon" | "beacon" => Some(Self::RainbowBeacon),
+            "rainbowpinwheels" | "pinwheels" => Some(Self::RainbowPinwheels),
+            "jellybeanraindrops" | "raindrops" | "jellybean" => Some(Self::JellybeanRaindrops),
+            _ => None,
+        }
+    }
+}
+
+// ============================================================================
+// Idle Effect Settings
+// ============================================================================
+
+/// Configuration for idle effect behavior.
+///
+/// When the keyboard is idle (no key presses for `idle_timeout_ms`), it can
+/// trigger a special RGB effect. After `idle_effect_duration_ms`, the effect
+/// stops and RGB turns off or returns to normal state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IdleEffectSettings {
+    /// Whether idle effect is enabled
+    #[serde(default = "default_idle_effect_enabled")]
+    pub enabled: bool,
+
+    /// Time in milliseconds before entering idle effect (0 = disabled)
+    /// Default: 60000ms (1 minute)
+    #[serde(default = "default_idle_timeout")]
+    pub idle_timeout_ms: u32,
+
+    /// Duration in milliseconds to run the idle effect (0 = immediate off)
+    /// Default: 300000ms (5 minutes)
+    #[serde(default = "default_idle_duration")]
+    pub idle_effect_duration_ms: u32,
+
+    /// Which RGB matrix effect to use during idle
+    #[serde(default)]
+    pub idle_effect_mode: RgbMatrixEffect,
+}
+
+const fn default_idle_effect_enabled() -> bool {
+    true
+}
+
+const fn default_idle_timeout() -> u32 {
+    60_000 // 1 minute
+}
+
+const fn default_idle_duration() -> u32 {
+    300_000 // 5 minutes
+}
+
+impl Default for IdleEffectSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            idle_timeout_ms: 60_000,
+            idle_effect_duration_ms: 300_000,
+            idle_effect_mode: RgbMatrixEffect::Breathing,
+        }
+    }
+}
+
+impl IdleEffectSettings {
+    /// Checks if any settings differ from defaults.
+    #[must_use]
+    pub fn has_custom_settings(&self) -> bool {
+        let defaults = Self::default();
+        self.enabled != defaults.enabled
+            || self.idle_timeout_ms != defaults.idle_timeout_ms
+            || self.idle_effect_duration_ms != defaults.idle_effect_duration_ms
+            || self.idle_effect_mode != defaults.idle_effect_mode
+    }
+}
+
+// ============================================================================
 // Tap-Hold Settings
 // ============================================================================
 
@@ -619,6 +803,11 @@ pub struct Layout {
     #[serde(default, alias = "inactive_key_behavior")]
     pub uncolored_key_behavior: UncoloredKeyBehavior,
 
+    // === Idle Effect Settings ===
+    /// Idle effect configuration (timeout, duration, mode)
+    #[serde(default)]
+    pub idle_effect_settings: IdleEffectSettings,
+
     // === Tap-Hold Settings ===
     /// Tap-hold configuration (LT, MT, TT timing and behavior)
     #[serde(default)]
@@ -644,6 +833,7 @@ impl Layout {
             rgb_saturation: RgbSaturation::default(),
             rgb_timeout_ms: 0,
             uncolored_key_behavior: UncoloredKeyBehavior::default(),
+            idle_effect_settings: IdleEffectSettings::default(),
             tap_hold_settings: TapHoldSettings::default(),
         })
     }
@@ -1445,5 +1635,89 @@ mod tests {
     fn test_layout_new_has_default_saturation() {
         let layout = Layout::new("Test").unwrap();
         assert_eq!(layout.rgb_saturation, RgbSaturation::NEUTRAL);
+    }
+
+    // === RGB Matrix Effect Tests ===
+
+    #[test]
+    fn test_rgb_matrix_effect_display_names() {
+        assert_eq!(RgbMatrixEffect::Breathing.display_name(), "Breathing");
+        assert_eq!(RgbMatrixEffect::RainbowMovingChevron.display_name(), "Rainbow Moving Chevron");
+        assert_eq!(RgbMatrixEffect::CycleAll.display_name(), "Cycle All");
+    }
+
+    #[test]
+    fn test_rgb_matrix_effect_from_name() {
+        // Exact matches
+        assert_eq!(RgbMatrixEffect::from_name("Breathing"), Some(RgbMatrixEffect::Breathing));
+        assert_eq!(RgbMatrixEffect::from_name("breathing"), Some(RgbMatrixEffect::Breathing));
+        
+        // With spaces and underscores
+        assert_eq!(RgbMatrixEffect::from_name("Rainbow Moving Chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
+        assert_eq!(RgbMatrixEffect::from_name("rainbow_moving_chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
+        
+        // Short aliases
+        assert_eq!(RgbMatrixEffect::from_name("breath"), Some(RgbMatrixEffect::Breathing));
+        assert_eq!(RgbMatrixEffect::from_name("chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
+        assert_eq!(RgbMatrixEffect::from_name("cycle"), Some(RgbMatrixEffect::CycleAll));
+        
+        // Invalid name
+        assert_eq!(RgbMatrixEffect::from_name("invalid_effect"), None);
+    }
+
+    #[test]
+    fn test_rgb_matrix_effect_default() {
+        assert_eq!(RgbMatrixEffect::default(), RgbMatrixEffect::SolidColor);
+    }
+
+    // === Idle Effect Settings Tests ===
+
+    #[test]
+    fn test_idle_effect_settings_default() {
+        let settings = IdleEffectSettings::default();
+        assert!(settings.enabled);
+        assert_eq!(settings.idle_timeout_ms, 60_000);
+        assert_eq!(settings.idle_effect_duration_ms, 300_000);
+        assert_eq!(settings.idle_effect_mode, RgbMatrixEffect::Breathing);
+    }
+
+    #[test]
+    fn test_idle_effect_settings_has_custom_settings() {
+        let default_settings = IdleEffectSettings::default();
+        assert!(!default_settings.has_custom_settings());
+
+        // Test enabled change
+        let custom = IdleEffectSettings {
+            enabled: false,
+            ..IdleEffectSettings::default()
+        };
+        assert!(custom.has_custom_settings());
+
+        // Test timeout change
+        let custom = IdleEffectSettings {
+            idle_timeout_ms: 30_000,
+            ..IdleEffectSettings::default()
+        };
+        assert!(custom.has_custom_settings());
+
+        // Test duration change
+        let custom = IdleEffectSettings {
+            idle_effect_duration_ms: 600_000,
+            ..IdleEffectSettings::default()
+        };
+        assert!(custom.has_custom_settings());
+
+        // Test mode change
+        let custom = IdleEffectSettings {
+            idle_effect_mode: RgbMatrixEffect::RainbowBeacon,
+            ..IdleEffectSettings::default()
+        };
+        assert!(custom.has_custom_settings());
+    }
+
+    #[test]
+    fn test_layout_new_has_default_idle_settings() {
+        let layout = Layout::new("Test").unwrap();
+        assert_eq!(layout.idle_effect_settings, IdleEffectSettings::default());
     }
 }
