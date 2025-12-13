@@ -133,6 +133,67 @@ chore: bump version to 0.6.0
 - `chore/task-name` - Maintenance tasks
 - `docs/doc-name` - Documentation updates
 
+#### Release Process
+
+**IMPORTANT:** Releases are automated via GitHub Actions. **Do NOT manually create CHANGELOG.md files.**
+
+**How Releases Work:**
+1. **Version Bump**: Update version in `Cargo.toml` (e.g., `0.10.0` → `0.11.0`)
+2. **Commit Version Bump**: Create commit with message `chore: bump version to X.Y.Z`
+3. **Create Git Tag**: Create annotated tag with `git tag -a vX.Y.Z -m "Release vX.Y.Z: Brief Description"`
+4. **Push Tag**: Push tag to GitHub with `git push origin vX.Y.Z`
+5. **GitHub Actions Handles Everything**:
+   - Runs tests on all platforms (Linux, macOS, Windows)
+   - Runs clippy on all platforms
+   - Builds release binaries for all targets (x86_64 & ARM64)
+   - Generates changelog automatically from git commits between tags
+   - Creates GitHub release with binaries and changelog
+   - Calculates and includes SHA256 checksums
+
+**Changelog Generation:**
+- Changelogs are auto-generated from git commit messages using conventional commits format
+- The workflow script (`.github/workflows/release.yml`) parses commit types and formats them:
+  - `feat:` → ✨ **Feature**
+  - `fix:` → 🐛 **Fix**
+  - `refactor:` → ♻️ **Refactor**
+  - `chore:` → 🔨 **Chore**
+  - `docs:` → 📚 **Docs**
+  - `test:` → 🧪 **Test**
+  - `ci:` → 🔧 **CI**
+  - `perf:` → ⚡ **Performance**
+  - `style:` → 💄 **Style**
+  - `build:` → 📦 **Build**
+- Changelog includes all commits since the previous tag
+- Download links and checksums are automatically added
+
+**What NOT To Do:**
+- ❌ Don't create or edit `CHANGELOG.md` files manually
+- ❌ Don't manually create GitHub releases
+- ❌ Don't manually build release binaries
+- ❌ Don't skip the version bump commit
+- ❌ Don't push tags before committing version changes
+
+**Example Release Flow:**
+```bash
+# 1. Bump version
+sed -i '' 's/version = "0.10.0"/version = "0.11.0"/' Cargo.toml
+
+# 2. Commit version bump
+git add Cargo.toml
+git commit -m "chore: bump version to 0.11.0"
+
+# 3. Create and push tag
+git tag -a v0.11.0 -m "Release v0.11.0: Tap Dance Support"
+git push origin main
+git push origin v0.11.0
+
+# 4. GitHub Actions will automatically:
+#    - Run tests and clippy
+#    - Build binaries for all platforms
+#    - Generate changelog from commits
+#    - Create GitHub release with all assets
+```
+
 #### Review Process
 - Always validate changes with tests before committing
 - Check `git diff` to review all modifications
