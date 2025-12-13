@@ -1,6 +1,4 @@
 use lazyqmk::models::layout::{Layout, TapDanceAction};
-use lazyqmk::parser::layout::parse_markdown_layout;
-use lazyqmk::parser::template_gen::save_markdown_layout;
 
 #[test]
 fn test_tap_dance_two_way_creation() {

@@ -474,22 +474,28 @@ hint = "New"
 priority = 2
 
 [[contexts.tap_dance_editor.bindings]]
+keys = ["e"]
+action = "Edit selected tap dance"
+hint = "Edit"
+priority = 3
+
+[[contexts.tap_dance_editor.bindings]]
 keys = ["d"]
 action = "Delete selected tap dance"
 hint = "Delete"
-priority = 3
+priority = 4
 
 [[contexts.tap_dance_editor.bindings]]
 keys = ["Enter"]
 action = "Apply to current key"
 hint = "Apply"
-priority = 4
+priority = 5
 
 [[contexts.tap_dance_editor.bindings]]
 keys = ["Esc"]
 action = "Close editor"
 hint = "Close"
-priority = 5
+priority = 6
 
 # =============================================================================
 # SETTINGS MANAGER
