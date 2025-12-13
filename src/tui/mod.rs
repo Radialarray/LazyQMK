@@ -36,6 +36,8 @@ pub mod modifier_picker;
 pub mod onboarding_wizard;
 pub mod settings_manager;
 pub mod status_bar;
+pub mod tap_dance_editor;
+pub mod tap_dance_form;
 pub mod template_browser;
 pub mod theme;
 
@@ -49,8 +51,8 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Modifier, Style},
-    text::Line,
-    widgets::{Block, Borders, Clear, Paragraph},
+    text::{Line, Span},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame, Terminal,
 };
 use std::io;
@@ -143,6 +145,15 @@ impl PendingKeycodeState {
         }
         None
     }
+}
+
+/// Origin for tap dance form flow
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TapDanceFormContext {
+    /// Launched from tap dance editor list (manage library only)
+    FromEditor,
+    /// Launched from keycode picker to assign TD(name) to selected key
+    FromKeycodePicker,
 }
 
 /// State for the template save dialog.
@@ -273,6 +284,11 @@ pub enum PopupType {
     ModifierPicker,
     /// Key editor popup for viewing/editing key properties
     KeyEditor,
+    /// Tap dance editor popup
+    TapDanceEditor,
+    /// Tap dance form dialog (create/edit)
+    TapDanceForm,
+
 }
 
 /// Selection mode for multi-key operations
@@ -314,14 +330,18 @@ pub enum ActiveComponent {
     TemplateBrowser(TemplateBrowser),
     /// Layout picker component (for loading saved layouts)
     LayoutPicker(LayoutPicker),
-    /// Layout variant picker component (for switching QMK keyboard layout variants)
-    LayoutVariantPicker(LayoutVariantPicker),
+    /// Tap dance editor component
+    TapDanceEditor(tap_dance_editor::TapDanceEditor),
+    /// Tap dance form component
+    TapDanceForm(tap_dance_form::TapDanceForm),
     /// Build log component
     BuildLog(BuildLog),
     /// Help overlay component
     HelpOverlay(HelpOverlay),
     /// Settings manager component
     SettingsManager(settings_manager::SettingsManager),
+    /// Layout variant picker component (for switching QMK layout variants)
+    LayoutVariantPicker(LayoutVariantPicker),
 }
 
 /// Application state - single source of truth
@@ -368,7 +388,14 @@ pub struct AppState {
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
     /// Pending parameterized keycode state (for multi-stage keycode building)
     pub pending_keycode: PendingKeycodeState,
+    /// Tap dance form cache (preserved when opening picker)
+    pub tap_dance_form_cache: Option<tap_dance_form::TapDanceForm>,
+    /// Tap dance form picker target (which field is being picked)
+    pub tap_dance_form_pick_target: Option<tap_dance_form::FormRow>,
+    /// Tap dance form context (where flow was launched from)
+    pub tap_dance_form_context: Option<TapDanceFormContext>,
     /// Key editor component state
+
     pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
@@ -449,7 +476,11 @@ impl AppState {
             template_save_dialog_state: TemplateSaveDialogState::default(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
             pending_keycode: PendingKeycodeState::new(),
+            tap_dance_form_cache: None,
+            tap_dance_form_pick_target: None,
+            tap_dance_form_context: None,
             key_editor_state: KeyEditorState::new(),
+
             clipboard: clipboard::KeyClipboard::new(),
             flash_highlight: None,
             selection_mode: None,
@@ -698,11 +729,20 @@ impl AppState {
         self.active_popup = Some(PopupType::SettingsManager);
     }
 
+    /// Open the tap dance editor component
+    pub fn open_tap_dance_editor(&mut self) {
+        let editor = tap_dance_editor::TapDanceEditor::new(&self.layout);
+        self.active_component = Some(ActiveComponent::TapDanceEditor(editor));
+        self.active_popup = Some(PopupType::TapDanceEditor);
+    }
+
     /// Close the currently active component
     pub fn close_component(&mut self) {
         self.active_component = None;
         self.active_popup = None;
     }
+
+    // === Tap Dance Management Methods ===
 }
 
 /// Initialize terminal for TUI
@@ -805,6 +845,11 @@ fn render(f: &mut Frame, state: &AppState) {
     // Render popup if active
     if let Some(popup_type) = &state.active_popup {
         render_popup(f, popup_type, state);
+    }
+
+    // Render error overlay on top of everything if error is present
+    if let Some(ref error) = state.error_message {
+        render_error_overlay(f, error, &state.theme);
     }
 }
 
@@ -933,6 +978,16 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::KeyEditor => {
             key_editor::render_key_editor(f, state);
         }
+        PopupType::TapDanceEditor => {
+            if let Some(ActiveComponent::TapDanceEditor(ref editor)) = state.active_component {
+                editor.render(f, f.area(), &state.theme);
+            }
+        }
+        PopupType::TapDanceForm => {
+            if let Some(ActiveComponent::TapDanceForm(ref form)) = state.active_component {
+                form.render(f, f.area(), &state.theme);
+            }
+        }
     }
 }
 
@@ -964,6 +1019,72 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     );
 
     f.render_widget(prompt, area);
+}
+
+/// Render error overlay on top of all other UI elements
+fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
+    let area = centered_rect(70, 40, f.area());
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background with error color
+    let background = Block::default().style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
+    // Split into title and message
+    let chunks = RatatuiLayout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(3),    // Error message
+            Constraint::Length(2), // Help text
+        ])
+        .split(area);
+
+    // Title with error styling
+    let title = Paragraph::new("ERROR")
+        .style(
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(theme.error).bg(theme.background)),
+        );
+    f.render_widget(title, chunks[0]);
+
+    // Error message with word wrap
+    let error_text = Paragraph::new(error)
+        .style(Style::default().fg(theme.text))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Details ")
+                .style(Style::default().bg(theme.background)),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(error_text, chunks[1]);
+
+    // Help text
+    let help = Paragraph::new(vec![Line::from(vec![
+        Span::styled(
+            "Enter/Esc",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" Dismiss"),
+    ])])
+    .style(Style::default().fg(theme.text).bg(theme.background))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(help, chunks[2]);
 }
 
 /// Render template save dialog
@@ -1107,6 +1228,18 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 /// Handle keyboard input events
 fn handle_key_event(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    use crossterm::event::KeyCode;
+
+    // If error overlay is shown, allow dismissing with Enter or Esc
+    if state.error_message.is_some() {
+        if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
+            state.clear_error();
+            return Ok(false);
+        }
+        // Block all other input while error is shown
+        return Ok(false);
+    }
+
     // Route to popup handler if popup is active
     if state.active_popup.is_some() {
         return handlers::handle_popup_input(state, key);

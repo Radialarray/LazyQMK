@@ -82,6 +82,8 @@ pub enum Action {
     OpenSettings,
     /// Open the metadata editor dialog.
     EditMetadata,
+    /// Open the tap dance editor dialog.
+    OpenTapDanceEditor,
 
     // === FILE OPERATIONS ===
     /// Save the current keyboard configuration.
@@ -166,6 +168,7 @@ impl Action {
             Self::OpenLayerManager => "open_layer_manager",
             Self::OpenSettings => "open_settings",
             Self::EditMetadata => "edit_metadata",
+            Self::OpenTapDanceEditor => "open_tap_dance_editor",
 
             // File operations
             Self::Save => "save",
@@ -300,6 +303,7 @@ impl ShortcutRegistry {
         self.register(ctx, K::Char('L'), M::SHIFT, Action::OpenLayerManager);
         self.register(ctx, K::Char('S'), M::SHIFT, Action::OpenSettings);
         self.register(ctx, K::Char('E'), M::SHIFT, Action::EditMetadata);
+        self.register(ctx, K::Char('D'), M::SHIFT, Action::OpenTapDanceEditor);
 
         // === FILE OPERATIONS ===
         self.register(ctx, K::Char('s'), M::CONTROL, Action::Save);

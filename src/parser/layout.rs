@@ -118,10 +118,14 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
         idle_effect_settings: crate::models::IdleEffectSettings::default(),
         tap_hold_settings: crate::models::TapHoldSettings::default(),
+        tap_dances: Vec::new(),
     };
 
     // Parse content (layers and categories)
     parse_content(&lines[content_start..], &mut layout)?;
+
+    // Auto-create missing tap dance definitions for any TD() references
+    layout.auto_create_tap_dances();
 
     // Validate the parsed layout
     layout.validate()?;

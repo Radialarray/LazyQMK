@@ -123,3 +123,10 @@ pub fn handle_setup_wizard(state: &mut AppState) -> Result<bool> {
     }
     Ok(false)
 }
+
+/// Handle open tap dance editor action
+pub fn handle_open_tap_dance_editor(state: &mut AppState) -> Result<bool> {
+    state.open_tap_dance_editor();
+    state.set_status("Tap Dance Editor - n: new, d: delete, Enter: select, Esc: cancel");
+    Ok(false)
+}

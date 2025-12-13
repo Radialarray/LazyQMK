@@ -22,7 +22,7 @@ pub use layer::{
 };
 pub use layout::{
     HoldDecisionMode, IdleEffectSettings, Layout, LayoutMetadata, RgbBrightness, RgbMatrixEffect,
-    RgbSaturation, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    RgbSaturation, TapDanceAction, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

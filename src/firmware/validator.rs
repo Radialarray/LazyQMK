@@ -275,6 +275,9 @@ impl<'a> FirmwareValidator<'a> {
         // Check matrix coverage
         self.validate_matrix_coverage(&mut report);
 
+        // Check for orphaned tap dances
+        self.validate_tap_dances(&mut report);
+
         Ok(report)
     }
 
@@ -438,6 +441,18 @@ impl<'a> FirmwareValidator<'a> {
         if actual_positions < expected_positions {
             report.add_warning(ValidationWarning::new(format!(
                 "Only {actual_positions} of {expected_positions} positions are defined in the layout. Some keys may be missing."
+            )));
+        }
+    }
+
+    /// Validates tap dance definitions.
+    fn validate_tap_dances(&self, report: &mut ValidationReport) {
+        // Check for orphaned tap dances (defined but never used)
+        let orphaned = self.layout.get_orphaned_tap_dances();
+        for td_name in orphaned {
+            report.add_warning(ValidationWarning::new(format!(
+                "Tap dance '{}' is defined but never used in any layer",
+                td_name
             )));
         }
     }
@@ -664,5 +679,54 @@ mod tests {
         // Don't create any files
         let warnings = super::check_deprecated_options(&qmk_path, "test_keyboard");
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn test_orphaned_tap_dance_warning() {
+        use crate::models::layout::TapDanceAction;
+
+        let (mut layout, geometry, mapping, keycode_db) = create_test_setup();
+
+        // Add a tap dance but don't use it anywhere
+        let mut tap_dance = TapDanceAction::new("unused_td", "KC_A");
+        tap_dance = tap_dance.with_double_tap("KC_B");
+        layout.add_tap_dance(tap_dance).unwrap();
+
+        let validator = FirmwareValidator::new(&layout, &geometry, &mapping, &keycode_db);
+        let report = validator.validate().unwrap();
+
+        // Should be valid (warnings don't block validation)
+        assert!(report.is_valid());
+        // Should have exactly one warning about the orphaned tap dance
+        assert_eq!(report.warnings.len(), 1);
+        assert!(report.warnings[0]
+            .message
+            .contains("Tap dance 'unused_td' is defined but never used"));
+    }
+
+    #[test]
+    fn test_used_tap_dance_no_warning() {
+        use crate::models::layout::TapDanceAction;
+
+        let (mut layout, geometry, mapping, keycode_db) = create_test_setup();
+
+        // Add a tap dance and use it
+        let mut tap_dance = TapDanceAction::new("used_td", "KC_A");
+        tap_dance = tap_dance.with_double_tap("KC_B");
+        layout.add_tap_dance(tap_dance).unwrap();
+
+        // Update a key to use the tap dance
+        layout.layers[0].keys[0].keycode = "TD(used_td)".to_string();
+
+        let validator = FirmwareValidator::new(&layout, &geometry, &mapping, &keycode_db);
+        let report = validator.validate().unwrap();
+
+        // Should be valid with no warnings about tap dance
+        assert!(report.is_valid());
+        // Should not have any tap dance warnings
+        assert!(!report
+            .warnings
+            .iter()
+            .any(|w| w.message.contains("Tap dance")));
     }
 }

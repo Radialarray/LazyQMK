@@ -136,6 +136,20 @@ Each key displays a color source indicator in its top-right corner.
 - Conflicts with RGB_MATRIX_TIMEOUT (suppressed when idle effect enabled)
 - Configurable via Settings Manager (Shift+S)
 
+**Tap Dance**
+- Configure keys with different actions based on tap count and hold
+- Two-way tap dance: single tap → keycode, double tap → keycode
+- Three-way tap dance: single tap → keycode, double tap → keycode, hold → keycode
+- Managed via Tap Dance Editor (Shift+D)
+- Create new tap dance actions with step-by-step wizard
+- Select from existing tap dances and apply to keys
+- Delete unused tap dance definitions
+- Actions stored in layout frontmatter (YAML) for version control
+- Generates QMK `tap_dance_actions` array automatically in keymap.c
+- Supports both `ACTION_TAP_DANCE_DOUBLE` (2-way) and `ACTION_TAP_DANCE_FN_ADVANCED` (3-way)
+- Validation warnings for orphaned tap dances (defined but unused)
+- Limitations: Uses QMK built-in patterns only (no custom C callbacks)
+
 ### Configuration & Setup
 
 **First-Run Onboarding Wizard**

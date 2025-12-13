@@ -393,6 +393,7 @@ fn create_test_layout() -> Layout {
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),
         rgb_saturation: lazyqmk::models::RgbSaturation::default(),
         rgb_timeout_ms: 0,
+        tap_dances: vec![],
     }
 }
 
@@ -787,4 +788,244 @@ fn test_full_pipeline_validation_to_generation() {
         keymap_content.len() > 100,
         "keymap.c should have substantial content"
     );
+}
+
+// === Tap Dance Tests ===
+
+#[test]
+fn test_tap_dance_two_way_generation() {
+    use lazyqmk::models::TapDanceAction;
+    
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let mut layout = create_test_layout();
+    
+    // Add a 2-way tap dance
+    let td = TapDanceAction::new("test", "KC_A".to_string())
+        .with_double_tap("KC_B".to_string());
+    layout.tap_dances.push(td);
+    
+    // Apply TD(test) to a key
+    layout.layers[0].keys[0].keycode = "TD(test)".to_string();
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    assert!(result.is_ok(), "Generation with 2-way tap dance should succeed");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Check enum
+    assert!(content.contains("enum tap_dance_ids"), "Should have tap dance enum");
+    assert!(content.contains("TD_TEST"), "Should have TD_TEST in enum");
+    
+    // Check actions array with 2-way macro
+    assert!(content.contains("tap_dance_action_t tap_dance_actions"), "Should have actions array");
+    assert!(content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"), "Should use ACTION_TAP_DANCE_DOUBLE");
+    
+    // Check keymap uses TD(TD_TEST)
+    assert!(content.contains("TD(TD_TEST)"), "Should use TD(TD_TEST) in keymap");
+}
+
+#[test]
+fn test_tap_dance_three_way_generation() {
+    use lazyqmk::models::TapDanceAction;
+    
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let mut layout = create_test_layout();
+    
+    // Add a 3-way tap dance
+    let td = TapDanceAction::new("triple", "KC_ESC".to_string())
+        .with_double_tap("KC_CAPS".to_string())
+        .with_hold("KC_LCTL".to_string());
+    layout.tap_dances.push(td);
+    
+    // Apply TD(triple) to a key
+    layout.layers[0].keys[1].keycode = "TD(triple)".to_string();
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    assert!(result.is_ok(), "Generation with 3-way tap dance should succeed");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Check enum
+    assert!(content.contains("TD_TRIPLE"), "Should have TD_TRIPLE in enum");
+    
+    // Check helper functions
+    assert!(content.contains("void td_triple_finished"), "Should have finished function");
+    assert!(content.contains("void td_triple_reset"), "Should have reset function");
+    assert!(content.contains("register_code16(KC_ESC)"), "Should register single tap");
+    assert!(content.contains("register_code16(KC_CAPS)"), "Should register double tap");
+    assert!(content.contains("register_code16(KC_LCTL)"), "Should register hold");
+    assert!(content.contains("unregister_code16(KC_ESC)"), "Should unregister single tap");
+    assert!(content.contains("unregister_code16(KC_CAPS)"), "Should unregister double tap");
+    assert!(content.contains("unregister_code16(KC_LCTL)"), "Should unregister hold");
+    
+    // Check actions array with 3-way macro
+    assert!(content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_triple_finished, td_triple_reset)"), 
+            "Should use ACTION_TAP_DANCE_FN_ADVANCED");
+    
+    // Check keymap uses TD(TD_TRIPLE)
+    assert!(content.contains("TD(TD_TRIPLE)"), "Should use TD(TD_TRIPLE) in keymap");
+}
+
+#[test]
+fn test_tap_dance_multiple_stable_ordering() {
+    use lazyqmk::models::TapDanceAction;
+    
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let mut layout = create_test_layout();
+    
+    // Add multiple tap dances in non-alphabetical order
+    let td_zebra = TapDanceAction::new("zebra", "KC_Z".to_string())
+        .with_double_tap("KC_X".to_string());
+    let td_alpha = TapDanceAction::new("alpha", "KC_A".to_string())
+        .with_double_tap("KC_B".to_string());
+    let td_beta = TapDanceAction::new("beta", "KC_C".to_string())
+        .with_double_tap("KC_D".to_string());
+    
+    layout.tap_dances.push(td_zebra);
+    layout.tap_dances.push(td_alpha);
+    layout.tap_dances.push(td_beta);
+    
+    // Apply TD keycodes
+    layout.layers[0].keys[0].keycode = "TD(zebra)".to_string();
+    layout.layers[0].keys[1].keycode = "TD(alpha)".to_string();
+    layout.layers[0].keys[2].keycode = "TD(beta)".to_string();
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    assert!(result.is_ok(), "Generation with multiple tap dances should succeed");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Verify alphabetical ordering in enum (alpha, beta, zebra)
+    let td_alpha_pos = content.find("TD_ALPHA").expect("Should find TD_ALPHA");
+    let td_beta_pos = content.find("TD_BETA").expect("Should find TD_BETA");
+    let td_zebra_pos = content.find("TD_ZEBRA").expect("Should find TD_ZEBRA");
+    
+    assert!(td_alpha_pos < td_beta_pos, "TD_ALPHA should come before TD_BETA in enum");
+    assert!(td_beta_pos < td_zebra_pos, "TD_BETA should come before TD_ZEBRA in enum");
+    
+    // Verify all keycodes are transformed
+    assert!(content.contains("TD(TD_ZEBRA)"), "Should have TD(TD_ZEBRA)");
+    assert!(content.contains("TD(TD_ALPHA)"), "Should have TD(TD_ALPHA)");
+    assert!(content.contains("TD(TD_BETA)"), "Should have TD(TD_BETA)");
+}
+
+#[test]
+fn test_tap_dance_empty_no_code() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let layout = create_test_layout();
+    // No tap dances added
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    assert!(result.is_ok(), "Generation with no tap dances should succeed");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Should not contain tap dance code
+    assert!(!content.contains("enum tap_dance_ids"), "Should not have tap dance enum");
+    assert!(!content.contains("tap_dance_action_t"), "Should not have actions array");
+    assert!(!content.contains("ACTION_TAP_DANCE"), "Should not have tap dance macros");
+}
+
+#[test]
+fn test_tap_dance_invalid_reference_passthrough() {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let mut layout = create_test_layout();
+    
+    // Apply TD() keycode that doesn't exist in tap_dances
+    layout.layers[0].keys[0].keycode = "TD(nonexistent)".to_string();
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    // Should still generate (validation would catch this, but generator is permissive)
+    assert!(result.is_ok(), "Generation should not fail on missing tap dance ref");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Should pass through unchanged (validator will catch the error)
+    assert!(content.contains("TD(nonexistent)"), "Should pass through invalid reference");
+}
+
+#[test]
+fn test_tap_dance_mixed_two_and_three_way() {
+    use lazyqmk::models::TapDanceAction;
+    
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let mut layout = create_test_layout();
+    
+    // Add one 2-way and one 3-way
+    let td_two = TapDanceAction::new("two", "KC_A".to_string())
+        .with_double_tap("KC_B".to_string());
+    let td_three = TapDanceAction::new("three", "KC_X".to_string())
+        .with_double_tap("KC_Y".to_string())
+        .with_hold("KC_Z".to_string());
+    
+    layout.tap_dances.push(td_two);
+    layout.tap_dances.push(td_three);
+    
+    layout.layers[0].keys[0].keycode = "TD(two)".to_string();
+    layout.layers[0].keys[1].keycode = "TD(three)".to_string();
+    
+    let geometry = create_test_geometry();
+    let mapping = create_test_mapping();
+    let config = create_test_config(&temp_dir);
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let result = generator.generate();
+    
+    assert!(result.is_ok(), "Generation with mixed tap dances should succeed");
+    
+    let (keymap_path, _) = result.unwrap();
+    let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
+    
+    // Check both are in enum
+    assert!(content.contains("TD_TWO"), "Should have TD_TWO");
+    assert!(content.contains("TD_THREE"), "Should have TD_THREE");
+    
+    // Check 2-way uses simple macro
+    assert!(content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"), "Should have 2-way macro");
+    
+    // Check 3-way has helper functions and advanced macro
+    assert!(content.contains("void td_three_finished"), "Should have 3-way helpers");
+    assert!(content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_three_finished, td_three_reset)"), 
+            "Should have 3-way macro");
 }

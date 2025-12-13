@@ -328,6 +328,114 @@ impl IdleEffectSettings {
 }
 
 // ============================================================================
+// Tap Dance Settings
+// ============================================================================
+
+/// A tap dance action that performs different keycodes based on tap count.
+///
+/// Tap dances support 2-way (single/double tap) and 3-way (single/double/hold) patterns.
+/// The hold action activates when the key is held past the tapping term.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TapDanceAction {
+    /// Unique name for this tap dance (used in TD() references)
+    /// Must be a valid C identifier (alphanumeric + underscore)
+    pub name: String,
+    /// Keycode sent on single tap
+    pub single_tap: String,
+    /// Optional keycode sent on double tap (None = 2-way disabled, single tap repeats)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub double_tap: Option<String>,
+    /// Optional keycode sent on hold (None = no hold action)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hold: Option<String>,
+}
+
+// Keep public API methods for future TUI editor (Phase 3) and firmware generation (Phase 4)
+#[allow(dead_code)]
+impl TapDanceAction {
+    /// Creates a new tap dance with only single tap defined.
+    ///
+    /// Use the builder methods `with_double_tap()` and `with_hold()` to add more actions.
+    pub fn new(name: impl Into<String>, single_tap: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            single_tap: single_tap.into(),
+            double_tap: None,
+            hold: None,
+        }
+    }
+
+    /// Adds a double-tap action (builder pattern).
+    pub fn with_double_tap(mut self, keycode: impl Into<String>) -> Self {
+        self.double_tap = Some(keycode.into());
+        self
+    }
+
+    /// Adds a hold action (builder pattern).
+    pub fn with_hold(mut self, keycode: impl Into<String>) -> Self {
+        self.hold = Some(keycode.into());
+        self
+    }
+
+    /// Validates the tap dance action.
+    ///
+    /// Checks:
+    /// - Name is non-empty and valid C identifier
+    /// - Single tap keycode is non-empty
+    /// - Double tap keycode (if present) is non-empty
+    /// - Hold keycode (if present) is non-empty
+    pub fn validate(&self) -> Result<()> {
+        if self.name.is_empty() {
+            anyhow::bail!("Tap dance name cannot be empty");
+        }
+
+        // Validate name is a valid C identifier (alphanumeric + underscore)
+        if !self.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            anyhow::bail!("Tap dance name '{}' must be alphanumeric with underscores only", self.name);
+        }
+
+        if self.single_tap.is_empty() {
+            anyhow::bail!("Tap dance '{}' must have a single_tap keycode", self.name);
+        }
+
+        if let Some(ref double_tap) = self.double_tap {
+            if double_tap.is_empty() {
+                anyhow::bail!("Tap dance '{}': double_tap cannot be empty", self.name);
+            }
+        }
+
+        if let Some(ref hold) = self.hold {
+            if hold.is_empty() {
+                anyhow::bail!("Tap dance '{}': hold cannot be empty", self.name);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Returns true if this is a 2-way tap dance (single/double).
+    /// Used in firmware generation to determine QMK macro type.
+    #[must_use]
+    pub const fn is_two_way(&self) -> bool {
+        self.double_tap.is_some() && self.hold.is_none()
+    }
+
+    /// Returns true if this is a 3-way tap dance (single/double/hold).
+    /// Used in firmware generation to determine QMK macro type.
+    #[must_use]
+    pub const fn is_three_way(&self) -> bool {
+        self.double_tap.is_some() && self.hold.is_some()
+    }
+
+    /// Returns true if this tap dance has a hold action (2-way or 3-way).
+    /// Used in firmware generation for conditional logic.
+    #[must_use]
+    pub const fn has_hold(&self) -> bool {
+        self.hold.is_some()
+    }
+}
+
+// ============================================================================
 // Tap-Hold Settings
 // ============================================================================
 
@@ -812,6 +920,11 @@ pub struct Layout {
     /// Tap-hold configuration (LT, MT, TT timing and behavior)
     #[serde(default)]
     pub tap_hold_settings: TapHoldSettings,
+
+    // === Tap Dance Actions ===
+    /// Tap dance action definitions
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tap_dances: Vec<TapDanceAction>,
 }
 
 /// Default for rgb_enabled is true
@@ -835,6 +948,7 @@ impl Layout {
             uncolored_key_behavior: UncoloredKeyBehavior::default(),
             idle_effect_settings: IdleEffectSettings::default(),
             tap_hold_settings: TapHoldSettings::default(),
+            tap_dances: Vec::new(),
         })
     }
 
@@ -1152,6 +1266,139 @@ impl Layout {
         self.layers.iter().position(|layer| layer.id == id)
     }
 
+    /// Adds a tap dance action to the layout.
+    pub fn add_tap_dance(&mut self, tap_dance: TapDanceAction) -> Result<()> {
+        // Validate the tap dance
+        tap_dance.validate()?;
+
+        // Check for duplicate name
+        if self.tap_dances.iter().any(|td| td.name == tap_dance.name) {
+            anyhow::bail!("Tap dance with name '{}' already exists", tap_dance.name);
+        }
+
+        self.tap_dances.push(tap_dance);
+        self.metadata.touch();
+        Ok(())
+    }
+
+    /// Gets a tap dance by name.
+    #[must_use]
+    pub fn get_tap_dance(&self, name: &str) -> Option<&TapDanceAction> {
+        self.tap_dances.iter().find(|td| td.name == name)
+    }
+
+    /// Gets a mutable reference to a tap dance by name.
+    pub fn get_tap_dance_mut(&mut self, name: &str) -> Option<&mut TapDanceAction> {
+        self.metadata.touch();
+        self.tap_dances.iter_mut().find(|td| td.name == name)
+    }
+
+    /// Removes a tap dance by name.
+    pub fn remove_tap_dance(&mut self, name: &str) -> Option<TapDanceAction> {
+        if let Some(index) = self.tap_dances.iter().position(|td| td.name == name) {
+            self.metadata.touch();
+            Some(self.tap_dances.remove(index))
+        } else {
+            None
+        }
+    }
+
+    /// Auto-creates missing tap dance definitions for all TD() references in the layout.
+    ///
+    /// Scans all keycodes for TD(name) patterns and creates placeholder tap dance
+    /// definitions for any referenced names that don't have definitions yet.
+    ///
+    /// Placeholder tap dances use KC_NO (no-op) keycodes that users can edit later.
+    pub fn auto_create_tap_dances(&mut self) {
+        // Collect all TD() references from keys
+        let mut referenced_names = std::collections::HashSet::new();
+        let td_pattern = regex::Regex::new(r"TD\(([^)]+)\)").unwrap();
+
+        for layer in &self.layers {
+            for key in &layer.keys {
+                if let Some(captures) = td_pattern.captures(&key.keycode) {
+                    let name = captures[1].to_string();
+                    referenced_names.insert(name);
+                }
+            }
+        }
+
+        // Auto-create missing tap dance definitions
+        for name in &referenced_names {
+            if !self.tap_dances.iter().any(|td| &td.name == name) {
+                // Create a placeholder tap dance with KC_NO (no-op) keycodes
+                // User can edit these later via the TUI
+                let placeholder = TapDanceAction {
+                    name: name.clone(),
+                    single_tap: "KC_NO".to_string(),
+                    double_tap: None,
+                    hold: None,
+                };
+                self.tap_dances.push(placeholder);
+            }
+        }
+    }
+
+    /// Validates all tap dance references in the layout.
+    ///
+    /// Checks:
+    /// - Every TD(name) keycode references a defined tap dance
+    /// - No duplicate tap dance names
+    /// - Warns about orphaned tap dance definitions (defined but not used)
+    pub fn validate_tap_dances(&self) -> Result<()> {
+        // Collect all TD() references from keys
+        let mut referenced_names = std::collections::HashSet::new();
+        let td_pattern = regex::Regex::new(r"TD\(([^)]+)\)").unwrap();
+
+        for layer in &self.layers {
+            for key in &layer.keys {
+                if let Some(captures) = td_pattern.captures(&key.keycode) {
+                    let name = captures[1].to_string();
+                    referenced_names.insert(name);
+                }
+            }
+        }
+
+        // Check that all referenced tap dances exist
+        for name in &referenced_names {
+            if !self.tap_dances.iter().any(|td| &td.name == name) {
+                anyhow::bail!("Tap dance '{}' is referenced but not defined", name);
+            }
+        }
+
+        // Check for duplicate names (should be prevented by add_tap_dance, but double-check)
+        let mut seen_names = std::collections::HashSet::new();
+        for td in &self.tap_dances {
+            if !seen_names.insert(&td.name) {
+                anyhow::bail!("Duplicate tap dance name: {}", td.name);
+            }
+        }
+
+        // Note: We don't error on orphaned definitions, just log them as warnings in the UI
+        Ok(())
+    }
+
+    /// Returns a list of orphaned tap dance names (defined but not used).
+    #[must_use]
+    pub fn get_orphaned_tap_dances(&self) -> Vec<String> {
+        let td_pattern = regex::Regex::new(r"TD\(([^)]+)\)").unwrap();
+        let mut referenced_names = std::collections::HashSet::new();
+
+        for layer in &self.layers {
+            for key in &layer.keys {
+                if let Some(captures) = td_pattern.captures(&key.keycode) {
+                    referenced_names.insert(captures[1].to_string());
+                }
+            }
+        }
+
+        self.tap_dances
+            .iter()
+            .filter(|td| !referenced_names.contains(&td.name))
+            .map(|td| td.name.clone())
+            .collect()
+    }
+
     /// Resolves layer references in a keycode to layer indices.
     ///
     /// Uses the keycode database to detect layer keycodes dynamically,
@@ -1195,6 +1442,7 @@ impl Layout {
     /// - All layers have the same number of keys
     /// - No duplicate positions within each layer
     /// - All category references exist
+    /// - All tap dance references are valid
     pub fn validate(&self) -> Result<()> {
         if self.layers.is_empty() {
             anyhow::bail!("Layout must have at least one layer");
@@ -1267,6 +1515,9 @@ impl Layout {
                 }
             }
         }
+
+        // Validate tap dance actions and references
+        self.validate_tap_dances()?;
 
         Ok(())
     }

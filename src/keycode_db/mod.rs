@@ -31,6 +31,9 @@ pub enum ParamType {
     Layer,
     /// Needs modifier selection (opens modifier picker)
     Modifier,
+    /// Needs a tap dance action selection (opens tap dance picker)
+    #[serde(rename = "tapdance")]
+    TapDance,
 }
 
 /// Parameter definition for parameterized keycodes
@@ -219,6 +222,7 @@ impl KeycodeDb {
             ),
             ("advanced", include_str!("categories/advanced.json")),
             ("magic", include_str!("categories/magic.json")),
+            ("tap_dance", include_str!("categories/tap_dance.json")),
         ];
 
         for (cat_id, json_data) in category_files {
@@ -756,6 +760,34 @@ impl KeycodeDb {
         None
     }
 
+    /// Parses a tap dance keycode and extracts the tap dance name.
+    ///
+    /// Returns the tap dance name if the keycode matches the `TD(name)` pattern.
+    ///
+    /// # Examples
+    /// ```
+    /// use lazyqmk::keycode_db::KeycodeDb;
+    ///
+    /// let db = KeycodeDb::load().unwrap();
+    /// assert_eq!(db.parse_tap_dance_keycode("TD(esc_caps)"), Some("esc_caps".to_string()));
+    /// assert_eq!(db.parse_tap_dance_keycode("TD(shift_123)"), Some("shift_123".to_string()));
+    /// assert_eq!(db.parse_tap_dance_keycode("KC_A"), None);
+    /// ```
+    #[must_use]
+    pub fn parse_tap_dance_keycode(&self, keycode: &str) -> Option<String> {
+        // TD(name) pattern
+        if keycode.starts_with("TD(") && keycode.ends_with(')') {
+            let inner = &keycode[3..keycode.len() - 1];
+            let name = inner.trim();
+            
+            // Validate it's a non-empty, valid C identifier
+            if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                return Some(name.to_string());
+            }
+        }
+        None
+    }
+
     /// Get the list of simple layer keycode prefixes (single parameter).
     /// E.g., ["MO", "TG", "TO", "DF", "OSL", "TT", "PDF"]
     #[must_use]
@@ -1136,6 +1168,40 @@ mod tests {
         let db = get_test_db();
         assert!(db.parse_layer_keycode("KC_A").is_none());
         assert!(db.parse_layer_keycode("LCTL_T(KC_A)").is_none());
+    }
+
+    #[test]
+    fn test_parse_tap_dance_keycode_valid() {
+        let db = get_test_db();
+        assert_eq!(
+            db.parse_tap_dance_keycode("TD(esc_caps)"),
+            Some("esc_caps".to_string())
+        );
+        assert_eq!(
+            db.parse_tap_dance_keycode("TD(shift_123)"),
+            Some("shift_123".to_string())
+        );
+        assert_eq!(
+            db.parse_tap_dance_keycode("TD(MY_TAP_DANCE)"),
+            Some("MY_TAP_DANCE".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_tap_dance_keycode_invalid() {
+        let db = get_test_db();
+        // Not a tap dance keycode
+        assert_eq!(db.parse_tap_dance_keycode("KC_A"), None);
+        assert_eq!(db.parse_tap_dance_keycode("MO(1)"), None);
+        
+        // Invalid names (not C identifiers)
+        assert_eq!(db.parse_tap_dance_keycode("TD(my-tap)"), None);
+        assert_eq!(db.parse_tap_dance_keycode("TD(my tap)"), None);
+        assert_eq!(db.parse_tap_dance_keycode("TD(my@tap)"), None);
+        
+        // Empty name
+        assert_eq!(db.parse_tap_dance_keycode("TD()"), None);
+        assert_eq!(db.parse_tap_dance_keycode("TD(  )"), None);
     }
 
     #[test]

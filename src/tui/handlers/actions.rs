@@ -132,12 +132,13 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         Action::Save => file_ops::handle_save(state),
         Action::SaveAsTemplate => file_ops::handle_save_as_template(state),
 
-        // Popup management (9 actions)
+        // Popup management (10 actions)
         Action::OpenKeycodePicker => popups::handle_open_keycode_picker(state),
         Action::OpenLayerManager => popups::handle_open_layer_manager(state),
         Action::OpenCategoryManager => popups::handle_open_category_manager(state),
         Action::OpenSettings => popups::handle_open_settings(state),
         Action::EditMetadata => popups::handle_edit_metadata(state),
+        Action::OpenTapDanceEditor => popups::handle_open_tap_dance_editor(state),
         Action::SetupWizard => popups::handle_setup_wizard(state),
         Action::BrowseTemplates => popups::handle_browse_templates(state),
         Action::ViewBuildLog => popups::handle_view_build_log(state),

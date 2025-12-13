@@ -88,6 +88,7 @@ fn create_test_layout_with_layers() -> Layout {
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),
         rgb_saturation: lazyqmk::models::RgbSaturation::default(),
         rgb_timeout_ms: 0,
+        tap_dances: vec![],
     }
 }
 

@@ -110,6 +110,19 @@ impl<'a> FirmwareGenerator<'a> {
 
         code.push('\n');
 
+        // Add tap dance configuration if any tap dances are defined
+        if !self.layout.tap_dances.is_empty() {
+            code.push_str("// Tap Dance Configuration\n");
+            code.push_str(&self.generate_tap_dance_enum());
+            code.push('\n');
+            code.push_str(&self.generate_tap_dance_helpers());
+            if !self.generate_tap_dance_helpers().is_empty() {
+                code.push('\n');
+            }
+            code.push_str(&self.generate_tap_dance_actions());
+            code.push('\n');
+        }
+
         // Keymap definition
         code.push_str("const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {\n");
 
@@ -296,8 +309,11 @@ impl<'a> FirmwareGenerator<'a> {
             // Resolve layer references in keycode (e.g., MO(@uuid) -> MO(1))
             let resolved_keycode = self.resolve_keycode(&key.keycode);
 
+            // Process tap dance keycodes (e.g., TD(name) -> TD(TD_NAME))
+            let processed_keycode = self.process_keycode_for_tap_dance(&resolved_keycode);
+
             // Store keycode at layout position
-            keys_by_layout[layout_idx as usize] = resolved_keycode;
+            keys_by_layout[layout_idx as usize] = processed_keycode;
         }
 
         Ok(keys_by_layout)
@@ -761,6 +777,152 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("#endif // RGB_MATRIX_ENABLE\n");
 
         Ok(code)
+    }
+
+    /// Generates tap dance enum definition.
+    ///
+    /// Creates `enum tap_dance_ids { TD_NAME1, TD_NAME2, ... };`
+    /// Names are sorted alphabetically for stable ordering.
+    fn generate_tap_dance_enum(&self) -> String {
+        if self.layout.tap_dances.is_empty() {
+            return String::new();
+        }
+
+        let mut code = String::new();
+        code.push_str("enum tap_dance_ids {\n");
+
+        // Sort tap dances by name for stable enum ordering
+        let mut sorted_tds: Vec<_> = self.layout.tap_dances.iter().collect();
+        sorted_tds.sort_by_key(|td| &td.name);
+
+        for (idx, td) in sorted_tds.iter().enumerate() {
+            let enum_name = format!("TD_{}", td.name.to_uppercase());
+            code.push_str(&format!("    {}", enum_name));
+            if idx < sorted_tds.len() - 1 {
+                code.push(',');
+            }
+            code.push('\n');
+        }
+
+        code.push_str("};\n");
+        code
+    }
+
+    /// Generates helper functions for 3-way tap dances (with hold behavior).
+    ///
+    /// For each tap dance that has a hold action, generates finished/reset callback functions.
+    fn generate_tap_dance_helpers(&self) -> String {
+        let mut code = String::new();
+
+        // Sort tap dances by name for consistent output
+        let mut sorted_tds: Vec<_> = self.layout.tap_dances.iter().collect();
+        sorted_tds.sort_by_key(|td| &td.name);
+
+        for td in sorted_tds {
+            // Only generate helper functions for 3-way tap dances (those with hold)
+            if td.hold.is_none() {
+                continue;
+            }
+
+            let name_lower = td.name.to_lowercase();
+            let single_tap = &td.single_tap;
+            let double_tap = td.double_tap.as_ref().unwrap(); // 3-way always has double_tap
+            let hold = td.hold.as_ref().unwrap();
+
+            // Generate finished function
+            code.push_str(&format!(
+                "void td_{}_finished(tap_dance_state_t *state, void *user_data) {{\n",
+                name_lower
+            ));
+            code.push_str("    if (state->count == 1) {\n");
+            code.push_str("        if (state->interrupted || !state->pressed) {\n");
+            code.push_str(&format!("            register_code16({});\n", single_tap));
+            code.push_str("        } else {\n");
+            code.push_str(&format!("            register_code16({});\n", hold));
+            code.push_str("        }\n");
+            code.push_str("    } else if (state->count == 2) {\n");
+            code.push_str(&format!("        register_code16({});\n", double_tap));
+            code.push_str("    }\n");
+            code.push_str("}\n\n");
+
+            // Generate reset function
+            code.push_str(&format!(
+                "void td_{}_reset(tap_dance_state_t *state, void *user_data) {{\n",
+                name_lower
+            ));
+            code.push_str("    if (state->count == 1) {\n");
+            code.push_str(&format!("        unregister_code16({});\n", single_tap));
+            code.push_str(&format!("        unregister_code16({});\n", hold));
+            code.push_str("    } else if (state->count == 2) {\n");
+            code.push_str(&format!("        unregister_code16({});\n", double_tap));
+            code.push_str("    }\n");
+            code.push_str("}\n\n");
+        }
+
+        code
+    }
+
+    /// Generates tap dance actions array.
+    ///
+    /// Creates `tap_dance_action_t tap_dance_actions[] = { ... };`
+    /// Uses ACTION_TAP_DANCE_DOUBLE for 2-way, ACTION_TAP_DANCE_FN_ADVANCED for 3-way.
+    fn generate_tap_dance_actions(&self) -> String {
+        if self.layout.tap_dances.is_empty() {
+            return String::new();
+        }
+
+        let mut code = String::new();
+        code.push_str("tap_dance_action_t tap_dance_actions[] = {\n");
+
+        // Sort tap dances by name to match enum ordering
+        let mut sorted_tds: Vec<_> = self.layout.tap_dances.iter().collect();
+        sorted_tds.sort_by_key(|td| &td.name);
+
+        for (idx, td) in sorted_tds.iter().enumerate() {
+            let enum_name = format!("TD_{}", td.name.to_uppercase());
+            
+            let action = if td.is_two_way() {
+                // 2-way tap dance: ACTION_TAP_DANCE_DOUBLE(single, double)
+                let single = &td.single_tap;
+                let double = td.double_tap.as_ref().unwrap();
+                format!("ACTION_TAP_DANCE_DOUBLE({}, {})", single, double)
+            } else {
+                // 3-way tap dance: ACTION_TAP_DANCE_FN_ADVANCED(NULL, finished, reset)
+                let name_lower = td.name.to_lowercase();
+                format!(
+                    "ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_{}_finished, td_{}_reset)",
+                    name_lower, name_lower
+                )
+            };
+
+            code.push_str(&format!("    [{}] = {}", enum_name, action));
+            if idx < sorted_tds.len() - 1 {
+                code.push(',');
+            }
+            code.push('\n');
+        }
+
+        code.push_str("};\n");
+        code
+    }
+
+    /// Processes a keycode, converting TD(name) references to TD(TD_NAME_UPPER).
+    ///
+    /// Validates that the referenced tap dance exists in the layout.
+    fn process_keycode_for_tap_dance(&self, keycode: &str) -> String {
+        // Try to parse as tap dance keycode
+        if let Some(name) = self.keycode_db.parse_tap_dance_keycode(keycode) {
+            // Validate that this tap dance exists in the layout
+            if self.layout.get_tap_dance(&name).is_some() {
+                // Convert TD(name) -> TD(TD_NAME)
+                let enum_name = format!("TD_{}", name.to_uppercase());
+                return format!("TD({})", enum_name);
+            }
+            // If tap dance doesn't exist, return original (will be caught by validator)
+        }
+        
+        // Not a tap dance keycode, return unchanged
+        keycode.to_string()
     }
 
     /// Generates config.h for the keymap.

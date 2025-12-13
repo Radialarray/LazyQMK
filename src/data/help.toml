@@ -146,9 +146,15 @@ action = "View build log"
 priority = 28
 
 [[contexts.main.bindings]]
+keys = ["Shift+D"]
+action = "Tap dance editor"
+hint = "TapDance"
+priority = 29
+
+[[contexts.main.bindings]]
 keys = ["Shift+S"]
 action = "Settings"
-priority = 29
+priority = 30
 
 [[contexts.main.bindings]]
 keys = ["t"]
@@ -163,12 +169,12 @@ priority = 28
 [[contexts.main.bindings]]
 keys = ["Ctrl+W"]
 action = "Setup wizard"
-priority = 29
+priority = 31
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+Y"]
 action = "Switch layout variant"
-priority = 30
+priority = 32
 
 [[contexts.main.bindings]]
 keys = ["?"]
@@ -444,6 +450,50 @@ priority = 5
 [[contexts.category_manager.bindings]]
 keys = ["Esc"]
 action = "Close"
+hint = "Close"
+priority = 6
+
+# =============================================================================
+# TAP DANCE EDITOR
+# =============================================================================
+
+[contexts.tap_dance_editor]
+name = "Tap Dance Editor"
+description = "Manage tap dance actions"
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["↑", "↓"]
+action = "Navigate tap dances"
+hint = "Navigate"
+priority = 1
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["n"]
+action = "New tap dance (step-by-step wizard)"
+hint = "New"
+priority = 2
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["e"]
+action = "Edit selected tap dance"
+hint = "Edit"
+priority = 3
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["d"]
+action = "Delete selected tap dance"
+hint = "Delete"
+priority = 4
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["Enter"]
+action = "Apply to current key"
+hint = "Apply"
+priority = 5
+
+[[contexts.tap_dance_editor.bindings]]
+keys = ["Esc"]
+action = "Close editor"
 hint = "Close"
 priority = 6
 

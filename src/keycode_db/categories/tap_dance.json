@@ -1,0 +1,38 @@
+{
+  "category": {
+    "id": "tap_dance",
+    "name": "Tap Dance",
+    "description": "Keys with different actions on single/double tap or hold"
+  },
+  "keycodes": [
+    {
+      "code": "TD()",
+      "name": "Tap Dance",
+      "category": "tap_dance",
+      "pattern": "TD\\(([A-Za-z0-9_]+)\\)",
+      "description": "Tap once/twice/hold for different actions",
+      "params": [
+        {
+          "type": "tapdance",
+          "name": "action",
+          "description": "Tap dance name (new or existing)"
+        },
+        {
+          "type": "keycode",
+          "name": "single_tap",
+          "description": "Single tap keycode (step 2/4)"
+        },
+        {
+          "type": "keycode",
+          "name": "double_tap",
+          "description": "Double tap keycode (required, step 3/4)"
+        },
+        {
+          "type": "keycode",
+          "name": "hold",
+          "description": "Hold keycode (optional, Esc to skip, step 4/4)"
+        }
+      ]
+    }
+  ]
+}
