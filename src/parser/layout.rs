@@ -124,6 +124,9 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
     // Parse content (layers and categories)
     parse_content(&lines[content_start..], &mut layout)?;
 
+    // Auto-create missing tap dance definitions for any TD() references
+    layout.auto_create_tap_dances();
+
     // Validate the parsed layout
     layout.validate()?;
 

@@ -1303,6 +1303,42 @@ impl Layout {
         }
     }
 
+    /// Auto-creates missing tap dance definitions for all TD() references in the layout.
+    ///
+    /// Scans all keycodes for TD(name) patterns and creates placeholder tap dance
+    /// definitions for any referenced names that don't have definitions yet.
+    ///
+    /// Placeholder tap dances use KC_NO (no-op) keycodes that users can edit later.
+    pub fn auto_create_tap_dances(&mut self) {
+        // Collect all TD() references from keys
+        let mut referenced_names = std::collections::HashSet::new();
+        let td_pattern = regex::Regex::new(r"TD\(([^)]+)\)").unwrap();
+
+        for layer in &self.layers {
+            for key in &layer.keys {
+                if let Some(captures) = td_pattern.captures(&key.keycode) {
+                    let name = captures[1].to_string();
+                    referenced_names.insert(name);
+                }
+            }
+        }
+
+        // Auto-create missing tap dance definitions
+        for name in &referenced_names {
+            if !self.tap_dances.iter().any(|td| &td.name == name) {
+                // Create a placeholder tap dance with KC_NO (no-op) keycodes
+                // User can edit these later via the TUI
+                let placeholder = TapDanceAction {
+                    name: name.clone(),
+                    single_tap: "KC_NO".to_string(),
+                    double_tap: None,
+                    hold: None,
+                };
+                self.tap_dances.push(placeholder);
+            }
+        }
+    }
+
     /// Validates all tap dance references in the layout.
     ///
     /// Checks:
@@ -1406,6 +1442,7 @@ impl Layout {
     /// - All layers have the same number of keys
     /// - No duplicate positions within each layer
     /// - All category references exist
+    /// - All tap dance references are valid
     pub fn validate(&self) -> Result<()> {
         if self.layers.is_empty() {
             anyhow::bail!("Layout must have at least one layer");

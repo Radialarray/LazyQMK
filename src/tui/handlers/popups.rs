@@ -15,6 +15,19 @@ use crate::tui::{
     PopupType,
 };
 
+/// Extracts the tap dance name from a TD(name) keycode.
+/// Returns None if the keycode is not a valid TD() pattern.
+fn extract_td_name(keycode: &str) -> Option<String> {
+    if let Some(stripped) = keycode.strip_prefix("TD(") {
+        if let Some(name) = stripped.strip_suffix(')') {
+            if !name.is_empty() {
+                return Some(name.to_string());
+            }
+        }
+    }
+    None
+}
+
 /// Start a parameterized keycode flow using KeycodeDb param metadata (data-driven approach)
 /// Returns true if the keycode was handled as parameterized.
 fn start_parameterized_keycode_flow(state: &mut AppState, keycode: &str) -> bool {
@@ -186,7 +199,40 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                     .map(|td| td.name.clone())
                     .collect();
 
-                let form = crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names);
+                // Check if the current key already has a TD() keycode - if so, edit that tap dance
+                let form = if let Some(current_key) = state.get_selected_key() {
+                    let current_keycode = &current_key.keycode;
+                    
+                    // Parse TD(name) pattern to extract the name
+                    if let Some(td_name) = extract_td_name(current_keycode) {
+                        // Find the tap dance definition
+                        if let Some((index, tap_dance)) = state
+                            .layout
+                            .tap_dances
+                            .iter()
+                            .enumerate()
+                            .find(|(_, td)| td.name == td_name)
+                        {
+                            // Edit existing tap dance
+                            crate::tui::tap_dance_form::TapDanceForm::new_edit(
+                                tap_dance.clone(),
+                                index,
+                                existing_names,
+                            )
+                        } else {
+                            // TD reference exists but no definition found (auto-created placeholder)
+                            // Create new tap dance with that name
+                            crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names)
+                        }
+                    } else {
+                        // Current key doesn't have TD(), create new
+                        crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names)
+                    }
+                } else {
+                    // No selected key, create new
+                    crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names)
+                };
+
                 state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromKeycodePicker);
                 state.active_component = Some(ActiveComponent::TapDanceForm(form));
                 state.active_popup = Some(PopupType::TapDanceForm);
@@ -1379,5 +1425,48 @@ mod tests {
             state.pending_keycode.keycode_template.is_none(),
             "Expected pending keycode to be cleared"
         );
+    }
+
+    #[test]
+    fn test_td_keycode_edit_existing_opens_form() {
+        use crate::models::{Layer, KeyDefinition, Position, TapDanceAction};
+        
+        let mut state = create_test_state();
+        
+        // Setup: Add a tap dance definition
+        let td = TapDanceAction::new("slash", "KC_SLSH")
+            .with_double_tap("KC_BSLS");
+        state.layout.add_tap_dance(td).unwrap();
+        
+        // Setup: Add a layer with a key that has this tap dance
+        let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "TD(slash)"));
+        state.layout.layers.push(layer);
+        state.current_layer = 0;
+        state.selected_position = Position::new(0, 0);
+
+        // Action: Select TD() keycode from picker while on a key that already has TD(slash)
+        let event = KeycodePickerEvent::KeycodeSelected("TD()".to_string());
+        
+        let _ = handle_keycode_picker_event(&mut state, event);
+
+        // Assert: Tap dance form should be open
+        assert!(
+            matches!(state.active_component, Some(ActiveComponent::TapDanceForm(_))),
+            "Expected TapDanceForm to be active, got: {:?}",
+            state.active_component.as_ref().map(std::mem::discriminant)
+        );
+        assert_eq!(state.active_popup, Some(PopupType::TapDanceForm));
+        assert_eq!(state.tap_dance_form_context, Some(crate::tui::TapDanceFormContext::FromKeycodePicker));
+    }
+
+    #[test]
+    fn test_extract_td_name() {
+        assert_eq!(extract_td_name("TD(slash)"), Some("slash".to_string()));
+        assert_eq!(extract_td_name("TD(esc_caps)"), Some("esc_caps".to_string()));
+        assert_eq!(extract_td_name("TD(my_dance_123)"), Some("my_dance_123".to_string()));
+        assert_eq!(extract_td_name("TD()"), None); // Empty name
+        assert_eq!(extract_td_name("KC_A"), None); // Not a TD
+        assert_eq!(extract_td_name("TD(incomplete"), None); // Missing closing paren
     }
 }
