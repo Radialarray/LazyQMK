@@ -47,9 +47,6 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                 return Ok(false);
             }
             TapDanceEditorEvent::CreateNew => {
-                // Start tap dance creation flow
-                state.start_tap_dance_create();
-                
                 // Close tap dance editor
                 state.active_popup = None;
                 state.active_component = None;
@@ -59,25 +56,40 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                     .map(|td| td.name.clone())
                     .collect();
                 
-                // Open name entry dialog
-                let name_entry = crate::tui::tap_dance_name_entry::TapDanceNameEntry::new(existing_names);
-                state.active_popup = Some(PopupType::TapDanceNameEntry);
-                state.active_component = Some(ActiveComponent::TapDanceNameEntry(name_entry));
-                state.set_status("Enter tap dance name (alphanumeric + underscore)");
+                // Open tap dance form for creating new
+                let form = crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names);
+                state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromEditor);
+                state.active_popup = Some(PopupType::TapDanceForm);
+                state.active_component = Some(ActiveComponent::TapDanceForm(form));
+                state.set_status("Create new tap dance - fill required fields");
                 
                 return Ok(false);
             }
             TapDanceEditorEvent::Edit(index) => {
-                // Start tap dance edit flow
-                state.start_tap_dance_edit(index);
-                
-                // Close tap dance editor
-                state.active_popup = None;
-                state.active_component = None;
-                
-                // Open keycode picker for single_tap field
-                state.open_keycode_picker();
-                state.set_status("Edit tap dance: Select single tap keycode");
+                // Get the tap dance to edit
+                if let Some(tap_dance) = state.layout.tap_dances.get(index).cloned() {
+                    // Close tap dance editor
+                    state.active_popup = None;
+                    state.active_component = None;
+                    
+                    // Get existing tap dance names for validation
+                    let existing_names: Vec<String> = state.layout.tap_dances.iter()
+                        .map(|td| td.name.clone())
+                        .collect();
+                    
+                    // Open tap dance form for editing
+                    let form = crate::tui::tap_dance_form::TapDanceForm::new_edit(
+                        tap_dance,
+                        index,
+                        existing_names,
+                    );
+                    state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromEditor);
+                    state.active_popup = Some(PopupType::TapDanceForm);
+                    state.active_component = Some(ActiveComponent::TapDanceForm(form));
+                    state.set_status("Edit tap dance - modify fields as needed");
+                } else {
+                    state.set_error(format!("Tap dance at index {index} not found"));
+                }
                 
                 return Ok(false);
             }

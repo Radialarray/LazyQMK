@@ -37,7 +37,7 @@ pub mod onboarding_wizard;
 pub mod settings_manager;
 pub mod status_bar;
 pub mod tap_dance_editor;
-pub mod tap_dance_name_entry;
+pub mod tap_dance_form;
 pub mod template_browser;
 pub mod theme;
 
@@ -147,54 +147,13 @@ impl PendingKeycodeState {
     }
 }
 
-/// Field being edited in tap dance creation/edit flow
+/// Origin for tap dance form flow
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TapDanceEditField {
-    /// Entering tap dance name (text input)
-    Name,
-    /// Selecting single tap keycode (picker)
-    SingleTap,
-    /// Selecting double tap keycode (picker)
-    DoubleTap,
-    /// Selecting hold keycode (picker)
-    Hold,
-}
-
-/// State for tap dance editing (multi-stage picker flow)
-#[derive(Debug, Clone)]
-pub struct TapDanceEditState {
-    /// Tap dance being created/edited (None = not editing)
-    pub draft: Option<crate::models::TapDanceAction>,
-    /// Current field being edited
-    pub active_field: TapDanceEditField,
-    /// Whether we're editing existing (Some(index)) or creating new (None)
-    pub editing_index: Option<usize>,
-    /// Input buffer for name field
-    pub name_buffer: String,
-}
-
-impl TapDanceEditState {
-    /// Create a new tap dance edit state for creating a new tap dance
-    #[must_use]
-    pub const fn new_create() -> Self {
-        Self {
-            draft: None,
-            active_field: TapDanceEditField::Name,
-            editing_index: None,
-            name_buffer: String::new(),
-        }
-    }
-
-    /// Create a new tap dance edit state for editing an existing tap dance
-    #[must_use]
-    pub fn new_edit(tap_dance: crate::models::TapDanceAction, index: usize) -> Self {
-        Self {
-            draft: Some(tap_dance),
-            active_field: TapDanceEditField::SingleTap,
-            editing_index: Some(index),
-            name_buffer: String::new(),
-        }
-    }
+pub enum TapDanceFormContext {
+    /// Launched from tap dance editor list (manage library only)
+    FromEditor,
+    /// Launched from keycode picker to assign TD(name) to selected key
+    FromKeycodePicker,
 }
 
 /// State for the template save dialog.
@@ -327,8 +286,9 @@ pub enum PopupType {
     KeyEditor,
     /// Tap dance editor popup
     TapDanceEditor,
-    /// Tap dance name entry popup
-    TapDanceNameEntry,
+    /// Tap dance form dialog (create/edit)
+    TapDanceForm,
+
 }
 
 /// Selection mode for multi-key operations
@@ -372,8 +332,8 @@ pub enum ActiveComponent {
     LayoutPicker(LayoutPicker),
     /// Tap dance editor component
     TapDanceEditor(tap_dance_editor::TapDanceEditor),
-    /// Tap dance name entry component
-    TapDanceNameEntry(tap_dance_name_entry::TapDanceNameEntry),
+    /// Tap dance form component
+    TapDanceForm(tap_dance_form::TapDanceForm),
     /// Build log component
     BuildLog(BuildLog),
     /// Help overlay component
@@ -428,9 +388,14 @@ pub struct AppState {
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
     /// Pending parameterized keycode state (for multi-stage keycode building)
     pub pending_keycode: PendingKeycodeState,
-    /// Tap dance editing state (for multi-stage picker flow)
-    pub tap_dance_edit_state: Option<TapDanceEditState>,
+    /// Tap dance form cache (preserved when opening picker)
+    pub tap_dance_form_cache: Option<tap_dance_form::TapDanceForm>,
+    /// Tap dance form picker target (which field is being picked)
+    pub tap_dance_form_pick_target: Option<tap_dance_form::FormRow>,
+    /// Tap dance form context (where flow was launched from)
+    pub tap_dance_form_context: Option<TapDanceFormContext>,
     /// Key editor component state
+
     pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
@@ -511,8 +476,11 @@ impl AppState {
             template_save_dialog_state: TemplateSaveDialogState::default(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
             pending_keycode: PendingKeycodeState::new(),
-            tap_dance_edit_state: None,
+            tap_dance_form_cache: None,
+            tap_dance_form_pick_target: None,
+            tap_dance_form_context: None,
             key_editor_state: KeyEditorState::new(),
+
             clipboard: clipboard::KeyClipboard::new(),
             flash_highlight: None,
             selection_mode: None,
@@ -775,58 +743,6 @@ impl AppState {
     }
 
     // === Tap Dance Management Methods ===
-
-    /// Start creating a new tap dance (enter name first)
-    pub fn start_tap_dance_create(&mut self) {
-        self.tap_dance_edit_state = Some(TapDanceEditState::new_create());
-    }
-
-    /// Start editing an existing tap dance
-    pub fn start_tap_dance_edit(&mut self, index: usize) {
-        if let Some(td) = self.layout.tap_dances.get(index).cloned() {
-            self.tap_dance_edit_state = Some(TapDanceEditState::new_edit(td, index));
-        }
-    }
-
-    /// Advance to the next field in tap dance editing
-    pub fn advance_tap_dance_field(&mut self) {
-        if let Some(ref mut state) = self.tap_dance_edit_state {
-            state.active_field = match state.active_field {
-                TapDanceEditField::Name => TapDanceEditField::SingleTap,
-                TapDanceEditField::SingleTap => TapDanceEditField::DoubleTap,
-                TapDanceEditField::DoubleTap => TapDanceEditField::Hold,
-                TapDanceEditField::Hold => TapDanceEditField::Hold, // Stay on hold until save
-            };
-        }
-    }
-
-    /// Save the current tap dance draft to layout
-    pub fn save_tap_dance(&mut self) -> Result<()> {
-        if let Some(state) = self.tap_dance_edit_state.take() {
-            if let Some(tap_dance) = state.draft {
-                // Validate the tap dance
-                tap_dance.validate()?;
-
-                if let Some(index) = state.editing_index {
-                    // Update existing tap dance
-                    if let Some(existing) = self.layout.tap_dances.get_mut(index) {
-                        *existing = tap_dance;
-                        self.mark_dirty();
-                    }
-                } else {
-                    // Add new tap dance
-                    self.layout.add_tap_dance(tap_dance)?;
-                    self.mark_dirty();
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Cancel tap dance editing without saving
-    pub fn cancel_tap_dance_edit(&mut self) {
-        self.tap_dance_edit_state = None;
-    }
 }
 
 /// Initialize terminal for TUI
@@ -1062,9 +978,9 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 editor.render(f, f.area(), &state.theme);
             }
         }
-        PopupType::TapDanceNameEntry => {
-            if let Some(ActiveComponent::TapDanceNameEntry(ref entry)) = state.active_component {
-                entry.render(f, f.area(), &state.theme);
+        PopupType::TapDanceForm => {
+            if let Some(ActiveComponent::TapDanceForm(ref form)) = state.active_component {
+                form.render(f, f.area(), &state.theme);
             }
         }
     }

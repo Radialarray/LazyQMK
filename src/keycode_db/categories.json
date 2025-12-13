@@ -115,6 +115,11 @@
       "id": "haptic",
       "name": "Haptic",
       "description": "Haptic feedback motor controls"
+    },
+    {
+      "id": "tap_dance",
+      "name": "Tap Dance",
+      "description": "Tap dance keycodes with tap/double/hold actions"
     }
   ]
 }

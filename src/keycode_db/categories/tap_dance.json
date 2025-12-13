@@ -15,7 +15,22 @@
         {
           "type": "tapdance",
           "name": "action",
-          "description": "Tap dance action name"
+          "description": "Tap dance name (new or existing)"
+        },
+        {
+          "type": "keycode",
+          "name": "single_tap",
+          "description": "Single tap keycode (step 2/4)"
+        },
+        {
+          "type": "keycode",
+          "name": "double_tap",
+          "description": "Double tap keycode (required, step 3/4)"
+        },
+        {
+          "type": "keycode",
+          "name": "hold",
+          "description": "Hold keycode (optional, Esc to skip, step 4/4)"
         }
       ]
     }
