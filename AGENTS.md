@@ -199,7 +199,7 @@ git push origin v0.11.0
 - Check `git diff` to review all modifications
 - Ensure no unintended changes are included
 - Exclude unrelated files (submodule changes, temp files, etc.)
-- **qmk_firmware submodule:** never delete, replace, or commit changes here. If the submodule shows as modified or missing, restore with `git submodule update --init --recursive qmk_firmware` and do not stage its changes.
+- **qmk_firmware submodule:** never delete or replace it. Do not stage/commit its changes unless you are intentionally changing the submodule. If it shows modified or missing, restore with `git submodule update --init --recursive qmk_firmware` and keep it out of commits.
 
 ### Architecture Guidelines
 
