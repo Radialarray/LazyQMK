@@ -419,8 +419,8 @@ pub fn get_keycode_breakdown(
         if let Some(layout) = layout {
             if let Some(td) = layout.tap_dances.iter().find(|td| td.name == td_name) {
                 let single = &td.single_tap;
-                let double = td.double_tap.as_ref().map(String::as_str).unwrap_or("(none)");
-                let hold = td.hold.as_ref().map(String::as_str).unwrap_or("(none)");
+                let double = td.double_tap.as_deref().unwrap_or("(none)");
+                let hold = td.hold.as_deref().unwrap_or("(none)");
                 
                 // Format the taps (single / double)
                 let taps = format!("{}  /  {}", single, double);

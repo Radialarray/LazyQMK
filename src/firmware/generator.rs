@@ -108,6 +108,11 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str(&format!("#include \"{}\"\n", header));
         }
 
+        // Tap dance requires process_tap_dance.h definitions
+        if !self.layout.tap_dances.is_empty() {
+            code.push_str("#include \"process_keycode/process_tap_dance.h\"\n");
+        }
+
         code.push('\n');
 
         // Add tap dance configuration if any tap dances are defined
@@ -880,19 +885,22 @@ impl<'a> FirmwareGenerator<'a> {
 
         for (idx, td) in sorted_tds.iter().enumerate() {
             let enum_name = format!("TD_{}", td.name.to_uppercase());
-            
-            let action = if td.is_two_way() {
-                // 2-way tap dance: ACTION_TAP_DANCE_DOUBLE(single, double)
-                let single = &td.single_tap;
-                let double = td.double_tap.as_ref().unwrap();
-                format!("ACTION_TAP_DANCE_DOUBLE({}, {})", single, double)
-            } else {
+
+            let action = if td.has_hold() {
                 // 3-way tap dance: ACTION_TAP_DANCE_FN_ADVANCED(NULL, finished, reset)
                 let name_lower = td.name.to_lowercase();
                 format!(
                     "ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_{}_finished, td_{}_reset)",
                     name_lower, name_lower
                 )
+            } else if let Some(double) = &td.double_tap {
+                // 2-way tap dance: ACTION_TAP_DANCE_DOUBLE(single, double)
+                let single = &td.single_tap;
+                format!("ACTION_TAP_DANCE_DOUBLE({}, {})", single, double)
+            } else {
+                // Single-tap-only fallback: treat as double with same keycode to avoid helper fns
+                let single = &td.single_tap;
+                format!("ACTION_TAP_DANCE_DOUBLE({}, {})", single, single)
             };
 
             code.push_str(&format!("    [{}] = {}", enum_name, action));
