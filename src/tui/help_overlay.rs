@@ -254,6 +254,21 @@ impl HelpOverlayState {
             }
         }
 
+        // Tap dance editor
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action.contains("Tap dance editor") {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{keys:<18}");
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
+
         lines.push(Line::from(""));
         Self::add_context_subsection(
             &mut lines,
@@ -312,6 +327,25 @@ impl HelpOverlayState {
             Style::default().fg(theme.text_muted),
         )]));
         Self::add_context_bindings(&mut lines, &registry, contexts::CLIPBOARD, theme, key_style);
+
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![Span::styled(
+            "  Selection entry points:",
+            Style::default().fg(theme.text_muted),
+        )]));
+        if let Some(ctx) = registry.get_context(contexts::MAIN) {
+            for binding in &ctx.bindings {
+                if binding.action == "Selection mode" || binding.action == "Rectangle select" {
+                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                    let padded_keys = format!("{keys:<18}");
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(padded_keys, key_style),
+                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                    ]));
+                }
+            }
+        }
 
         lines.push(Line::from(""));
         Self::add_subsection_header(&mut lines, "Multi-key selection", theme);

@@ -113,11 +113,13 @@ priority = 21
 [[contexts.main.bindings]]
 keys = ["Shift+V"]
 action = "Selection mode"
+hint = "Select"
 priority = 22
 
 [[contexts.main.bindings]]
 keys = ["Shift+R"]
 action = "Rectangle select"
+hint = "Rect"
 priority = 23
 
 [[contexts.main.bindings]]
