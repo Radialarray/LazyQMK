@@ -704,7 +704,7 @@ priority = 2
 
 [contexts.selection]
 name = "Selection Mode"
-description = "Multi-key selection for copy/cut"
+description = "Multi-key selection for copy/cut/color/category"
 
 [[contexts.selection.bindings]]
 keys = ["↑", "↓", "←", "→"]
@@ -725,22 +725,34 @@ hint = "Rect"
 priority = 3
 
 [[contexts.selection.bindings]]
+keys = ["c"]
+action = "Set color for selected"
+hint = "Color"
+priority = 4
+
+[[contexts.selection.bindings]]
+keys = ["Ctrl+K"]
+action = "Assign category to selected"
+hint = "Category"
+priority = 5
+
+[[contexts.selection.bindings]]
 keys = ["y"]
 action = "Copy selected"
 hint = "Copy"
-priority = 4
+priority = 6
 
 [[contexts.selection.bindings]]
 keys = ["d"]
 action = "Cut selected"
 hint = "Cut"
-priority = 5
+priority = 7
 
 [[contexts.selection.bindings]]
 keys = ["Esc"]
 action = "Exit selection"
 hint = "Exit"
-priority = 6
+priority = 8
 
 # =============================================================================
 # TEMPLATE BROWSER

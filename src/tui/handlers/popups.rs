@@ -419,6 +419,27 @@ fn handle_category_picker_event(
                         }
                     }
                 }
+                Some(crate::tui::CategoryPickerContext::MultiKeySelection) => {
+                    // Apply category to all selected keys on current layer
+                    if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                        let mut count = 0;
+                        for pos in &state.selected_keys {
+                            if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                                key.category_id.clone_from(&category_id);
+                                count += 1;
+                            }
+                        }
+                        
+                        if count > 0 {
+                            state.mark_dirty();
+                            if let Some(id) = &category_id {
+                                state.set_status(format!("Applied category '{id}' to {count} keys"));
+                            } else {
+                                state.set_status(format!("Removed category from {count} keys"));
+                            }
+                        }
+                    }
+                }
                 None => {
                     state.set_error("No category context set");
                 }
@@ -511,6 +532,23 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                                 Some(ActiveComponent::CategoryManager(manager));
                             state.active_popup = Some(PopupType::CategoryManager);
                         }
+                        crate::tui::component::ColorPickerContext::MultiKeySelection => {
+                            // Apply color to all selected keys on current layer
+                            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                                let mut count = 0;
+                                for pos in &state.selected_keys {
+                                    if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                                        key.color_override = Some(color);
+                                        count += 1;
+                                    }
+                                }
+                                
+                                if count > 0 {
+                                    state.mark_dirty();
+                                    state.set_status(format!("Set color to {} for {count} keys", color.to_hex()));
+                                }
+                            }
+                        }
                     }
 
                     // Close the color picker
@@ -539,6 +577,23 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                         crate::tui::component::ColorPickerContext::Category => {
                             state.set_error("Categories must have a color");
                             return Ok(false); // Don't close
+                        }
+                        crate::tui::component::ColorPickerContext::MultiKeySelection => {
+                            // Clear color override for all selected keys on current layer
+                            if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
+                                let mut count = 0;
+                                for pos in &state.selected_keys {
+                                    if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                                        key.color_override = None;
+                                        count += 1;
+                                    }
+                                }
+                                
+                                if count > 0 {
+                                    state.mark_dirty();
+                                    state.set_status(format!("Cleared color for {count} keys (using layer default)"));
+                                }
+                            }
                         }
                     }
 

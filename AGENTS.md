@@ -48,6 +48,9 @@ Rust 1.75+: Follow standard conventions
 - **Note**: CI may use newer Rust/clippy versions with stricter lints. If CI fails but local passes, update Rust (`rustup update stable`) and re-run clippy
 - **Required Rust version**: 1.91.1 or newer (matches CI to ensure consistent clippy behavior)
 
+### Help System Source of Truth
+- **Context help and help menu text must come from `src/data/help.toml`**. Do not hardcode help strings in code; add or update entries in `help.toml` instead.
+
 ### Code Quality Standards
 
 #### Privacy & Personal Information

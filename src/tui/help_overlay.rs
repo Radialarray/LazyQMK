@@ -363,26 +363,31 @@ impl HelpOverlayState {
 
         // =====================================================================
         // COLOR SYSTEM
-        // =====================================================================
-        Self::add_section_header(&mut lines, "COLOR SYSTEM", theme);
+         // =====================================================================
+         Self::add_section_header(&mut lines, "COLOR SYSTEM", theme);
 
-        // Main color shortcuts
-        if let Some(ctx) = registry.get_context(contexts::MAIN) {
-            for binding in &ctx.bindings {
-                if binding.action.contains("color") || binding.action.contains("Color") {
-                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{keys:<18}");
-                    lines.push(Line::from(vec![
-                        Span::raw("  "),
-                        Span::styled(padded_keys, key_style),
-                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
-                    ]));
-                }
-            }
-        }
+         // Main color shortcuts
+         if let Some(ctx) = registry.get_context(contexts::MAIN) {
+             for binding in &ctx.bindings {
+                 if binding.action.contains("color") || binding.action.contains("Color") {
+                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                     let padded_keys = format!("{keys:<18}");
+                     lines.push(Line::from(vec![
+                         Span::raw("  "),
+                         Span::styled(padded_keys, key_style),
+                         Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                     ]));
+                 }
+             }
+         }
 
-        lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In color picker (Palette mode)", theme);
+         lines.push(Line::from(""));
+         lines.push(Line::from(vec![Span::styled(
+             "  Note: When selection mode is active, color is applied to all selected keys.",
+             Style::default().fg(theme.text_muted),
+         )]));
+         lines.push(Line::from(""));
+         Self::add_subsection_header(&mut lines, "In color picker (Palette mode)", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -411,27 +416,31 @@ impl HelpOverlayState {
             info_style,
         );
 
-        // =====================================================================
-        // CATEGORY SYSTEM
-        // =====================================================================
-        Self::add_section_header(&mut lines, "CATEGORY SYSTEM", theme);
+         // =====================================================================
+         // CATEGORY SYSTEM
+         // =====================================================================
+         Self::add_section_header(&mut lines, "CATEGORY SYSTEM", theme);
 
-        // Main category shortcuts
-        if let Some(ctx) = registry.get_context(contexts::MAIN) {
-            for binding in &ctx.bindings {
-                if binding.action.contains("ategory") {
-                    let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
-                    let padded_keys = format!("{keys:<18}");
-                    lines.push(Line::from(vec![
-                        Span::raw("  "),
-                        Span::styled(padded_keys, key_style),
-                        Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
-                    ]));
-                }
-            }
-        }
+         // Main category shortcuts
+         if let Some(ctx) = registry.get_context(contexts::MAIN) {
+             for binding in &ctx.bindings {
+                 if binding.action.contains("ategory") {
+                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
+                     let padded_keys = format!("{keys:<18}");
+                     lines.push(Line::from(vec![
+                         Span::raw("  "),
+                         Span::styled(padded_keys, key_style),
+                         Span::styled(binding.action.clone(), Style::default().fg(theme.text)),
+                     ]));
+                 }
+             }
+         }
 
-        lines.push(Line::from(""));
+         lines.push(Line::from(""));
+         lines.push(Line::from(vec![Span::styled(
+             "  Note: When selection mode is active, category is applied to all selected keys.",
+             Style::default().fg(theme.text_muted),
+         )]));
         Self::add_subsection_header(&mut lines, "In category manager", theme);
         Self::add_context_bindings(
             &mut lines,

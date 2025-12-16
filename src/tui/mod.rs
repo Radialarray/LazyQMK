@@ -102,6 +102,8 @@ pub enum CategoryPickerContext {
     IndividualKey,
     /// Setting category for entire layer
     Layer,
+    /// Setting category for multiple selected keys
+    MultiKeySelection,
 }
 
 /// Type of parameterized keycode being built

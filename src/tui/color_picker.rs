@@ -300,6 +300,7 @@ impl ColorPicker {
             ColorPickerContext::IndividualKey => "Individual Key Color Picker",
             ColorPickerContext::LayerDefault => "Layer Color Picker",
             ColorPickerContext::Category => "Category Color Picker",
+            ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker",
         }
     }
 
@@ -309,6 +310,7 @@ impl ColorPicker {
             ColorPickerContext::IndividualKey => "Individual Key Color Picker (Custom RGB)",
             ColorPickerContext::LayerDefault => "Layer Color Picker (Custom RGB)",
             ColorPickerContext::Category => "Category Color Picker (Custom RGB)",
+            ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker (Custom RGB)",
         }
     }
 }

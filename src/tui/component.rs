@@ -55,4 +55,6 @@ pub enum ColorPickerContext {
     LayerDefault,
     /// Setting category color
     Category,
+    /// Coloring multiple selected keys
+    MultiKeySelection,
 }
