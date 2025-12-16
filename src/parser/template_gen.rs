@@ -264,7 +264,8 @@ fn generate_key_descriptions(layout: &Layout) -> Option<String> {
 /// Only writes non-default settings to keep files clean.
 fn generate_settings(layout: &Layout) -> Option<String> {
     use crate::models::{
-        HoldDecisionMode, RgbBrightness, RgbSaturation, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+        HoldDecisionMode, RgbBrightness, RgbSaturation, TapHoldPreset, TapHoldSettings,
+        UncoloredKeyBehavior,
     };
 
     let default_uncolored = UncoloredKeyBehavior::default();
@@ -362,10 +363,16 @@ fn generate_settings(layout: &Layout) -> Option<String> {
                 output.push_str("**Idle Effect Duration**: 0\n");
             } else if duration_ms >= 60000 && duration_ms.is_multiple_of(60000) {
                 // Whole minutes
-                output.push_str(&format!("**Idle Effect Duration**: {} min\n", duration_ms / 60000));
+                output.push_str(&format!(
+                    "**Idle Effect Duration**: {} min\n",
+                    duration_ms / 60000
+                ));
             } else if duration_ms >= 1000 && duration_ms.is_multiple_of(1000) {
                 // Whole seconds
-                output.push_str(&format!("**Idle Effect Duration**: {} sec\n", duration_ms / 1000));
+                output.push_str(&format!(
+                    "**Idle Effect Duration**: {} sec\n",
+                    duration_ms / 1000
+                ));
             } else {
                 // Milliseconds
                 output.push_str(&format!("**Idle Effect Duration**: {duration_ms}ms\n"));
@@ -374,7 +381,10 @@ fn generate_settings(layout: &Layout) -> Option<String> {
 
         // Write idle effect mode if not default
         if ies.idle_effect_mode != defaults.idle_effect_mode {
-            output.push_str(&format!("**Idle Effect Mode**: {}\n", ies.idle_effect_mode.display_name()));
+            output.push_str(&format!(
+                "**Idle Effect Mode**: {}\n",
+                ies.idle_effect_mode.display_name()
+            ));
         }
     }
 
@@ -876,7 +886,7 @@ mod tests {
     fn test_idle_effect_default_not_written() {
         let layout = create_test_layout();
         let markdown = generate_markdown(&layout).unwrap();
-        
+
         // Default settings should not be written
         assert!(!markdown.contains("Idle Effect"));
         assert!(!markdown.contains("Idle Timeout"));
@@ -891,10 +901,10 @@ mod tests {
             enabled: false,
             ..crate::models::IdleEffectSettings::default()
         };
-        
+
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Effect**: Off"));
-        
+
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert!(!parsed.idle_effect_settings.enabled);
     }
@@ -902,28 +912,28 @@ mod tests {
     #[test]
     fn test_idle_effect_timeout_formats() {
         let mut layout = create_test_layout();
-        
+
         // Test minutes format
         layout.idle_effect_settings.idle_timeout_ms = 120_000; // 2 minutes
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Timeout**: 2 min"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.idle_effect_settings.idle_timeout_ms, 120_000);
-        
+
         // Test seconds format
         layout.idle_effect_settings.idle_timeout_ms = 45_000; // 45 seconds
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Timeout**: 45 sec"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.idle_effect_settings.idle_timeout_ms, 45_000);
-        
+
         // Test milliseconds format
         layout.idle_effect_settings.idle_timeout_ms = 12_345; // Odd milliseconds
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Timeout**: 12345ms"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.idle_effect_settings.idle_timeout_ms, 12_345);
-        
+
         // Test zero (disabled)
         layout.idle_effect_settings.idle_timeout_ms = 0;
         let markdown = generate_markdown(&layout).unwrap();
@@ -935,21 +945,21 @@ mod tests {
     #[test]
     fn test_idle_effect_duration_formats() {
         let mut layout = create_test_layout();
-        
+
         // Test minutes format
         layout.idle_effect_settings.idle_effect_duration_ms = 600_000; // 10 minutes
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Effect Duration**: 10 min"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.idle_effect_settings.idle_effect_duration_ms, 600_000);
-        
+
         // Test seconds format
         layout.idle_effect_settings.idle_effect_duration_ms = 90_000; // 90 seconds
         let markdown = generate_markdown(&layout).unwrap();
         assert!(markdown.contains("**Idle Effect Duration**: 90 sec"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.idle_effect_settings.idle_effect_duration_ms, 90_000);
-        
+
         // Test zero (immediate off)
         layout.idle_effect_settings.idle_effect_duration_ms = 0;
         let markdown = generate_markdown(&layout).unwrap();
@@ -961,22 +971,30 @@ mod tests {
     #[test]
     fn test_idle_effect_mode_round_trip() {
         use crate::models::RgbMatrixEffect;
-        
+
         let mut layout = create_test_layout();
-        
+
         // Test various effect modes (skip Breathing which is the default)
         let effects = [
             RgbMatrixEffect::RainbowMovingChevron,
             RgbMatrixEffect::CycleAll,
             RgbMatrixEffect::JellybeanRaindrops,
         ];
-        
+
         for effect in effects {
             layout.idle_effect_settings.idle_effect_mode = effect;
             let markdown = generate_markdown(&layout).unwrap();
-            assert!(markdown.contains("**Idle Effect Mode**:"), "Missing Idle Effect Mode for {}", effect.display_name());
-            assert!(markdown.contains(effect.display_name()), "Missing effect name {}", effect.display_name());
-            
+            assert!(
+                markdown.contains("**Idle Effect Mode**:"),
+                "Missing Idle Effect Mode for {}",
+                effect.display_name()
+            );
+            assert!(
+                markdown.contains(effect.display_name()),
+                "Missing effect name {}",
+                effect.display_name()
+            );
+
             let parsed = parse_markdown_layout_str(&markdown).unwrap();
             assert_eq!(parsed.idle_effect_settings.idle_effect_mode, effect);
         }
@@ -985,26 +1003,29 @@ mod tests {
     #[test]
     fn test_idle_effect_complete_settings() {
         use crate::models::RgbMatrixEffect;
-        
+
         let mut layout = create_test_layout();
         layout.idle_effect_settings = crate::models::IdleEffectSettings {
             enabled: true,
-            idle_timeout_ms: 30_000, // 30 seconds
+            idle_timeout_ms: 30_000,          // 30 seconds
             idle_effect_duration_ms: 180_000, // 3 minutes
             idle_effect_mode: RgbMatrixEffect::RainbowBeacon,
         };
-        
+
         let markdown = generate_markdown(&layout).unwrap();
         println!("Generated markdown:\n{markdown}");
-        
+
         assert!(markdown.contains("**Idle Timeout**: 30 sec"));
         assert!(markdown.contains("**Idle Effect Duration**: 3 min"));
         assert!(markdown.contains("**Idle Effect Mode**: Rainbow Beacon"));
-        
+
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert!(parsed.idle_effect_settings.enabled);
         assert_eq!(parsed.idle_effect_settings.idle_timeout_ms, 30_000);
         assert_eq!(parsed.idle_effect_settings.idle_effect_duration_ms, 180_000);
-        assert_eq!(parsed.idle_effect_settings.idle_effect_mode, RgbMatrixEffect::RainbowBeacon);
+        assert_eq!(
+            parsed.idle_effect_settings.idle_effect_mode,
+            RgbMatrixEffect::RainbowBeacon
+        );
     }
 }

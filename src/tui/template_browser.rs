@@ -241,7 +241,6 @@ impl TemplateBrowser {
         let _ = state.scan_templates();
         Self { state }
     }
-
 }
 
 impl Default for TemplateBrowser {

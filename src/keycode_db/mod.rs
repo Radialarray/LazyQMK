@@ -779,7 +779,7 @@ impl KeycodeDb {
         if keycode.starts_with("TD(") && keycode.ends_with(')') {
             let inner = &keycode[3..keycode.len() - 1];
             let name = inner.trim();
-            
+
             // Validate it's a non-empty, valid C identifier
             if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
                 return Some(name.to_string());
@@ -1193,12 +1193,12 @@ mod tests {
         // Not a tap dance keycode
         assert_eq!(db.parse_tap_dance_keycode("KC_A"), None);
         assert_eq!(db.parse_tap_dance_keycode("MO(1)"), None);
-        
+
         // Invalid names (not C identifiers)
         assert_eq!(db.parse_tap_dance_keycode("TD(my-tap)"), None);
         assert_eq!(db.parse_tap_dance_keycode("TD(my tap)"), None);
         assert_eq!(db.parse_tap_dance_keycode("TD(my@tap)"), None);
-        
+
         // Empty name
         assert_eq!(db.parse_tap_dance_keycode("TD()"), None);
         assert_eq!(db.parse_tap_dance_keycode("TD(  )"), None);

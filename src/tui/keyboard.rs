@@ -38,9 +38,9 @@ impl KeyboardWidget {
     #[allow(clippy::too_many_lines)]
     pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         use crate::models::keyboard_geometry::terminal_scale;
-        
+
         let theme = &state.theme;
-        
+
         // Get unified scale factor from config (1.0 = 100%)
         // Apply to base scale factors from keyboard_geometry
         let scale_multiplier = state.config.ui.keyboard_scale;
@@ -58,9 +58,27 @@ impl KeyboardWidget {
             return;
         };
 
+        // Build title with layer references info
+        let title = if let Some(refs) = state.layer_refs.get(&state.current_layer) {
+            let ref_count = refs.len();
+            if ref_count > 0 {
+                format!(
+                    " Layer {}: {} ({} inbound ref{}) ",
+                    state.current_layer,
+                    layer.name,
+                    ref_count,
+                    if ref_count == 1 { "" } else { "s" }
+                )
+            } else {
+                format!(" Layer {}: {} ", state.current_layer, layer.name)
+            }
+        } else {
+            format!(" Layer {}: {} ", state.current_layer, layer.name)
+        };
+
         // Render outer container
         let outer_block = Block::default()
-            .title(format!(" Layer {}: {} ", state.current_layer, layer.name))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.primary))
             .style(Style::default().bg(theme.background));
@@ -221,6 +239,16 @@ impl KeyboardWidget {
             };
 
             // Render the key with custom border that includes color indicator
+            // Determine if this key is targeted by hold-like inbound refs on this layer
+            let has_hold_like_inbound = state
+                .layer_refs
+                .get(&state.current_layer)
+                .map(|refs| {
+                    refs.iter()
+                        .any(|r| r.position == key.position && r.kind.is_hold_like())
+                })
+                .unwrap_or(false);
+
             Self::render_key_with_indicator(
                 f,
                 key_area,
@@ -231,6 +259,7 @@ impl KeyboardWidget {
                 is_cut_source,
                 is_in_selection,
                 is_flashing,
+                has_hold_like_inbound,
                 theme,
             );
         }
@@ -248,10 +277,11 @@ impl KeyboardWidget {
         is_cut_source: bool,
         is_in_selection: bool,
         is_flashing: bool,
+        has_hold_like_inbound: bool,
         theme: &super::Theme,
     ) {
-        // Determine colors based on selection, cut state, multi-selection, and flash
-        let (border_style, content_bg, content_fg) = if is_flashing {
+        // Determine colors based on selection, cut state, multi-selection, flash, and inbound holds
+        let (border_style, content_bg, content_fg, overlay_border_color) = if is_flashing {
             // Flash highlight: bright accent background
             (
                 Style::default()
@@ -259,6 +289,7 @@ impl KeyboardWidget {
                     .add_modifier(Modifier::BOLD),
                 Some(theme.success),
                 theme.background,
+                None,
             )
         } else if is_selected {
             (
@@ -267,6 +298,7 @@ impl KeyboardWidget {
                     .add_modifier(Modifier::BOLD),
                 Some(theme.accent),
                 theme.background,
+                None,
             )
         } else if is_in_selection {
             // Multi-selection: highlighted but not as prominent as primary selection
@@ -276,6 +308,7 @@ impl KeyboardWidget {
                     .add_modifier(Modifier::BOLD),
                 Some(theme.surface),
                 theme.text,
+                None,
             )
         } else if is_cut_source {
             // Cut source: dimmed appearance
@@ -285,13 +318,44 @@ impl KeyboardWidget {
                     .add_modifier(Modifier::DIM),
                 None,
                 theme.text_muted,
+                None,
+            )
+        } else if has_hold_like_inbound {
+            // Inbound hold-like reference: keep base border color, but add red overlay border
+            (
+                Style::default().fg(border_color),
+                None,
+                theme.text,
+                Some(theme.error),
             )
         } else {
-            (Style::default().fg(border_color), None, theme.text)
+            (Style::default().fg(border_color), None, theme.text, None)
         };
 
         // Draw the custom border with indicator in top-right corner
         let buf = f.buffer_mut();
+
+        // If we need a secondary overlay border (red) to indicate hold-like inbound refs
+        if let Some(overlay_color) = overlay_border_color {
+            let top_y = area.y;
+            let left_x = area.x;
+            let right_x = area.x + area.width.saturating_sub(1);
+            let bottom_y = area.y + area.height.saturating_sub(1);
+            let overlay_style = Style::default()
+                .fg(overlay_color)
+                .add_modifier(Modifier::BOLD);
+
+            // Top and bottom
+            for x in left_x..=right_x {
+                buf[(x, top_y)].set_style(overlay_style);
+                buf[(x, bottom_y)].set_style(overlay_style);
+            }
+            // Left and right
+            for y in top_y..=bottom_y {
+                buf[(left_x, y)].set_style(overlay_style);
+                buf[(right_x, y)].set_style(overlay_style);
+            }
+        }
 
         // Top border with indicator in right corner: ┌──────i┐
         let top_y = area.y;
@@ -299,18 +363,14 @@ impl KeyboardWidget {
         let right_x = area.x + area.width.saturating_sub(1);
 
         // Draw corners
-         buf[(left_x, top_y)]
-             .set_char('┌')
-             .set_style(border_style);
-         buf[(right_x, top_y)]
-             .set_char('┐')
-             .set_style(border_style);
-         buf[(left_x, area.y + area.height.saturating_sub(1))]
-             .set_char('└')
-             .set_style(border_style);
-         buf[(right_x, area.y + area.height.saturating_sub(1))]
-             .set_char('┘')
-             .set_style(border_style);
+        buf[(left_x, top_y)].set_char('┌').set_style(border_style);
+        buf[(right_x, top_y)].set_char('┐').set_style(border_style);
+        buf[(left_x, area.y + area.height.saturating_sub(1))]
+            .set_char('└')
+            .set_style(border_style);
+        buf[(right_x, area.y + area.height.saturating_sub(1))]
+            .set_char('┘')
+            .set_style(border_style);
 
         // Top border with indicator in right corner (just before ┐)
         let top_width = area.width.saturating_sub(2) as usize;
@@ -323,48 +383,48 @@ impl KeyboardWidget {
                 if i == indicator_pos {
                     // Draw the indicator character with the border color
                     let indicator_style = if is_selected {
-                         Style::default()
-                             .fg(theme.accent)
-                             .add_modifier(Modifier::BOLD)
-                     } else {
-                         Style::default()
-                             .fg(border_color)
-                             .add_modifier(Modifier::BOLD)
-                     };
-                     buf[(x, top_y)]
-                         .set_char(indicator.chars().next().unwrap_or('─'))
-                         .set_style(indicator_style);
-                 } else {
-                     buf[(x, top_y)].set_char('─').set_style(border_style);
+                        Style::default()
+                            .fg(theme.accent)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                            .fg(border_color)
+                            .add_modifier(Modifier::BOLD)
+                    };
+                    buf[(x, top_y)]
+                        .set_char(indicator.chars().next().unwrap_or('─'))
+                        .set_style(indicator_style);
+                } else {
+                    buf[(x, top_y)].set_char('─').set_style(border_style);
                 }
             }
         }
 
         // Bottom border
-         for i in 1..area.width.saturating_sub(1) {
-             buf[(left_x + i, area.y + area.height.saturating_sub(1))]
-                 .set_char('─')
-                 .set_style(border_style);
-         }
+        for i in 1..area.width.saturating_sub(1) {
+            buf[(left_x + i, area.y + area.height.saturating_sub(1))]
+                .set_char('─')
+                .set_style(border_style);
+        }
 
         // Left and right borders
-         for row in 1..area.height.saturating_sub(1) {
-             buf[(left_x, area.y + row)]
-                 .set_char('│')
-                 .set_style(border_style);
-             buf[(right_x, area.y + row)]
-                 .set_char('│')
-                 .set_style(border_style);
-         }
+        for row in 1..area.height.saturating_sub(1) {
+            buf[(left_x, area.y + row)]
+                .set_char('│')
+                .set_style(border_style);
+            buf[(right_x, area.y + row)]
+                .set_char('│')
+                .set_style(border_style);
+        }
 
-         // Fill content area background if selected
-         if let Some(bg) = content_bg {
-             for row in 1..area.height.saturating_sub(1) {
-                 for col in 1..area.width.saturating_sub(1) {
-                     buf[(area.x + col, area.y + row)].set_bg(bg);
-                 }
-             }
-         }
+        // Fill content area background if selected
+        if let Some(bg) = content_bg {
+            for row in 1..area.height.saturating_sub(1) {
+                for col in 1..area.width.saturating_sub(1) {
+                    buf[(area.x + col, area.y + row)].set_bg(bg);
+                }
+            }
+        }
 
         // Render content lines
         let content_area = Rect {
@@ -388,14 +448,14 @@ impl KeyboardWidget {
                         break;
                     }
                     let mut style = span.style;
-                     if is_selected {
-                         style = style.fg(content_fg);
-                         if let Some(bg) = content_bg {
-                             style = style.bg(bg);
-                         }
-                     }
-                     buf[(x, y)].set_char(ch).set_style(style);
-                     x += 1;
+                    if is_selected {
+                        style = style.fg(content_fg);
+                        if let Some(bg) = content_bg {
+                            style = style.bg(bg);
+                        }
+                    }
+                    buf[(x, y)].set_char(ch).set_style(style);
+                    x += 1;
                 }
             }
         }

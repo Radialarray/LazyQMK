@@ -99,11 +99,7 @@ impl TapDanceForm {
     }
 
     /// Creates a new form for editing an existing tap dance
-    pub fn new_edit(
-        tap_dance: TapDanceAction,
-        index: usize,
-        existing_names: Vec<String>,
-    ) -> Self {
+    pub fn new_edit(tap_dance: TapDanceAction, index: usize, existing_names: Vec<String>) -> Self {
         let name_input = tap_dance.name.clone();
         Self {
             draft: tap_dance,
@@ -285,7 +281,11 @@ impl Component for TapDanceForm {
                     self.clear_hold();
                 }
             }
-            KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+            KeyCode::Char('s')
+                if key
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::CONTROL) =>
+            {
                 // Ctrl+S to save
                 if self.can_save() {
                     // Final validation
@@ -345,7 +345,11 @@ impl Component for TapDanceForm {
                     .fg(theme.accent)
                     .add_modifier(Modifier::BOLD),
             )
-            .block(Block::default().borders(Borders::ALL).style(Style::default().bg(theme.background)));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .style(Style::default().bg(theme.background)),
+            );
         frame.render_widget(title, chunks[0]);
 
         // Name field
@@ -366,14 +370,12 @@ impl Component for TapDanceForm {
         } else {
             " Name [REQUIRED] "
         };
-        let name = Paragraph::new(name_text)
-            .style(name_style)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(name_label)
-                    .style(Style::default().bg(theme.background)),
-            );
+        let name = Paragraph::new(name_text).style(name_style).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(name_label)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(name, chunks[1]);
 
         // Single tap field
@@ -392,14 +394,12 @@ impl Component for TapDanceForm {
         } else {
             " Single Tap [REQUIRED] "
         };
-        let single = Paragraph::new(single_text)
-            .style(single_style)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(single_label)
-                    .style(Style::default().bg(theme.background)),
-            );
+        let single = Paragraph::new(single_text).style(single_style).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(single_label)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(single, chunks[2]);
 
         // Double tap field
@@ -418,14 +418,12 @@ impl Component for TapDanceForm {
         } else {
             " Double Tap [REQUIRED] "
         };
-        let double = Paragraph::new(double_text)
-            .style(double_style)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(double_label)
-                    .style(Style::default().bg(theme.background)),
-            );
+        let double = Paragraph::new(double_text).style(double_style).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(double_label)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(double, chunks[3]);
 
         // Hold field
@@ -444,14 +442,12 @@ impl Component for TapDanceForm {
         } else {
             " Hold [OPTIONAL] "
         };
-        let hold = Paragraph::new(hold_text)
-            .style(hold_style)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(hold_label)
-                    .style(Style::default().bg(theme.background)),
-            );
+        let hold = Paragraph::new(hold_text).style(hold_style).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(hold_label)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(hold, chunks[4]);
 
         // Status line
@@ -462,9 +458,11 @@ impl Component for TapDanceForm {
         } else {
             Style::default().fg(theme.warning)
         };
-        let status = Paragraph::new(status_text)
-            .style(status_style)
-            .block(Block::default().borders(Borders::ALL).style(Style::default().bg(theme.background)));
+        let status = Paragraph::new(status_text).style(status_style).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(status, chunks[5]);
 
         // Error message (if any)
@@ -518,7 +516,11 @@ impl Component for TapDanceForm {
             Span::raw(" Cancel"),
         ])])
         .style(Style::default().fg(theme.text).bg(theme.background))
-        .block(Block::default().borders(Borders::ALL).style(Style::default().bg(theme.background)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().bg(theme.background)),
+        );
         frame.render_widget(help, chunks[7]);
     }
 }

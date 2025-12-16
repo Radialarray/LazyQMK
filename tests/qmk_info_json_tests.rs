@@ -48,7 +48,10 @@ fn test_parse_crkbd_info_json() {
     println!("Available layouts for crkbd/rev1: {layouts:?}");
 
     // crkbd typically has LAYOUT or LAYOUT_split_3x6_3
-    assert!(!layouts.is_empty(), "crkbd/rev1 should have layout definitions");
+    assert!(
+        !layouts.is_empty(),
+        "crkbd/rev1 should have layout definitions"
+    );
 }
 
 #[test]
@@ -59,8 +62,8 @@ fn test_build_crkbd_geometry() {
     }
 
     let qmk_path = get_qmk_path();
-    let info =
-        parse_keyboard_info_json(&qmk_path, "crkbd/rev1").expect("Failed to parse crkbd/rev1 info.json");
+    let info = parse_keyboard_info_json(&qmk_path, "crkbd/rev1")
+        .expect("Failed to parse crkbd/rev1 info.json");
 
     let layouts = extract_layout_names(&info);
     assert!(!layouts.is_empty(), "crkbd/rev1 should have layouts");
@@ -105,13 +108,13 @@ fn test_build_crkbd_visual_mapping() {
     }
 
     let qmk_path = get_qmk_path();
-    let info =
-        parse_keyboard_info_json(&qmk_path, "crkbd/rev1").expect("Failed to parse crkbd/rev1 info.json");
+    let info = parse_keyboard_info_json(&qmk_path, "crkbd/rev1")
+        .expect("Failed to parse crkbd/rev1 info.json");
     let layouts = extract_layout_names(&info);
     let layout_name = &layouts[0];
 
-    let geometry =
-        build_keyboard_geometry(&info, "crkbd/rev1", layout_name).expect("Failed to build geometry");
+    let geometry = build_keyboard_geometry(&info, "crkbd/rev1", layout_name)
+        .expect("Failed to build geometry");
 
     let mapping = VisualLayoutMapping::build(&geometry);
 
@@ -219,7 +222,7 @@ fn test_parse_split_config_keyboard() {
     }
 
     let qmk_path = get_qmk_path();
-    
+
     // Test 1upkeyboards/pi50/grid which has split configuration
     let result = parse_keyboard_info_json(&qmk_path, "1upkeyboards/pi50/grid");
 
@@ -230,40 +233,41 @@ fn test_parse_split_config_keyboard() {
     );
 
     let info = result.unwrap();
-    
+
     // Layouts should come from variant's keyboard.json
     assert!(
         !info.layouts.is_empty(),
         "1upkeyboards/pi50/grid should have layouts from keyboard.json"
     );
-    
+
     let layouts = extract_layout_names(&info);
     println!("1upkeyboards/pi50/grid layouts: {:?}", layouts);
-    
+
     // Should have LAYOUT_ortho_5x12
     assert!(
         layouts.contains(&"LAYOUT_ortho_5x12".to_string()),
         "Should have LAYOUT_ortho_5x12 from keyboard.json"
     );
-    
+
     // Encoder should come from parent's info.json
     assert!(
         info.encoder.is_some(),
         "1upkeyboards/pi50/grid should have encoder config from parent info.json"
     );
-    
+
     let encoder = info.encoder.as_ref().unwrap();
     let rotary = encoder.rotary.as_ref().unwrap();
     assert_eq!(rotary.len(), 1, "Should have 1 encoder");
-    
+
     // Build geometry to verify it works end-to-end
-    let geometry_result = build_keyboard_geometry(&info, "1upkeyboards/pi50/grid", "LAYOUT_ortho_5x12");
+    let geometry_result =
+        build_keyboard_geometry(&info, "1upkeyboards/pi50/grid", "LAYOUT_ortho_5x12");
     assert!(
         geometry_result.is_ok(),
         "Failed to build geometry for 1upkeyboards/pi50/grid: {:?}",
         geometry_result.err()
     );
-    
+
     let geometry = geometry_result.unwrap();
     // pi50 grid has 61 keys (5x12 + encoder)
     assert!(
@@ -271,7 +275,7 @@ fn test_parse_split_config_keyboard() {
         "pi50/grid should have at least 60 keys, found {}",
         geometry.keys.len()
     );
-    
+
     println!(
         "1upkeyboards/pi50/grid: {} keys, {}x{} matrix",
         geometry.keys.len(),
@@ -293,7 +297,7 @@ fn test_parse_keebart_corne_choc_pro() {
     }
 
     let qmk_path = get_qmk_path();
-    
+
     // Test keebart/corne_choc_pro/standard
     let result = parse_keyboard_info_json(&qmk_path, "keebart/corne_choc_pro/standard");
 
@@ -304,22 +308,22 @@ fn test_parse_keebart_corne_choc_pro() {
     );
 
     let info = result.unwrap();
-    
+
     // Should have layouts
     assert!(
         !info.layouts.is_empty(),
         "keebart/corne_choc_pro/standard should have layouts"
     );
-    
+
     let layouts = extract_layout_names(&info);
     println!("keebart/corne_choc_pro/standard layouts: {:?}", layouts);
-    
+
     // Corne typically has LAYOUT_split_3x6_3 or similar
     assert!(
         layouts.iter().any(|l| l.contains("split") || l == "LAYOUT"),
         "Should have a split layout or LAYOUT"
     );
-    
+
     // Build geometry to verify it works end-to-end
     let layout_name = &layouts[0];
     let geometry_result = build_keyboard_geometry(&info, "keebart/corne_choc_pro", layout_name);
@@ -329,7 +333,7 @@ fn test_parse_keebart_corne_choc_pro() {
         layout_name,
         geometry_result.err()
     );
-    
+
     let geometry = geometry_result.unwrap();
     // Corne has 42 keys (3x6 + 3 thumb keys per half)
     assert!(
@@ -337,7 +341,7 @@ fn test_parse_keebart_corne_choc_pro() {
         "keebart/corne_choc_pro should have at least 36 keys, found {}",
         geometry.keys.len()
     );
-    
+
     println!(
         "keebart/corne_choc_pro/standard/{}: {} keys, {}x{} matrix",
         layout_name,
@@ -345,15 +349,16 @@ fn test_parse_keebart_corne_choc_pro() {
         geometry.matrix_rows,
         geometry.matrix_cols
     );
-    
+
     // Also test the mini variant if it exists
     let mini_result = parse_keyboard_info_json(&qmk_path, "keebart/corne_choc_pro/mini");
     if let Ok(mini_info) = mini_result {
         let mini_layouts = extract_layout_names(&mini_info);
         println!("keebart/corne_choc_pro/mini layouts: {:?}", mini_layouts);
-        
+
         if let Some(mini_layout_name) = mini_layouts.first() {
-            let mini_geometry = build_keyboard_geometry(&mini_info, "keebart/corne_choc_pro", mini_layout_name);
+            let mini_geometry =
+                build_keyboard_geometry(&mini_info, "keebart/corne_choc_pro", mini_layout_name);
             if let Ok(geom) = mini_geometry {
                 println!(
                     "keebart/corne_choc_pro/mini/{}: {} keys, {}x{} matrix",
@@ -450,7 +455,7 @@ fn test_parse_json5_keyboard() {
     }
 
     let qmk_path = get_qmk_path();
-    
+
     // Test splitkb/aurora/lily58/rev1 which has JSON5 comments
     let result = parse_keyboard_info_json(&qmk_path, "splitkb/aurora/lily58/rev1");
 
@@ -461,22 +466,22 @@ fn test_parse_json5_keyboard() {
     );
 
     let info = result.unwrap();
-    
+
     // Should have layouts from keyboard.json
     assert!(
         !info.layouts.is_empty(),
         "splitkb/aurora/lily58/rev1 should have layouts from keyboard.json"
     );
-    
+
     let layouts = extract_layout_names(&info);
     println!("splitkb/aurora/lily58/rev1 layouts: {:?}", layouts);
-    
+
     // Should have LAYOUT
     assert!(
         layouts.contains(&"LAYOUT".to_string()),
         "Should have LAYOUT from keyboard.json with JSON5 comments"
     );
-    
+
     // Build geometry to verify parsing worked correctly
     let geometry_result = build_keyboard_geometry(&info, "splitkb/aurora/lily58/rev1", "LAYOUT");
     assert!(
@@ -484,15 +489,16 @@ fn test_parse_json5_keyboard() {
         "Failed to build geometry for splitkb/aurora/lily58/rev1: {:?}",
         geometry_result.err()
     );
-    
+
     let geometry = geometry_result.unwrap();
     // lily58 has 58 keys
     assert_eq!(
-        geometry.keys.len(), 58,
+        geometry.keys.len(),
+        58,
         "lily58 should have 58 keys, found {}",
         geometry.keys.len()
     );
-    
+
     println!(
         "splitkb/aurora/lily58/rev1: {} keys, {}x{} matrix (parsed from JSON5 with comments)",
         geometry.keys.len(),

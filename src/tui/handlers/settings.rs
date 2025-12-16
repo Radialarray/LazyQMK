@@ -3,7 +3,10 @@
 use anyhow::Result;
 use crossterm::event;
 
-use crate::models::{HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, TapHoldPreset, UncoloredKeyBehavior};
+use crate::models::{
+    HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, TapHoldPreset,
+    UncoloredKeyBehavior,
+};
 use crate::tui::settings_manager::{
     ManagerMode, SettingItem, SettingsManagerContext, SettingsManagerEvent,
 };
@@ -263,21 +266,23 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                     );
                 }
                 SettingItem::IdleTimeout => {
-                    let current_secs = (state.layout.idle_effect_settings.idle_timeout_ms / 1000) as u16;
+                    let current_secs =
+                        (state.layout.idle_effect_settings.idle_timeout_ms / 1000) as u16;
                     manager
                         .state_mut()
                         .start_editing_numeric(*setting, current_secs, 0, 3600);
                 }
                 SettingItem::IdleEffectDuration => {
-                    let current_secs = (state.layout.idle_effect_settings.idle_effect_duration_ms / 1000) as u16;
+                    let current_secs =
+                        (state.layout.idle_effect_settings.idle_effect_duration_ms / 1000) as u16;
                     manager
                         .state_mut()
                         .start_editing_numeric(*setting, current_secs, 0, 3600);
                 }
                 SettingItem::IdleEffectMode => {
-                    manager
-                        .state_mut()
-                        .start_selecting_idle_effect_mode(state.layout.idle_effect_settings.idle_effect_mode);
+                    manager.state_mut().start_selecting_idle_effect_mode(
+                        state.layout.idle_effect_settings.idle_effect_mode,
+                    );
                 }
             }
             state.set_status("Select option with ↑↓, Enter to apply");
@@ -388,7 +393,10 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     if let Err(e) = state.config.save() {
                         state.set_status(format!("Failed to save config: {e}"));
                     } else {
-                        state.set_status(format!("Theme mode set to: {}", theme_mode_display(theme_mode)));
+                        state.set_status(format!(
+                            "Theme mode set to: {}",
+                            theme_mode_display(theme_mode)
+                        ));
                     }
                 }
             }
@@ -402,7 +410,10 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     if let Some(&mode) = RgbMatrixEffect::all().get(selected_idx) {
                         state.layout.idle_effect_settings.idle_effect_mode = mode;
                         state.mark_dirty();
-                        state.set_status(format!("Idle effect mode set to: {}", mode.display_name()));
+                        state.set_status(format!(
+                            "Idle effect mode set to: {}",
+                            mode.display_name()
+                        ));
                     }
                 }
             }
@@ -595,25 +606,24 @@ fn apply_path_setting(state: &mut AppState, setting: SettingItem, value: String)
                 ));
             }
         }
-         SettingItem::OutputDir => {
-             state.config.build.output_dir = std::path::PathBuf::from(&value);
-             if let Err(e) = state.config.save() {
-                 state.set_status(format!("Failed to save config: {e}"));
-             } else {
-                 state.set_status(format!("Output directory set to: {value}"));
-             }
-         }
-         _ => {}
-     }
-     Ok(())
- }
- 
- /// Helper function to display theme mode name
- fn theme_mode_display(mode: crate::config::ThemeMode) -> &'static str {
-     match mode {
-         crate::config::ThemeMode::Auto => "Auto",
-         crate::config::ThemeMode::Dark => "Dark",
-         crate::config::ThemeMode::Light => "Light",
-     }
- }
+        SettingItem::OutputDir => {
+            state.config.build.output_dir = std::path::PathBuf::from(&value);
+            if let Err(e) = state.config.save() {
+                state.set_status(format!("Failed to save config: {e}"));
+            } else {
+                state.set_status(format!("Output directory set to: {value}"));
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
+/// Helper function to display theme mode name
+fn theme_mode_display(mode: crate::config::ThemeMode) -> &'static str {
+    match mode {
+        crate::config::ThemeMode::Auto => "Auto",
+        crate::config::ThemeMode::Dark => "Dark",
+        crate::config::ThemeMode::Light => "Light",
+    }
+}

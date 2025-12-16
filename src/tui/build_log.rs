@@ -89,8 +89,6 @@ impl BuildLog {
             state: BuildLogState::new(),
         }
     }
-
-
 }
 
 impl Default for BuildLog {

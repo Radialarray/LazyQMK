@@ -404,14 +404,14 @@ mod tests {
     fn test_hsv_roundtrip() {
         // Test various colors round-trip through HSV
         let colors = vec![
-            RgbColor::new(255, 0, 0),     // Red
-            RgbColor::new(0, 255, 0),     // Green
-            RgbColor::new(0, 0, 255),     // Blue
-            RgbColor::new(255, 255, 0),   // Yellow
-            RgbColor::new(255, 0, 255),   // Magenta
-            RgbColor::new(0, 255, 255),   // Cyan
-            RgbColor::new(128, 64, 192),  // Purple-ish
-            RgbColor::new(200, 100, 50),  // Orange-ish
+            RgbColor::new(255, 0, 0),    // Red
+            RgbColor::new(0, 255, 0),    // Green
+            RgbColor::new(0, 0, 255),    // Blue
+            RgbColor::new(255, 255, 0),  // Yellow
+            RgbColor::new(255, 0, 255),  // Magenta
+            RgbColor::new(0, 255, 255),  // Cyan
+            RgbColor::new(128, 64, 192), // Purple-ish
+            RgbColor::new(200, 100, 50), // Orange-ish
         ];
 
         for color in colors {
@@ -483,12 +483,12 @@ mod tests {
     fn test_saturate_increase() {
         let color = RgbColor::new(200, 150, 150);
         let saturated = color.saturate(200);
-        
+
         // More saturated color should have greater difference between max and min channels
         let original_range = color.r.max(color.g).max(color.b) - color.r.min(color.g).min(color.b);
-        let saturated_range = saturated.r.max(saturated.g).max(saturated.b) 
+        let saturated_range = saturated.r.max(saturated.g).max(saturated.b)
             - saturated.r.min(saturated.g).min(saturated.b);
-        
+
         assert!(
             saturated_range >= original_range,
             "Saturated color should have greater channel range"
@@ -505,7 +505,10 @@ mod tests {
         // Trying to saturate beyond 100% should clamp at maximum
         let more_saturated = red.saturate(200);
         let (_, s2, _) = more_saturated.to_hsv();
-        assert!((s2 - 1.0).abs() < 0.01, "Saturation should be clamped at 1.0");
+        assert!(
+            (s2 - 1.0).abs() < 0.01,
+            "Saturation should be clamped at 1.0"
+        );
     }
 
     #[test]

@@ -85,10 +85,8 @@ impl KeycodePickerState {
             Some(ref lang_id) => {
                 // Find the language index in the list
                 let languages = keycode_db.languages();
-                let language_list_index = languages
-                    .iter()
-                    .position(|l| l.id == *lang_id)
-                    .unwrap_or(0);
+                let language_list_index =
+                    languages.iter().position(|l| l.id == *lang_id).unwrap_or(0);
 
                 // Languages category is at index: categories.len() + 1
                 // (index 0 = "All", then regular categories, then "Languages")

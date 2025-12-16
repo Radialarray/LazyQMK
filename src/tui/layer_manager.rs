@@ -350,8 +350,6 @@ impl LayerManager {
             self.state.selected = self.cached_layers.len() - 1;
         }
     }
-
-
 }
 
 impl Component for LayerManager {

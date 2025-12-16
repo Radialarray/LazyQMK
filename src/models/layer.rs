@@ -453,13 +453,13 @@ mod tests {
     #[test]
     fn test_layer_new_respects_max_layer_limit() {
         let color = RgbColor::new(255, 0, 0);
-        
+
         // These should succeed (within MAX_QMK_LAYER_LIMIT of 32)
         assert!(Layer::new(0, "Base", color).is_ok());
         assert!(Layer::new(7, "Lower", color).is_ok());
         assert!(Layer::new(15, "Layer15", color).is_ok());
         assert!(Layer::new(31, "Layer31", color).is_ok());
-        
+
         // This should fail (equals MAX_QMK_LAYER_LIMIT)
         assert!(Layer::new(32, "Layer32", color).is_err());
         assert!(Layer::new(255, "Layer255", color).is_err());

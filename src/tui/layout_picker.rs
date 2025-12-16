@@ -132,15 +132,15 @@ pub struct LayoutPicker {
 }
 
 impl LayoutPicker {
-     /// Create a new LayoutPicker
-     #[must_use]
-     pub fn new() -> Self {
-         let mut state = LayoutPickerState::new();
-         // Attempt to scan layouts on creation (ignore errors)
-         let _ = state.scan_layouts();
-         Self { state }
-     }
- }
+    /// Create a new LayoutPicker
+    #[must_use]
+    pub fn new() -> Self {
+        let mut state = LayoutPickerState::new();
+        // Attempt to scan layouts on creation (ignore errors)
+        let _ = state.scan_layouts();
+        Self { state }
+    }
+}
 
 impl Default for LayoutPicker {
     fn default() -> Self {

@@ -40,7 +40,7 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                 } else {
                     state.set_error("No key selected");
                 }
-                
+
                 // Close the component
                 state.active_popup = None;
                 state.active_component = None;
@@ -50,19 +50,22 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                 // Close tap dance editor
                 state.active_popup = None;
                 state.active_component = None;
-                
+
                 // Get existing tap dance names for validation
-                let existing_names: Vec<String> = state.layout.tap_dances.iter()
+                let existing_names: Vec<String> = state
+                    .layout
+                    .tap_dances
+                    .iter()
                     .map(|td| td.name.clone())
                     .collect();
-                
+
                 // Open tap dance form for creating new
                 let form = crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names);
                 state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromEditor);
                 state.active_popup = Some(PopupType::TapDanceForm);
                 state.active_component = Some(ActiveComponent::TapDanceForm(form));
                 state.set_status("Create new tap dance - fill required fields");
-                
+
                 return Ok(false);
             }
             TapDanceEditorEvent::Edit(index) => {
@@ -71,26 +74,30 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                     // Close tap dance editor
                     state.active_popup = None;
                     state.active_component = None;
-                    
+
                     // Get existing tap dance names for validation
-                    let existing_names: Vec<String> = state.layout.tap_dances.iter()
+                    let existing_names: Vec<String> = state
+                        .layout
+                        .tap_dances
+                        .iter()
                         .map(|td| td.name.clone())
                         .collect();
-                    
+
                     // Open tap dance form for editing
                     let form = crate::tui::tap_dance_form::TapDanceForm::new_edit(
                         tap_dance,
                         index,
                         existing_names,
                     );
-                    state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromEditor);
+                    state.tap_dance_form_context =
+                        Some(crate::tui::TapDanceFormContext::FromEditor);
                     state.active_popup = Some(PopupType::TapDanceForm);
                     state.active_component = Some(ActiveComponent::TapDanceForm(form));
                     state.set_status("Edit tap dance - modify fields as needed");
                 } else {
                     state.set_error(format!("Tap dance at index {index} not found"));
                 }
-                
+
                 return Ok(false);
             }
             TapDanceEditorEvent::Delete(name) => {
@@ -98,7 +105,7 @@ pub fn handle_tap_dance_editor_input(state: &mut AppState, key: event::KeyEvent)
                 state.layout.remove_tap_dance(&name);
                 state.mark_dirty();
                 state.set_status(format!("Deleted tap dance '{name}'"));
-                
+
                 // Refresh editor with updated list
                 editor = crate::tui::tap_dance_editor::TapDanceEditor::new(&state.layout);
             }

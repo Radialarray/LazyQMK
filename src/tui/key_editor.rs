@@ -421,17 +421,17 @@ pub fn get_keycode_breakdown(
                 let single = &td.single_tap;
                 let double = td.double_tap.as_deref().unwrap_or("(none)");
                 let hold = td.hold.as_deref().unwrap_or("(none)");
-                
+
                 // Format the taps (single / double)
                 let taps = format!("{}  /  {}", single, double);
-                
+
                 // Format the hold action
                 let hold_display = if hold != "(none)" {
                     format!("Hold: {}", hold)
                 } else {
                     "(2-way)".to_string()
                 };
-                
+
                 return Some((
                     "Single/Double".to_string(),
                     taps,
@@ -448,7 +448,7 @@ pub fn get_keycode_breakdown(
             String::new(),
         ));
     }
-    
+
     let parsed = parse_keycode_with_db(db, keycode)?;
 
     match parsed.category.as_str() {
@@ -1101,16 +1101,16 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_tap_dance() {
         use crate::models::{Layout, TapDanceAction};
-        
+
         let db = KeycodeDb::load().expect("Failed to load keycode database");
         let mut layout = Layout::new("Test").unwrap();
-        
+
         // Add a tap dance definition
         let td = TapDanceAction::new("slash", "KC_SLSH")
             .with_double_tap("KC_BSLS")
             .with_hold("KC_QUES");
         layout.add_tap_dance(td).unwrap();
-        
+
         let result = get_keycode_breakdown(&db, "TD(slash)", Some(&layout));
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -1123,15 +1123,14 @@ mod tests {
     #[test]
     fn test_get_keycode_breakdown_tap_dance_two_way() {
         use crate::models::{Layout, TapDanceAction};
-        
+
         let db = KeycodeDb::load().expect("Failed to load keycode database");
         let mut layout = Layout::new("Test").unwrap();
-        
+
         // Add a 2-way tap dance (no hold)
-        let td = TapDanceAction::new("esc_caps", "KC_ESC")
-            .with_double_tap("KC_CAPS");
+        let td = TapDanceAction::new("esc_caps", "KC_ESC").with_double_tap("KC_CAPS");
         layout.add_tap_dance(td).unwrap();
-        
+
         let result = get_keycode_breakdown(&db, "TD(esc_caps)", Some(&layout));
         assert!(result.is_some());
         let (label1, val1, label2, val2) = result.unwrap();
@@ -1144,7 +1143,10 @@ mod tests {
     #[test]
     fn test_extract_td_name() {
         assert_eq!(extract_td_name("TD(slash)"), Some("slash".to_string()));
-        assert_eq!(extract_td_name("TD(esc_caps)"), Some("esc_caps".to_string()));
+        assert_eq!(
+            extract_td_name("TD(esc_caps)"),
+            Some("esc_caps".to_string())
+        );
         assert_eq!(extract_td_name("TD()"), None); // Empty name
         assert_eq!(extract_td_name("KC_A"), None); // Not a TD
     }

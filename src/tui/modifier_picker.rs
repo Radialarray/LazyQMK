@@ -78,10 +78,10 @@ impl QmkModifier {
             Self::LCtrl | Self::RCtrl => "Ctrl",
             Self::LShift | Self::RShift => "Shift",
             Self::LAlt | Self::RAlt => "Alt",
-             Self::LGui | Self::RGui => "GUI",
-         }
-     }
- }
+            Self::LGui | Self::RGui => "GUI",
+        }
+    }
+}
 
 /// Preset modifier combinations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -270,14 +270,14 @@ pub struct ModifierPicker {
 impl ModifierPicker {
     /// Create a new ModifierPicker with empty selection
     #[must_use]
-     pub fn new() -> Self {
-         Self {
-             state: ModifierPickerState::new(),
-         }
-     }
+    pub fn new() -> Self {
+        Self {
+            state: ModifierPickerState::new(),
+        }
+    }
 
-     /// Get the selected modifiers as individual strings
-     fn get_modifiers_list(&self) -> Vec<String> {
+    /// Get the selected modifiers as individual strings
+    fn get_modifiers_list(&self) -> Vec<String> {
         if self.state.selected_mods == 0 {
             return Vec::new();
         }

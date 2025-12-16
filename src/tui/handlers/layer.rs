@@ -26,6 +26,7 @@ pub fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) ->
                 // Add the new layer
                 state.layout.layers.push(layer);
                 state.mark_dirty();
+                state.refresh_layer_refs(); // Update layer reference index
                 state.set_status(format!(
                     "Layer '{}' created",
                     state.layout.layers.last().unwrap().name
@@ -57,6 +58,7 @@ pub fn handle_layer_manager_input(state: &mut AppState, key: event::KeyEvent) ->
                     }
 
                     state.mark_dirty();
+                    state.refresh_layer_refs(); // Update layer reference index
                     state.set_status("Layer deleted");
 
                     // Update component with new layers

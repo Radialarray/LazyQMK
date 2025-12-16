@@ -14,13 +14,9 @@ use ratatui::{
 };
 
 use crate::models::{
-    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, TapHoldPreset, TapHoldSettings,
-    UncoloredKeyBehavior,
+    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, TapHoldPreset,
+    TapHoldSettings, UncoloredKeyBehavior,
 };
-
-
-
-
 
 use super::Theme;
 
@@ -114,7 +110,6 @@ pub enum SettingItem {
     UncoloredKeyBehavior,
 
     // === Tap-Hold Settings (Per-Layout) ===
-
     /// Preset for common tap-hold configurations
     TapHoldPreset,
     /// Base timing for tap vs hold decision
@@ -182,9 +177,7 @@ impl SettingItem {
             | Self::KeymapName
             | Self::OutputFormat
             | Self::OutputDir => SettingGroup::Build,
-            Self::ShowHelpOnStartup
-            | Self::ThemeMode
-            | Self::KeyboardScale => SettingGroup::Ui,
+            Self::ShowHelpOnStartup | Self::ThemeMode | Self::KeyboardScale => SettingGroup::Ui,
             Self::RgbEnabled
             | Self::RgbBrightness
             | Self::RgbSaturation
@@ -253,11 +246,15 @@ impl SettingItem {
             Self::KeyboardScale => "Keyboard display size: 1.0 = default, 0.5 = half, 2.0 = double",
             Self::RgbEnabled => "Turn all RGB LEDs on or off",
             Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
-            Self::RgbSaturation => "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)",
+            Self::RgbSaturation => {
+                "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)"
+            }
             Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
             Self::IdleEffectEnabled => "Enable idle effect (triggers RGB animation before timeout)",
             Self::IdleTimeout => "Delay before starting idle effect (0 = disabled)",
-            Self::IdleEffectDuration => "How long to run idle effect before turning off (0 = immediate)",
+            Self::IdleEffectDuration => {
+                "How long to run idle effect before turning off (0 = immediate)"
+            }
             Self::IdleEffectMode => "RGB animation effect to use during idle period",
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
@@ -627,8 +624,6 @@ impl SettingsManagerState {
     pub fn cancel(&mut self) {
         self.mode = ManagerMode::Browsing;
     }
-
-
 }
 
 impl Default for SettingsManagerState {
@@ -722,7 +717,9 @@ impl SettingsManager {
             ManagerMode::SelectingOutputFormat { .. } => self.handle_output_format_selection(key),
             ManagerMode::SelectingThemeMode { .. } => self.handle_theme_mode_selection(key),
             ManagerMode::EditingPath { .. } => self.handle_path_editing(key),
-            ManagerMode::SelectingIdleEffectMode { .. } => self.handle_idle_effect_mode_selection(key),
+            ManagerMode::SelectingIdleEffectMode { .. } => {
+                self.handle_idle_effect_mode_selection(key)
+            }
         }
     }
 
@@ -1284,9 +1281,12 @@ fn get_setting_value_display(
                 format!("{rgb_timeout_ms}ms")
             }
         }
-        SettingItem::IdleEffectEnabled => {
-            if idle_effect_settings.enabled { "On" } else { "Off" }.to_string()
+        SettingItem::IdleEffectEnabled => if idle_effect_settings.enabled {
+            "On"
+        } else {
+            "Off"
         }
+        .to_string(),
         SettingItem::IdleTimeout => {
             let idle_timeout_ms = idle_effect_settings.idle_timeout_ms;
             if idle_timeout_ms == 0 {
@@ -1311,9 +1311,10 @@ fn get_setting_value_display(
                 format!("{duration_ms}ms")
             }
         }
-        SettingItem::IdleEffectMode => {
-            idle_effect_settings.idle_effect_mode.display_name().to_string()
-        }
+        SettingItem::IdleEffectMode => idle_effect_settings
+            .idle_effect_mode
+            .display_name()
+            .to_string(),
         SettingItem::UncoloredKeyBehavior => format!("{}%", uncolored_key_behavior.as_percent()),
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
@@ -1932,7 +1933,7 @@ mod tests {
     #[test]
     fn test_setting_item_all_includes_idle_effect_settings() {
         let all_settings = SettingItem::all();
-        
+
         // Verify idle effect settings are present
         assert!(all_settings.contains(&SettingItem::IdleEffectEnabled));
         assert!(all_settings.contains(&SettingItem::IdleTimeout));
@@ -1950,10 +1951,19 @@ mod tests {
 
     #[test]
     fn test_idle_effect_settings_have_display_names() {
-        assert_eq!(SettingItem::IdleEffectEnabled.display_name(), "Idle Effect Enabled");
+        assert_eq!(
+            SettingItem::IdleEffectEnabled.display_name(),
+            "Idle Effect Enabled"
+        );
         assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Timeout");
-        assert_eq!(SettingItem::IdleEffectDuration.display_name(), "Idle Effect Duration");
-        assert_eq!(SettingItem::IdleEffectMode.display_name(), "Idle Effect Mode");
+        assert_eq!(
+            SettingItem::IdleEffectDuration.display_name(),
+            "Idle Effect Duration"
+        );
+        assert_eq!(
+            SettingItem::IdleEffectMode.display_name(),
+            "Idle Effect Mode"
+        );
     }
 
     #[test]

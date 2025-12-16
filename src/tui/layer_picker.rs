@@ -149,10 +149,10 @@ impl LayerPicker {
     #[must_use]
     pub const fn state(&self) -> &LayerPickerState {
         &self.state
-     }
- }
- 
- /// Render the layer picker popup using the Component
+    }
+}
+
+/// Render the layer picker popup using the Component
 pub fn render_layer_picker_component(
     f: &mut Frame,
     picker: &LayerPicker,
@@ -244,8 +244,6 @@ pub fn render_layer_picker_component(
         .style(Style::default().fg(theme.text_muted));
     f.render_widget(help, chunks[2]);
 }
-
-
 
 /// Helper to create a centered rectangle
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

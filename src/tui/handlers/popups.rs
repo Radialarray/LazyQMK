@@ -76,8 +76,10 @@ fn open_picker_for_param_index(state: &mut AppState, param_idx: usize) {
     // Clone the parameter data we need before calling state methods
     let param = &params[param_idx];
     let param_type = param.param_type;
-    let prefix = KeycodeDb::get_prefix(&template).unwrap_or(&template).to_string();
-    
+    let prefix = KeycodeDb::get_prefix(&template)
+        .unwrap_or(&template)
+        .to_string();
+
     // Build status message from param description or generic fallback
     let message = param
         .description
@@ -159,6 +161,7 @@ fn handle_parameter_collected(state: &mut AppState, param_value: String) {
             if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = final_keycode.clone();
                 state.mark_dirty();
+                state.refresh_layer_refs(); // Update layer reference index
                 state.set_status(format!("Assigned: {final_keycode}"));
             }
         } else {
@@ -202,7 +205,7 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                 // Check if the current key already has a TD() keycode - if so, edit that tap dance
                 let form = if let Some(current_key) = state.get_selected_key() {
                     let current_keycode = &current_key.keycode;
-                    
+
                     // Parse TD(name) pattern to extract the name
                     if let Some(td_name) = extract_td_name(current_keycode) {
                         // Find the tap dance definition
@@ -233,7 +236,8 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                     crate::tui::tap_dance_form::TapDanceForm::new_create(existing_names)
                 };
 
-                state.tap_dance_form_context = Some(crate::tui::TapDanceFormContext::FromKeycodePicker);
+                state.tap_dance_form_context =
+                    Some(crate::tui::TapDanceFormContext::FromKeycodePicker);
                 state.active_component = Some(ActiveComponent::TapDanceForm(form));
                 state.active_popup = Some(PopupType::TapDanceForm);
                 state.pending_keycode.reset();
@@ -251,7 +255,7 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                     // Pick target remains set for when the parameterized keycode is completed
                     return Ok(false);
                 }
-                
+
                 // Apply keycode to the appropriate field based on pick target
                 if let Some(target) = state.tap_dance_form_pick_target.take() {
                     use crate::tui::tap_dance_form::FormRow;
@@ -259,12 +263,13 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                         FormRow::Single | FormRow::Double => {
                             // Single/Double taps must be basic keycodes (no parameterized)
                             if !is_basic_keycode(&keycode) {
-                                state.set_error("Only basic keycodes allowed for single/double tap");
+                                state
+                                    .set_error("Only basic keycodes allowed for single/double tap");
                                 state.tap_dance_form_cache = Some(form);
                                 state.tap_dance_form_pick_target = Some(target);
                                 return Ok(false);
                             }
-                            
+
                             if target == FormRow::Single {
                                 form.set_single_tap(keycode.clone());
                                 state.set_status(format!("Single tap set to: {keycode}"));
@@ -282,7 +287,7 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                                 state.tap_dance_form_pick_target = Some(target);
                                 return Ok(false);
                             }
-                            
+
                             form.set_hold(keycode.clone());
                             state.set_status(format!("Hold set to: {keycode}"));
                         }
@@ -298,7 +303,6 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                 state.active_popup = Some(PopupType::TapDanceForm);
                 return Ok(false);
             }
-
 
             // Check if we're editing a combo keycode part
             if let Some((part, combo_type)) = state.key_editor_state.combo_edit.take() {
@@ -319,6 +323,7 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
                 if let Some(key) = state.get_selected_key_mut() {
                     key.keycode = new_keycode.clone();
                     state.mark_dirty();
+                    state.refresh_layer_refs(); // Update layer reference index
                     state.set_status(format!("Updated: {new_keycode}"));
                 }
 
@@ -334,10 +339,29 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
             }
 
             // Normal keycode assignment
+            // Check for transparency conflicts before assigning (need to do this before mut borrow)
+            use crate::services::layer_refs::check_transparency_conflict;
+            let warning_msg = check_transparency_conflict(
+                state.current_layer,
+                state.selected_position,
+                &keycode,
+                &state.layer_refs,
+            );
+
             if let Some(key) = state.get_selected_key_mut() {
                 key.keycode = keycode.clone();
                 state.mark_dirty();
-                state.set_status(format!("Assigned: {keycode}"));
+                state.refresh_layer_refs(); // Update layer reference index
+
+                // Show appropriate status message
+                if let Some(warning) = warning_msg {
+                    state.set_status_with_style(
+                        format!("Assigned: {} - {}", keycode, warning),
+                        state.theme.error,
+                    );
+                } else {
+                    state.set_status(format!("Assigned: {keycode}"));
+                }
             }
 
             state.close_component();
@@ -347,7 +371,7 @@ fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) 
             if let Some(form) = state.tap_dance_form_cache.take() {
                 // Clear pick target
                 state.tap_dance_form_pick_target = None;
-                
+
                 // Restore form without changes
                 state.active_component = Some(ActiveComponent::TapDanceForm(form));
                 state.active_popup = Some(PopupType::TapDanceForm);
@@ -799,6 +823,7 @@ fn handle_layer_picker_event(
                     if let Some(key) = state.get_selected_key_mut() {
                         key.keycode = new_keycode.clone();
                         state.mark_dirty();
+                        state.refresh_layer_refs(); // Update layer reference index
                         state.set_status(format!("Updated: {new_keycode}"));
                     }
 
@@ -825,6 +850,7 @@ fn handle_layer_picker_event(
                     let keycode = format!("MO({})", layer_ref);
                     key.keycode = keycode.clone();
                     state.mark_dirty();
+                    state.refresh_layer_refs(); // Update layer reference index
                     state.set_status(format!("Assigned: {keycode}"));
                 }
             }
@@ -853,8 +879,6 @@ fn handle_layer_picker_event(
     Ok(())
 }
 
-
-
 /// Handle input for tap keycode picker (second stage of `LT/MT/SH_T`)
 pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     // Use the component-based picker
@@ -870,8 +894,10 @@ pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEven
             }
             KeyCode::Enter => {
                 // Get the selected keycode from the component
-                let keycodes =
-                    keycode_picker::get_filtered_keycodes_from_context(picker.state(), &state.keycode_db);
+                let keycodes = keycode_picker::get_filtered_keycodes_from_context(
+                    picker.state(),
+                    &state.keycode_db,
+                );
                 if let Some(kc) = keycodes.get(picker.state().selected) {
                     // Only allow basic keycodes for tap action (no parameterized keycodes)
                     if is_basic_keycode(&kc.code) {
@@ -944,7 +970,9 @@ fn handle_modifier_picker_event(
                 // No parameterized flow - unexpected state
                 state.pending_keycode.reset();
                 state.close_component();
-                state.set_error("Unexpected state: modifier selected but no parameterized flow active");
+                state.set_error(
+                    "Unexpected state: modifier selected but no parameterized flow active",
+                );
             }
         }
         ModifierPickerEvent::Cancelled => {
@@ -980,19 +1008,19 @@ fn is_basic_or_layer_keycode(code: &str) -> bool {
     if is_basic_keycode(code) {
         return true;
     }
-    
+
     // Reject @ layer references (not yet supported in tap dance hold)
     if code.contains('@') {
         return false;
     }
-    
+
     // Check if it's a simple layer keycode (single parameter, layer number)
     // MO(n), TG(n), TO(n), TT(n), OSL(n) are allowed
     // LT(n, KC_X), MT(...), LM(...) etc. are NOT allowed
     if let Some(prefix) = code.split('(').next() {
         matches!(prefix, "MO" | "TG" | "TO" | "TT" | "OSL" | "DF")
             && code.matches('(').count() == 1  // Only one opening paren
-            && !code.contains(',')              // No comma (no second parameter)
+            && !code.contains(',') // No comma (no second parameter)
     } else {
         false
     }
@@ -1104,8 +1132,9 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
             TapDanceFormEvent::PickSingle => {
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
-                state.tap_dance_form_pick_target = Some(crate::tui::tap_dance_form::FormRow::Single);
-                
+                state.tap_dance_form_pick_target =
+                    Some(crate::tui::tap_dance_form::FormRow::Single);
+
                 // Open keycode picker
                 state.open_keycode_picker();
                 state.set_status("Select single tap keycode (required)");
@@ -1114,8 +1143,9 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
             TapDanceFormEvent::PickDouble => {
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
-                state.tap_dance_form_pick_target = Some(crate::tui::tap_dance_form::FormRow::Double);
-                
+                state.tap_dance_form_pick_target =
+                    Some(crate::tui::tap_dance_form::FormRow::Double);
+
                 // Open keycode picker
                 state.open_keycode_picker();
                 state.set_status("Select double tap keycode (required)");
@@ -1125,7 +1155,7 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
                 state.tap_dance_form_pick_target = Some(crate::tui::tap_dance_form::FormRow::Hold);
-                
+
                 // Open keycode picker
                 state.open_keycode_picker();
                 state.set_status("Select hold keycode (optional, Esc to skip)");
@@ -1207,7 +1237,7 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
                 state.tap_dance_form_context = None;
                 state.active_popup = None;
                 state.active_component = None;
-                
+
                 match context {
                     crate::tui::TapDanceFormContext::FromEditor => {
                         state.open_tap_dance_editor();
@@ -1350,18 +1380,21 @@ mod tests {
     #[test]
     fn test_combo_edit_preserves_hold_behavior() {
         let mut state = create_test_state();
-        
+
         // Setup: We are editing the TAP part of a Layer Tap (LT)
         state.key_editor_state.combo_edit = Some((
             ComboEditPart::Tap,
-            ComboType::LayerTap { layer: "1".to_string(), tap_key: "KC_TRNS".to_string() }
+            ComboType::LayerTap {
+                layer: "1".to_string(),
+                tap_key: "KC_TRNS".to_string(),
+            },
         ));
 
         // Action: Select a basic keycode 'KC_A'
         let event = KeycodePickerEvent::KeycodeSelected("KC_A".to_string());
-        
+
         // Setup layout
-        use crate::models::{Layer, KeyDefinition, Position};
+        use crate::models::{KeyDefinition, Layer, Position};
         let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
         state.layout.layers.push(layer);
@@ -1374,7 +1407,7 @@ mod tests {
         // Assert: The keycode should be LT(1, KC_A), NOT just KC_A
         let key = state.get_selected_key_mut().unwrap();
         assert_eq!(key.keycode, "LT(1, KC_A)");
-        
+
         // Assert: Combo edit state is cleared
         assert!(state.key_editor_state.combo_edit.is_none());
     }
@@ -1382,38 +1415,48 @@ mod tests {
     #[test]
     fn test_combo_edit_rejects_non_basic_keycode() {
         let mut state = create_test_state();
-        
+
         // Setup: Editing Tap part
         state.key_editor_state.combo_edit = Some((
             ComboEditPart::Tap,
-            ComboType::LayerTap { layer: "1".to_string(), tap_key: "KC_TRNS".to_string() }
+            ComboType::LayerTap {
+                layer: "1".to_string(),
+                tap_key: "KC_TRNS".to_string(),
+            },
         ));
 
         // Action: Try to select a parameterized keycode 'MO(1)'
         let event = KeycodePickerEvent::KeycodeSelected("MO(1)".to_string());
-        
+
         let _ = handle_keycode_picker_event(&mut state, event);
 
         // Assert: Error set
-        assert!(state.error_message.as_deref().unwrap_or("").contains("Only basic keycodes allowed"));
-        
+        assert!(state
+            .error_message
+            .as_deref()
+            .unwrap_or("")
+            .contains("Only basic keycodes allowed"));
+
         // Assert: Combo edit state is PRESERVED (not cleared)
         assert!(state.key_editor_state.combo_edit.is_some());
     }
-    
+
     #[test]
     fn test_mod_tap_edit_preserves_modifiers() {
         let mut state = create_test_state();
-        
+
         // Setup: We are editing the TAP part of a Mod Tap (MT)
         // MT(MOD_LSFT, KC_Z)
         state.key_editor_state.combo_edit = Some((
             ComboEditPart::Tap,
-            ComboType::ModTapCustom { modifier: "MOD_LSFT".to_string(), tap_key: "KC_Z".to_string() }
+            ComboType::ModTapCustom {
+                modifier: "MOD_LSFT".to_string(),
+                tap_key: "KC_Z".to_string(),
+            },
         ));
-        
+
         // Setup layout
-        use crate::models::{Layer, KeyDefinition, Position};
+        use crate::models::{KeyDefinition, Layer, Position};
         let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
         state.layout.layers.push(layer);
@@ -1422,7 +1465,7 @@ mod tests {
 
         // Action: Select 'KC_ENTER'
         let event = KeycodePickerEvent::KeycodeSelected("KC_ENTER".to_string());
-        
+
         let _ = handle_keycode_picker_event(&mut state, event);
 
         // Assert: The keycode should be MT(MOD_LSFT, KC_ENTER)
@@ -1433,9 +1476,9 @@ mod tests {
     #[test]
     fn test_td_keycode_opens_tap_dance_form() {
         let mut state = create_test_state();
-        
+
         // Setup layout with a key
-        use crate::models::{Layer, KeyDefinition, Position};
+        use crate::models::{KeyDefinition, Layer, Position};
         let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
         state.layout.layers.push(layer);
@@ -1444,12 +1487,15 @@ mod tests {
 
         // Action: Select TD() keycode from picker
         let event = KeycodePickerEvent::KeycodeSelected("TD()".to_string());
-        
+
         let _ = handle_keycode_picker_event(&mut state, event);
 
         // Assert: Tap dance form should be open
         assert!(
-            matches!(state.active_component, Some(ActiveComponent::TapDanceForm(_))),
+            matches!(
+                state.active_component,
+                Some(ActiveComponent::TapDanceForm(_))
+            ),
             "Expected TapDanceForm to be active, got: {:?}",
             state.active_component.as_ref().map(std::mem::discriminant)
         );
@@ -1458,14 +1504,17 @@ mod tests {
             Some(PopupType::TapDanceForm),
             "Expected popup to be TapDanceForm"
         );
-        
+
         // Assert: Context should be FromKeycodePicker
         assert!(
-            matches!(state.tap_dance_form_context, Some(crate::tui::TapDanceFormContext::FromKeycodePicker)),
+            matches!(
+                state.tap_dance_form_context,
+                Some(crate::tui::TapDanceFormContext::FromKeycodePicker)
+            ),
             "Expected context to be FromKeycodePicker, got: {:?}",
             state.tap_dance_form_context
         );
-        
+
         // Assert: Pending keycode should be cleared (no further param flow)
         assert!(
             state.pending_keycode.keycode_template.is_none(),
@@ -1475,15 +1524,14 @@ mod tests {
 
     #[test]
     fn test_td_keycode_edit_existing_opens_form() {
-        use crate::models::{Layer, KeyDefinition, Position, TapDanceAction};
-        
+        use crate::models::{KeyDefinition, Layer, Position, TapDanceAction};
+
         let mut state = create_test_state();
-        
+
         // Setup: Add a tap dance definition
-        let td = TapDanceAction::new("slash", "KC_SLSH")
-            .with_double_tap("KC_BSLS");
+        let td = TapDanceAction::new("slash", "KC_SLSH").with_double_tap("KC_BSLS");
         state.layout.add_tap_dance(td).unwrap();
-        
+
         // Setup: Add a layer with a key that has this tap dance
         let mut layer = Layer::new(0, "Base", crate::models::RgbColor::default()).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "TD(slash)"));
@@ -1493,24 +1541,36 @@ mod tests {
 
         // Action: Select TD() keycode from picker while on a key that already has TD(slash)
         let event = KeycodePickerEvent::KeycodeSelected("TD()".to_string());
-        
+
         let _ = handle_keycode_picker_event(&mut state, event);
 
         // Assert: Tap dance form should be open
         assert!(
-            matches!(state.active_component, Some(ActiveComponent::TapDanceForm(_))),
+            matches!(
+                state.active_component,
+                Some(ActiveComponent::TapDanceForm(_))
+            ),
             "Expected TapDanceForm to be active, got: {:?}",
             state.active_component.as_ref().map(std::mem::discriminant)
         );
         assert_eq!(state.active_popup, Some(PopupType::TapDanceForm));
-        assert_eq!(state.tap_dance_form_context, Some(crate::tui::TapDanceFormContext::FromKeycodePicker));
+        assert_eq!(
+            state.tap_dance_form_context,
+            Some(crate::tui::TapDanceFormContext::FromKeycodePicker)
+        );
     }
 
     #[test]
     fn test_extract_td_name() {
         assert_eq!(extract_td_name("TD(slash)"), Some("slash".to_string()));
-        assert_eq!(extract_td_name("TD(esc_caps)"), Some("esc_caps".to_string()));
-        assert_eq!(extract_td_name("TD(my_dance_123)"), Some("my_dance_123".to_string()));
+        assert_eq!(
+            extract_td_name("TD(esc_caps)"),
+            Some("esc_caps".to_string())
+        );
+        assert_eq!(
+            extract_td_name("TD(my_dance_123)"),
+            Some("my_dance_123".to_string())
+        );
         assert_eq!(extract_td_name("TD()"), None); // Empty name
         assert_eq!(extract_td_name("KC_A"), None); // Not a TD
         assert_eq!(extract_td_name("TD(incomplete"), None); // Missing closing paren
@@ -1522,7 +1582,7 @@ mod tests {
         assert!(is_basic_or_layer_keycode("KC_A"));
         assert!(is_basic_or_layer_keycode("KC_ENTER"));
         assert!(is_basic_or_layer_keycode("KC_LSFT"));
-        
+
         // Simple layer keycodes should be allowed
         assert!(is_basic_or_layer_keycode("MO(1)"));
         assert!(is_basic_or_layer_keycode("TG(2)"));
@@ -1530,13 +1590,13 @@ mod tests {
         assert!(is_basic_or_layer_keycode("TT(1)"));
         assert!(is_basic_or_layer_keycode("OSL(2)"));
         assert!(is_basic_or_layer_keycode("DF(0)"));
-        
+
         // Complex parameterized keycodes should be rejected
         assert!(!is_basic_or_layer_keycode("LT(1, KC_SPC)"));
         assert!(!is_basic_or_layer_keycode("MT(MOD_LCTL, KC_A)"));
         assert!(!is_basic_or_layer_keycode("LM(1, MOD_LSFT)"));
         assert!(!is_basic_or_layer_keycode("LCTL_T(KC_A)"));
-        
+
         // Layer references should be rejected
         assert!(!is_basic_or_layer_keycode("MO(@layer_id)"));
     }

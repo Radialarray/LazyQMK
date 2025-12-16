@@ -721,7 +721,6 @@ impl HelpOverlay {
             state: HelpOverlayState::new(),
         }
     }
-
 }
 
 impl Default for HelpOverlay {

@@ -4,6 +4,7 @@
 //! and coordinate between different parts of the application.
 
 pub mod geometry;
+pub mod layer_refs;
 pub mod layouts;
 
 // Re-export GeometryService if it exists, otherwise just re-export the module

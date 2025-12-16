@@ -98,7 +98,15 @@ impl StatusBar {
                 Span::raw(error),
             ]));
         } else if !state.status_message.is_empty() {
-            content_lines.push(Line::from(state.status_message.as_str()));
+            let line = if let Some(color) = state.status_color_override {
+                Line::from(vec![Span::styled(
+                    state.status_message.as_str(),
+                    Style::default().fg(color),
+                )])
+            } else {
+                Line::from(state.status_message.as_str())
+            };
+            content_lines.push(line);
         } else if show_hints {
             content_lines.push(Self::get_hints_line(state, theme));
         }
@@ -141,7 +149,12 @@ impl StatusBar {
 
         let status = Paragraph::new(status_text)
             .style(Style::default().bg(theme.background))
-            .block(Block::default().borders(Borders::ALL).title(" Status ").style(Style::default().bg(theme.background)));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Status ")
+                    .style(Style::default().bg(theme.background)),
+            );
 
         f.render_widget(status, area);
     }
@@ -150,7 +163,7 @@ impl StatusBar {
     fn get_hints_line(state: &AppState, theme: &Theme) -> Line<'static> {
         let context_name = Self::get_current_context(state);
         let registry = HelpRegistry::default();
-        
+
         // Get top priority hints for this context (limit to 5 for space)
         let hints = registry.format_status_bar_hints(context_name, 5);
 
@@ -225,12 +238,16 @@ impl StatusBar {
     fn get_contextual_help_line(state: &AppState, theme: &Theme) -> Line<'static> {
         let context_name = Self::get_current_context(state);
         let registry = HelpRegistry::default();
-        
+
         // Get hints for help line (show up to 5, always include "?: Help" at end)
         let all_hints = registry.get_status_bar_hints(context_name);
-        
+
         // Take up to 5 hints (or 4 if we need to add "?: Help")
-        let max_hints = if context_name == help_registry::contexts::MAIN { 4 } else { 5 };
+        let max_hints = if context_name == help_registry::contexts::MAIN {
+            4
+        } else {
+            5
+        };
         let help_hints: Vec<_> = all_hints
             .iter()
             .take(max_hints)
@@ -240,8 +257,7 @@ impl StatusBar {
                 } else {
                     binding.keys.join(",")
                 };
-                let action = binding.hint.as_ref()
-                    .unwrap_or(&binding.action);
+                let action = binding.hint.as_ref().unwrap_or(&binding.action);
                 (key, action.as_str())
             })
             .collect();
@@ -259,10 +275,7 @@ impl StatusBar {
             if i > 0 {
                 spans.push(Span::raw(" | "));
             }
-            spans.push(Span::styled(
-                key.clone(),
-                Style::default().fg(theme.accent),
-            ));
+            spans.push(Span::styled(key.clone(), Style::default().fg(theme.accent)));
             spans.push(Span::raw(": "));
             spans.push(Span::raw(action.to_string()));
         }

@@ -542,8 +542,6 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
     f.render_widget(instructions_widget, chunks[9]);
 }
 
-
-
 /// Render the color grid (4x3)
 fn render_color_grid(f: &mut Frame, area: Rect, picker_state: &ColorPickerState, theme: &Theme) {
     let columns = picker_state.palette.columns();

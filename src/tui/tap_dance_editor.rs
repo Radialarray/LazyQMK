@@ -44,12 +44,12 @@ impl TapDanceEditor {
     pub fn new(layout: &Layout) -> Self {
         let tap_dances = layout.tap_dances.clone();
         let mut list_state = ListState::default();
-        
+
         // Select first item if any exist
         if !tap_dances.is_empty() {
             list_state.select(Some(0));
         }
-        
+
         Self {
             list_state,
             tap_dances,
@@ -170,22 +170,50 @@ impl TapDanceEditor {
         frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
 
         // Help text
-        let help = Paragraph::new(vec![
-            Line::from(vec![
-                Span::styled("↑/↓", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" Navigate  "),
-                Span::styled("Enter", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" Apply  "),
-                Span::styled("n", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" New  "),
-                Span::styled("e", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" Edit  "),
-                Span::styled("d", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" Delete  "),
-                Span::styled("Esc", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                Span::raw(" Cancel"),
-            ]),
-        ])
+        let help = Paragraph::new(vec![Line::from(vec![
+            Span::styled(
+                "↑/↓",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Navigate  "),
+            Span::styled(
+                "Enter",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Apply  "),
+            Span::styled(
+                "n",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" New  "),
+            Span::styled(
+                "e",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Edit  "),
+            Span::styled(
+                "d",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Delete  "),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" Cancel"),
+        ])])
         .block(
             Block::default()
                 .borders(Borders::ALL)

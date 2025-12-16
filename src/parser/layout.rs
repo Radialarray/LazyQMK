@@ -444,9 +444,10 @@ fn parse_keycode_syntax(cell: &str, row: u8, col: u8) -> Result<KeyDefinition> {
     //   (?:\([^)]*\))?    - Optional parentheses with anything inside (for params)
     //   (?:\{...\})?      - Optional color override
     //   (?:@...)?         - Optional category suffix (@ only allowed here, not in keycode)
-    let keycode_regex =
-        Regex::new(r"^([A-Z_][A-Z_0-9]*(?:\([^)]*\))?)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$")
-            .unwrap();
+    let keycode_regex = Regex::new(
+        r"^([A-Z_][A-Z_0-9]*(?:\([^)]*\))?)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$",
+    )
+    .unwrap();
 
     let captures = keycode_regex
         .captures(cell)
@@ -764,7 +765,8 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .unwrap()
                 .trim()
                 .to_lowercase();
-            layout.idle_effect_settings.enabled = matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+            layout.idle_effect_settings.enabled =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
 
         // Parse Idle Timeout
@@ -827,10 +829,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 
         // Parse Idle Effect Mode
         if line.starts_with("**Idle Effect Mode**:") {
-            let value = line
-                .strip_prefix("**Idle Effect Mode**:")
-                .unwrap()
-                .trim();
+            let value = line.strip_prefix("**Idle Effect Mode**:").unwrap().trim();
 
             if let Some(effect) = crate::models::RgbMatrixEffect::from_name(value) {
                 layout.idle_effect_settings.idle_effect_mode = effect;

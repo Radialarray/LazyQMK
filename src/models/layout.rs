@@ -156,35 +156,35 @@ pub enum RgbMatrixEffect {
     #[default]
     #[serde(rename = "solid_color")]
     SolidColor,
-    
+
     /// Breathing animation
     #[serde(rename = "breathing")]
     Breathing,
-    
+
     /// Rainbow moving chevron
     #[serde(rename = "rainbow_moving_chevron")]
     RainbowMovingChevron,
-    
+
     /// Cycle all LEDs through hue
     #[serde(rename = "cycle_all")]
     CycleAll,
-    
+
     /// Cycle left to right
     #[serde(rename = "cycle_left_right")]
     CycleLeftRight,
-    
+
     /// Cycle up and down
     #[serde(rename = "cycle_up_down")]
     CycleUpDown,
-    
+
     /// Rainbow beacon animation
     #[serde(rename = "rainbow_beacon")]
     RainbowBeacon,
-    
+
     /// Rainbow pinwheels
     #[serde(rename = "rainbow_pinwheels")]
     RainbowPinwheels,
-    
+
     /// Jellybean raindrops
     #[serde(rename = "jellybean_raindrops")]
     JellybeanRaindrops,
@@ -390,8 +390,15 @@ impl TapDanceAction {
         }
 
         // Validate name is a valid C identifier (alphanumeric + underscore)
-        if !self.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-            anyhow::bail!("Tap dance name '{}' must be alphanumeric with underscores only", self.name);
+        if !self
+            .name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        {
+            anyhow::bail!(
+                "Tap dance name '{}' must be alphanumeric with underscores only",
+                self.name
+            );
         }
 
         if self.single_tap.is_empty() {
@@ -1833,7 +1840,7 @@ mod tests {
     #[test]
     fn test_apply_rgb_settings_with_saturation() {
         let mut layout = Layout::new("Test").unwrap();
-        
+
         // Test with saturation at neutral (100%)
         layout.rgb_saturation = RgbSaturation::new(100);
         layout.rgb_brightness = RgbBrightness::new(100);
@@ -1874,10 +1881,10 @@ mod tests {
     fn test_apply_rgb_settings_disabled() {
         let mut layout = Layout::new("Test").unwrap();
         layout.rgb_enabled = false;
-        
+
         let color = RgbColor::new(200, 100, 50);
         let result = layout.apply_rgb_settings(color);
-        
+
         // Should be black when RGB is disabled
         assert_eq!(result, RgbColor::new(0, 0, 0));
     }
@@ -1893,25 +1900,49 @@ mod tests {
     #[test]
     fn test_rgb_matrix_effect_display_names() {
         assert_eq!(RgbMatrixEffect::Breathing.display_name(), "Breathing");
-        assert_eq!(RgbMatrixEffect::RainbowMovingChevron.display_name(), "Rainbow Moving Chevron");
+        assert_eq!(
+            RgbMatrixEffect::RainbowMovingChevron.display_name(),
+            "Rainbow Moving Chevron"
+        );
         assert_eq!(RgbMatrixEffect::CycleAll.display_name(), "Cycle All");
     }
 
     #[test]
     fn test_rgb_matrix_effect_from_name() {
         // Exact matches
-        assert_eq!(RgbMatrixEffect::from_name("Breathing"), Some(RgbMatrixEffect::Breathing));
-        assert_eq!(RgbMatrixEffect::from_name("breathing"), Some(RgbMatrixEffect::Breathing));
-        
+        assert_eq!(
+            RgbMatrixEffect::from_name("Breathing"),
+            Some(RgbMatrixEffect::Breathing)
+        );
+        assert_eq!(
+            RgbMatrixEffect::from_name("breathing"),
+            Some(RgbMatrixEffect::Breathing)
+        );
+
         // With spaces and underscores
-        assert_eq!(RgbMatrixEffect::from_name("Rainbow Moving Chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
-        assert_eq!(RgbMatrixEffect::from_name("rainbow_moving_chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
-        
+        assert_eq!(
+            RgbMatrixEffect::from_name("Rainbow Moving Chevron"),
+            Some(RgbMatrixEffect::RainbowMovingChevron)
+        );
+        assert_eq!(
+            RgbMatrixEffect::from_name("rainbow_moving_chevron"),
+            Some(RgbMatrixEffect::RainbowMovingChevron)
+        );
+
         // Short aliases
-        assert_eq!(RgbMatrixEffect::from_name("breath"), Some(RgbMatrixEffect::Breathing));
-        assert_eq!(RgbMatrixEffect::from_name("chevron"), Some(RgbMatrixEffect::RainbowMovingChevron));
-        assert_eq!(RgbMatrixEffect::from_name("cycle"), Some(RgbMatrixEffect::CycleAll));
-        
+        assert_eq!(
+            RgbMatrixEffect::from_name("breath"),
+            Some(RgbMatrixEffect::Breathing)
+        );
+        assert_eq!(
+            RgbMatrixEffect::from_name("chevron"),
+            Some(RgbMatrixEffect::RainbowMovingChevron)
+        );
+        assert_eq!(
+            RgbMatrixEffect::from_name("cycle"),
+            Some(RgbMatrixEffect::CycleAll)
+        );
+
         // Invalid name
         assert_eq!(RgbMatrixEffect::from_name("invalid_effect"), None);
     }

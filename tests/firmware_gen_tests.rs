@@ -118,161 +118,219 @@ fn test_non_layer_keycodes_passthrough() {
 fn test_idle_effect_enabled_in_keymap() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Enable idle effect
     layout.idle_effect_settings.enabled = true;
     layout.idle_effect_settings.idle_timeout_ms = 30_000;
     layout.idle_effect_settings.idle_effect_duration_ms = 120_000;
     layout.idle_effect_settings.idle_effect_mode = lazyqmk::models::RgbMatrixEffect::Breathing;
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
+
     assert!(result.is_ok(), "Generation with idle effect should succeed");
-    
+
     let (keymap_path, config_path) = result.unwrap();
     let keymap_content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
     let config_content = fs::read_to_string(&config_path).expect("Should read config.h");
-    
+
     // Check keymap.c contains idle effect state machine
-    assert!(keymap_content.contains("idle_state_t"), "Should have idle state enum");
-    assert!(keymap_content.contains("IDLE_STATE_ACTIVE"), "Should have ACTIVE state");
-    assert!(keymap_content.contains("IDLE_STATE_IDLE_EFFECT"), "Should have IDLE_EFFECT state");
-    assert!(keymap_content.contains("IDLE_STATE_OFF"), "Should have OFF state");
-    assert!(keymap_content.contains("matrix_scan_user"), "Should have matrix_scan_user");
-    assert!(keymap_content.contains("process_record_user"), "Should have process_record_user");
-    assert!(keymap_content.contains("keyboard_post_init_user"), "Should have keyboard_post_init_user");
-    
+    assert!(
+        keymap_content.contains("idle_state_t"),
+        "Should have idle state enum"
+    );
+    assert!(
+        keymap_content.contains("IDLE_STATE_ACTIVE"),
+        "Should have ACTIVE state"
+    );
+    assert!(
+        keymap_content.contains("IDLE_STATE_IDLE_EFFECT"),
+        "Should have IDLE_EFFECT state"
+    );
+    assert!(
+        keymap_content.contains("IDLE_STATE_OFF"),
+        "Should have OFF state"
+    );
+    assert!(
+        keymap_content.contains("matrix_scan_user"),
+        "Should have matrix_scan_user"
+    );
+    assert!(
+        keymap_content.contains("process_record_user"),
+        "Should have process_record_user"
+    );
+    assert!(
+        keymap_content.contains("keyboard_post_init_user"),
+        "Should have keyboard_post_init_user"
+    );
+
     // Check config.h contains idle effect defines
-    assert!(config_content.contains("#define LQMK_IDLE_TIMEOUT_MS 30000"), "Should have timeout define");
-    assert!(config_content.contains("#define LQMK_IDLE_EFFECT_DURATION_MS 120000"), "Should have duration define");
-    assert!(config_content.contains("#define LQMK_IDLE_EFFECT_MODE RGB_MATRIX_BREATHING"), "Should have mode define");
+    assert!(
+        config_content.contains("#define LQMK_IDLE_TIMEOUT_MS 30000"),
+        "Should have timeout define"
+    );
+    assert!(
+        config_content.contains("#define LQMK_IDLE_EFFECT_DURATION_MS 120000"),
+        "Should have duration define"
+    );
+    assert!(
+        config_content.contains("#define LQMK_IDLE_EFFECT_MODE RGB_MATRIX_BREATHING"),
+        "Should have mode define"
+    );
 }
 
 #[test]
 fn test_idle_effect_disabled_no_code() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Disable idle effect
     layout.idle_effect_settings.enabled = false;
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
+
     assert!(result.is_ok());
-    
+
     let (keymap_path, config_path) = result.unwrap();
     let keymap_content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
     let config_content = fs::read_to_string(&config_path).expect("Should read config.h");
-    
+
     // Should not contain idle effect code
-    assert!(!keymap_content.contains("idle_state_t"), "Should not have idle state enum");
-    assert!(!config_content.contains("LQMK_IDLE_TIMEOUT_MS"), "Should not have idle defines");
+    assert!(
+        !keymap_content.contains("idle_state_t"),
+        "Should not have idle state enum"
+    );
+    assert!(
+        !config_content.contains("LQMK_IDLE_TIMEOUT_MS"),
+        "Should not have idle defines"
+    );
 }
 
 #[test]
 fn test_idle_effect_no_rgb_matrix_timeout_conflict() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Enable idle effect AND set rgb_timeout_ms (which should be ignored)
     layout.idle_effect_settings.enabled = true;
     layout.idle_effect_settings.idle_timeout_ms = 60_000;
     layout.idle_effect_settings.idle_effect_duration_ms = 300_000;
     layout.rgb_timeout_ms = 120_000; // This should be ignored
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
+
     assert!(result.is_ok());
-    
+
     let (_, config_path) = result.unwrap();
     let config_content = fs::read_to_string(&config_path).expect("Should read config.h");
-    
+
     // Should have idle effect defines
-    assert!(config_content.contains("LQMK_IDLE_TIMEOUT_MS"), "Should have idle timeout");
-    
+    assert!(
+        config_content.contains("LQMK_IDLE_TIMEOUT_MS"),
+        "Should have idle timeout"
+    );
+
     // Should NOT have RGB_MATRIX_TIMEOUT when idle effect is enabled
-    assert!(!config_content.contains("#define RGB_MATRIX_TIMEOUT"), "Should not emit RGB_MATRIX_TIMEOUT when idle effect is enabled");
+    assert!(
+        !config_content.contains("#define RGB_MATRIX_TIMEOUT"),
+        "Should not emit RGB_MATRIX_TIMEOUT when idle effect is enabled"
+    );
 }
 
 #[test]
 fn test_rgb_matrix_timeout_when_idle_disabled() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Disable idle effect but set rgb_timeout_ms
     layout.idle_effect_settings.enabled = false;
     layout.rgb_timeout_ms = 90_000;
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
+
     assert!(result.is_ok());
-    
+
     let (_, config_path) = result.unwrap();
     let config_content = fs::read_to_string(&config_path).expect("Should read config.h");
-    
+
     // Should have RGB_MATRIX_TIMEOUT when idle effect is disabled
-    assert!(config_content.contains("#define RGB_MATRIX_TIMEOUT 90000"), "Should emit RGB_MATRIX_TIMEOUT when idle effect is disabled");
-    
+    assert!(
+        config_content.contains("#define RGB_MATRIX_TIMEOUT 90000"),
+        "Should emit RGB_MATRIX_TIMEOUT when idle effect is disabled"
+    );
+
     // Should NOT have idle effect defines
-    assert!(!config_content.contains("LQMK_IDLE_TIMEOUT_MS"), "Should not have idle defines");
+    assert!(
+        !config_content.contains("LQMK_IDLE_TIMEOUT_MS"),
+        "Should not have idle defines"
+    );
 }
 
 #[test]
 fn test_idle_effect_different_modes() {
     use lazyqmk::models::RgbMatrixEffect;
-    
+
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let effects = vec![
         (RgbMatrixEffect::SolidColor, "RGB_MATRIX_SOLID_COLOR"),
         (RgbMatrixEffect::Breathing, "RGB_MATRIX_BREATHING"),
-        (RgbMatrixEffect::RainbowMovingChevron, "RGB_MATRIX_RAINBOW_MOVING_CHEVRON"),
+        (
+            RgbMatrixEffect::RainbowMovingChevron,
+            "RGB_MATRIX_RAINBOW_MOVING_CHEVRON",
+        ),
         (RgbMatrixEffect::CycleAll, "RGB_MATRIX_CYCLE_ALL"),
-        (RgbMatrixEffect::JellybeanRaindrops, "RGB_MATRIX_JELLYBEAN_RAINDROPS"),
+        (
+            RgbMatrixEffect::JellybeanRaindrops,
+            "RGB_MATRIX_JELLYBEAN_RAINDROPS",
+        ),
     ];
-    
+
     for (effect, expected_mode) in effects {
         let mut layout = create_test_layout();
         layout.idle_effect_settings.enabled = true;
         layout.idle_effect_settings.idle_effect_mode = effect;
-        
+
         let geometry = create_test_geometry();
         let mapping = create_test_mapping();
         let config = create_test_config(&temp_dir);
-        
+
         let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let result = generator.generate();
-        
-        assert!(result.is_ok(), "Generation with {:?} should succeed", effect);
-        
+
+        assert!(
+            result.is_ok(),
+            "Generation with {:?} should succeed",
+            effect
+        );
+
         let (_, config_path) = result.unwrap();
         let config_content = fs::read_to_string(&config_path).expect("Should read config.h");
-        
+
         assert!(
             config_content.contains(&format!("#define LQMK_IDLE_EFFECT_MODE {}", expected_mode)),
             "Should have correct mode for {:?}: expected {}",
@@ -795,138 +853,196 @@ fn test_full_pipeline_validation_to_generation() {
 #[test]
 fn test_tap_dance_two_way_generation() {
     use lazyqmk::models::TapDanceAction;
-    
+
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Add a 2-way tap dance
-    let td = TapDanceAction::new("test", "KC_A".to_string())
-        .with_double_tap("KC_B".to_string());
+    let td = TapDanceAction::new("test", "KC_A".to_string()).with_double_tap("KC_B".to_string());
     layout.tap_dances.push(td);
-    
+
     // Apply TD(test) to a key
     layout.layers[0].keys[0].keycode = "TD(test)".to_string();
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
-    assert!(result.is_ok(), "Generation with 2-way tap dance should succeed");
-    
+
+    assert!(
+        result.is_ok(),
+        "Generation with 2-way tap dance should succeed"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Check enum
-    assert!(content.contains("enum tap_dance_ids"), "Should have tap dance enum");
+    assert!(
+        content.contains("enum tap_dance_ids"),
+        "Should have tap dance enum"
+    );
     assert!(content.contains("TD_TEST"), "Should have TD_TEST in enum");
-    
+
     // Check actions array with 2-way macro
-    assert!(content.contains("tap_dance_action_t tap_dance_actions"), "Should have actions array");
-    assert!(content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"), "Should use ACTION_TAP_DANCE_DOUBLE");
-    
+    assert!(
+        content.contains("tap_dance_action_t tap_dance_actions"),
+        "Should have actions array"
+    );
+    assert!(
+        content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"),
+        "Should use ACTION_TAP_DANCE_DOUBLE"
+    );
+
     // Check keymap uses TD(TD_TEST)
-    assert!(content.contains("TD(TD_TEST)"), "Should use TD(TD_TEST) in keymap");
+    assert!(
+        content.contains("TD(TD_TEST)"),
+        "Should use TD(TD_TEST) in keymap"
+    );
 }
 
 #[test]
 fn test_tap_dance_three_way_generation() {
     use lazyqmk::models::TapDanceAction;
-    
+
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Add a 3-way tap dance
     let td = TapDanceAction::new("triple", "KC_ESC".to_string())
         .with_double_tap("KC_CAPS".to_string())
         .with_hold("KC_LCTL".to_string());
     layout.tap_dances.push(td);
-    
+
     // Apply TD(triple) to a key
     layout.layers[0].keys[1].keycode = "TD(triple)".to_string();
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
-    assert!(result.is_ok(), "Generation with 3-way tap dance should succeed");
-    
+
+    assert!(
+        result.is_ok(),
+        "Generation with 3-way tap dance should succeed"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Check enum
-    assert!(content.contains("TD_TRIPLE"), "Should have TD_TRIPLE in enum");
-    
+    assert!(
+        content.contains("TD_TRIPLE"),
+        "Should have TD_TRIPLE in enum"
+    );
+
     // Check helper functions
-    assert!(content.contains("void td_triple_finished"), "Should have finished function");
-    assert!(content.contains("void td_triple_reset"), "Should have reset function");
-    assert!(content.contains("register_code16(KC_ESC)"), "Should register single tap");
-    assert!(content.contains("register_code16(KC_CAPS)"), "Should register double tap");
-    assert!(content.contains("register_code16(KC_LCTL)"), "Should register hold");
-    assert!(content.contains("unregister_code16(KC_ESC)"), "Should unregister single tap");
-    assert!(content.contains("unregister_code16(KC_CAPS)"), "Should unregister double tap");
-    assert!(content.contains("unregister_code16(KC_LCTL)"), "Should unregister hold");
-    
+    assert!(
+        content.contains("void td_triple_finished"),
+        "Should have finished function"
+    );
+    assert!(
+        content.contains("void td_triple_reset"),
+        "Should have reset function"
+    );
+    assert!(
+        content.contains("register_code16(KC_ESC)"),
+        "Should register single tap"
+    );
+    assert!(
+        content.contains("register_code16(KC_CAPS)"),
+        "Should register double tap"
+    );
+    assert!(
+        content.contains("register_code16(KC_LCTL)"),
+        "Should register hold"
+    );
+    assert!(
+        content.contains("unregister_code16(KC_ESC)"),
+        "Should unregister single tap"
+    );
+    assert!(
+        content.contains("unregister_code16(KC_CAPS)"),
+        "Should unregister double tap"
+    );
+    assert!(
+        content.contains("unregister_code16(KC_LCTL)"),
+        "Should unregister hold"
+    );
+
     // Check actions array with 3-way macro
-    assert!(content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_triple_finished, td_triple_reset)"), 
-            "Should use ACTION_TAP_DANCE_FN_ADVANCED");
-    
+    assert!(
+        content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_triple_finished, td_triple_reset)"),
+        "Should use ACTION_TAP_DANCE_FN_ADVANCED"
+    );
+
     // Check keymap uses TD(TD_TRIPLE)
-    assert!(content.contains("TD(TD_TRIPLE)"), "Should use TD(TD_TRIPLE) in keymap");
+    assert!(
+        content.contains("TD(TD_TRIPLE)"),
+        "Should use TD(TD_TRIPLE) in keymap"
+    );
 }
 
 #[test]
 fn test_tap_dance_multiple_stable_ordering() {
     use lazyqmk::models::TapDanceAction;
-    
+
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Add multiple tap dances in non-alphabetical order
-    let td_zebra = TapDanceAction::new("zebra", "KC_Z".to_string())
-        .with_double_tap("KC_X".to_string());
-    let td_alpha = TapDanceAction::new("alpha", "KC_A".to_string())
-        .with_double_tap("KC_B".to_string());
-    let td_beta = TapDanceAction::new("beta", "KC_C".to_string())
-        .with_double_tap("KC_D".to_string());
-    
+    let td_zebra =
+        TapDanceAction::new("zebra", "KC_Z".to_string()).with_double_tap("KC_X".to_string());
+    let td_alpha =
+        TapDanceAction::new("alpha", "KC_A".to_string()).with_double_tap("KC_B".to_string());
+    let td_beta =
+        TapDanceAction::new("beta", "KC_C".to_string()).with_double_tap("KC_D".to_string());
+
     layout.tap_dances.push(td_zebra);
     layout.tap_dances.push(td_alpha);
     layout.tap_dances.push(td_beta);
-    
+
     // Apply TD keycodes
     layout.layers[0].keys[0].keycode = "TD(zebra)".to_string();
     layout.layers[0].keys[1].keycode = "TD(alpha)".to_string();
     layout.layers[0].keys[2].keycode = "TD(beta)".to_string();
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
-    assert!(result.is_ok(), "Generation with multiple tap dances should succeed");
-    
+
+    assert!(
+        result.is_ok(),
+        "Generation with multiple tap dances should succeed"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Verify alphabetical ordering in enum (alpha, beta, zebra)
     let td_alpha_pos = content.find("TD_ALPHA").expect("Should find TD_ALPHA");
     let td_beta_pos = content.find("TD_BETA").expect("Should find TD_BETA");
     let td_zebra_pos = content.find("TD_ZEBRA").expect("Should find TD_ZEBRA");
-    
-    assert!(td_alpha_pos < td_beta_pos, "TD_ALPHA should come before TD_BETA in enum");
-    assert!(td_beta_pos < td_zebra_pos, "TD_BETA should come before TD_ZEBRA in enum");
-    
+
+    assert!(
+        td_alpha_pos < td_beta_pos,
+        "TD_ALPHA should come before TD_BETA in enum"
+    );
+    assert!(
+        td_beta_pos < td_zebra_pos,
+        "TD_BETA should come before TD_ZEBRA in enum"
+    );
+
     // Verify all keycodes are transformed
     assert!(content.contains("TD(TD_ZEBRA)"), "Should have TD(TD_ZEBRA)");
     assert!(content.contains("TD(TD_ALPHA)"), "Should have TD(TD_ALPHA)");
@@ -938,94 +1054,122 @@ fn test_tap_dance_empty_no_code() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let layout = create_test_layout();
     // No tap dances added
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
-    assert!(result.is_ok(), "Generation with no tap dances should succeed");
-    
+
+    assert!(
+        result.is_ok(),
+        "Generation with no tap dances should succeed"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Should not contain tap dance code
-    assert!(!content.contains("enum tap_dance_ids"), "Should not have tap dance enum");
-    assert!(!content.contains("tap_dance_action_t"), "Should not have actions array");
-    assert!(!content.contains("ACTION_TAP_DANCE"), "Should not have tap dance macros");
+    assert!(
+        !content.contains("enum tap_dance_ids"),
+        "Should not have tap dance enum"
+    );
+    assert!(
+        !content.contains("tap_dance_action_t"),
+        "Should not have actions array"
+    );
+    assert!(
+        !content.contains("ACTION_TAP_DANCE"),
+        "Should not have tap dance macros"
+    );
 }
 
 #[test]
 fn test_tap_dance_invalid_reference_passthrough() {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Apply TD() keycode that doesn't exist in tap_dances
     layout.layers[0].keys[0].keycode = "TD(nonexistent)".to_string();
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
+
     // Should still generate (validation would catch this, but generator is permissive)
-    assert!(result.is_ok(), "Generation should not fail on missing tap dance ref");
-    
+    assert!(
+        result.is_ok(),
+        "Generation should not fail on missing tap dance ref"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Should pass through unchanged (validator will catch the error)
-    assert!(content.contains("TD(nonexistent)"), "Should pass through invalid reference");
+    assert!(
+        content.contains("TD(nonexistent)"),
+        "Should pass through invalid reference"
+    );
 }
 
 #[test]
 fn test_tap_dance_mixed_two_and_three_way() {
     use lazyqmk::models::TapDanceAction;
-    
+
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let mut layout = create_test_layout();
-    
+
     // Add one 2-way and one 3-way
-    let td_two = TapDanceAction::new("two", "KC_A".to_string())
-        .with_double_tap("KC_B".to_string());
+    let td_two = TapDanceAction::new("two", "KC_A".to_string()).with_double_tap("KC_B".to_string());
     let td_three = TapDanceAction::new("three", "KC_X".to_string())
         .with_double_tap("KC_Y".to_string())
         .with_hold("KC_Z".to_string());
-    
+
     layout.tap_dances.push(td_two);
     layout.tap_dances.push(td_three);
-    
+
     layout.layers[0].keys[0].keycode = "TD(two)".to_string();
     layout.layers[0].keys[1].keycode = "TD(three)".to_string();
-    
+
     let geometry = create_test_geometry();
     let mapping = create_test_mapping();
     let config = create_test_config(&temp_dir);
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
-    
+
     let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
     let result = generator.generate();
-    
-    assert!(result.is_ok(), "Generation with mixed tap dances should succeed");
-    
+
+    assert!(
+        result.is_ok(),
+        "Generation with mixed tap dances should succeed"
+    );
+
     let (keymap_path, _) = result.unwrap();
     let content = fs::read_to_string(&keymap_path).expect("Should read keymap.c");
-    
+
     // Check both are in enum
     assert!(content.contains("TD_TWO"), "Should have TD_TWO");
     assert!(content.contains("TD_THREE"), "Should have TD_THREE");
-    
+
     // Check 2-way uses simple macro
-    assert!(content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"), "Should have 2-way macro");
-    
+    assert!(
+        content.contains("ACTION_TAP_DANCE_DOUBLE(KC_A, KC_B)"),
+        "Should have 2-way macro"
+    );
+
     // Check 3-way has helper functions and advanced macro
-    assert!(content.contains("void td_three_finished"), "Should have 3-way helpers");
-    assert!(content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_three_finished, td_three_reset)"), 
-            "Should have 3-way macro");
+    assert!(
+        content.contains("void td_three_finished"),
+        "Should have 3-way helpers"
+    );
+    assert!(
+        content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_three_finished, td_three_reset)"),
+        "Should have 3-way macro"
+    );
 }

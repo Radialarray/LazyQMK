@@ -66,6 +66,8 @@ use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
 use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
+use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
+use std::collections::HashMap;
 
 // Re-export TUI components
 pub use build_log::BuildLog;
@@ -74,8 +76,7 @@ pub use category_picker::{CategoryPicker, CategoryPickerEvent};
 pub use color_picker::ColorPicker;
 pub use component::{Component, ContextualComponent};
 pub use config_dialogs::{
-    LayoutPicker as LayoutVariantPicker,
-    LayoutPickerEvent as LayoutVariantPickerEvent,
+    LayoutPicker as LayoutVariantPicker, LayoutPickerEvent as LayoutVariantPickerEvent,
 };
 pub use help_overlay::HelpOverlay;
 pub use key_editor::KeyEditorState;
@@ -93,8 +94,6 @@ pub use template_browser::TemplateBrowser;
 pub use theme::Theme;
 
 // Import handler functions from the handlers module
-
-
 
 /// Category picker context - what are we setting the category for?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -288,7 +287,6 @@ pub enum PopupType {
     TapDanceEditor,
     /// Tap dance form dialog (create/edit)
     TapDanceForm,
-
 }
 
 /// Selection mode for multi-key operations
@@ -368,7 +366,9 @@ pub struct AppState {
     pub active_popup: Option<PopupType>,
     /// Status bar message
     pub status_message: String,
-    /// Error message to display
+    /// Optional color override for status message (warnings/errors rendered via status)
+    pub status_color_override: Option<ratatui::style::Color>,
+    /// Current error message (if any)
     pub error_message: Option<String>,
 
     // Active component (Component trait pattern - replaces individual state fields)
@@ -395,7 +395,6 @@ pub struct AppState {
     /// Tap dance form context (where flow was launched from)
     pub tap_dance_form_context: Option<TapDanceFormContext>,
     /// Key editor component state
-
     pub key_editor_state: KeyEditorState,
     /// Key clipboard for copy/cut/paste operations
     pub clipboard: clipboard::KeyClipboard,
@@ -419,6 +418,11 @@ pub struct AppState {
     // Firmware build state
     /// Current firmware build state (if building)
     pub build_state: Option<BuildState>,
+
+    // Layer reference tracking
+    /// Index of layer references (which keys on which layers reference this layer)
+    /// Key: target layer index, Value: list of references to that layer
+    pub layer_refs: HashMap<usize, Vec<LayerRef>>,
 
     // Control flags
     /// Whether application should exit
@@ -460,6 +464,9 @@ impl AppState {
             .get_first_position()
             .unwrap_or(Position { row: 0, col: 0 });
 
+        // Build initial layer reference index
+        let layer_refs = build_layer_ref_index(&layout.layers);
+
         Ok(Self {
             layout,
             source_path,
@@ -469,6 +476,7 @@ impl AppState {
             selected_position,
             active_popup: None,
             status_message: "Press ? for help".to_string(),
+            status_color_override: None,
             error_message: None,
             active_component: None,
             category_picker_context: None,
@@ -490,6 +498,7 @@ impl AppState {
             mapping,
             config,
             build_state: None,
+            layer_refs,
             should_quit: false,
             return_to_settings_after_picker: false,
         })
@@ -624,6 +633,18 @@ impl AppState {
     pub fn set_status(&mut self, message: impl Into<String>) {
         self.status_message = message.into();
         self.error_message = None;
+        self.status_color_override = None;
+    }
+
+    /// Set status message with custom foreground color (used for warnings)
+    pub fn set_status_with_style(
+        &mut self,
+        message: impl Into<String>,
+        color: ratatui::style::Color,
+    ) {
+        self.status_message = message.into();
+        self.error_message = None;
+        self.status_color_override = Some(color);
     }
 
     /// Set error message
@@ -634,6 +655,17 @@ impl AppState {
     /// Clear error message
     pub fn clear_error(&mut self) {
         self.error_message = None;
+    }
+
+    /// Refresh the layer reference index after layer changes
+    ///
+    /// Call this after operations that add/remove/modify layer-switching keycodes:
+    /// - Assigning a layer keycode (MO, LT, TG, etc.)
+    /// - Deleting a layer keycode
+    /// - Pasting keys that may contain layer keycodes
+    /// - Adding/removing layers
+    pub fn refresh_layer_refs(&mut self) {
+        self.layer_refs = build_layer_ref_index(&self.layout.layers);
     }
 
     // === Component Management Methods (Component Trait Pattern) ===
@@ -862,8 +894,16 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     );
 
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(state.theme.primary).bg(state.theme.background))
-        .block(Block::default().borders(Borders::ALL).style(Style::default().bg(state.theme.background)));
+        .style(
+            Style::default()
+                .fg(state.theme.primary)
+                .bg(state.theme.background),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().bg(state.theme.background)),
+        );
 
     f.render_widget(title_widget, area);
 }

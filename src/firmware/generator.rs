@@ -245,16 +245,16 @@ impl<'a> FirmwareGenerator<'a> {
         // Generate encoder bindings for each layer
         // Default encoder actions cycle through: RGB effect, hue, brightness, saturation
         let default_encoder_bindings = [
-            ("RM_NEXT", "RM_PREV"),  // Encoder 0: RGB effect
-            ("RM_HUEU", "RM_HUED"),  // Encoder 1: RGB hue
-            ("RM_VALU", "RM_VALD"),  // Encoder 2: RGB brightness
-            ("RM_SATU", "RM_SATD"),  // Encoder 3: RGB saturation
-            ("KC_VOLU", "KC_VOLD"),  // Encoder 4+: Volume (fallback for extra encoders)
+            ("RM_NEXT", "RM_PREV"), // Encoder 0: RGB effect
+            ("RM_HUEU", "RM_HUED"), // Encoder 1: RGB hue
+            ("RM_VALU", "RM_VALD"), // Encoder 2: RGB brightness
+            ("RM_SATU", "RM_SATD"), // Encoder 3: RGB saturation
+            ("KC_VOLU", "KC_VOLD"), // Encoder 4+: Volume (fallback for extra encoders)
         ];
 
         for (layer_idx, _layer) in self.layout.layers.iter().enumerate() {
             code.push_str(&format!("    [{layer_idx}] = {{\n"));
-            
+
             // Generate encoder bindings based on actual encoder count
             for enc_idx in 0..encoder_count {
                 let (ccw, cw) = if enc_idx < default_encoder_bindings.len() {
@@ -265,7 +265,7 @@ impl<'a> FirmwareGenerator<'a> {
                 };
                 code.push_str(&format!("        ENCODER_CCW_CW({ccw}, {cw}),\n"));
             }
-            
+
             code.push_str("    }");
 
             if layer_idx < self.layout.layers.len() - 1 {
@@ -728,7 +728,9 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            break;\n");
         code.push('\n');
         code.push_str("        case IDLE_STATE_IDLE_EFFECT:\n");
-        code.push_str("            if (elapsed >= LQMK_IDLE_TIMEOUT_MS + LQMK_IDLE_EFFECT_DURATION_MS) {\n");
+        code.push_str(
+            "            if (elapsed >= LQMK_IDLE_TIMEOUT_MS + LQMK_IDLE_EFFECT_DURATION_MS) {\n",
+        );
         code.push_str("                // Transition to off\n");
         code.push_str("                rgb_matrix_disable_noeeprom();\n");
         code.push_str("                idle_state = IDLE_STATE_OFF;\n");
@@ -928,7 +930,7 @@ impl<'a> FirmwareGenerator<'a> {
             }
             // If tap dance doesn't exist, return original (will be caught by validator)
         }
-        
+
         // Not a tap dance keycode, return unchanged
         keycode.to_string()
     }
@@ -1639,7 +1641,8 @@ mod tests {
         layout.idle_effect_settings.enabled = true;
         layout.idle_effect_settings.idle_timeout_ms = 45_000;
         layout.idle_effect_settings.idle_effect_duration_ms = 180_000;
-        layout.idle_effect_settings.idle_effect_mode = crate::models::RgbMatrixEffect::RainbowBeacon;
+        layout.idle_effect_settings.idle_effect_mode =
+            crate::models::RgbMatrixEffect::RainbowBeacon;
 
         let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
@@ -1661,7 +1664,7 @@ mod tests {
 
         // Should contain idle effect defines
         assert!(config_h.contains("LQMK_IDLE_TIMEOUT_MS"));
-        
+
         // Should NOT contain RGB_MATRIX_TIMEOUT when idle effect is enabled
         assert!(!config_h.contains("#define RGB_MATRIX_TIMEOUT"));
     }
@@ -1677,7 +1680,7 @@ mod tests {
 
         // Should contain RGB_MATRIX_TIMEOUT when idle effect is disabled
         assert!(config_h.contains("#define RGB_MATRIX_TIMEOUT 120000"));
-        
+
         // Should NOT contain idle effect defines
         assert!(!config_h.contains("LQMK_IDLE_TIMEOUT_MS"));
     }
@@ -1685,11 +1688,12 @@ mod tests {
     #[test]
     fn test_idle_effect_restores_tui_colors() {
         let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
-        
+
         // Add category to trigger custom colors
-        let category = crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        let category =
+            crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
         layout.add_category(category).unwrap();
-        
+
         layout.idle_effect_settings.enabled = true;
 
         let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
@@ -1714,10 +1718,10 @@ mod tests {
     #[test]
     fn test_idle_effect_no_rgb_keyboard() {
         let (mut layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
-        
+
         // Remove keys to simulate non-RGB keyboard
         geometry.keys.clear();
-        
+
         layout.idle_effect_settings.enabled = true;
 
         let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
@@ -1778,7 +1782,7 @@ mod tests {
     // fn test_generate_encoder_map_with_multiple_layers() {
     //     let (mut layout, mut geometry, mapping, config, keycode_db) = create_test_setup();
     //     geometry.encoder_count = 2;
-        
+
     //     // Add a second layer
     //     let mut layer2 = Layer::new(1, "Layer 2", RgbColor::new(0, 255, 0)).unwrap();
     //     layer2.add_key(KeyDefinition::new(Position::new(0, 0), "KC_1"));
@@ -1791,10 +1795,10 @@ mod tests {
     //     // Count occurrences of "[0] =" and "[1] =" to verify both layers
     //     let layer0_count = encoder_map.matches("[0] =").count();
     //     let layer1_count = encoder_map.matches("[1] =").count();
-        
+
     //     assert_eq!(layer0_count, 1, "Should have one layer 0 definition");
     //     assert_eq!(layer1_count, 1, "Should have one layer 1 definition");
-        
+
     //     // Each layer should have 2 encoder bindings
     //     let encoder_count = encoder_map.matches("ENCODER_CCW_CW").count();
     //     assert_eq!(encoder_count, 4, "Should have 2 encoders * 2 layers = 4 total bindings");

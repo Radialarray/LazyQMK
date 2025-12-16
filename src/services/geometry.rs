@@ -51,13 +51,13 @@ pub struct GeometryResult {
 #[must_use]
 pub fn extract_base_keyboard(keyboard_path: &str) -> String {
     let keyboard_parts: Vec<&str> = keyboard_path.split('/').collect();
-    
+
     // If path has 3+ components, check if last component looks like a variant
     if keyboard_parts.len() >= 3 {
         let last_part = keyboard_parts[keyboard_parts.len() - 1];
-        
+
         // Check if the last component matches common variant patterns
-        let looks_like_variant = 
+        let looks_like_variant =
             // Common variant names
             matches!(last_part, "standard" | "mini" | "normal" | "full" | "compact" | 
                                "rgb" | "wireless" | "ansi" | "iso" | "hotswap")
@@ -65,13 +65,13 @@ pub fn extract_base_keyboard(keyboard_path: &str) -> String {
             || last_part.starts_with("rev")
             // Version patterns: v1, v2, v3, etc.
             || (last_part.starts_with('v') && last_part.len() <= 3 && last_part[1..].chars().all(|c| c.is_ascii_digit()));
-        
+
         if looks_like_variant {
             // Has variant subdirectory - use parent path
             return keyboard_parts[..keyboard_parts.len() - 1].join("/");
         }
     }
-    
+
     // No variant detected or not enough path components
     keyboard_path.to_string()
 }

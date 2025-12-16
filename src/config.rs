@@ -842,7 +842,7 @@ mod tests {
         let qmk_path = temp_dir.path().join("qmk");
         let keyboards_dir = qmk_path.join("keyboards");
         let keyboard_dir = keyboards_dir.join("test_keyboard");
-        
+
         // Create multiple variant directories
         let rev1_dir = keyboard_dir.join("rev1");
         let standard_dir = keyboard_dir.join("standard");
