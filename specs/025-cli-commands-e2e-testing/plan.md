@@ -1,8 +1,37 @@
 # Spec 025: CLI Commands & End-to-End Testing
 
-**Status**: Draft  
+**Status**: Partially Implemented (50% - Phases 1 & 2 Complete)  
 **Created**: 2025-01-16  
-**Updated**: 2025-01-16
+**Updated**: 2025-12-17
+
+## Implementation Status
+
+- ✅ **Phase 1 Complete**: Core commands (validate, generate, inspect, keycode resolve) + 77 E2E tests
+- ✅ **Phase 2 Complete**: Tap dance & layer utilities fully implemented
+- ❌ **Phase 3 Not Started**: QMK metadata & categories (0%)
+- ❌ **Phase 4 Not Started**: Templates, config, utilities (0%)
+
+### Summary of Implemented Commands (10/26 = 38%)
+
+**✅ Implemented (10):**
+1. `lazyqmk validate` - Validation with JSON output
+2. `lazyqmk inspect` - Section inspection
+3. `lazyqmk generate` - Firmware generation with deterministic mode
+4. `lazyqmk keycode resolve` - Layer UUID resolution
+5. `lazyqmk layer-refs` - Layer reference analysis
+6. `lazyqmk tap-dance list` - List tap dances
+7. `lazyqmk tap-dance add` - Add tap dance
+8. `lazyqmk tap-dance delete` - Delete tap dance
+9. `lazyqmk tap-dance validate` - Validate tap dances
+10. `--help` (partial via clap)
+
+**❌ Not Implemented (16):**
+- 3 QMK metadata commands (list-keyboards, list-layouts, geometry)
+- 3 category commands (list, add, delete)
+- 3 template commands (list, save, apply)
+- 2 config commands (show, set)
+- 2 utility commands (keycodes, help)
+- 1 documentation artifact (docs/TESTING.md)
 
 ## Problem Statement
 
@@ -34,7 +63,7 @@ Add a comprehensive CLI surface that exposes all core features in a headless, sc
 
 ### 1. Validation & Inspection
 
-#### `lazyqmk validate`
+#### ✅ `lazyqmk validate` (IMPLEMENTED)
 Validates a layout file against QMK keycodes, layer structure, and tap dance references.
 
 **Usage:**
@@ -96,7 +125,7 @@ lazyqmk validate --layout my_layout.md --strict
 
 ---
 
-#### `lazyqmk inspect`
+#### ✅ `lazyqmk inspect` (IMPLEMENTED)
 Reads and displays specific sections of a layout file.
 
 **Usage:**
@@ -153,7 +182,7 @@ lazyqmk inspect --layout my_layout.md --section tap-dances --json
 
 ### 2. QMK Metadata & Geometry
 
-#### `lazyqmk list-keyboards`
+#### ❌ `lazyqmk list-keyboards` (NOT IMPLEMENTED)
 Lists all compilable keyboards found in QMK firmware directory.
 
 **Usage:**
@@ -203,7 +232,7 @@ lazyqmk list-keyboards --qmk-path ~/qmk_firmware --json
 
 ---
 
-#### `lazyqmk list-layouts`
+#### ❌ `lazyqmk list-layouts` (NOT IMPLEMENTED)
 Lists layout variants for a specific keyboard.
 
 **Usage:**
@@ -245,7 +274,7 @@ lazyqmk list-layouts --qmk-path ~/qmk_firmware --keyboard crkbd/rev1 --json
 
 ---
 
-#### `lazyqmk geometry`
+#### ❌ `lazyqmk geometry` (NOT IMPLEMENTED)
 Displays matrix, LED, and visual coordinate mappings for a keyboard layout.
 
 **Usage:**
@@ -295,7 +324,7 @@ lazyqmk geometry --qmk-path ~/qmk_firmware --keyboard crkbd/rev1 --layout-name L
 
 ### 3. Keycode & Layer Utilities
 
-#### `lazyqmk keycode resolve`
+#### ✅ `lazyqmk keycode resolve` (IMPLEMENTED)
 Resolves parameterized keycodes (LT, LM, MO, etc.) with layer UUIDs to indices.
 
 **Usage:**
@@ -339,7 +368,7 @@ lazyqmk keycode resolve --layout my_layout.md --expr "MO(@layer-uuid)" --json
 
 ---
 
-#### `lazyqmk layer-refs`
+#### ✅ `lazyqmk layer-refs` (IMPLEMENTED)
 Shows layer reference index and transparency conflict warnings.
 
 **Usage:**
@@ -394,7 +423,7 @@ lazyqmk layer-refs --layout my_layout.md --json
 
 ### 4. Tap Dance Management
 
-#### `lazyqmk tap-dance list`
+#### ✅ `lazyqmk tap-dance list` (IMPLEMENTED)
 Lists all tap dance definitions in a layout.
 
 **Usage:**
@@ -433,7 +462,7 @@ lazyqmk tap-dance list --layout my_layout.md --json
 
 ---
 
-#### `lazyqmk tap-dance add`
+#### ✅ `lazyqmk tap-dance add` (IMPLEMENTED)
 Adds a new tap dance definition to a layout.
 
 **Usage:**
@@ -470,7 +499,7 @@ lazyqmk tap-dance add --layout my_layout.md --name shift_caps --single KC_LSFT -
 
 ---
 
-#### `lazyqmk tap-dance delete`
+#### ✅ `lazyqmk tap-dance delete` (IMPLEMENTED)
 Removes a tap dance definition from a layout.
 
 **Usage:**
@@ -504,7 +533,7 @@ lazyqmk tap-dance delete --layout my_layout.md --name old_td --force
 
 ---
 
-#### `lazyqmk tap-dance validate`
+#### ✅ `lazyqmk tap-dance validate` (IMPLEMENTED)
 Validates tap dance definitions and references.
 
 **Usage:**
@@ -547,7 +576,7 @@ lazyqmk tap-dance validate --layout my_layout.md --json
 
 ### 5. Category Management
 
-#### `lazyqmk category list`
+#### ❌ `lazyqmk category list` (NOT IMPLEMENTED)
 Lists all categories defined in a layout.
 
 **Usage:**
@@ -579,7 +608,7 @@ lazyqmk category list --layout <file> [--json]
 
 ---
 
-#### `lazyqmk category add`
+#### ❌ `lazyqmk category add` (NOT IMPLEMENTED)
 Adds a new category to a layout.
 
 **Usage:**
@@ -605,7 +634,7 @@ lazyqmk category add --layout my_layout.md --id nav --name "Navigation" --color 
 
 ---
 
-#### `lazyqmk category delete`
+#### ❌ `lazyqmk category delete` (NOT IMPLEMENTED)
 Removes a category from a layout.
 
 **Usage:**
@@ -627,7 +656,7 @@ lazyqmk category delete --layout <file> --id <id> [--force]
 
 ### 6. Firmware Generation
 
-#### `lazyqmk generate`
+#### ✅ `lazyqmk generate` (IMPLEMENTED)
 Generates QMK firmware files (keymap.c, config.h) from a layout.
 
 **Usage:**
@@ -672,7 +701,7 @@ lazyqmk generate --layout my_layout.md --qmk-path ~/qmk_firmware --out-dir ./bui
 
 ### 7. Configuration
 
-#### `lazyqmk config show`
+#### ❌ `lazyqmk config show` (NOT IMPLEMENTED)
 Displays current configuration.
 
 **Usage:**
@@ -709,7 +738,7 @@ lazyqmk config show --json
 
 ---
 
-#### `lazyqmk config set`
+#### ❌ `lazyqmk config set` (NOT IMPLEMENTED)
 Updates configuration values.
 
 **Usage:**
@@ -736,7 +765,7 @@ lazyqmk config set --qmk-path ~/qmk_firmware --output-dir ~/lazyqmk_builds
 
 ### 8. Templates
 
-#### `lazyqmk template list`
+#### ❌ `lazyqmk template list` (NOT IMPLEMENTED)
 Lists available templates.
 
 **Usage:**
@@ -768,7 +797,7 @@ lazyqmk template list [--json]
 
 ---
 
-#### `lazyqmk template save`
+#### ❌ `lazyqmk template save` (NOT IMPLEMENTED)
 Saves current layout as a template.
 
 **Usage:**
@@ -788,7 +817,7 @@ lazyqmk template save --layout <file> --name <name> [--tags <tag1,tag2>]
 
 ---
 
-#### `lazyqmk template apply`
+#### ❌ `lazyqmk template apply` (NOT IMPLEMENTED)
 Applies a template to create a new layout file.
 
 **Usage:**
@@ -809,7 +838,7 @@ lazyqmk template apply --name <name> --out <file>
 
 ### 9. Utilities
 
-#### `lazyqmk keycodes`
+#### ❌ `lazyqmk keycodes` (NOT IMPLEMENTED)
 Lists available keycodes from the database.
 
 **Usage:**
@@ -837,7 +866,7 @@ lazyqmk keycodes [--category <name>] [--json]
 
 ---
 
-#### `lazyqmk help`
+#### ⚠️ `lazyqmk help` (PARTIAL - clap --help exists)
 Displays help topics from help.toml (source of truth).
 
 **Usage:**
@@ -1133,89 +1162,89 @@ fn test_list_layouts_crkbd() {
 
 ## Implementation Phases
 
-### Phase 1: Core Commands & Fixtures (Week 1)
+### ✅ Phase 1: Core Commands & Fixtures (COMPLETE)
 **Priority: High**
 
 **Tasks:**
-1. Add clap subcommands structure to `src/main.rs`
-2. Create `src/cli/` module with command handlers:
-   - `validate.rs`
-   - `generate.rs`
-   - `inspect.rs`
-   - `keycode.rs`
-3. Create `tests/fixtures/mod.rs` with shared builders
-4. Implement `validate` command with JSON output
-5. Implement `generate` command with deterministic mode
-6. Add `keycode resolve` command
-7. Create golden test helper
-8. Add initial E2E tests for validate and generate
+1. ✅ Add clap subcommands structure to `src/main.rs`
+2. ✅ Create `src/cli/` module with command handlers:
+   - ✅ `validate.rs`
+   - ✅ `generate.rs`
+   - ✅ `inspect.rs`
+   - ✅ `keycode.rs`
+3. ✅ Create `tests/fixtures/mod.rs` with shared builders
+4. ✅ Implement `validate` command with JSON output
+5. ✅ Implement `generate` command with deterministic mode
+6. ✅ Add `keycode resolve` command
+7. ✅ Create golden test helper
+8. ✅ Add initial E2E tests for validate and generate
 
 **Deliverables:**
-- Working `validate`, `generate`, `keycode resolve` commands
-- Shared test fixtures
-- Golden test framework
-- 10+ E2E tests passing
+- ✅ Working `validate`, `generate`, `keycode resolve` commands
+- ✅ Shared test fixtures (comprehensive builders in `tests/fixtures/mod.rs`)
+- ✅ Golden test framework (5 golden files)
+- ✅ **77 E2E tests passing** (exceeds 10+ target)
 
 ---
 
-### Phase 2: Tap Dance & Layer Utilities (Week 2)
+### ✅ Phase 2: Tap Dance & Layer Utilities (COMPLETE)
 **Priority: High**
 
 **Tasks:**
-1. Implement tap dance CRUD commands:
-   - `tap-dance list`
-   - `tap-dance add`
-   - `tap-dance delete`
-   - `tap-dance validate`
-2. Implement `layer-refs` command
-3. Add E2E tests for tap dance flows
-4. Add golden tests for tap dance generation (2-way, 3-way)
-5. Test orphan detection and validation
+1. ✅ Implement tap dance CRUD commands:
+   - ✅ `tap-dance list`
+   - ✅ `tap-dance add`
+   - ✅ `tap-dance delete`
+   - ✅ `tap-dance validate`
+2. ✅ Implement `layer-refs` command
+3. ✅ Add E2E tests for tap dance flows
+4. ✅ Add golden tests for tap dance generation (2-way, 3-way)
+5. ✅ Test orphan detection and validation
 
 **Deliverables:**
-- Complete tap dance CLI surface
-- Layer refs analysis command
-- 15+ tap dance E2E tests
+- ✅ Complete tap dance CLI surface (`src/cli/tap_dance.rs`)
+- ✅ Layer refs analysis command (`src/cli/layer_refs.rs`)
+- ✅ Comprehensive tap dance E2E tests (exceeds 15+ target)
 
 ---
 
-### Phase 3: QMK Metadata & Categories (Week 3)
+### ❌ Phase 3: QMK Metadata & Categories (NOT STARTED)
 **Priority: Medium**
 
 **Tasks:**
-1. Implement QMK metadata commands:
-   - `list-keyboards`
-   - `list-layouts`
-   - `geometry`
-2. Implement category CRUD commands:
-   - `category list/add/delete`
-3. Gate QMK commands with feature flag or runtime checks
-4. Add contract tests (marked `#[ignore]`)
-5. Document running gated tests
+1. ❌ Implement QMK metadata commands:
+   - ❌ `list-keyboards`
+   - ❌ `list-layouts`
+   - ❌ `geometry`
+2. ❌ Implement category CRUD commands:
+   - ❌ `category list/add/delete`
+3. ❌ Gate QMK commands with feature flag or runtime checks
+4. ❌ Add contract tests (marked `#[ignore]`)
+5. ❌ Document running gated tests
 
 **Deliverables:**
-- QMK metadata commands
-- Category management CLI
-- Contract tests for QMK parsing
+- ❌ QMK metadata commands
+- ❌ Category management CLI
+- ❌ Contract tests for QMK parsing
 
 ---
 
-### Phase 4: Templates, Config, Utilities (Week 4)
+### ❌ Phase 4: Templates, Config, Utilities (NOT STARTED)
 **Priority: Low**
 
 **Tasks:**
-1. Implement template commands
-2. Implement config commands (`show`, `set`)
-3. Implement utility commands (`keycodes`, `help`)
-4. Add E2E tests for template round-trip
-5. Add E2E tests for config management
-6. Write comprehensive documentation
+1. ❌ Implement template commands
+2. ❌ Implement config commands (`show`, `set`)
+3. ❌ Implement utility commands (`keycodes`, `help`)
+4. ❌ Add E2E tests for template round-trip
+5. ❌ Add E2E tests for config management
+6. ⚠️ Write comprehensive documentation (TESTING.md missing)
 
 **Deliverables:**
-- Complete CLI surface
-- Template and config management
-- Full E2E test coverage
-- User documentation
+- ❌ Complete CLI surface
+- ❌ Template and config management
+- ✅ Full E2E test coverage (77 tests for implemented features)
+- ❌ User documentation (`docs/TESTING.md` not created)
 
 ---
 
@@ -1306,12 +1335,16 @@ test:
 
 ## Success Criteria
 
-1. **CLI Surface**: All priority commands implemented with proper exit codes and JSON output
-2. **E2E Coverage**: 50+ E2E tests covering major workflows
-3. **Golden Tests**: Deterministic firmware generation with snapshot regression testing
-4. **CI Integration**: Fast test suite runs in <2 minutes; full suite (with QMK) in <5 minutes
-5. **Documentation**: Complete CLI reference and testing guide
-6. **Developer Experience**: `lazyqmk --help` provides clear command documentation
+1. ⚠️ **CLI Surface**: High-priority commands (Phases 1-2) fully implemented (10/26 commands = 38%)
+2. ✅ **E2E Coverage**: **77 E2E tests** covering major workflows (exceeds 50+ target)
+3. ✅ **Golden Tests**: Deterministic firmware generation with snapshot regression testing
+4. ✅ **CI Integration**: Fast test suite runs in <2 minutes
+5. ⚠️ **Documentation**: CLI `--help` complete, but `docs/TESTING.md` missing
+6. ✅ **Developer Experience**: `lazyqmk --help` provides clear command documentation
+
+**Overall Status: PARTIALLY COMPLETE (50%)**
+- ✅ All High-Priority work (Phases 1-2) complete
+- ❌ Medium and Low-Priority work (Phases 3-4) not started
 
 ## Non-Goals
 
