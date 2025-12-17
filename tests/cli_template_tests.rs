@@ -12,9 +12,8 @@ use fixtures::*;
 static TEMPLATE_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Path to the lazyqmk binary
-fn lazyqmk_bin() -> String {
-    std::env::var("CARGO_BIN_EXE_lazyqmk")
-        .unwrap_or_else(|_| "target/release/lazyqmk".to_string())
+fn lazyqmk_bin() -> &'static str {
+    env!("CARGO_BIN_EXE_lazyqmk")
 }
 
 /// Get the template directory path

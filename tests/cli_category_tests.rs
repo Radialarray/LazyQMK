@@ -19,10 +19,9 @@ struct ListCategoriesResponse {
     count: usize,
 }
 
-/// Path to the lazyqmk binary
-fn lazyqmk_bin() -> String {
-    std::env::var("CARGO_BIN_EXE_lazyqmk")
-        .unwrap_or_else(|_| "target/release/lazyqmk".to_string())
+/// Path to the lazyqmk binary (set by cargo at compile time)
+fn lazyqmk_bin() -> &'static str {
+    env!("CARGO_BIN_EXE_lazyqmk")
 }
 
 // ============================================================================
