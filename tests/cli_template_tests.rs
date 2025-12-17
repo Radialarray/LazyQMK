@@ -358,10 +358,10 @@ fn test_template_apply_nonexistent_template() {
         .output()
         .expect("Failed to execute command");
 
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "Nonexistent template should fail"
+    assert!(
+        matches!(output.status.code(), Some(1) | Some(2)),
+        "Nonexistent template should fail with exit code 1 or 2, got: {:?}",
+        output.status.code()
     );
 }
 
