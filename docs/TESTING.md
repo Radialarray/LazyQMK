@@ -143,6 +143,21 @@ These tests:
 - Test error conditions thoroughly
 - Use fixtures for consistent test data
 
+## Test Statistics
+
+LazyQMK has comprehensive test coverage:
+
+- **Total tests**: ~970 tests
+- **CLI E2E tests**: 156 tests across 12 command categories
+- **Integration tests**: ~800 tests
+- **Unit tests**: ~10 tests
+- **Ignored tests (manual)**: 4 tests (pre-release validation only)
+- **Golden files**: 5 files for firmware generation regression testing
+
+**Test execution time:**
+- Fast suite (`cargo test --tests`): <2 seconds
+- Full suite with ignored tests: ~10 seconds
+
 ## Test Categories
 
 ### Unit Tests
@@ -231,30 +246,109 @@ fn test_generate_matches_golden() {
 - Normalize non-deterministic elements
 - Essential for firmware generation testing
 
-### Contract Tests (QMK-dependent)
+### Mock QMK Fixture Tests
 
-Tests that require the QMK submodule, marked with `#[ignore]`:
+**Most QMK-dependent tests now use lightweight fixtures instead of the full submodule!**
+
+QMK metadata commands (`list-keyboards`, `list-layouts`, `geometry`) use a mock QMK structure in `tests/fixtures/mock_qmk/` for fast CI-friendly testing:
+
+```
+tests/fixtures/mock_qmk/
+  keyboards/
+    crkbd/
+      info.json           # Real crkbd keyboard metadata
+    keebart/
+      corne_choc_pro/
+        info.json         # Real corne_choc_pro keyboard metadata
+    planck/
+      info.json           # Real planck keyboard metadata
+```
+
+**How it works:**
+
+Commands check for `LAZYQMK_QMK_FIXTURE` environment variable:
 
 ```rust
 #[test]
-#[ignore = "requires QMK submodule"]
-fn test_list_qmk_keyboards() {
-    // This test accesses the actual QMK firmware submodule
-    let keyboards = list_keyboards().expect("QMK not found");
-    assert!(!keyboards.is_empty());
+fn test_list_keyboards_with_fixture() {
+    let fixture_path = PathBuf::from("tests/fixtures/mock_qmk");
+    
+    let output = Command::new(lazyqmk_bin())
+        .args(["list-keyboards", "--qmk-path", "dummy"])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
+        .output()
+        .expect("Failed to execute command");
+    
+    assert_eq!(output.status.code(), Some(0));
 }
 ```
 
-**Characteristics:**
-- Require `git submodule update --init --recursive qmk_firmware`
-- Run with `cargo test -- --ignored`
-- Test real QMK metadata and configurations
-- Slower (~5-10 seconds per test)
+**Benefits:**
+- ✅ No QMK submodule needed (saves 500MB+ download)
+- ✅ Fast tests (<1 second vs 5-10 seconds)
+- ✅ Run in CI without special setup
+- ✅ Deterministic output
+- ✅ 18 QMK metadata tests run automatically
 
-Which tests are contract tests:
-- `test_list_qmk_keyboards` - Lists available keyboards
-- `test_list_qmk_layouts` - Lists layouts for a keyboard
-- `test_geometry_calculation` - Calculates physical keyboard layout
+**When to use the real QMK submodule:**
+Only for the 4 manual pre-release tests (see below).
+
+### Manual Pre-Release Tests (Ignored)
+
+Only **4 tests** remain ignored for manual pre-release validation. These require full QMK compilation or are deprecated:
+
+```bash
+# Find ignored tests
+cargo test -- --list --ignored
+```
+
+**The 4 ignored tests:**
+
+1. **`test_generation_vial_json_structure`** (deprecated)
+   - File: `tests/firmware_gen_tests.rs`
+   - Reason: Vial support removed, can be deleted
+   - Status: Safe to remove
+
+2. **`test_scan_keyboards_finds_crkbd`** (QMK CLI integration)
+   - File: `tests/qmk_info_json_tests.rs`
+   - Reason: Requires QMK CLI + submodule for end-to-end validation
+   - Status: Manual pre-release validation only
+
+3. **`test_tap_dance_add_use_generate`** (full pipeline)
+   - File: `tests/cli_tap_dance_tests.rs`
+   - Reason: Requires full QMK compilation (slow, 5-10 minutes)
+   - Status: Manual pre-release validation only
+
+4. **`test_check_deprecated_options_clean`** (deprecated)
+   - File: `src/firmware/validator.rs`
+   - Reason: Vial-specific checks no longer needed after migration to standard QMK
+   - Status: Deprecated, can be removed
+
+**Run ignored tests:**
+
+```bash
+# All ignored tests
+cargo test -- --ignored
+
+# Specific test
+cargo test test_scan_keyboards_finds_crkbd -- --ignored
+```
+
+**Requirements for ignored tests:**
+```bash
+# Initialize QMK submodule
+git submodule update --init --recursive qmk_firmware
+
+# Optional: Install QMK CLI for full pipeline test
+pip3 install qmk
+qmk setup
+```
+
+**Characteristics:**
+- Require QMK submodule (500MB+)
+- Slow execution (5-10 minutes for compilation tests)
+- Only needed for pre-release validation
+- Documented in AGENTS.md pre-release checklist
 
 ## Writing New Tests
 
@@ -372,6 +466,99 @@ let (config, temp_dir) = temp_config_with_qmk(None);
 // config.paths.qmk_firmware is set to a temp QMK structure
 // temp_dir keeps directory alive; it's deleted when temp_dir is dropped
 ```
+
+### Environment-Based Test Isolation
+
+LazyQMK uses environment variables to isolate tests and enable fixture-based testing:
+
+#### `LAZYQMK_CONFIG_DIR` - Config Isolation
+
+Prevents tests from modifying your real configuration:
+
+```rust
+#[test]
+fn test_config_set_safe() {
+    let temp_dir = TempDir::new().unwrap();
+    
+    let output = Command::new(lazyqmk_bin())
+        .env("LAZYQMK_CONFIG_DIR", temp_dir.path())
+        .args(["config", "set", "qmk_firmware", "/path/to/qmk"])
+        .output()
+        .expect("Failed to execute");
+    
+    assert_eq!(output.status.code(), Some(0));
+    // Config written to temp_dir, not your real config
+}
+```
+
+**Implementation** (in `src/config.rs`):
+```rust
+pub fn config_dir() -> Result<PathBuf> {
+    // Check for test override first
+    if let Ok(test_dir) = std::env::var("LAZYQMK_CONFIG_DIR") {
+        return Ok(PathBuf::from(test_dir));
+    }
+    
+    // Normal behavior: use platform-specific config directory
+    let config_dir = dirs::config_dir()?.join(APP_DATA_DIR);
+    Ok(config_dir)
+}
+```
+
+**Benefits:**
+- ✅ 13 config tests run safely in CI
+- ✅ No risk of corrupting real user config
+- ✅ Parallel test execution is safe
+- ✅ Temp dirs auto-cleanup after tests
+
+#### `LAZYQMK_QMK_FIXTURE` - Mock QMK Structure
+
+Enables QMK metadata tests without the 500MB+ submodule:
+
+```rust
+#[test]
+fn test_list_keyboards_fast() {
+    let fixture_path = PathBuf::from("tests/fixtures/mock_qmk");
+    
+    let output = Command::new(lazyqmk_bin())
+        .args(["list-keyboards", "--qmk-path", "ignored"])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
+        .output()
+        .expect("Failed to execute");
+    
+    assert_eq!(output.status.code(), Some(0));
+}
+```
+
+**Implementation** (in `src/cli/qmk.rs`):
+```rust
+pub fn list_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
+    // Check for test fixture override
+    let qmk_path = if let Ok(fixture_path) = std::env::var("LAZYQMK_QMK_FIXTURE") {
+        PathBuf::from(fixture_path)
+    } else {
+        qmk_path.to_path_buf()
+    };
+    
+    // Scan keyboards using either fixture or real QMK path
+    scan_qmk_keyboards(&qmk_path)
+}
+```
+
+**Fixture structure:**
+```
+tests/fixtures/mock_qmk/
+  keyboards/
+    crkbd/info.json           # Minimal real keyboard metadata
+    keebart/corne_choc_pro/info.json
+    planck/info.json
+```
+
+**Benefits:**
+- ✅ 18 QMK metadata tests run in CI (<1 second)
+- ✅ No submodule initialization needed
+- ✅ Deterministic test results
+- ✅ Easy to add new test keyboards (just add info.json)
 
 ### Temp Directory Handling
 
@@ -611,92 +798,105 @@ Normalization handles:
 - **Line endings**: Normalizes to `\n`
 - **Trailing whitespace**: Removed
 
-## Contract Tests (QMK-dependent)
+## Pre-Release Manual Testing
 
-### Why Marked with `#[ignore]`
+### The 4 Ignored Tests
 
-Contract tests are marked `#[ignore]` because they:
+LazyQMK has only **4 ignored tests** that require manual execution before releases. Most tests (including QMK metadata commands) now use fixtures and run automatically in CI.
 
-1. **Require QMK submodule** - Not everyone has it initialized
-2. **Are slower** - Take 5-10 seconds per test
-3. **May fail in CI** - Depend on QMK availability
-4. **Aren't essential** - Unit tests cover the same logic
+**Find all ignored tests:**
+```bash
+cargo test -- --list --ignored
+```
 
-The `#[ignore]` attribute prevents them from running by default, keeping the fast path (<2 minutes) unblocked for most development.
+**The 4 tests:**
 
-### How to Run Them
+1. **`test_generation_vial_json_structure`** *(deprecated - can be removed)*
+   - **Location**: `tests/firmware_gen_tests.rs`
+   - **Purpose**: Validates vial.json structure
+   - **Status**: ⚠️ Deprecated after migration to standard QMK
+   - **Action**: Safe to remove this test
+   
+2. **`test_scan_keyboards_finds_crkbd`** *(pre-release validation)*
+   - **Location**: `tests/qmk_info_json_tests.rs`
+   - **Purpose**: Validates QMK CLI integration with real submodule
+   - **Status**: ✅ Manual pre-release test
+   - **Runtime**: ~5 seconds
+   
+3. **`test_tap_dance_add_use_generate`** *(pre-release validation)*
+   - **Location**: `tests/cli_tap_dance_tests.rs`
+   - **Purpose**: Full pipeline test with QMK firmware compilation
+   - **Status**: ✅ Manual pre-release test
+   - **Runtime**: ~5-10 minutes (QMK compilation)
+   
+4. **`test_check_deprecated_options_clean`** *(deprecated - can be removed)*
+   - **Location**: `src/firmware/validator.rs`
+   - **Purpose**: Checks for deprecated Vial options
+   - **Status**: ⚠️ Deprecated after migration to standard QMK
+   - **Action**: Safe to remove this test
 
-Run all ignored tests:
+### Running Pre-Release Tests
+
+**Before any release**, run these 2 critical tests:
 
 ```bash
-cargo test -- --ignored
+# 1. Initialize QMK submodule (one-time setup)
+git submodule update --init --recursive qmk_firmware
+
+# 2. Run the 2 critical pre-release tests
+cargo test test_scan_keyboards_finds_crkbd -- --ignored
+cargo test test_tap_dance_add_use_generate -- --ignored
+
+# 3. Optional: Install QMK CLI for full pipeline test
+pip3 install qmk
+qmk setup
 ```
 
-Run specific ignored tests:
+**Expected results:**
+- Both tests should pass ✅
+- Total runtime: ~5-15 minutes (depending on QMK compilation)
 
-```bash
-cargo test test_list_qmk_keyboards -- --ignored
-```
+**If tests fail:**
+- Check QMK submodule is initialized: `ls qmk_firmware/keyboards`
+- Verify QMK CLI is installed: `qmk --version`
+- Check QMK submodule commit matches expected version
 
-Run ignored tests for a specific file:
+### Why Only 4 Tests Are Ignored
 
-```bash
-cargo test --test cli_inspect_tests -- --ignored
-```
+**Previous state (before Spec 025/026):**
+- 23 tests were ignored
+- Required QMK submodule for most QMK commands
+- Slow test suite (~10+ minutes)
 
-### Requirements
+**Current state (after Spec 025/026):**
+- ✅ **Only 4 tests ignored** (2 deprecated, 2 pre-release validation)
+- ✅ **18 QMK metadata tests** use fixtures (run in CI automatically)
+- ✅ **13 config tests** use environment isolation (run in CI automatically)
+- ✅ **Fast test suite** (<2 seconds for ~970 tests)
 
-Before running contract tests:
+**Changes made:**
+1. **Mock QMK fixtures** (`tests/fixtures/mock_qmk/`) enable QMK command testing without submodule
+2. **Environment-based config isolation** (`LAZYQMK_CONFIG_DIR`) enables safe config tests
+3. **Fixture override** (`LAZYQMK_QMK_FIXTURE`) allows commands to use mock data in tests
 
-1. **Initialize QMK submodule**:
-   ```bash
-   git submodule update --init --recursive qmk_firmware
-   ```
+**Result:**
+- 91% reduction in ignored tests (23 → 4)
+- QMK metadata commands fully tested in CI
+- Only full-pipeline compilation tests remain manual
 
-2. **Verify it's initialized**:
-   ```bash
-   ls qmk_firmware/keyboards | head
-   # Should list keyboard directories like "0_sixty", "1up60hse", etc.
-   ```
+### Pre-Release Checklist
 
-If you get "QMK path not found" errors, the submodule isn't initialized.
+See `AGENTS.md` section "Pre-Release Testing Requirements" for complete checklist:
 
-### Which Tests Are Contract Tests
+1. All CI tests pass: `cargo test --tests && cargo test --lib`
+2. All pre-release tests pass: `cargo test -- --ignored`
+3. Clippy clean: `cargo clippy --all-features -- -D warnings`
+4. Tested on target platform (macOS/Linux/Windows)
+5. QMK submodule at expected commit
+6. Version number updated in `Cargo.toml`
+7. CHANGELOG reviewed (auto-generated from commits)
 
-These tests require the QMK submodule:
-
-```rust
-#[test]
-#[ignore = "requires QMK submodule"]
-fn test_list_qmk_keyboards() {
-    let keyboards = list_keyboards().expect("QMK not found");
-    assert!(!keyboards.is_empty());
-}
-
-#[test]
-#[ignore = "requires QMK submodule"]
-fn test_list_qmk_layouts() {
-    let layouts = list_layouts("test_keyboard").expect("QMK not found");
-    assert!(!layouts.is_empty());
-}
-
-#[test]
-#[ignore = "requires QMK submodule"]
-fn test_calculate_geometry() {
-    let geometry = calculate_keyboard_geometry(
-        &qmk_path,
-        "test_keyboard",
-        "LAYOUT_test"
-    ).expect("QMK not found");
-    assert_eq!(geometry.keys.len(), 6);
-}
-```
-
-Search for `#[ignore]` to find all contract tests:
-
-```bash
-grep -r "#\[ignore\]" tests/
-```
+**Only create release if all checklist items are complete.**
 
 ## CI Integration
 

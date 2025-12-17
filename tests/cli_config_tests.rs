@@ -1,14 +1,28 @@
 //! End-to-end tests for `lazyqmk config` commands.
 
+use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Mutex;
 
 mod fixtures;
 use fixtures::*;
+
+// Mutex to ensure config tests that modify state don't run in parallel
+static CONFIG_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Path to the lazyqmk binary
 fn lazyqmk_bin() -> String {
     std::env::var("CARGO_BIN_EXE_lazyqmk")
         .unwrap_or_else(|_| "target/release/lazyqmk".to_string())
+}
+
+/// Creates a Command with isolated config directory for testing.
+/// Pass in a config directory path to share between multiple commands in the same test.
+fn isolated_config_command(args: &[&str], config_dir: &PathBuf) -> Command {
+    let mut cmd = Command::new(lazyqmk_bin());
+    cmd.env("LAZYQMK_CONFIG_DIR", config_dir);
+    cmd.args(args);
+    cmd
 }
 
 // ============================================================================
@@ -81,12 +95,13 @@ fn test_config_show_json_schema() {
 // ============================================================================
 
 #[test]
-#[ignore = "modifies user config"]
 fn test_config_set_theme_light() {
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "set", "--theme", "light"])
-        .output()
-        .expect("Failed to execute command");
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let config_dir = temp_dir.path().to_path_buf();
+
+    let mut cmd = isolated_config_command(&["config", "set", "--theme", "light"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(
         output.status.code(),
@@ -96,10 +111,8 @@ fn test_config_set_theme_light() {
     );
 
     // Verify it was set
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =
@@ -113,19 +126,18 @@ fn test_config_set_theme_light() {
 }
 
 #[test]
-#[ignore = "modifies user config"]
 fn test_config_set_theme_dark() {
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "set", "--theme", "dark"])
-        .output()
-        .expect("Failed to execute command");
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let config_dir = temp_dir.path().to_path_buf();
+
+    let mut cmd = isolated_config_command(&["config", "set", "--theme", "dark"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(output.status.code(), Some(0));
 
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =
@@ -140,17 +152,17 @@ fn test_config_set_theme_dark() {
 
 #[test]
 fn test_config_set_theme_auto() {
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "set", "--theme", "auto"])
-        .output()
-        .expect("Failed to execute command");
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
+    let config_dir = temp_dir.path().to_path_buf();
+
+    let mut cmd = isolated_config_command(&["config", "set", "--theme", "auto"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(output.status.code(), Some(0));
 
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =
@@ -178,23 +190,27 @@ fn test_config_set_invalid_theme() {
 }
 
 #[test]
-#[ignore = "modifies user config"]
 fn test_config_set_output_dir_creates_if_needed() {
-    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
-    let output_dir = temp_dir.path().join("new_output_dir");
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let config_temp = tempfile::TempDir::new().expect("Failed to create config temp dir");
+    let config_dir = config_temp.path().to_path_buf();
+    
+    let output_temp = tempfile::TempDir::new().expect("Failed to create output temp dir");
+    let output_dir = output_temp.path().join("new_output_dir");
 
     // Verify it doesn't exist yet
     assert!(!output_dir.exists(), "Output dir should not exist initially");
 
-    let output = Command::new(lazyqmk_bin())
-        .args([
+    let mut cmd = isolated_config_command(
+        &[
             "config",
             "set",
             "--output-dir",
             output_dir.to_str().unwrap(),
-        ])
-        .output()
-        .expect("Failed to execute command");
+        ],
+        &config_dir,
+    );
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(
         output.status.code(),
@@ -205,10 +221,8 @@ fn test_config_set_output_dir_creates_if_needed() {
 
     // The directory may or may not be created depending on implementation,
     // but the config should accept the path
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =
@@ -222,8 +236,11 @@ fn test_config_set_output_dir_creates_if_needed() {
 }
 
 #[test]
-#[ignore = "modifies user config"]
 fn test_config_set_qmk_path() {
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let config_temp = tempfile::TempDir::new().expect("Failed to create config temp dir");
+    let config_dir = config_temp.path().to_path_buf();
+    
     let (config, temp_dir) = temp_config_with_qmk(None);
     let qmk_path = config
         .paths
@@ -233,10 +250,8 @@ fn test_config_set_qmk_path() {
         .unwrap()
         .to_string();
 
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "set", "--qmk-path", &qmk_path])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "set", "--qmk-path", &qmk_path], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(
         output.status.code(),
@@ -245,10 +260,8 @@ fn test_config_set_qmk_path() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =
@@ -279,22 +292,26 @@ fn test_config_set_qmk_path_invalid_directory() {
 }
 
 #[test]
-#[ignore = "modifies user config"]
 fn test_config_set_multiple_values() {
-    let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
-    let output_dir = temp_dir.path().join("output");
+    let _lock = CONFIG_TEST_LOCK.lock().unwrap();
+    let config_temp = tempfile::TempDir::new().expect("Failed to create config temp dir");
+    let config_dir = config_temp.path().to_path_buf();
+    
+    let output_temp = tempfile::TempDir::new().expect("Failed to create output temp dir");
+    let output_dir = output_temp.path().join("output");
 
-    let output = Command::new(lazyqmk_bin())
-        .args([
+    let mut cmd = isolated_config_command(
+        &[
             "config",
             "set",
             "--theme",
             "dark",
             "--output-dir",
             output_dir.to_str().unwrap(),
-        ])
-        .output()
-        .expect("Failed to execute command");
+        ],
+        &config_dir,
+    );
+    let output = cmd.output().expect("Failed to execute command");
 
     assert_eq!(
         output.status.code(),
@@ -303,10 +320,8 @@ fn test_config_set_multiple_values() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let output = Command::new(lazyqmk_bin())
-        .args(["config", "show", "--json"])
-        .output()
-        .expect("Failed to execute command");
+    let mut cmd = isolated_config_command(&["config", "show", "--json"], &config_dir);
+    let output = cmd.output().expect("Failed to execute command");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let result: serde_json::Value =

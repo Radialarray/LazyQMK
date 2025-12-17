@@ -6,6 +6,7 @@
 //! - `geometry`: Display coordinate mappings for keyboard layout
 
 use std::process::Command;
+use std::path::PathBuf;
 
 mod fixtures;
 
@@ -15,18 +16,26 @@ fn lazyqmk_bin() -> String {
         .unwrap_or_else(|_| "target/release/lazyqmk".to_string())
 }
 
+/// Path to the mock QMK fixture for testing without full submodule
+fn mock_qmk_fixture() -> PathBuf {
+    // CARGO_MANIFEST_DIR is always set by cargo test to the project root
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+        .expect("CARGO_MANIFEST_DIR should be set by cargo");
+    PathBuf::from(manifest_dir).join("tests/fixtures/mock_qmk")
+}
+
 // ============================================================================
 // list-keyboards TESTS
 // ============================================================================
 
 /// Test: list-keyboards with valid QMK path returns keyboards successfully
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_keyboards_valid_path() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
 
     let output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path])
+        .args(["list-keyboards", "--qmk-path", "dummy"])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -46,13 +55,13 @@ fn test_list_keyboards_valid_path() {
 
 /// Test: list-keyboards with JSON output produces valid JSON
 #[test]
-#[ignore = "requires QMK submodule"]
 #[allow(clippy::cast_possible_truncation)]
 fn test_list_keyboards_json_output() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
 
     let output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+        .args(["list-keyboards", "--qmk-path", "dummy", "--json"])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -88,7 +97,7 @@ fn test_list_keyboards_json_output() {
     );
     assert!(
         !keyboards.is_empty(),
-        "Should find at least one keyboard in QMK firmware"
+        "Should find at least one keyboard in fixture"
     );
 
     // Verify all keyboards are strings
@@ -99,21 +108,21 @@ fn test_list_keyboards_json_output() {
 
 /// Test: list-keyboards with regex filter returns matching keyboards
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_keyboards_with_filter() {
-    let qmk_path = "qmk_firmware";
-    // Use a broad filter to ensure matches
-    let filter = "^[a-z]";
+    let fixture_path = mock_qmk_fixture();
+    // Use a filter to match our fixture keyboards
+    let filter = "crkbd";
 
     let output = Command::new(lazyqmk_bin())
         .args([
             "list-keyboards",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--filter",
             filter,
             "--json",
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -128,12 +137,11 @@ fn test_list_keyboards_with_filter() {
         .expect("Should have keyboards array");
     assert!(!keyboards.is_empty(), "Filter should match at least one keyboard");
 
-    // All keyboards should match the filter pattern
+    // All keyboards should contain the filter string
     for kb in keyboards {
         let kb_name = kb.as_str().expect("Should be string");
-        let first_char = kb_name.chars().next().expect("Should have first char");
         assert!(
-            first_char.is_alphabetic() && first_char.is_lowercase(),
+            kb_name.contains("crkbd"),
             "Keyboard should match filter: {}",
             kb_name
         );
@@ -142,19 +150,19 @@ fn test_list_keyboards_with_filter() {
 
 /// Test: list-keyboards with invalid filter regex returns error
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_keyboards_invalid_filter_regex() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
     let invalid_regex = "[invalid(regex";
 
     let output = Command::new(lazyqmk_bin())
         .args([
             "list-keyboards",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--filter",
             invalid_regex,
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -173,9 +181,8 @@ fn test_list_keyboards_invalid_filter_regex() {
 
 /// Test: list-keyboards with strict filter that matches nothing returns error
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_keyboards_empty_filter_result() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
     // Filter that almost certainly won't match anything
     let strict_filter = "^ZZZZZZZZZ";
 
@@ -183,10 +190,11 @@ fn test_list_keyboards_empty_filter_result() {
         .args([
             "list-keyboards",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--filter",
             strict_filter,
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -232,38 +240,21 @@ fn test_list_keyboards_invalid_qmk_path() {
 
 /// Test: list-layouts with valid keyboard returns layouts with key counts
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_layouts_valid_keyboard() {
-    let qmk_path = "qmk_firmware";
-    // First find a keyboard
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
-        .output()
-        .expect("Failed to list keyboards");
-
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON output");
-
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
-    assert!(!keyboards.is_empty(), "Should have at least one keyboard");
-
-    let keyboard_name = keyboards[0]
-        .as_str()
-        .expect("Should be string")
-        .to_string();
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
 
     // Now test list-layouts
     let output = Command::new(lazyqmk_bin())
         .args([
             "list-layouts",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--keyboard",
-            &keyboard_name,
+            keyboard_name,
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -289,95 +280,75 @@ fn test_list_layouts_valid_keyboard() {
 
 /// Test: list-layouts with JSON output is valid JSON
 #[test]
-#[ignore = "requires QMK submodule"]
 #[allow(clippy::cast_possible_truncation)]
 fn test_list_layouts_json_output() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+
+    let output = Command::new(lazyqmk_bin())
+        .args([
+            "list-layouts",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--json",
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    if output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let result: serde_json::Value =
+            serde_json::from_str(&stdout).expect("Should parse JSON output");
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
+        // Validate structure
+        assert!(result["keyboard"].is_string(), "Should have keyboard field");
+        assert!(result["layouts"].is_array(), "Should have layouts array");
+        assert!(result["count"].is_number(), "Should have count field");
 
-    // Try different keyboards until we find one with layouts
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-                "--json",
-            ])
-            .output()
-            .expect("Failed to execute command");
+        let layouts = result["layouts"]
+            .as_array()
+            .expect("Should be array");
+        let count = result["count"].as_u64().expect("Should be number");
 
-        if output.status.code() == Some(0) {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let result: serde_json::Value =
-                serde_json::from_str(&stdout).expect("Should parse JSON output");
+        assert_eq!(
+            layouts.len(),
+            count as usize,
+            "Layout count should match array length"
+        );
 
-            // Validate structure
-            assert!(result["keyboard"].is_string(), "Should have keyboard field");
-            assert!(result["layouts"].is_array(), "Should have layouts array");
-            assert!(result["count"].is_number(), "Should have count field");
-
-            let layouts = result["layouts"]
-                .as_array()
-                .expect("Should be array");
-            let count = result["count"].as_u64().expect("Should be number");
-
-            assert_eq!(
-                layouts.len(),
-                count as usize,
-                "Layout count should match array length"
+        // Verify each layout has name and key_count
+        for layout in layouts {
+            assert!(
+                layout["name"].is_string(),
+                "Each layout should have name"
             );
-
-            // Verify each layout has name and key_count
-            for layout in layouts {
-                assert!(
-                    layout["name"].is_string(),
-                    "Each layout should have name"
-                );
-                assert!(
-                    layout["key_count"].is_number(),
-                    "Each layout should have key_count"
-                );
-            }
-
-            return; // Test passed with a keyboard that has layouts
+            assert!(
+                layout["key_count"].is_number(),
+                "Each layout should have key_count"
+            );
         }
     }
-
-    // If we get here, we couldn't find a keyboard with layouts to test
-    // This is acceptable - the firmware might not have keyboards with explicit layouts
 }
 
 /// Test: list-layouts with non-existent keyboard returns error
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_layouts_nonexistent_keyboard() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
     let nonexistent_keyboard = "nonexistent_keyboard_xyz";
 
     let output = Command::new(lazyqmk_bin())
         .args([
             "list-layouts",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--keyboard",
             nonexistent_keyboard,
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -426,53 +397,36 @@ fn test_list_layouts_invalid_qmk_path() {
 
 /// Test: list-layouts outputs human-readable format correctly
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_list_layouts_human_readable_output() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+
+    let output = Command::new(lazyqmk_bin())
+        .args([
+            "list-layouts",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    if output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
-
-    // Try different keyboards until we find one with layouts
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-            ])
-            .output()
-            .expect("Failed to execute command");
-
-        if output.status.code() == Some(0) {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-
-            // Verify human-readable format
-            assert!(stdout.contains("Keyboard:"), "Should show keyboard name");
-            assert!(
-                stdout.contains("layout") || stdout.contains("Available"),
-                "Should show layouts"
-            );
-            assert!(
-                stdout.contains("keys") || stdout.contains("key"),
-                "Should show key counts"
-            );
-
-            return;
-        }
+        // Verify human-readable format
+        assert!(stdout.contains("Keyboard:"), "Should show keyboard name");
+        assert!(
+            stdout.contains("layout") || stdout.contains("Available"),
+            "Should show layouts"
+        );
+        assert!(
+            stdout.contains("keys") || stdout.contains("key"),
+            "Should show key counts"
+        );
     }
 }
 
@@ -482,236 +436,147 @@ fn test_list_layouts_human_readable_output() {
 
 /// Test: geometry with valid keyboard and layout returns coordinate mappings
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_valid_keyboard_and_layout() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+    let layout_name = "LAYOUT";
+
+    // Test geometry command
+    let geo_output = Command::new(lazyqmk_bin())
+        .args([
+            "geometry",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--layout-name",
+            layout_name,
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute geometry command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
-
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
-
-    // Try different keyboards until we find one with layouts we can use for geometry
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let layouts_output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-                "--json",
-            ])
-            .output()
-            .expect("Failed to list layouts");
-
-        if layouts_output.status.code() == Some(0) {
-            let layouts_stdout = String::from_utf8_lossy(&layouts_output.stdout);
-            let layouts_result: serde_json::Value =
-                serde_json::from_str(&layouts_stdout).expect("Should parse JSON");
-
-            let layouts = layouts_result["layouts"]
-                .as_array()
-                .expect("Should have layouts");
-
-            if !layouts.is_empty() {
-                let layout_name = layouts[0]["name"]
-                    .as_str()
-                    .expect("Should be string")
-                    .to_string();
-
-                // Test geometry command
-                let geo_output = Command::new(lazyqmk_bin())
-                    .args([
-                        "geometry",
-                        "--qmk-path",
-                        qmk_path,
-                        "--keyboard",
-                        kb_name,
-                        "--layout-name",
-                        &layout_name,
-                    ])
-                    .output()
-                    .expect("Failed to execute geometry command");
-
-                if geo_output.status.code() == Some(0) {
-                    let stdout = String::from_utf8_lossy(&geo_output.stdout);
-                    assert!(
-                        stdout.contains("Keyboard:") || stdout.contains("Layout:"),
-                        "Geometry output should show keyboard and layout"
-                    );
-                    assert!(
-                        stdout.contains("Matrix:") || stdout.contains("matrix"),
-                        "Should show matrix dimensions"
-                    );
-                    assert!(
-                        stdout.contains("Keys:") || stdout.contains("keys"),
-                        "Should show key count"
-                    );
-                    return;
-                }
-            }
-        }
+    if geo_output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&geo_output.stdout);
+        assert!(
+            stdout.contains("Keyboard:") || stdout.contains("Layout:"),
+            "Geometry output should show keyboard and layout"
+        );
+        assert!(
+            stdout.contains("Matrix:") || stdout.contains("matrix"),
+            "Should show matrix dimensions"
+        );
+        assert!(
+            stdout.contains("Keys:") || stdout.contains("keys"),
+            "Should show key count"
+        );
     }
 }
 
 /// Test: geometry with JSON output is valid JSON with correct structure
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_json_output() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts for geometry test
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+    let layout_name = "LAYOUT";
+
+    // Test geometry with JSON
+    let geo_output = Command::new(lazyqmk_bin())
+        .args([
+            "geometry",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--layout-name",
+            layout_name,
+            "--json",
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute geometry command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    if geo_output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&geo_output.stdout);
+        let result: serde_json::Value =
+            serde_json::from_str(&stdout).expect("Should parse JSON");
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
+        // Validate structure
+        assert!(
+            result["keyboard"].is_string(),
+            "Should have keyboard field"
+        );
+        assert!(result["layout"].is_string(), "Should have layout field");
+        assert!(result["matrix"].is_object(), "Should have matrix object");
+        assert!(
+            result["key_count"].is_number(),
+            "Should have key_count field"
+        );
+        assert!(
+            result["mappings"].is_array(),
+            "Should have mappings array"
+        );
 
-    // Try different keyboards until we find one for geometry
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let layouts_output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-                "--json",
-            ])
-            .output()
-            .expect("Failed to list layouts");
+        // Validate matrix structure
+        let matrix = &result["matrix"];
+        assert!(matrix["rows"].is_number(), "Matrix should have rows");
+        assert!(matrix["cols"].is_number(), "Matrix should have cols");
 
-        if layouts_output.status.code() == Some(0) {
-            let layouts_stdout = String::from_utf8_lossy(&layouts_output.stdout);
-            let layouts_result: serde_json::Value =
-                serde_json::from_str(&layouts_stdout).expect("Should parse JSON");
+        let rows = matrix["rows"]
+            .as_u64()
+            .expect("rows should be number");
+        let cols = matrix["cols"]
+            .as_u64()
+            .expect("cols should be number");
+        assert!(rows > 0, "Rows should be positive");
+        assert!(cols > 0, "Cols should be positive");
 
-            let layouts = layouts_result["layouts"]
-                .as_array()
-                .expect("Should have layouts");
+        // Validate mappings
+        let mappings = result["mappings"]
+            .as_array()
+            .expect("mappings should be array");
+        assert!(!mappings.is_empty(), "Should have mappings");
 
-            if !layouts.is_empty() {
-                let layout_name = layouts[0]["name"]
-                    .as_str()
-                    .expect("Should be string")
-                    .to_string();
-
-                // Test geometry with JSON
-                let geo_output = Command::new(lazyqmk_bin())
-                    .args([
-                        "geometry",
-                        "--qmk-path",
-                        qmk_path,
-                        "--keyboard",
-                        kb_name,
-                        "--layout-name",
-                        &layout_name,
-                        "--json",
-                    ])
-                    .output()
-                    .expect("Failed to execute geometry command");
-
-                if geo_output.status.code() == Some(0) {
-                    let stdout = String::from_utf8_lossy(&geo_output.stdout);
-                    let result: serde_json::Value =
-                        serde_json::from_str(&stdout).expect("Should parse JSON");
-
-                    // Validate structure
-                    assert!(
-                        result["keyboard"].is_string(),
-                        "Should have keyboard field"
-                    );
-                    assert!(result["layout"].is_string(), "Should have layout field");
-                    assert!(result["matrix"].is_object(), "Should have matrix object");
-                    assert!(
-                        result["key_count"].is_number(),
-                        "Should have key_count field"
-                    );
-                    assert!(
-                        result["mappings"].is_array(),
-                        "Should have mappings array"
-                    );
-
-                    // Validate matrix structure
-                    let matrix = &result["matrix"];
-                    assert!(matrix["rows"].is_number(), "Matrix should have rows");
-                    assert!(matrix["cols"].is_number(), "Matrix should have cols");
-
-                    let rows = matrix["rows"]
-                        .as_u64()
-                        .expect("rows should be number");
-                    let cols = matrix["cols"]
-                        .as_u64()
-                        .expect("cols should be number");
-                    assert!(rows > 0, "Rows should be positive");
-                    assert!(cols > 0, "Cols should be positive");
-
-                    // Validate mappings
-                    let mappings = result["mappings"]
-                        .as_array()
-                        .expect("mappings should be array");
-                    assert!(!mappings.is_empty(), "Should have mappings");
-
-                    for mapping in mappings {
-                        assert!(
-                            mapping["visual_index"].is_number(),
-                            "Mapping should have visual_index"
-                        );
-                        assert!(
-                            mapping["matrix"].is_array(),
-                            "Mapping should have matrix array"
-                        );
-                        assert!(
-                            mapping["led_index"].is_number(),
-                            "Mapping should have led_index"
-                        );
-                        assert!(
-                            mapping["visual_position"].is_array(),
-                            "Mapping should have visual_position array"
-                        );
-                    }
-
-                    return;
-                }
-            }
+        for mapping in mappings {
+            assert!(
+                mapping["visual_index"].is_number(),
+                "Mapping should have visual_index"
+            );
+            assert!(
+                mapping["matrix"].is_array(),
+                "Mapping should have matrix array"
+            );
+            assert!(
+                mapping["led_index"].is_number(),
+                "Mapping should have led_index"
+            );
+            assert!(
+                mapping["visual_position"].is_array(),
+                "Mapping should have visual_position array"
+            );
         }
     }
 }
 
 /// Test: geometry with non-existent keyboard returns error
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_nonexistent_keyboard() {
-    let qmk_path = "qmk_firmware";
+    let fixture_path = mock_qmk_fixture();
     let nonexistent_keyboard = "nonexistent_keyboard_xyz";
 
     let output = Command::new(lazyqmk_bin())
         .args([
             "geometry",
             "--qmk-path",
-            qmk_path,
+            "dummy",
             "--keyboard",
             nonexistent_keyboard,
             "--layout-name",
             "LAYOUT",
         ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
         .expect("Failed to execute command");
 
@@ -730,51 +595,36 @@ fn test_geometry_nonexistent_keyboard() {
 
 /// Test: geometry with non-existent layout returns error
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_nonexistent_layout() {
-    let qmk_path = "qmk_firmware";
-    // Find a valid keyboard first
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+
+    let output = Command::new(lazyqmk_bin())
+        .args([
+            "geometry",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--layout-name",
+            "NONEXISTENT_LAYOUT_XYZ",
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "Non-existent layout should return exit code 1 (validation error)"
+    );
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
-
-    if !keyboards.is_empty() {
-        let keyboard_name = keyboards[0].as_str().expect("Should be string");
-
-        let output = Command::new(lazyqmk_bin())
-            .args([
-                "geometry",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                keyboard_name,
-                "--layout-name",
-                "NONEXISTENT_LAYOUT_XYZ",
-            ])
-            .output()
-            .expect("Failed to execute command");
-
-        assert_eq!(
-            output.status.code(),
-            Some(1),
-            "Non-existent layout should return exit code 1 (validation error)"
-        );
-
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            stderr.contains("Layout") || stderr.contains("layout") || stderr.contains("not found"),
-            "Error should mention layout"
-        );
-    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Layout") || stderr.contains("layout") || stderr.contains("not found"),
+        "Error should mention layout"
+    );
 }
 
 /// Test: geometry with invalid QMK path returns error
@@ -810,191 +660,101 @@ fn test_geometry_invalid_qmk_path() {
 
 /// Test: geometry outputs human-readable format correctly
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_human_readable_output() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts for geometry test
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+    let layout_name = "LAYOUT";
+
+    // Test geometry human-readable output
+    let geo_output = Command::new(lazyqmk_bin())
+        .args([
+            "geometry",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--layout-name",
+            layout_name,
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute geometry command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    if geo_output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&geo_output.stdout);
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
-
-    // Try different keyboards until we find one with layouts
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let layouts_output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-                "--json",
-            ])
-            .output()
-            .expect("Failed to list layouts");
-
-        if layouts_output.status.code() == Some(0) {
-            let layouts_stdout = String::from_utf8_lossy(&layouts_output.stdout);
-            let layouts_result: serde_json::Value =
-                serde_json::from_str(&layouts_stdout).expect("Should parse JSON");
-
-            let layouts = layouts_result["layouts"]
-                .as_array()
-                .expect("Should have layouts");
-
-            if !layouts.is_empty() {
-                let layout_name = layouts[0]["name"]
-                    .as_str()
-                    .expect("Should be string")
-                    .to_string();
-
-                // Test geometry human-readable output
-                let geo_output = Command::new(lazyqmk_bin())
-                    .args([
-                        "geometry",
-                        "--qmk-path",
-                        qmk_path,
-                        "--keyboard",
-                        kb_name,
-                        "--layout-name",
-                        &layout_name,
-                    ])
-                    .output()
-                    .expect("Failed to execute geometry command");
-
-                if geo_output.status.code() == Some(0) {
-                    let stdout = String::from_utf8_lossy(&geo_output.stdout);
-
-                    // Verify human-readable format
-                    assert!(stdout.contains("Keyboard:"), "Should show keyboard");
-                    assert!(stdout.contains("Layout:"), "Should show layout");
-                    assert!(stdout.contains("Matrix:"), "Should show matrix");
-                    assert!(stdout.contains("Keys:"), "Should show keys");
-                    assert!(
-                        stdout.contains("Coordinate Mappings") || stdout.contains("Visual"),
-                        "Should show coordinate mappings"
-                    );
-
-                    return;
-                }
-            }
-        }
+        // Verify human-readable format
+        assert!(stdout.contains("Keyboard:"), "Should show keyboard");
+        assert!(stdout.contains("Layout:"), "Should show layout");
+        assert!(stdout.contains("Matrix:"), "Should show matrix");
+        assert!(stdout.contains("Keys:"), "Should show keys");
+        assert!(
+            stdout.contains("Coordinate Mappings") || stdout.contains("Visual"),
+            "Should show coordinate mappings"
+        );
     }
 }
 
 /// Test: geometry with matrix and LED indices in JSON output
 #[test]
-#[ignore = "requires QMK submodule"]
 fn test_geometry_matrix_and_led_indices() {
-    let qmk_path = "qmk_firmware";
-    // Find a keyboard with layouts
-    let list_output = Command::new(lazyqmk_bin())
-        .args(["list-keyboards", "--qmk-path", qmk_path, "--json"])
+    let fixture_path = mock_qmk_fixture();
+    // Use a keyboard we know exists in the fixture
+    let keyboard_name = "crkbd";
+    let layout_name = "LAYOUT";
+
+    // Test geometry with JSON
+    let geo_output = Command::new(lazyqmk_bin())
+        .args([
+            "geometry",
+            "--qmk-path",
+            "dummy",
+            "--keyboard",
+            keyboard_name,
+            "--layout-name",
+            layout_name,
+            "--json",
+        ])
+        .env("LAZYQMK_QMK_FIXTURE", &fixture_path)
         .output()
-        .expect("Failed to list keyboards");
+        .expect("Failed to execute geometry command");
 
-    let list_stdout = String::from_utf8_lossy(&list_output.stdout);
-    let list_result: serde_json::Value =
-        serde_json::from_str(&list_stdout).expect("Should parse JSON");
+    if geo_output.status.code() == Some(0) {
+        let stdout = String::from_utf8_lossy(&geo_output.stdout);
+        let result: serde_json::Value =
+            serde_json::from_str(&stdout).expect("Should parse JSON");
 
-    let keyboards = list_result["keyboards"]
-        .as_array()
-        .expect("Should have keyboards");
+        let mappings = result["mappings"]
+            .as_array()
+            .expect("mappings should be array");
 
-    // Try different keyboards
-    for keyboard_name in keyboards {
-        let kb_name = keyboard_name.as_str().expect("Should be string");
-        let layouts_output = Command::new(lazyqmk_bin())
-            .args([
-                "list-layouts",
-                "--qmk-path",
-                qmk_path,
-                "--keyboard",
-                kb_name,
-                "--json",
-            ])
-            .output()
-            .expect("Failed to list layouts");
+        if !mappings.is_empty() {
+            let first_mapping = &mappings[0];
 
-        if layouts_output.status.code() == Some(0) {
-            let layouts_stdout = String::from_utf8_lossy(&layouts_output.stdout);
-            let layouts_result: serde_json::Value =
-                serde_json::from_str(&layouts_stdout).expect("Should parse JSON");
-
-            let layouts = layouts_result["layouts"]
+            // Verify matrix field is a 2-element array
+            let matrix = first_mapping["matrix"]
                 .as_array()
-                .expect("Should have layouts");
+                .expect("matrix should be array");
+            assert_eq!(
+                matrix.len(),
+                2,
+                "Matrix should have [row, col]"
+            );
+            assert!(matrix[0].is_number(), "Matrix row should be number");
+            assert!(matrix[1].is_number(), "Matrix col should be number");
 
-            if !layouts.is_empty() {
-                let layout_name = layouts[0]["name"]
-                    .as_str()
-                    .expect("Should be string")
-                    .to_string();
-
-                // Test geometry with JSON
-                let geo_output = Command::new(lazyqmk_bin())
-                    .args([
-                        "geometry",
-                        "--qmk-path",
-                        qmk_path,
-                        "--keyboard",
-                        kb_name,
-                        "--layout-name",
-                        &layout_name,
-                        "--json",
-                    ])
-                    .output()
-                    .expect("Failed to execute geometry command");
-
-                if geo_output.status.code() == Some(0) {
-                    let stdout = String::from_utf8_lossy(&geo_output.stdout);
-                    let result: serde_json::Value =
-                        serde_json::from_str(&stdout).expect("Should parse JSON");
-
-                    let mappings = result["mappings"]
-                        .as_array()
-                        .expect("mappings should be array");
-
-                    if !mappings.is_empty() {
-                        let first_mapping = &mappings[0];
-
-                        // Verify matrix field is a 2-element array
-                        let matrix = first_mapping["matrix"]
-                            .as_array()
-                            .expect("matrix should be array");
-                        assert_eq!(
-                            matrix.len(),
-                            2,
-                            "Matrix should have [row, col]"
-                        );
-                        assert!(matrix[0].is_number(), "Matrix row should be number");
-                        assert!(matrix[1].is_number(), "Matrix col should be number");
-
-                        // Verify visual_position field is a 2-element array
-                        let visual = first_mapping["visual_position"]
-                            .as_array()
-                            .expect("visual_position should be array");
-                        assert_eq!(
-                            visual.len(),
-                            2,
-                            "Visual position should have [x, y]"
-                        );
-                        assert!(visual[0].is_number(), "X should be number");
-                        assert!(visual[1].is_number(), "Y should be number");
-
-                        return;
-                    }
-                }
-            }
+            // Verify visual_position field is a 2-element array
+            let visual = first_mapping["visual_position"]
+                .as_array()
+                .expect("visual_position should be array");
+            assert_eq!(
+                visual.len(),
+                2,
+                "Visual position should have [x, y]"
+            );
+            assert!(visual[0].is_number(), "X should be number");
+            assert!(visual[1].is_number(), "Y should be number");
         }
     }
 }

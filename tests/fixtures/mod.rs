@@ -342,6 +342,12 @@ pub fn temp_config_with_qmk(qmk_path: Option<PathBuf>) -> (Config, TempDir) {
             serde_json::to_string_pretty(&info_json).unwrap()
         ).expect("Failed to write info.json");
 
+        // Create minimal Makefile (required for validation)
+        fs::write(
+            path.join("Makefile"),
+            "# Minimal QMK Makefile for testing\n"
+        ).expect("Failed to write Makefile");
+
         path
     });
 

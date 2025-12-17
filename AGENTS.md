@@ -82,42 +82,24 @@ pip3 install qmk
 qmk setup
 ```
 
-##### 2. Run QMK Metadata Integration Tests (15 tests)
+##### 2. Run Full Pipeline Integration Tests (2 critical tests)
 ```bash
-# Test list-keyboards command with real QMK firmware
-cargo test --test cli_qmk_tests -- --ignored
+# Test QMK CLI integration (finds crkbd in real QMK submodule)
+cargo test --test qmk_info_json_tests test_scan_keyboards_finds_crkbd -- --ignored
 
-# Expected: All 15 tests pass
-# These validate: list-keyboards, list-layouts, geometry commands
+# Test tap dance full pipeline (end-to-end with real QMK)
+cargo test --test cli_tap_dance_tests test_tap_dance_add_use_generate -- --ignored
+
+# Expected: Both tests pass
+# These validate: End-to-end firmware generation, QMK submodule integration
+
+# Note: There are 2 additional deprecated tests that can be ignored:
+# - test_generation_vial_json_structure (deprecated after Vial removal)
+# - test_check_deprecated_options_clean (deprecated after Vial removal)
+# These can be safely removed from the codebase.
 ```
 
-##### 3. Run Full Pipeline Integration Tests (3 tests)
-```bash
-# Test complete firmware generation with all features
-cargo test --test firmware_gen_tests -- --ignored
-
-# Test QMK CLI integration
-cargo test --test qmk_info_json_tests -- --ignored
-
-# Test tap dance full pipeline
-cargo test --test cli_tap_dance_tests -- --ignored
-
-# Expected: All 3 tests pass
-# These validate: End-to-end firmware generation, QMK compilation
-```
-
-##### 4. Verify All Tests Pass
-```bash
-# Summary: Total pre-release tests
-cargo test -- --ignored 2>&1 | grep "test result"
-
-# Expected output should show:
-# - QMK tests: 15 passed
-# - Pipeline tests: 3 passed
-# - Total: 18+ passed (some config tests may be included)
-```
-
-##### 5. Final Validation Checklist
+##### 3. Final Validation Checklist
 - [ ] All CI tests pass: `cargo test --tests && cargo test --lib`
 - [ ] All pre-release tests pass: `cargo test -- --ignored`
 - [ ] Clippy clean: `cargo clippy --all-features -- -D warnings`
@@ -132,9 +114,11 @@ cargo test -- --ignored 2>&1 | grep "test result"
 - **QMK submodule:** 500MB+ repository, expensive for CI
 - **Compilation time:** 5-10 minutes for full firmware builds
 - **External dependencies:** Requires QMK CLI tools
-- **Cost/benefit:** 18 tests vs. significant CI resource usage
+- **Cost/benefit:** 2 critical tests vs. significant CI resource usage
 
-These tests provide critical validation that fixtures and mocks cannot replace. They ensure LazyQMK works correctly with real QMK firmware before releases go to users.
+These 2 tests provide critical end-to-end validation that fixtures and mocks cannot replace. They ensure LazyQMK works correctly with real QMK firmware compilation before releases go to users.
+
+**Note:** QMK metadata tests (list-keyboards, list-layouts, geometry) now run in CI using lightweight fixtures, so only the 2 full pipeline tests require manual execution before release.
 
 ### Help System Source of Truth
 - **Context help and help menu text must come from `src/data/help.toml`**. Do not hardcode help strings in code; add or update entries in `help.toml` instead.

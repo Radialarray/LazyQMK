@@ -43,15 +43,22 @@ struct ListKeyboardsResponse {
 impl ListKeyboardsArgs {
     /// Execute the list-keyboards command
     pub fn execute(&self) -> CliResult<()> {
+        // Check for test fixture override (for testing without full QMK submodule)
+        let qmk_path = if let Ok(fixture_path) = std::env::var("LAZYQMK_QMK_FIXTURE") {
+            PathBuf::from(fixture_path)
+        } else {
+            self.qmk_path.clone()
+        };
+
         // Validate QMK path
-        if !self.qmk_path.exists() {
+        if !qmk_path.exists() {
             return Err(CliError::io(format!(
                 "QMK path does not exist: {}",
-                self.qmk_path.display()
+                qmk_path.display()
             )));
         }
 
-        let keyboards_dir = self.qmk_path.join("keyboards");
+        let keyboards_dir = qmk_path.join("keyboards");
         if !keyboards_dir.exists() {
             return Err(CliError::io(format!(
                 "QMK keyboards directory not found: {}",
@@ -194,16 +201,23 @@ struct LayoutInfo {
 impl ListLayoutsArgs {
     /// Execute the list-layouts command
     pub fn execute(&self) -> CliResult<()> {
+        // Check for test fixture override (for testing without full QMK submodule)
+        let qmk_path = if let Ok(fixture_path) = std::env::var("LAZYQMK_QMK_FIXTURE") {
+            PathBuf::from(fixture_path)
+        } else {
+            self.qmk_path.clone()
+        };
+
         // Validate QMK path
-        if !self.qmk_path.exists() {
+        if !qmk_path.exists() {
             return Err(CliError::io(format!(
                 "QMK path does not exist: {}",
-                self.qmk_path.display()
+                qmk_path.display()
             )));
         }
 
         // Discover keyboard config files
-        let config = discover_keyboard_config(&self.qmk_path, &self.keyboard)
+        let config = discover_keyboard_config(&qmk_path, &self.keyboard)
             .map_err(|e| CliError::validation(format!("Keyboard not found: {e}")))?;
 
         if !config.has_layouts {
@@ -214,7 +228,7 @@ impl ListLayoutsArgs {
         }
 
         // Parse keyboard info.json
-        let info = parse_keyboard_info_json(&self.qmk_path, &self.keyboard)
+        let info = parse_keyboard_info_json(&qmk_path, &self.keyboard)
             .map_err(|e| CliError::io(format!("Failed to parse keyboard info: {e}")))?;
 
         // Extract layout variants with key counts
@@ -320,16 +334,23 @@ struct KeyMapping {
 impl GeometryArgs {
     /// Execute the geometry command
     pub fn execute(&self) -> CliResult<()> {
+        // Check for test fixture override (for testing without full QMK submodule)
+        let qmk_path = if let Ok(fixture_path) = std::env::var("LAZYQMK_QMK_FIXTURE") {
+            PathBuf::from(fixture_path)
+        } else {
+            self.qmk_path.clone()
+        };
+
         // Validate QMK path
-        if !self.qmk_path.exists() {
+        if !qmk_path.exists() {
             return Err(CliError::io(format!(
                 "QMK path does not exist: {}",
-                self.qmk_path.display()
+                qmk_path.display()
             )));
         }
 
         // Parse keyboard info.json
-        let info = parse_keyboard_info_json(&self.qmk_path, &self.keyboard)
+        let info = parse_keyboard_info_json(&qmk_path, &self.keyboard)
             .map_err(|e| CliError::validation(format!("Invalid keyboard: {e}")))?;
 
         // Check if layout exists
@@ -342,7 +363,7 @@ impl GeometryArgs {
         }
 
         // Try to load RGB matrix mapping for accurate LED indices
-        let matrix_to_led = parse_variant_keyboard_json(&self.qmk_path, &self.keyboard)
+        let matrix_to_led = parse_variant_keyboard_json(&qmk_path, &self.keyboard)
             .and_then(|variant| variant.rgb_matrix.map(|rgb| build_matrix_to_led_map(&rgb)));
 
         // Build keyboard geometry

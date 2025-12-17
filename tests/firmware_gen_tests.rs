@@ -691,14 +691,6 @@ fn test_generation_keymap_c_structure() {
     );
 }
 
-/// DEPRECATED: vial.json is no longer generated since migration to standard QMK
-#[test]
-#[ignore = "requires QMK firmware"]
-fn test_generation_vial_json_structure() {
-    // This test is deprecated - vial.json is no longer generated
-    // Kept for reference
-}
-
 #[test]
 fn test_generation_led_ordering() {
     // Arrange

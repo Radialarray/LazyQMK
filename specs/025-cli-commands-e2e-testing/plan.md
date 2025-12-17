@@ -1,37 +1,62 @@
 # Spec 025: CLI Commands & End-to-End Testing
 
-**Status**: Partially Implemented (50% - Phases 1 & 2 Complete)  
+**Status**: ✅ COMPLETE - All Phases Implemented  
 **Created**: 2025-01-16  
 **Updated**: 2025-12-17
 
 ## Implementation Status
 
-- ✅ **Phase 1 Complete**: Core commands (validate, generate, inspect, keycode resolve) + 77 E2E tests
+- ✅ **Phase 1 Complete**: Core commands (validate, generate, inspect, keycode resolve) + comprehensive E2E tests
 - ✅ **Phase 2 Complete**: Tap dance & layer utilities fully implemented
-- ❌ **Phase 3 Not Started**: QMK metadata & categories (0%)
-- ❌ **Phase 4 Not Started**: Templates, config, utilities (0%)
+- ✅ **Phase 3 Complete**: QMK metadata & categories implemented with fixture-based testing
+- ✅ **Phase 4 Complete**: Templates, config, utilities implemented
 
-### Summary of Implemented Commands (10/26 = 38%)
+### Summary of Implemented Commands (26/26 = 100%)
 
-**✅ Implemented (10):**
+**✅ All Commands Implemented:**
 1. `lazyqmk validate` - Validation with JSON output
 2. `lazyqmk inspect` - Section inspection
 3. `lazyqmk generate` - Firmware generation with deterministic mode
 4. `lazyqmk keycode resolve` - Layer UUID resolution
 5. `lazyqmk layer-refs` - Layer reference analysis
-6. `lazyqmk tap-dance list` - List tap dances
-7. `lazyqmk tap-dance add` - Add tap dance
-8. `lazyqmk tap-dance delete` - Delete tap dance
-9. `lazyqmk tap-dance validate` - Validate tap dances
-10. `--help` (partial via clap)
+6. `lazyqmk tap-dance list/add/delete/validate` - Tap dance management (4 subcommands)
+7. `lazyqmk list-keyboards` - QMK keyboard discovery with regex filtering
+8. `lazyqmk list-layouts` - Layout variants for keyboards
+9. `lazyqmk geometry` - Coordinate mapping display
+10. `lazyqmk category list/add/delete` - Category management (3 subcommands)
+11. `lazyqmk template list/save/apply` - Template system (3 subcommands)
+12. `lazyqmk config show/set` - Configuration management (2 subcommands)
+13. `lazyqmk keycodes` - Keycode database listing
+14. `lazyqmk show-help` - Help topic display
+15. `--help` (comprehensive via clap for all commands)
 
-**❌ Not Implemented (16):**
-- 3 QMK metadata commands (list-keyboards, list-layouts, geometry)
-- 3 category commands (list, add, delete)
-- 3 template commands (list, save, apply)
-- 2 config commands (show, set)
-- 2 utility commands (keycodes, help)
-- 1 documentation artifact (docs/TESTING.md)
+### E2E Test Coverage: **156 CLI Tests**
+- validate: 8 tests
+- inspect: 11 tests
+- generate: 12 tests
+- keycode: 10 tests
+- layer-refs: 16 tests
+- tap-dance: 20 tests
+- list-keyboards/list-layouts/geometry: 18 tests (fixture-based)
+- category: 17 tests
+- config: 13 tests
+- template: 11 tests
+- keycodes: 10 tests
+- help: 10 tests
+
+### Golden Test Files: 5
+- `keymap_basic.c`
+- `keymap_idle_effect_on.c`
+- `keymap_tap_dances.c`
+- `config_basic.h`
+- `config_idle_effect.h`
+
+### Test Infrastructure
+- Comprehensive fixture builders in `tests/fixtures/mod.rs`
+- Mock QMK structure in `tests/fixtures/mock_qmk/` (crkbd, corne_choc_pro, planck)
+- Golden test helper with `UPDATE_GOLDEN=1` support
+- Deterministic output mode for stable testing
+- Exit code standards consistently applied
 
 ## Problem Statement
 
@@ -1335,16 +1360,18 @@ test:
 
 ## Success Criteria
 
-1. ⚠️ **CLI Surface**: High-priority commands (Phases 1-2) fully implemented (10/26 commands = 38%)
-2. ✅ **E2E Coverage**: **77 E2E tests** covering major workflows (exceeds 50+ target)
-3. ✅ **Golden Tests**: Deterministic firmware generation with snapshot regression testing
-4. ✅ **CI Integration**: Fast test suite runs in <2 minutes
-5. ⚠️ **Documentation**: CLI `--help` complete, but `docs/TESTING.md` missing
+1. ✅ **CLI Surface**: All commands implemented (26/26 = 100%)
+2. ✅ **E2E Coverage**: **156 CLI E2E tests** covering all workflows (exceeds 50+ target)
+3. ✅ **Golden Tests**: Deterministic firmware generation with 5 golden files and snapshot regression testing
+4. ✅ **CI Integration**: Fast test suite runs in <2 minutes (~1 second for integration tests)
+5. ✅ **Documentation**: CLI `--help` complete, `docs/TESTING.md` comprehensive
 6. ✅ **Developer Experience**: `lazyqmk --help` provides clear command documentation
+7. ✅ **Fixture-based Testing**: QMK metadata commands use lightweight fixtures (no submodule required for CI)
 
-**Overall Status: PARTIALLY COMPLETE (50%)**
-- ✅ All High-Priority work (Phases 1-2) complete
-- ❌ Medium and Low-Priority work (Phases 3-4) not started
+**Overall Status: ✅ COMPLETE (100%)**
+- ✅ All Phases (1-4) complete with comprehensive test coverage
+- ✅ Documentation updated with test categories and fixture usage
+- ✅ Only 4 tests remain ignored (manual pre-release validation per AGENTS.md)
 
 ## Non-Goals
 

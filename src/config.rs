@@ -277,7 +277,15 @@ impl Config {
     /// - Linux: `~/.config/LazyQMK/`
     /// - macOS: `~/Library/Application Support/LazyQMK/`
     /// - Windows: `%APPDATA%\LazyQMK\`
+    ///
+    /// For testing, this can be overridden with the `LAZYQMK_CONFIG_DIR` environment variable.
     pub fn config_dir() -> Result<PathBuf> {
+        // Check for test override first
+        if let Ok(test_dir) = std::env::var("LAZYQMK_CONFIG_DIR") {
+            return Ok(PathBuf::from(test_dir));
+        }
+
+        // Normal behavior: use platform-specific config directory
         let config_dir = dirs::config_dir()
             .context("Failed to determine config directory")?
             .join(crate::branding::APP_DATA_DIR);
