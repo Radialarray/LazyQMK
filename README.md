@@ -26,11 +26,24 @@ That said, if you're interested in helping make this more robust, broaden hardwa
 > [!IMPORTANT]
 > **Custom QMK Fork Required**: LazyQMK requires a custom QMK firmware fork for full functionality, especially LED/RGB lighting support. Using the official QMK firmware will result in limited features.
 
-### Pre-built Binary + Custom QMK Fork (Recommended)
+### Homebrew (macOS/Linux) - Recommended
+
+```bash
+brew install Radialarray/lazyqmk/lazyqmk
+```
+
+Or tap first, then install:
+
+```bash
+brew tap Radialarray/lazyqmk
+brew install lazyqmk
+```
+
+### Pre-built Binary + Custom QMK Fork
 
 **Step 1: Download and install LazyQMK for your platform**
 
-<details open>
+<details>
 <summary><b>Linux (x86_64)</b></summary>
 
 ```bash

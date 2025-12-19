@@ -264,3 +264,98 @@ jobs:
             release-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Update Homebrew tap automatically
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get release info
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Download checksums
+        run: |
+          TAG="${{ steps.release.outputs.tag }}"
+          curl -sL "https://github.com/Radialarray/LazyQMK/releases/download/${TAG}/lazyqmk-macos-aarch64.zip.sha256" -o macos-arm64.sha256
+          curl -sL "https://github.com/Radialarray/LazyQMK/releases/download/${TAG}/lazyqmk-linux-x86_64.zip.sha256" -o linux-x64.sha256
+          curl -sL "https://github.com/Radialarray/LazyQMK/releases/download/${TAG}/lazyqmk-linux-aarch64.zip.sha256" -o linux-arm64.sha256
+
+      - name: Extract checksums
+        id: checksums
+        run: |
+          echo "macos_arm64=$(cat macos-arm64.sha256 | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "linux_x64=$(cat linux-x64.sha256 | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(cat linux-arm64.sha256 | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew formula
+        run: |
+          mkdir -p Formula
+          cat > Formula/lazyqmk.rb <<'EOF'
+          class Lazyqmk < Formula
+            desc "Interactive terminal workspace for QMK firmware"
+            homepage "https://github.com/Radialarray/LazyQMK"
+            version "${{ steps.release.outputs.version }}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/Radialarray/LazyQMK/releases/download/v#{version}/lazyqmk-macos-aarch64.zip"
+                sha256 "${{ steps.checksums.outputs.macos_arm64 }}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+                url "https://github.com/Radialarray/LazyQMK/releases/download/v#{version}/lazyqmk-linux-aarch64.zip"
+                sha256 "${{ steps.checksums.outputs.linux_arm64 }}"
+              else
+                url "https://github.com/Radialarray/LazyQMK/releases/download/v#{version}/lazyqmk-linux-x86_64.zip"
+                sha256 "${{ steps.checksums.outputs.linux_x64 }}"
+              end
+            end
+
+            def install
+              bin.install "lazyqmk"
+            end
+
+            test do
+              system "#{bin}/lazyqmk", "--version"
+            end
+          end
+          EOF
+
+      - name: Push to homebrew-lazyqmk
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN not set - skipping Homebrew update"
+            echo "To enable automatic Homebrew updates:"
+            echo "1. Create a Personal Access Token with 'repo' scope"
+            echo "2. Add it as HOMEBREW_TAP_TOKEN in repository secrets"
+            exit 0
+          fi
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/Radialarray/homebrew-lazyqmk.git" tap
+          cp Formula/lazyqmk.rb tap/Formula/lazyqmk.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/lazyqmk.rb
+          git commit -m "chore: update lazyqmk to ${{ steps.release.outputs.version }}"
+          git push
