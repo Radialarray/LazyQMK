@@ -63,6 +63,9 @@ if [ -d "$ARTIFACT_DIR" ]; then
     esac
     # Then process other files
     case "$base" in
+      source.tar.gz)
+        # Skip source tarball (shows as "Unknown | Unknown")
+        ;;
       *.tar.*|*.zip)
         human=$(map_target "$base")
         IFS='|' read -r platform arch <<<"$human"
@@ -140,14 +143,6 @@ IFS=$'\n' INSTALLERS=($(printf '%s\n' "${INSTALLERS[@]}" | sort))
     echo "| (none) | (none) | (none) |"
   else
     printf '%s\n' "${ARCHIVE_ROWS[@]}"
-  fi
-
-  echo
-  echo "### Installer Scripts"
-  if [ ${#INSTALLERS[@]} -eq 0 ]; then
-    echo "(none)"
-  else
-    printf '%s\n' "${INSTALLERS[@]}"
   fi
 
   echo
