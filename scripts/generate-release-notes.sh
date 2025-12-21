@@ -115,11 +115,15 @@ IFS=$'\n' INSTALLERS=($(printf '%s\n' "${INSTALLERS[@]}" | sort))
   echo
   echo "## Install ${PROJECT_LABEL} ${TAG#v}"
   echo
-  # cargo-dist defaults: shell installer + homebrew
-  echo "- Shell installer (recommended):"
-  echo "  - curl --proto '=https' --tlsv1.2 -LsSf https://github.com/${REPO}/releases/latest/download/${PROJECT_LABEL,,}-installer.sh | sh"
-  echo "- Homebrew:"
-  echo "  - brew install radialarray/tap/${PROJECT_LABEL,,}"
+  echo "### Install prebuilt binaries via shell script"
+  echo '```sh'
+  echo "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/${REPO}/releases/latest/download/${PROJECT_LABEL,,}-installer.sh | sh"
+  echo '```'
+  echo
+  echo "### Install prebuilt binaries via Homebrew"
+  echo '```sh'
+  echo "brew install radialarray/tap/${PROJECT_LABEL,,}"
+  echo '```'
 
   echo
   echo "## Downloads"
