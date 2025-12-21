@@ -29,16 +29,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: guard tag
-        id: plan_guard
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "do_plan=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "do_plan=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "do_plan=" >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -53,13 +43,15 @@ jobs:
           path: ~/.cargo/bin/dist
       - id: plan
         run: |
-          if [ -n "${{ steps.plan_guard.outputs.do_plan || '' }}" ]; then
-            dist plan --output-format=json > plan-dist-manifest.json
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+            # Publishing: run host --steps=create to generate artifacts matrix
+            TAG="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}"
+            dist host --steps=create --tag="$TAG" --output-format=json > plan-dist-manifest.json
           else
-            # Not publishing (branch/PR): do a no-op plan so downstream steps have a manifest
+            # Not publishing (branch/PR): do a lightweight plan
             dist plan --output-format=json > plan-dist-manifest.json
           fi
-          echo "manifest=$(jq -c '.')" >> "$GITHUB_OUTPUT"
+          echo "manifest=$(jq -c . plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
       - name: Upload dist-manifest.json
         uses: actions/upload-artifact@v4
         with:
