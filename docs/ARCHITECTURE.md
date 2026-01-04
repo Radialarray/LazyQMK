@@ -1447,4 +1447,4 @@ src/
 - [FEATURES.md](FEATURES.md) - Complete feature documentation
 - [QUICKSTART.md](../QUICKSTART.md) - User guide
 - [README.md](../README.md) - Project overview
-- [specs/archived/017-tui-architecture-refactor/](../specs/archived/017-tui-architecture-refactor/) - Component refactoring history
+- Historical specs: Use `bd list --status=closed --type=feature` to view completed spec epics

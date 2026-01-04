@@ -373,7 +373,7 @@ Before committing changes:
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete technical architecture
 - [FEATURES.md](docs/FEATURES.md) - All implemented features
 - [QUICKSTART.md](QUICKSTART.md) - User guide
-- [specs/archived/](specs/archived/) - Historical specification documents
+- Historical work: Use `bd list --status=closed` to view completed specs and features
 
 <!-- MANUAL ADDITIONS END -->
 
