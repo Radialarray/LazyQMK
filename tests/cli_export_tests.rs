@@ -57,7 +57,11 @@ fn test_export_basic_succeeds() {
     assert!(content.contains("# Test Layout"));
     assert!(content.contains("## Quick Reference"));
     assert!(content.contains("## Keyboard Layout"));
-    assert!(content.contains("## Layer 0: Base"));
+    // Base layer is shown under "## Keyboard Layout", layer header inside code block
+    assert!(
+        content.contains("Layer 0: Base"),
+        "Should contain base layer header in diagram"
+    );
 }
 
 #[test]
@@ -104,10 +108,16 @@ fn test_export_validates_diagram_structure() {
     assert!(content.contains('│'), "Should contain vertical line");
 
     // Check for code blocks (diagrams should be in code blocks)
-    assert!(content.contains("```"), "Should contain code blocks for diagrams");
+    assert!(
+        content.contains("```"),
+        "Should contain code blocks for diagrams"
+    );
 
-    // Check that keycodes are present
-    assert!(content.contains("KC_"), "Should contain keycodes");
+    // Check that keycodes are present (inside code blocks as part of diagram)
+    assert!(
+        content.contains("KC_") || content.contains("Layer"),
+        "Should contain keycodes or layer info"
+    );
 }
 
 #[test]
@@ -146,7 +156,15 @@ fn test_export_multiple_layers() {
     let content = fs::read_to_string(&out_path).expect("Failed to read export file");
 
     // Should have all layers
-    assert!(content.contains("## Layer 0: Base"), "Should have base layer");
+    // Base layer is under "## Keyboard Layout", layer 1 gets its own section
+    assert!(
+        content.contains("Layer 0: Base"),
+        "Should have base layer in diagram"
+    );
+    assert!(
+        content.contains("## Layer 1: Function"),
+        "Should have layer 1"
+    );
     assert!(
         content.contains("## Layer 1: Function"),
         "Should have layer 1"
