@@ -41,13 +41,14 @@ pub fn render_layer_diagram(
     let mut output = String::new();
 
     // Add layer header
-    output.push_str(&format!("Layer {}: {}\n", layer_idx, layer.name));
+    use std::fmt::Write;
+    writeln!(output, "Layer {}: {}", layer_idx, layer.name).unwrap();
 
     // Build key grid with positioning
     let key_grid = build_key_grid(layout, layer_idx, geometry)?;
 
     // Render the grid to ASCII/Unicode
-    let diagram = render_grid(&key_grid)?;
+    let diagram = render_grid(&key_grid);
     output.push_str(&diagram);
 
     Ok(output)
@@ -157,9 +158,14 @@ fn detect_split_gap(keys: &[GridKey], max_col: usize) -> Option<usize> {
     // Count keys per column
     let mut col_counts = vec![0; max_col + 1];
     for key in keys {
-        for c in key.col..key.col + key.width {
-            if c <= max_col {
-                col_counts[c] += 1;
+        for (i, count) in col_counts
+            .iter_mut()
+            .enumerate()
+            .skip(key.col)
+            .take(key.width)
+        {
+            if i <= max_col {
+                *count += 1;
             }
         }
     }
@@ -205,7 +211,7 @@ fn detect_split_gap(keys: &[GridKey], max_col: usize) -> Option<usize> {
 }
 
 /// Renders the key grid to ASCII/Unicode string.
-fn render_grid(grid: &KeyGrid) -> Result<String> {
+fn render_grid(grid: &KeyGrid) -> String {
     // Calculate dimensions for each key cell
     // Standard key: 12 chars wide × 3 lines tall (including borders)
     const KEY_WIDTH: usize = 10; // Content width (12 - 2 for borders)
@@ -248,7 +254,7 @@ fn render_grid(grid: &KeyGrid) -> Result<String> {
             key_height,
             &key.label,
             key.color_ref,
-        )?;
+        );
     }
 
     // Convert buffer to string
@@ -259,7 +265,7 @@ fn render_grid(grid: &KeyGrid) -> Result<String> {
         output.push('\n');
     }
 
-    Ok(output)
+    output
 }
 
 /// Renders a single key box with Unicode box-drawing characters.
@@ -271,20 +277,20 @@ fn render_key_box(
     height: usize,
     label: &str,
     color_ref: Option<usize>,
-) -> Result<()> {
+) {
     let max_row = buffer.len();
     let max_col = buffer[0].len();
 
     // Check bounds
     if row >= max_row || col >= max_col {
-        return Ok(()); // Skip if out of bounds
+        return; // Skip if out of bounds
     }
 
     let actual_width = width.min(max_col - col);
     let actual_height = height.min(max_row - row);
 
     if actual_width < 4 || actual_height < 3 {
-        return Ok(()); // Too small to render
+        return; // Too small to render
     }
 
     // Draw top border: ┌───────┐
@@ -348,7 +354,7 @@ fn render_key_box(
                     content_width,
                     hold,
                     max_col,
-                )?;
+                );
             }
 
             // Line 2: Tap action
@@ -361,7 +367,7 @@ fn render_key_box(
                     content_width,
                     tap,
                     max_col,
-                )?;
+                );
             }
 
             // Line 3: Color reference (if present and space available)
@@ -375,7 +381,7 @@ fn render_key_box(
                         content_width,
                         &color_text,
                         max_col,
-                    )?;
+                    );
                 }
             }
         }
@@ -390,7 +396,7 @@ fn render_key_box(
                 content_width,
                 label,
                 max_col,
-            )?;
+            );
         }
 
         // Color reference below label
@@ -405,12 +411,10 @@ fn render_key_box(
                     content_width,
                     &color_text,
                     max_col,
-                )?;
+                );
             }
         }
     }
-
-    Ok(())
 }
 
 /// Writes text centered in a row.
@@ -421,9 +425,9 @@ fn write_centered_text(
     width: usize,
     text: &str,
     max_col: usize,
-) -> Result<()> {
+) {
     if row >= buffer.len() {
-        return Ok(());
+        return;
     }
 
     let text_len = text.chars().count();
@@ -445,8 +449,6 @@ fn write_centered_text(
             }
         }
     }
-
-    Ok(())
 }
 
 /// Formats a keycode for display.
@@ -456,7 +458,7 @@ fn format_keycode(keycode: &str) -> String {
     // Handle Layer Tap: LT(layer, keycode)
     if let Some(inner) = keycode.strip_prefix("LT(") {
         if let Some(args) = inner.strip_suffix(')') {
-            let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
+            let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
                 let layer = parts[0].trim_start_matches('@'); // Remove @ prefix
                 let tap = strip_kc_prefix(parts[1]);
@@ -468,7 +470,7 @@ fn format_keycode(keycode: &str) -> String {
     // Handle Mod Tap: MT(mod, keycode)
     if let Some(inner) = keycode.strip_prefix("MT(") {
         if let Some(args) = inner.strip_suffix(')') {
-            let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
+            let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
                 let mod_display = format_modifier(parts[0]);
                 let tap = strip_kc_prefix(parts[1]);
@@ -498,7 +500,7 @@ fn format_keycode(keycode: &str) -> String {
     // Handle Layer Mod: LM(layer, mod)
     if let Some(inner) = keycode.strip_prefix("LM(") {
         if let Some(args) = inner.strip_suffix(')') {
-            let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
+            let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
                 let layer = parts[0].trim_start_matches('@');
                 let mod_display = format_modifier(parts[1]);
@@ -587,8 +589,8 @@ fn build_color_reference_map(layout: &Layout, layer_idx: usize) -> HashMap<Strin
 
         let color_hex = format!("#{:02X}{:02X}{:02X}", color.r, color.g, color.b);
 
-        if !color_map.contains_key(&color_hex) {
-            color_map.insert(color_hex, next_ref);
+        if let std::collections::hash_map::Entry::Vacant(e) = color_map.entry(color_hex) {
+            e.insert(next_ref);
             next_ref += 1;
         }
     }
