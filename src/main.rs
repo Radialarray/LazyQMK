@@ -3,12 +3,20 @@
 //! This application provides a visual editor for mechanical keyboard layouts,
 //! allowing users to design layouts, assign keycodes, and generate QMK firmware.
 
+// Allow intentional type casts for terminal coordinates and QMK data structures
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::cast_possible_wrap)]
+
 // Module declarations
 mod app;
 mod branding;
 mod cli;
 mod config;
 mod constants;
+mod export;
 mod firmware;
 mod keycode_db;
 mod models;
@@ -49,6 +57,8 @@ enum Command {
     Validate(cli::ValidateArgs),
     /// Generate QMK firmware files (keymap.c, config.h)
     Generate(cli::GenerateArgs),
+    /// Export keyboard layout to markdown documentation
+    Export(cli::ExportArgs),
     /// Display help topics and keybindings
     #[command(name = "show-help")]
     ShowHelp(cli::HelpArgs),
@@ -86,7 +96,7 @@ fn main() -> Result<()> {
     // Handle CLI subcommands first (headless mode)
     if let Some(command) = cli.command {
         use cli::ExitCode;
-        
+
         let exit_code = match command {
             Command::Validate(args) => match args.execute() {
                 Ok(()) => ExitCode::Success,
@@ -96,6 +106,13 @@ fn main() -> Result<()> {
                 }
             },
             Command::Generate(args) => match args.execute() {
+                Ok(()) => ExitCode::Success,
+                Err(e) => {
+                    eprintln!("Error: {}", e.message);
+                    e.exit_code
+                }
+            },
+            Command::Export(args) => match args.execute() {
                 Ok(()) => ExitCode::Success,
                 Err(e) => {
                     eprintln!("Error: {}", e.message);
@@ -187,7 +204,7 @@ fn main() -> Result<()> {
                 }
             },
         };
-        
+
         std::process::exit(exit_code as i32);
     }
 
