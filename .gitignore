@@ -36,3 +36,15 @@ build/
 
 # User configuration (tracked separately if needed)
 # config.toml
+
+# Web frontend (Node.js / SvelteKit)
+web/node_modules/
+web/.svelte-kit/
+web/build/
+web/.env
+web/.env.*
+web/!.env.example
+web/vite.config.ts.timestamp-*
+web/test-results/
+web/playwright-report/
+web/playwright/.cache/
