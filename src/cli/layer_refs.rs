@@ -73,10 +73,7 @@ impl LayerRefsArgs {
 
             for (layer_idx, layer) in layout.layers.iter().enumerate() {
                 // Get inbound references for this layer
-                let refs = layer_ref_index
-                    .get(&layer_idx)
-                    .cloned()
-                    .unwrap_or_default();
+                let refs = layer_ref_index.get(&layer_idx).cloned().unwrap_or_default();
 
                 // Collect inbound references
                 let inbound_refs: Vec<InboundRefData> = refs

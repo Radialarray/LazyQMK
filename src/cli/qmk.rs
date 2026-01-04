@@ -6,8 +6,8 @@
 
 use crate::cli::common::{CliError, CliResult};
 use crate::parser::keyboard_json::{
-    discover_keyboard_config, extract_layout_variants, parse_keyboard_info_json,
-    parse_variant_keyboard_json, build_keyboard_geometry_with_rgb, build_matrix_to_led_map,
+    build_keyboard_geometry_with_rgb, build_matrix_to_led_map, discover_keyboard_config,
+    extract_layout_variants, parse_keyboard_info_json, parse_variant_keyboard_json,
 };
 use clap::Args;
 use regex::Regex;
@@ -125,7 +125,8 @@ fn scan_keyboards_directory(keyboards_dir: &PathBuf) -> anyhow::Result<Vec<Strin
         keyboards_root: &std::path::Path,
         keyboards: &mut HashSet<String>,
     ) -> anyhow::Result<()> {
-        let entries = fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;
+        let entries =
+            fs::read_dir(dir).context(format!("Failed to read directory: {}", dir.display()))?;
 
         for entry in entries {
             let entry = entry?;
@@ -408,7 +409,10 @@ impl GeometryArgs {
         } else {
             println!("Keyboard: {}", response.keyboard);
             println!("Layout: {}", response.layout);
-            println!("\nMatrix: {}x{}", response.matrix.rows, response.matrix.cols);
+            println!(
+                "\nMatrix: {}x{}",
+                response.matrix.rows, response.matrix.cols
+            );
             println!("Keys: {}", response.key_count);
             println!("\nCoordinate Mappings:");
             println!("  Visual | Matrix    | LED | Position");

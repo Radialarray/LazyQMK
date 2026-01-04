@@ -307,14 +307,14 @@ fn execute_validate(args: &ValidateArgs) -> CliResult<()> {
             serde_json::to_string_pretty(&response)
                 .map_err(|e| CliError::io(format!("Failed to serialize JSON: {e}")))?
         );
-        
+
         return if !valid {
             Err(CliError::validation("Tap dance validation failed"))
         } else {
             Ok(())
         };
     }
-    
+
     // Text output
     if !orphaned.is_empty() {
         println!("Errors:");

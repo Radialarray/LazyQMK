@@ -82,9 +82,8 @@ impl ConfigArgs {
 impl ConfigShowArgs {
     /// Execute show command
     pub fn execute(&self) -> CliResult<()> {
-        let config = Config::load().map_err(|e| {
-            CliError::validation(format!("Failed to load configuration: {}", e))
-        })?;
+        let config = Config::load()
+            .map_err(|e| CliError::validation(format!("Failed to load configuration: {}", e)))?;
 
         if self.json {
             output_json(&config)?;
@@ -165,9 +164,9 @@ impl ConfigSetArgs {
         }
 
         // Save configuration
-        config.save().map_err(|e| {
-            CliError::io(format!("Failed to save configuration: {}", e))
-        })?;
+        config
+            .save()
+            .map_err(|e| CliError::io(format!("Failed to save configuration: {}", e)))?;
 
         println!("Configuration updated successfully.");
 
@@ -193,9 +192,8 @@ fn output_json(config: &Config) -> CliResult<()> {
         },
     };
 
-    let json = serde_json::to_string_pretty(&output).map_err(|e| {
-        CliError::io(format!("Failed to serialize configuration to JSON: {}", e))
-    })?;
+    let json = serde_json::to_string_pretty(&output)
+        .map_err(|e| CliError::io(format!("Failed to serialize configuration to JSON: {}", e)))?;
 
     println!("{}", json);
     Ok(())
@@ -233,8 +231,32 @@ mod tests {
 
     #[test]
     fn test_theme_mode_parsing() {
-        assert_eq!(match "auto" { "auto" => ThemeMode::Auto, "light" => ThemeMode::Light, "dark" => ThemeMode::Dark, _ => ThemeMode::Auto }, ThemeMode::Auto);
-        assert_eq!(match "light" { "auto" => ThemeMode::Auto, "light" => ThemeMode::Light, "dark" => ThemeMode::Dark, _ => ThemeMode::Auto }, ThemeMode::Light);
-        assert_eq!(match "dark" { "auto" => ThemeMode::Auto, "light" => ThemeMode::Light, "dark" => ThemeMode::Dark, _ => ThemeMode::Auto }, ThemeMode::Dark);
+        assert_eq!(
+            match "auto" {
+                "auto" => ThemeMode::Auto,
+                "light" => ThemeMode::Light,
+                "dark" => ThemeMode::Dark,
+                _ => ThemeMode::Auto,
+            },
+            ThemeMode::Auto
+        );
+        assert_eq!(
+            match "light" {
+                "auto" => ThemeMode::Auto,
+                "light" => ThemeMode::Light,
+                "dark" => ThemeMode::Dark,
+                _ => ThemeMode::Auto,
+            },
+            ThemeMode::Light
+        );
+        assert_eq!(
+            match "dark" {
+                "auto" => ThemeMode::Auto,
+                "light" => ThemeMode::Light,
+                "dark" => ThemeMode::Dark,
+                _ => ThemeMode::Auto,
+            },
+            ThemeMode::Dark
+        );
     }
 }

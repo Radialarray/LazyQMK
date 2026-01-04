@@ -76,7 +76,10 @@ pub fn generate_markdown(layout: &Layout) -> Result<String> {
     // Generate tap dances section if any exist
     if !layout.tap_dances.is_empty() {
         // Add separator if nothing else was written after layers
-        if !has_key_descriptions(layout) && layout.categories.is_empty() && generate_settings(layout).is_none() {
+        if !has_key_descriptions(layout)
+            && layout.categories.is_empty()
+            && generate_settings(layout).is_none()
+        {
             output.push_str("---\n\n");
         } else {
             output.push('\n');

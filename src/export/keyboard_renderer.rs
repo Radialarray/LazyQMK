@@ -648,13 +648,13 @@ mod tests {
 
         // Create a simple 3x3 grid layout
         // Use exact integer positions so visual coordinates match
-        for row in 0..3 {
-            for col in 0..3 {
+        for row in 0u8..3 {
+            for col in 0u8..3 {
                 let key = KeyGeometry::new(
                     (row, col),
-                    (row * 3 + col) as u8,
-                    col as f32, // Use exact integers instead of 1.25 spacing
-                    row as f32,
+                    row * 3 + col,
+                    f32::from(col), // Use exact integers instead of 1.25 spacing
+                    f32::from(row),
                 );
                 geom.add_key(key);
             }

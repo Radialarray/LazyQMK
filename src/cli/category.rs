@@ -153,8 +153,7 @@ impl AddCategoryArgs {
             .map_err(|e| CliError::io(format!("Failed to load layout: {e}")))?;
 
         // Validate hex color format
-        let color = validate_and_parse_hex(&self.color)
-            .map_err(CliError::validation)?;
+        let color = validate_and_parse_hex(&self.color).map_err(CliError::validation)?;
 
         // Create category with validation
         let category = Category::new(&self.id, &self.name, color)

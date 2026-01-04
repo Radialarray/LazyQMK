@@ -54,12 +54,8 @@ impl KeycodeArgs {
         // Try to extract layer name if it's a layer keycode
         let layer_name = if was_resolved {
             // Extract layer index from resolved keycode
-            extract_layer_index(&resolved).and_then(|idx| {
-                layout
-                    .layers
-                    .get(idx)
-                    .map(|layer| layer.name.clone())
-            })
+            extract_layer_index(&resolved)
+                .and_then(|idx| layout.layers.get(idx).map(|layer| layer.name.clone()))
         } else {
             None
         };

@@ -1,7 +1,7 @@
 //! Display help topics from help.toml
 
-use clap::Args;
 use crate::cli::common::{CliError, CliResult};
+use clap::Args;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
@@ -61,16 +61,13 @@ impl HelpArgs {
 fn display_topic(topic: &str, help_data: &HelpData) -> CliResult<()> {
     // Try to find the context with matching name (using underscore normalization)
     let normalized_topic = topic.replace('-', "_");
-    
-    let context = help_data
-        .contexts
-        .get(&normalized_topic)
-        .ok_or_else(|| {
-            CliError::validation(format!(
-                "Unknown help topic: '{}'\n\nRun 'lazyqmk help' to see available topics.",
-                topic
-            ))
-        })?;
+
+    let context = help_data.contexts.get(&normalized_topic).ok_or_else(|| {
+        CliError::validation(format!(
+            "Unknown help topic: '{}'\n\nRun 'lazyqmk help' to see available topics.",
+            topic
+        ))
+    })?;
 
     // Display context header
     println!("{}", context.name);
@@ -96,7 +93,11 @@ fn display_topic(topic: &str, help_data: &HelpData) -> CliResult<()> {
         let keys_str = if binding.alt_keys.is_empty() {
             binding.keys.join(", ")
         } else {
-            format!("{} (or {})", binding.keys.join(", "), binding.alt_keys.join(", "))
+            format!(
+                "{} (or {})",
+                binding.keys.join(", "),
+                binding.alt_keys.join(", ")
+            )
         };
 
         println!("  {}  →  {}", keys_str, binding.action);
@@ -156,4 +157,3 @@ fn list_all_topics(help_data: &HelpData) {
     println!("       lazyqmk help main");
     println!("       lazyqmk help keycode_picker");
 }
-

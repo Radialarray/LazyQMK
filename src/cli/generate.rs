@@ -4,8 +4,8 @@ use crate::cli::common::{CliError, CliResult};
 use crate::config::Config;
 use crate::firmware::generator::FirmwareGenerator;
 use crate::keycode_db::KeycodeDb;
-use crate::services::LayoutService;
 use crate::services::geometry;
+use crate::services::LayoutService;
 use clap::Args;
 use std::path::PathBuf;
 
@@ -84,8 +84,12 @@ impl GenerateArgs {
             .map_err(|e| CliError::io(format!("Failed to load keycode database: {e}")))?;
 
         // Validate before generating
-        let validator =
-            crate::firmware::validator::FirmwareValidator::new(&layout, &geometry, &mapping, &keycode_db);
+        let validator = crate::firmware::validator::FirmwareValidator::new(
+            &layout,
+            &geometry,
+            &mapping,
+            &keycode_db,
+        );
         let report = validator
             .validate()
             .map_err(|e| CliError::io(format!("Validation failed: {e}")))?;

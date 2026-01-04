@@ -281,9 +281,8 @@ impl ApplyArgs {
             }
         }
 
-        let template_path = template_path.ok_or_else(|| {
-            CliError::validation(format!("Template '{}' not found", self.name))
-        })?;
+        let template_path = template_path
+            .ok_or_else(|| CliError::validation(format!("Template '{}' not found", self.name)))?;
 
         // Load the template
         let mut layout = LayoutService::load(&template_path)
@@ -307,8 +306,8 @@ impl ApplyArgs {
 
 /// Get the platform-specific template directory
 fn get_template_dir() -> CliResult<PathBuf> {
-    let config_dir =
-        Config::config_dir().map_err(|e| CliError::io(format!("Failed to get config directory: {e}")))?;
+    let config_dir = Config::config_dir()
+        .map_err(|e| CliError::io(format!("Failed to get config directory: {e}")))?;
     Ok(config_dir.join("templates"))
 }
 
@@ -336,6 +335,9 @@ mod tests {
         assert_eq!(sanitize_filename("My Layout"), "my_layout");
         assert_eq!(sanitize_filename("Corne Base"), "corne_base");
         assert_eq!(sanitize_filename("test-123"), "test-123");
-        assert_eq!(sanitize_filename("Special!@#$%Characters"), "special_____characters");
+        assert_eq!(
+            sanitize_filename("Special!@#$%Characters"),
+            "special_____characters"
+        );
     }
 }

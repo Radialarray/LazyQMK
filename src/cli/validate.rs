@@ -71,16 +71,15 @@ impl ValidateArgs {
                 }
             }
 
-            let location = if let (Some(layer), Some(row), Some(col)) =
-                (error.layer, error.row, error.col)
-            {
-                Some(ValidationLocation {
-                    layer,
-                    position: ValidationPosition { row, col },
-                })
-            } else {
-                None
-            };
+            let location =
+                if let (Some(layer), Some(row), Some(col)) = (error.layer, error.row, error.col) {
+                    Some(ValidationLocation {
+                        layer,
+                        position: ValidationPosition { row, col },
+                    })
+                } else {
+                    None
+                };
 
             messages.push(ValidationMessage {
                 severity: "error".to_string(),
@@ -158,10 +157,7 @@ impl ValidateArgs {
         }
 
         if self.strict && !response.errors.is_empty() {
-            let has_warnings = response
-                .errors
-                .iter()
-                .any(|m| m.severity == "warning");
+            let has_warnings = response.errors.iter().any(|m| m.severity == "warning");
             if has_warnings {
                 return Err(CliError::validation("Warnings found in strict mode"));
             }
@@ -187,17 +183,21 @@ fn build_minimal_geometry_for_layout(
     }
 
     // Estimate rows/cols (assume roughly square layout)
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
     let cols = (key_count as f64).sqrt().ceil() as u8;
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
     let rows = ((key_count as f64) / f64::from(cols)).ceil() as u8;
 
     let mut geometry = KeyboardGeometry::new(
-        layout
-            .metadata
-            .keyboard
-            .as_deref()
-            .unwrap_or("unknown"),
+        layout.metadata.keyboard.as_deref().unwrap_or("unknown"),
         layout
             .metadata
             .layout_variant

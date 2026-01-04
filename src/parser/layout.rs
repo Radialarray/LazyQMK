@@ -251,9 +251,8 @@ fn parse_content(lines: &[&str], layout: &mut Layout) -> Result<()> {
 
         // Check for tap dances section (## Tap Dances)
         if line == "## Tap Dances" {
-            line_num = parse_tap_dances(lines, line_num, layout).with_context(|| {
-                format!("Error parsing tap dances at line {}", line_num + 1)
-            })?;
+            line_num = parse_tap_dances(lines, line_num, layout)
+                .with_context(|| format!("Error parsing tap dances at line {}", line_num + 1))?;
             continue;
         }
 
@@ -928,10 +927,10 @@ fn parse_tap_dances(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
 
     // Helper to finish current tap dance
     let finish_current_td = |name: Option<String>,
-                              single: Option<String>,
-                              double: Option<String>,
-                              hold: Option<String>,
-                              layout: &mut Layout|
+                             single: Option<String>,
+                             double: Option<String>,
+                             hold: Option<String>,
+                             layout: &mut Layout|
      -> Result<()> {
         if let (Some(name), Some(single)) = (name, single) {
             let mut td = TapDanceAction::new(name, single);
@@ -1272,9 +1271,9 @@ mod tap_dance_parsing_tests {
 
     #[test]
     fn test_parse_tap_dances_from_markdown() {
-        use crate::models::{TapDanceAction, Layer, RgbColor, Position, KeyDefinition};
+        use crate::models::{KeyDefinition, Layer, Position, RgbColor, TapDanceAction};
         use crate::parser::template_gen;
-        
+
         // Create a simple layout with tap dances
         let mut layout = Layout::new("Test Layout").expect("Failed to create layout");
         layout.tap_dances = vec![
@@ -1291,37 +1290,45 @@ mod tap_dance_parsing_tests {
                 hold: Some("KC_LCTL".to_string()),
             },
         ];
-        
+
         // Add a simple layer
-        let mut layer = Layer::new(0, "Base", RgbColor::new(128, 128, 128)).expect("Failed to create layer");
+        let mut layer =
+            Layer::new(0, "Base", RgbColor::new(128, 128, 128)).expect("Failed to create layer");
         layer.keys = vec![
             KeyDefinition::new(Position::new(0, 0), "KC_A"),
             KeyDefinition::new(Position::new(0, 1), "KC_B"),
         ];
         layout.layers.push(layer);
-        
+
         // Generate markdown from the layout
-        let markdown = template_gen::generate_markdown(&layout).expect("Failed to generate markdown");
-        
+        let markdown =
+            template_gen::generate_markdown(&layout).expect("Failed to generate markdown");
+
         println!("Generated markdown:\n{}", markdown);
-        
+
         // Parse it back
         let parsed_layout = parse_markdown_layout_str(&markdown).expect("Parse failed");
-        
+
         println!("Parsed {} tap dances", parsed_layout.tap_dances.len());
         for td in &parsed_layout.tap_dances {
-            println!("  - {}: single={}, double={:?}, hold={:?}", 
-                td.name, td.single_tap, td.double_tap, td.hold);
+            println!(
+                "  - {}: single={}, double={:?}, hold={:?}",
+                td.name, td.single_tap, td.double_tap, td.hold
+            );
         }
 
-        assert_eq!(parsed_layout.tap_dances.len(), 2, "Should parse 2 tap dances");
-        
+        assert_eq!(
+            parsed_layout.tap_dances.len(),
+            2,
+            "Should parse 2 tap dances"
+        );
+
         let td1 = &parsed_layout.tap_dances[0];
         assert_eq!(td1.name, "esc_caps");
         assert_eq!(td1.single_tap, "KC_ESC");
         assert_eq!(td1.double_tap, Some("KC_CAPS".to_string()));
         assert_eq!(td1.hold, None);
-        
+
         let td2 = &parsed_layout.tap_dances[1];
         assert_eq!(td2.name, "shift_ctrl");
         assert_eq!(td2.single_tap, "KC_LSFT");
