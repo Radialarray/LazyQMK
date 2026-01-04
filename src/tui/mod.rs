@@ -157,6 +157,31 @@ pub enum TapDanceFormContext {
     FromKeycodePicker,
 }
 
+/// State for the export filename dialog.
+#[derive(Debug, Clone)]
+pub struct ExportFilenameDialogState {
+    /// Export filename input
+    pub filename: String,
+}
+
+impl ExportFilenameDialogState {
+    /// Creates a new export filename dialog with a default filename.
+    #[must_use]
+    pub fn new(layout_name: &str) -> Self {
+        let date = chrono::Local::now().format("%Y-%m-%d");
+        let default_filename = format!("{layout_name}_export_{date}.md");
+        Self {
+            filename: default_filename,
+        }
+    }
+}
+
+impl Default for ExportFilenameDialogState {
+    fn default() -> Self {
+        Self::new("layout")
+    }
+}
+
 /// State for the template save dialog.
 #[derive(Debug, Clone)]
 pub struct TemplateSaveDialogState {
@@ -265,6 +290,8 @@ pub enum PopupType {
     TemplateBrowser,
     /// Template save dialog popup
     TemplateSaveDialog,
+    /// Export filename dialog popup
+    ExportFilenameDialog,
     /// Help overlay popup
     HelpOverlay,
     /// Build log popup
@@ -386,6 +413,8 @@ pub struct AppState {
     pub category_manager_state: CategoryManagerState,
     /// Template save dialog component state
     pub template_save_dialog_state: TemplateSaveDialogState,
+    /// Export filename dialog component state
+    pub export_filename_dialog_state: ExportFilenameDialogState,
     /// Setup wizard component state
     pub wizard_state: onboarding_wizard::OnboardingWizardState,
     /// Pending parameterized keycode state (for multi-stage keycode building)
@@ -484,6 +513,7 @@ impl AppState {
             category_picker_context: None,
             category_manager_state: CategoryManagerState::new(),
             template_save_dialog_state: TemplateSaveDialogState::default(),
+            export_filename_dialog_state: ExportFilenameDialogState::default(),
             wizard_state: onboarding_wizard::OnboardingWizardState::new(),
             pending_keycode: PendingKeycodeState::new(),
             tap_dance_form_cache: None,
@@ -962,6 +992,9 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
         PopupType::TemplateSaveDialog => {
             render_template_save_dialog(f, state);
         }
+        PopupType::ExportFilenameDialog => {
+            render_export_filename_dialog(f, state);
+        }
         PopupType::UnsavedChangesPrompt => {
             render_unsaved_prompt(f, &state.theme);
         }
@@ -1245,6 +1278,63 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
         .style(Style::default().fg(theme.success))
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(actions, chunks[6]);
+}
+
+/// Render export filename dialog
+fn render_export_filename_dialog(f: &mut Frame, state: &AppState) {
+    let area = centered_rect(60, 30, f.area());
+
+    let dialog_state = &state.export_filename_dialog_state;
+    let theme = &state.theme;
+
+    // Clear the background area first
+    f.render_widget(Clear, area);
+
+    // Render opaque background
+    let background = Block::default().style(Style::default().bg(theme.background));
+    f.render_widget(background, area);
+
+    // Split into sections
+    let chunks = RatatuiLayout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Length(3), // Filename input
+            Constraint::Min(2),    // Help text
+            Constraint::Length(2), // Action buttons
+        ])
+        .split(area);
+
+    // Title
+    let title = Paragraph::new("Export Layout to Markdown")
+        .style(
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(title, chunks[0]);
+
+    // Filename field with cursor
+    let filename_text = format!("Filename: {}█", dialog_state.filename);
+    let filename = Paragraph::new(filename_text)
+        .style(Style::default().fg(theme.accent))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(filename, chunks[1]);
+
+    // Help text
+    let help_text = vec![
+        Line::from(""),
+        Line::from("Type: enter filename | Backspace: delete"),
+    ];
+    let help = Paragraph::new(help_text).style(Style::default().fg(theme.text_muted));
+    f.render_widget(help, chunks[2]);
+
+    // Action buttons
+    let actions = Paragraph::new("Enter: export | Esc: cancel")
+        .style(Style::default().fg(theme.success))
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(actions, chunks[3]);
 }
 
 /// Helper to create a centered rectangle

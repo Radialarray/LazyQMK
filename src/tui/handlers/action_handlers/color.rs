@@ -8,14 +8,27 @@ pub fn handle_set_individual_key_color(state: &mut AppState) -> Result<bool> {
     // Check if in selection mode with selected keys
     if state.selection_mode.is_some() && !state.selected_keys.is_empty() {
         // Multi-key selection mode - use first key's color as initial
-        if let Some(first_key) = state.layout.layers.get(state.current_layer)
-            .and_then(|layer| layer.keys.iter().find(|k| state.selected_keys.contains(&k.position))) {
-            let current_color = state.layout.resolve_key_color(state.current_layer, first_key);
+        if let Some(first_key) = state
+            .layout
+            .layers
+            .get(state.current_layer)
+            .and_then(|layer| {
+                layer
+                    .keys
+                    .iter()
+                    .find(|k| state.selected_keys.contains(&k.position))
+            })
+        {
+            let current_color = state
+                .layout
+                .resolve_key_color(state.current_layer, first_key);
             state.open_color_picker(
                 crate::tui::component::ColorPickerContext::MultiKeySelection,
                 current_color,
             );
-            state.set_status("Adjust color with arrows, Tab to switch channels, Enter to apply to all selected");
+            state.set_status(
+                "Adjust color with arrows, Tab to switch channels, Enter to apply to all selected",
+            );
         } else {
             state.set_error("No keys selected");
         }

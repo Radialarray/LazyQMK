@@ -429,11 +429,12 @@ fn handle_category_picker_event(
                                 count += 1;
                             }
                         }
-                        
+
                         if count > 0 {
                             state.mark_dirty();
                             if let Some(id) = &category_id {
-                                state.set_status(format!("Applied category '{id}' to {count} keys"));
+                                state
+                                    .set_status(format!("Applied category '{id}' to {count} keys"));
                             } else {
                                 state.set_status(format!("Removed category from {count} keys"));
                             }
@@ -537,15 +538,20 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                             if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
                                 let mut count = 0;
                                 for pos in &state.selected_keys {
-                                    if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                                    if let Some(key) =
+                                        layer.keys.iter_mut().find(|k| k.position == *pos)
+                                    {
                                         key.color_override = Some(color);
                                         count += 1;
                                     }
                                 }
-                                
+
                                 if count > 0 {
                                     state.mark_dirty();
-                                    state.set_status(format!("Set color to {} for {count} keys", color.to_hex()));
+                                    state.set_status(format!(
+                                        "Set color to {} for {count} keys",
+                                        color.to_hex()
+                                    ));
                                 }
                             }
                         }
@@ -583,15 +589,19 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                             if let Some(layer) = state.layout.layers.get_mut(state.current_layer) {
                                 let mut count = 0;
                                 for pos in &state.selected_keys {
-                                    if let Some(key) = layer.keys.iter_mut().find(|k| k.position == *pos) {
+                                    if let Some(key) =
+                                        layer.keys.iter_mut().find(|k| k.position == *pos)
+                                    {
                                         key.color_override = None;
                                         count += 1;
                                     }
                                 }
-                                
+
                                 if count > 0 {
                                     state.mark_dirty();
-                                    state.set_status(format!("Cleared color for {count} keys (using layer default)"));
+                                    state.set_status(format!(
+                                        "Cleared color for {count} keys (using layer default)"
+                                    ));
                                 }
                             }
                         }
@@ -1315,6 +1325,64 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
 }
 
 /// Handle keyboard picker input using Component trait pattern
+/// Handle input for export filename dialog
+pub fn handle_export_filename_dialog_input(
+    state: &mut AppState,
+    key: event::KeyEvent,
+) -> Result<bool> {
+    use crate::tui::handlers::action_handlers::file_ops;
+
+    match key.code {
+        KeyCode::Char(c) => {
+            // Add character to filename
+            state.export_filename_dialog_state.filename.push(c);
+            Ok(false)
+        }
+        KeyCode::Backspace => {
+            // Remove last character
+            state.export_filename_dialog_state.filename.pop();
+            Ok(false)
+        }
+        KeyCode::Enter => {
+            // Perform export
+            let filename = state.export_filename_dialog_state.filename.clone();
+            state.active_popup = None;
+
+            if filename.trim().is_empty() {
+                state.set_error("Filename cannot be empty");
+                return Ok(false);
+            }
+
+            // Ensure filename ends with .md (case-insensitive check)
+            let filename = if std::path::Path::new(&filename)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+            {
+                filename
+            } else {
+                format!("{filename}.md")
+            };
+
+            match file_ops::perform_export(state, &filename) {
+                Ok(()) => {
+                    // Success message already set by perform_export
+                }
+                Err(e) => {
+                    state.set_error(format!("Export failed: {e}"));
+                }
+            }
+            Ok(false)
+        }
+        KeyCode::Esc => {
+            // Cancel export
+            state.active_popup = None;
+            state.set_status("Export cancelled");
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
+}
+
 /// Handle input for unsaved changes prompt
 pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
@@ -1375,6 +1443,7 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
         Some(PopupType::LayerPicker) => handle_layer_picker_input(state, key),
         Some(PopupType::TemplateBrowser) => super::handle_template_browser_input(state, key),
         Some(PopupType::TemplateSaveDialog) => super::handle_template_save_dialog_input(state, key),
+        Some(PopupType::ExportFilenameDialog) => handle_export_filename_dialog_input(state, key),
         Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
         Some(PopupType::BuildLog) => handle_build_log_input(state, key),
         Some(PopupType::HelpOverlay) => handle_help_overlay_input(state, key),

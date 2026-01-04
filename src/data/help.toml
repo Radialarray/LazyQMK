@@ -128,14 +128,20 @@ action = "Save layout"
 priority = 24
 
 [[contexts.main.bindings]]
+keys = ["Ctrl+E"]
+action = "Export layout to markdown"
+hint = "Export"
+priority = 25
+
+[[contexts.main.bindings]]
 keys = ["Shift+E"]
 action = "Edit metadata"
-priority = 25
+priority = 26
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+G"]
 action = "Generate firmware"
-priority = 26
+priority = 27
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+B"]
@@ -811,6 +817,37 @@ keys = ["Esc"]
 action = "Cancel"
 hint = "Cancel"
 priority = 3
+
+# =============================================================================
+# EXPORT FILENAME DIALOG
+# =============================================================================
+
+[contexts.export_filename]
+name = "Export Layout"
+description = "Export layout to markdown file"
+
+[[contexts.export_filename.bindings]]
+keys = ["Type"]
+action = "Enter filename"
+hint = "Filename"
+priority = 1
+
+[[contexts.export_filename.bindings]]
+keys = ["Backspace"]
+action = "Delete character"
+priority = 2
+
+[[contexts.export_filename.bindings]]
+keys = ["Enter"]
+action = "Export"
+hint = "Export"
+priority = 3
+
+[[contexts.export_filename.bindings]]
+keys = ["Esc"]
+action = "Cancel"
+hint = "Cancel"
+priority = 4
 
 # =============================================================================
 # CATEGORY PICKER

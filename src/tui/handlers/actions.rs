@@ -127,9 +127,10 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         Action::NextLayer => navigation::handle_next_layer(state),
         Action::PreviousLayer => navigation::handle_previous_layer(state),
 
-        // File operations (3 actions)
+        // File operations (4 actions)
         Action::Quit => file_ops::handle_quit(state),
         Action::Save => file_ops::handle_save(state),
+        Action::ExportLayout => file_ops::handle_export_layout(state),
         Action::SaveAsTemplate => file_ops::handle_save_as_template(state),
 
         // Popup management (10 actions)

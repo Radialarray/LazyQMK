@@ -88,6 +88,8 @@ pub enum Action {
     // === FILE OPERATIONS ===
     /// Save the current keyboard configuration.
     Save,
+    /// Export the current layout to markdown format.
+    ExportLayout,
     /// Quit the application.
     Quit,
 
@@ -172,6 +174,7 @@ impl Action {
 
             // File operations
             Self::Save => "save",
+            Self::ExportLayout => "export_layout",
             Self::Quit => "quit",
 
             // Build
@@ -307,6 +310,7 @@ impl ShortcutRegistry {
 
         // === FILE OPERATIONS ===
         self.register(ctx, K::Char('s'), M::CONTROL, Action::Save);
+        self.register(ctx, K::Char('e'), M::CONTROL, Action::ExportLayout);
         self.register(ctx, K::Char('q'), M::CONTROL, Action::Quit);
 
         // === BUILD & FIRMWARE (v0.4.0: Shift+B = build log) ===
