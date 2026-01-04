@@ -486,8 +486,6 @@ mod tests {
     use crate::models::keyboard_geometry::KeyGeometry;
     use crate::models::layer::{KeyDefinition, Layer, Position};
     use crate::models::RgbColor;
-    use std::fs;
-    use tempfile::TempDir;
 
     fn create_test_setup() -> (Layout, KeyboardGeometry, VisualLayoutMapping, KeycodeDb) {
         let mut layout = Layout::new("Test").unwrap();

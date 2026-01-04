@@ -1,24 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { apiClient, type Layout } from '$api';
 	import { Button, Card } from '$components';
+	import type { PageData } from './$types';
 
-	let layout = $state<Layout | null>(null);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let filename = $derived($page.params.name);
-
-	onMount(async () => {
-		try {
-			layout = await apiClient.getLayout(filename);
-			error = null;
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load layout';
-		} finally {
-			loading = false;
-		}
-	});
+	let { data }: { data: PageData } = $props();
+	let layout = $derived(data.layout);
 </script>
 
 <div class="container mx-auto p-6">
@@ -31,21 +16,12 @@
 				{layout?.metadata.description || ''}
 			</p>
 		</div>
-		<Button onclick={() => (window.location.href = '/layouts')}>
-			Back to Layouts
-		</Button>
+		<a href="/layouts">
+			<Button>Back to Layouts</Button>
+		</a>
 	</div>
 
-	{#if loading}
-		<p class="text-muted-foreground">Loading layout...</p>
-	{:else if error}
-		<Card class="p-6">
-			<div class="text-destructive">
-				<p class="font-medium">Error loading layout</p>
-				<p class="text-sm">{error}</p>
-			</div>
-		</Card>
-	{:else if layout}
+	{#if layout}
 		<div class="space-y-6">
 			<!-- Metadata Card -->
 			<Card class="p-6">

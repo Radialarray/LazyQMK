@@ -55,9 +55,9 @@
 			<p class="text-muted-foreground mb-4">
 				Manage and edit your keyboard layouts
 			</p>
-			<Button onclick={() => (window.location.href = '/layouts')}>
-				View Layouts
-			</Button>
+			<a href="/layouts">
+				<Button>View Layouts</Button>
+			</a>
 		</Card>
 
 		<!-- Keycodes Card -->
@@ -66,9 +66,9 @@
 			<p class="text-muted-foreground mb-4">
 				Browse available QMK keycodes
 			</p>
-			<Button onclick={() => (window.location.href = '/keycodes')}>
-				Browse Keycodes
-			</Button>
+			<a href="/keycodes">
+				<Button>Browse Keycodes</Button>
+			</a>
 		</Card>
 
 		<!-- Settings Card -->
@@ -77,9 +77,9 @@
 			<p class="text-muted-foreground mb-4">
 				Configure QMK path and workspace
 			</p>
-			<Button onclick={() => (window.location.href = '/settings')}>
-				Open Settings
-			</Button>
+			<a href="/settings">
+				<Button>Open Settings</Button>
+			</a>
 		</Card>
 	</div>
 </div>

@@ -36,9 +36,9 @@
 				Manage your keyboard layouts
 			</p>
 		</div>
-		<Button onclick={() => (window.location.href = '/')}>
-			Back to Dashboard
-		</Button>
+		<a href="/">
+			<Button>Back to Dashboard</Button>
+		</a>
 	</div>
 
 	{#if loading}
@@ -68,12 +68,9 @@
 						<p class="text-xs text-muted-foreground">
 							Modified: {formatDate(layout.modified)}
 						</p>
-						<Button
-							size="sm"
-							onclick={() => (window.location.href = `/layouts/${layout.filename}`)}
-						>
-							Open
-						</Button>
+						<a href="/layouts/{layout.filename}">
+							<Button size="sm">Open</Button>
+						</a>
 					</div>
 				</Card>
 			{/each}
