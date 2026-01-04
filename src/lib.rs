@@ -25,3 +25,6 @@ pub mod parser;
 pub mod services;
 pub mod shortcuts;
 pub mod tui;
+
+#[cfg(feature = "web")]
+pub mod web;

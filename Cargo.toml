@@ -11,9 +11,22 @@ readme = "README.md"
 keywords = ["keyboard", "qmk", "tui", "terminal", "editor"]
 categories = ["command-line-utilities", "text-editors"]
 
+# Disable auto-discovery so we can conditionally include binaries
+autobins = false
+
+[[bin]]
+name = "lazyqmk"
+path = "src/main.rs"
+
+[[bin]]
+name = "lazyqmk-web"
+path = "src/bin/lazyqmk-web.rs"
+required-features = ["web"]
+
 [features]
 default = ["ratatui"]
 ratatui = ["dep:ratatui"]
+web = ["dep:axum", "dep:tower-http", "dep:tokio", "dep:tracing", "dep:tracing-subscriber"]
 
 [dependencies]
 ratatui = { version = "0.29", optional = true }
@@ -32,8 +45,18 @@ arboard = "3.6"
 dark-light = "2.0"
 uuid = { version = "1.19", features = ["v4", "serde"] }
 
+# Web API dependencies (optional)
+axum = { version = "0.8", optional = true }
+tower-http = { version = "0.6", features = ["cors", "trace"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
 [dev-dependencies]
 tempfile = "3.0"
+# Web API test dependencies (only needed when testing web feature)
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
 
 [profile.release]
 opt-level = 3
