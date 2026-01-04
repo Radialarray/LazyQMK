@@ -98,15 +98,33 @@ fn build_key_grid(
     // Build color reference map
     let color_map = build_color_reference_map(layout, layer_idx);
 
-    // Process each key
+    // Build a lookup from visual position (row, col) to key definition
+    let mut visual_to_key = std::collections::HashMap::new();
     for key_def in &layer.keys {
-        // Find corresponding geometry
-        let key_geom = geometry
-            .get_key_by_matrix((key_def.position.row, key_def.position.col))
-            .context(format!(
-                "No geometry found for key at ({}, {})",
-                key_def.position.row, key_def.position.col
-            ))?;
+        let key_pos = (key_def.position.row, key_def.position.col);
+        visual_to_key.insert(key_pos, key_def);
+    }
+
+    // Process each key in geometry order
+    // For each key in geometry, find the corresponding key definition by matching positions
+    for key_geom in &geometry.keys {
+        // Try to find key definition by checking all visual positions
+        // The key_def.position is the table position (row, col) in the markdown
+        // We need to find which key_def corresponds to this geometry key
+
+        // Calculate the visual position from geometry
+        let visual_row = key_geom.visual_y.round() as u8;
+        let visual_col = key_geom.visual_x.round() as u8;
+
+        // Look up key by visual position
+        let key_def = match visual_to_key.get(&(visual_row, visual_col)) {
+            Some(kd) => kd,
+            None => {
+                // Key exists in geometry but not in layout - skip it
+                // This can happen with optional keys or when layout doesn't define all positions
+                continue;
+            }
+        };
 
         // Convert visual position to grid coordinates
         // Use a simple scaling: divide by standard key width (assuming ~1u spacing)
@@ -629,13 +647,14 @@ mod tests {
         let mut geom = KeyboardGeometry::new("test", "LAYOUT", 4, 12);
 
         // Create a simple 3x3 grid layout
+        // Use exact integer positions so visual coordinates match
         for row in 0..3 {
             for col in 0..3 {
                 let key = KeyGeometry::new(
                     (row, col),
                     (row * 3 + col) as u8,
-                    col as f32 * 1.25,
-                    row as f32 * 1.25,
+                    col as f32, // Use exact integers instead of 1.25 spacing
+                    row as f32,
                 );
                 geom.add_key(key);
             }

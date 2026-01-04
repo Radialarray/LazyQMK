@@ -339,14 +339,16 @@ pub fn temp_config_with_qmk(qmk_path: Option<PathBuf>) -> (Config, TempDir) {
 
         fs::write(
             keyboard_dir.join("info.json"),
-            serde_json::to_string_pretty(&info_json).unwrap()
-        ).expect("Failed to write info.json");
+            serde_json::to_string_pretty(&info_json).unwrap(),
+        )
+        .expect("Failed to write info.json");
 
         // Create minimal Makefile (required for validation)
         fs::write(
             path.join("Makefile"),
-            "# Minimal QMK Makefile for testing\n"
-        ).expect("Failed to write Makefile");
+            "# Minimal QMK Makefile for testing\n",
+        )
+        .expect("Failed to write Makefile");
 
         path
     });
@@ -371,9 +373,8 @@ pub fn temp_config_with_qmk(qmk_path: Option<PathBuf>) -> (Config, TempDir) {
 /// * `path` - The file path to write to
 pub fn write_layout_file(layout: &Layout, path: &Path) -> std::io::Result<()> {
     use lazyqmk::services::LayoutService;
-    
-    LayoutService::save(layout, path)
-        .map_err(|e| std::io::Error::other(e.to_string()))
+
+    LayoutService::save(layout, path).map_err(|e| std::io::Error::other(e.to_string()))
 }
 
 /// Creates a layout file in a temp directory and returns the path.
