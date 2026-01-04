@@ -17,7 +17,7 @@ use std::fmt;
 ///
 /// Represents a color using red, green, and blue channels (0-255 each).
 /// Supports parsing from hex strings (#RRGGBB) and serialization.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct RgbColor {
     /// Red channel (0-255)
     pub r: u8,
