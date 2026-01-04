@@ -150,6 +150,19 @@ Each key displays a color source indicator in its top-right corner.
 - Validation warnings for orphaned tap dances (defined but unused)
 - Limitations: Uses QMK built-in patterns only (no custom C callbacks)
 
+**Layout Export**
+- Export keyboard layouts as richly-formatted markdown documents
+- Visual keyboard diagrams using Unicode box-drawing characters
+- Complete layer-by-layer visualization with colors
+- Color legend showing 4-level priority system (individual > category > layer > default)
+- Layer navigation map showing how layers are accessed via LT/MO keys
+- Tap dance reference table with all configured actions
+- Settings summary (RGB, idle effect, firmware configuration)
+- Split keyboard support with proper left/right rendering
+- CLI command: `lazyqmk export --layout <file> --output <file>`
+- TUI shortcut: Ctrl+E (prompts for filename)
+- Output format: GitHub/GitLab compatible markdown, printable, shareable
+
 ### Configuration & Setup
 
 **First-Run Onboarding Wizard**

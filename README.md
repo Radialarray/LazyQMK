@@ -139,6 +139,7 @@ That's it! You're ready to start editing your layout.
 - **Human-Readable Markdown** - Layouts stored as `.md` files with YAML frontmatter
 - **Version Control Ready** - Plain text format perfect for git or a dotfile manager like [chezmoi](https://github.com/twpayne/chezmoi)
 - **Template System** - Save and share common layouts across keyboards
+- **Layout Export** - Export visual keyboard documentation with diagrams, color legends, and layer navigation (`Ctrl+E` or `lazyqmk export`)
 - **OS Theme Integration** - Automatic dark/light mode detection from system settings
 
 ## 🚀 Quick Start
@@ -193,6 +194,7 @@ You can:
 - `c` - Assign category to key
 - `i` - Set individual key color
 - `Ctrl+S` - Save layout
+- `Ctrl+E` - Export layout to markdown documentation
 - `Ctrl+Q` - Quit application
 - `Ctrl+B` - Build firmware (compile)
 - `Ctrl+G` - Generate firmware files only (no compile)
