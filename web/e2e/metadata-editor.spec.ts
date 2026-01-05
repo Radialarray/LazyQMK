@@ -35,7 +35,10 @@ test.describe('Metadata Editor', () => {
 		],
 		matrix_rows: 1,
 		matrix_cols: 1,
-		encoder_count: 0
+		encoder_count: 0,
+		position_to_visual_index: {
+			'0,0': 0
+		}
 	};
 
 	test.beforeEach(async ({ page }) => {

@@ -29,6 +29,8 @@
 		onNavigate?: (newKeyIndex: number | null, newSelectedIndices: Set<number>) => void;
 		/** Custom class for the container */
 		class?: string;
+		/** Position to visual index mapping from backend (optional, for fallback lookups) */
+		positionToVisualIndexMap?: Record<string, number>;
 	}
 
 	let {
@@ -40,7 +42,8 @@
 		categories = [],
 		onKeyClick,
 		onNavigate,
-		class: className = ''
+		class: className = '',
+		positionToVisualIndexMap
 	}: Props = $props();
 	
 	let containerElement: HTMLDivElement;
@@ -48,9 +51,14 @@
 	// Transform geometry data for SVG rendering
 	const transformed = $derived(transformGeometry(geometry));
 
-	// Build a mapping from visual position (row, col) to visual_index using geometry data
-	// Geometry visual_x/visual_y (rounded) corresponds to layout key position row/col
+	// Build a mapping from visual position (row, col) to visual_index.
+	// Prefer the backend-provided mapping if available, otherwise compute locally as fallback.
 	const positionToVisualIndex = $derived.by(() => {
+		// Use backend-provided mapping if available
+		if (positionToVisualIndexMap) {
+			return new Map(Object.entries(positionToVisualIndexMap).map(([k, v]) => [k, v]));
+		}
+		// Fallback: compute locally from geometry (brittle, for backwards compatibility)
 		const map = new Map<string, number>();
 		for (const key of geometry) {
 			// Geometry y → row, x → col (quantized to grid)

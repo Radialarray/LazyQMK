@@ -69,7 +69,10 @@ test.describe('Color and Category Management', () => {
 		],
 		matrix_rows: 1,
 		matrix_cols: 3,
-		encoder_count: 0
+		encoder_count: 0,
+		position_to_visual_index: {
+			'0,0': 0, '0,70': 1, '0,140': 2
+		}
 	};
 
 	test.beforeEach(async ({ page }) => {

@@ -1122,6 +1122,7 @@
 							categories={layout.categories || []}
 							onKeyClick={handleKeyClick}
 							onNavigate={handleKeyboardNavigation}
+							positionToVisualIndexMap={geometry.position_to_visual_index}
 							class="max-w-4xl mx-auto"
 						/>
 					{:else}

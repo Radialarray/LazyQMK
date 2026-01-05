@@ -826,6 +826,10 @@ pub struct GeometryResponse {
     pub matrix_cols: u8,
     /// Number of rotary encoders.
     pub encoder_count: u8,
+    /// Mapping from visual position ("row,col") to visual_index (layout array index).
+    /// This allows the frontend to look up the visual_index for keys that only have
+    /// position data, avoiding brittle coordinate inference logic.
+    pub position_to_visual_index: std::collections::HashMap<String, u8>,
 }
 
 /// Key geometry information for API response.
@@ -927,6 +931,21 @@ async fn get_geometry(
         })
         .collect();
 
+    // Build position_to_visual_index mapping from geometry
+    // This provides the authoritative mapping from visual position to layout array index,
+    // so the frontend doesn't need to infer it from coordinates.
+    let position_to_visual_index: std::collections::HashMap<String, u8> = geometry
+        .keys
+        .iter()
+        .map(|k| {
+            // Quantize visual coordinates to grid position (same logic as VisualLayoutMapping::build)
+            let row = k.visual_y.round() as u8;
+            let col = k.visual_x.round() as u8;
+            let pos_key = format!("{row},{col}");
+            (pos_key, k.layout_index)
+        })
+        .collect();
+
     Ok(Json(GeometryResponse {
         keyboard,
         layout,
@@ -934,6 +953,7 @@ async fn get_geometry(
         matrix_rows: geometry.matrix_rows,
         matrix_cols: geometry.matrix_cols,
         encoder_count: geometry.encoder_count,
+        position_to_visual_index,
     }))
 }
 

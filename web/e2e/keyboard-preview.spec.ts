@@ -54,7 +54,11 @@ test.describe('Keyboard Preview', () => {
 		],
 		matrix_rows: 2,
 		matrix_cols: 3,
-		encoder_count: 0
+		encoder_count: 0,
+		position_to_visual_index: {
+			'0,0': 0, '0,1': 1, '0,2': 2,
+			'1,0': 3, '1,1': 4, '1,2': 5
+		}
 	};
 
 	test.beforeEach(async ({ page }) => {

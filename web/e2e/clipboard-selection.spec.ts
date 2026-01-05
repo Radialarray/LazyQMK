@@ -43,7 +43,10 @@ test.describe('Clipboard and Multi-Selection', () => {
 		],
 		matrix_rows: 1,
 		matrix_cols: 5,
-		encoder_count: 0
+		encoder_count: 0,
+		position_to_visual_index: {
+			'0,0': 0, '0,70': 1, '0,140': 2, '0,210': 3, '0,280': 4
+		}
 	};
 
 	test.beforeEach(async ({ page }) => {

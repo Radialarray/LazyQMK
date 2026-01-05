@@ -183,6 +183,11 @@ export interface GeometryResponse {
 	matrix_rows: number;
 	matrix_cols: number;
 	encoder_count: number;
+	/** Mapping from visual position ("row,col") to visual_index (layout array index).
+	 * This allows the frontend to look up the visual_index for keys that only have
+	 * position data, avoiding brittle coordinate inference logic.
+	 */
+	position_to_visual_index?: Record<string, number>;
 }
 
 // Validation response
