@@ -375,6 +375,47 @@ sudo ln -s $(pwd)/target/release/lazyqmk /usr/local/bin/lazyqmk
 
 After building, follow the QMK fork setup and configuration steps from the Installation section above.
 
+### Web Interface
+
+LazyQMK includes an optional web-based UI for editing layouts in your browser.
+
+**Quick Start (Out-of-the-box):**
+```bash
+lazyqmk --web
+```
+Then open http://localhost:3001 in your browser.
+
+**Development (with hot-reload):**
+```bash
+cd web
+pnpm install           # or npm install
+pnpm dev:web           # or npm run dev:web
+```
+This starts the Rust backend (port 3001) and Vite dev server (port 5173) simultaneously.
+
+**Custom Configuration:**
+```bash
+# Custom workspace directory for layout files
+lazyqmk --web --workspace ~/my-layouts
+
+# Custom port
+lazyqmk --web --port 8080
+
+# Custom host (bind to all interfaces)
+lazyqmk --web --host 0.0.0.0
+```
+
+**Workspace Directory:**
+The web backend stores layout files in a workspace directory. By default, it uses:
+- **Linux**: `~/.config/LazyQMK/layouts/`
+- **macOS**: `~/Library/Application Support/LazyQMK/layouts/`
+- **Windows**: `%APPDATA%\LazyQMK\layouts\`
+
+Override with `--workspace` flag to use a custom directory.
+
+**Docker (Optional):**
+For containerized deployment, see [web/SETUP.md](web/SETUP.md) for Docker instructions.
+
 ## 📚 Additional Resources
 
 - [Custom QMK Firmware Fork](https://github.com/Radialarray/qmk_firmware) - Required for LED/RGB support

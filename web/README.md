@@ -36,63 +36,79 @@ web/
 
 ## Prerequisites
 
-- Node.js 18+ (or Bun)
-- LazyQMK backend running on port 3001 (default) or configured URL
+- **Node.js 18+** (for frontend development)
+- **Rust 1.75+** (for backend)
+- **pnpm** or npm (package manager)
 
 ## Default Workspace
 
-The backend uses a platform-specific default workspace directory for storing layout files:
+The backend stores layout files in a workspace directory. By default:
 
 - **Linux**: `~/.config/LazyQMK/layouts/`
 - **macOS**: `~/Library/Application Support/LazyQMK/layouts/`
 - **Windows**: `%APPDATA%\LazyQMK\layouts\`
 
-This directory is created automatically on first run if it doesn't exist. You can override it with the `--workspace` flag when starting the backend.
+This directory is created automatically on first run. Override with `--workspace` flag:
+```bash
+lazyqmk --web --workspace ~/my-layouts
+```
 
 ## Getting Started
 
-### 1. Install Dependencies
+### Quick Start (Single Command)
+
+The recommended development workflow uses native tools (no Docker required):
 
 ```bash
 cd web
-npm install
-# or
-bun install
+pnpm install              # or npm install
+pnpm dev:web              # or npm run dev:web
 ```
 
-### 2. Start Development Environment
+This single command:
+- ✅ Starts Rust backend on port 3001
+- ✅ Starts Vite dev server on port 5173 with hot-reload
+- ✅ Automatically proxies API requests from frontend to backend
 
-**Quick start (single command):**
+Open http://localhost:5173 to access the UI.
+
+### Alternative: Production Mode
+
+For out-of-the-box usage without development tools:
+
 ```bash
-pnpm dev:web
-# or
-npm run dev:web
+lazyqmk --web
 ```
 
-This starts both the Rust backend (port 3001) and Vite dev server (port 5173) simultaneously.
+Then open http://localhost:3001 in your browser.
 
-**Or manually in separate terminals:**
+**Custom configuration:**
 ```bash
-# Terminal 1: Start backend
-cd ..
-cargo run --features web --bin lazyqmk-web
+# Custom workspace directory
+lazyqmk --web --workspace ~/my-layouts
 
-# Terminal 2: Start frontend
-npm run dev
+# Custom port
+lazyqmk --web --port 8080
+
+# Bind to all interfaces (not just localhost)
+lazyqmk --web --host 0.0.0.0
 ```
 
-**Backend customization:**
+### Alternative: Manual Two-Terminal Setup
+
+If you prefer running backend and frontend separately:
+
 ```bash
-# Use a custom workspace directory
-cargo run --features web --bin lazyqmk-web -- --workspace ~/my-layouts
+# Terminal 1: Backend
+cd .. && cargo run --features web --bin lazyqmk-web
 
-# Use a custom port
-cargo run --features web --bin lazyqmk-web -- --port 8080
+# Terminal 2: Frontend
+cd web && pnpm dev
 ```
 
-The frontend will be available at `http://localhost:5173`
+### Docker (Optional)
 
-**Note:** The frontend proxies API requests to `http://localhost:3001` by default (configured in `vite.config.ts`). If you change the backend port, update the proxy configuration.
+Docker is **optional** and only needed for containerized deployment. For Docker instructions, see [SETUP.md](SETUP.md).
 
 ## Development
 
@@ -119,16 +135,15 @@ npm run check:watch      # Type-check in watch mode
 
 ### Backend Configuration
 
-The frontend expects the backend at `http://localhost:3001` by default (proxied through Vite during development). To use a different backend:
+The frontend expects the backend at `http://localhost:3001` by default.
 
-1. **Development**: Edit `vite.config.ts` proxy configuration
-2. **Production**: Set backend URL when initializing ApiClient
+**Development:** Backend runs on port 3001 (configured in `dev.mjs`), and Vite proxies API requests to it (configured in `vite.config.ts`).
 
-Example custom backend URL:
+**Production:** When using `lazyqmk --web`, specify backend URL with `--host` and `--port` flags.
 
+**Custom backend URL example:**
 ```typescript
 import { ApiClient } from '$lib/api';
-
 const client = new ApiClient('https://api.example.com');
 ```
 

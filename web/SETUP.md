@@ -1,13 +1,14 @@
 # LazyQMK Web Editor Setup
 
 This document covers setup for the LazyQMK web editor, including:
-- Local development
-- Docker deployment
-- Tauri desktop application
+- Local development (recommended)
+- Production usage
+- Docker deployment (optional)
+- Tauri desktop application (optional)
 
 ## Quick Start
 
-### Option 1: Local Development (Recommended for Development)
+### Recommended: Local Development
 
 **Single command** (starts both backend and frontend):
 ```bash
@@ -16,20 +17,35 @@ pnpm install              # or npm install
 pnpm dev:web              # or npm run dev:web
 ```
 
+This starts:
+- Rust backend on http://localhost:3001
+- Vite dev server on http://localhost:5173 (with hot-reload)
+
 Visit http://localhost:5173
 
-**Or manually in separate terminals**:
-```bash
-# Terminal 1: Start the backend
-cargo run --features web --bin lazyqmk-web
+### Alternative: Production Mode
 
-# Terminal 2: Start the frontend
-cd web
-npm install
-npm run dev
+For out-of-the-box usage without dev tools:
+```bash
+lazyqmk --web
+```
+Then open http://localhost:3001 in your browser.
+
+**Custom configuration:**
+```bash
+# Custom workspace directory
+lazyqmk --web --workspace ~/my-layouts
+
+# Custom port
+lazyqmk --web --port 8080
+
+# Bind to all interfaces
+lazyqmk --web --host 0.0.0.0
 ```
 
-### Option 2: Docker (Recommended for Deployment)
+### Optional: Docker Deployment
+
+Docker is **not required** for development. Use Docker only for containerized production deployments:
 
 ```bash
 # Production build
@@ -39,7 +55,9 @@ docker compose up
 docker compose --profile dev up
 ```
 
-### Option 3: Desktop App (Tauri)
+See Docker Deployment section below for details.
+
+### Optional: Desktop App (Tauri)
 
 ```bash
 cd web
@@ -55,48 +73,71 @@ npm run tauri:dev
 
 - **Rust**: 1.91.1 or later (for backend)
 - **Node.js**: 20.x or later (for frontend)
-- **npm**: 10.x or later
+- **pnpm** or npm: 10.x or later
 
-### Backend Setup
-
-The backend is a Rust Axum server that provides the REST API:
+### Single-Command Development (Recommended)
 
 ```bash
-# Build and run the backend
-cargo run --features web --bin lazyqmk-web
+cd web
+pnpm install
+pnpm dev:web
+```
 
-# With custom options
+This automatically starts:
+1. Rust backend (port 3001) - API server
+2. Vite dev server (port 5173) - Frontend with hot-reload
+
+The frontend proxies API calls to the backend automatically.
+
+### Manual Two-Terminal Setup
+
+If you prefer running processes separately:
+
+```bash
+# Terminal 1: Backend
+cd .. && cargo run --features web --bin lazyqmk-web
+
+# Terminal 2: Frontend
+cd web && pnpm dev
+```
+
+### Backend Options
+
+```bash
 cargo run --features web --bin lazyqmk-web -- \
   --port 3001 \
+  --host 127.0.0.1 \
   --workspace ~/my-layouts \
   --verbose
 ```
 
-**Backend Options:**
+**Options:**
 - `--port`: Port to listen on (default: 3001)
 - `--host`: Host to bind to (default: 127.0.0.1)
-- `--workspace`: Directory containing layout files (default: current directory)
+- `--workspace`: Directory for layout files (default: platform-specific, see below)
 - `--verbose`: Enable debug logging
 
-### Frontend Setup
+### Default Workspace Directory
 
-```bash
-cd web
-npm install
-npm run dev
-```
+The backend stores layout files in a workspace directory:
 
-The dev server runs on http://localhost:5173 and proxies API calls to http://localhost:3001.
+- **Linux**: `~/.config/LazyQMK/layouts/`
+- **macOS**: `~/Library/Application Support/LazyQMK/layouts/`
+- **Windows**: `%APPDATA%\LazyQMK\layouts\`
+
+This directory is created automatically on first run. Override with `--workspace` flag.
 
 ### Changing the Backend URL
 
-Edit `vite.config.ts`:
+The frontend proxies to `http://localhost:3001` by default (configured in `vite.config.ts`).
 
+To change:
 ```typescript
+// vite.config.ts
 server: {
   proxy: {
     '/api': {
-      target: 'http://localhost:3001',  // Change this
+      target: 'http://localhost:3001',  // Change port here
       changeOrigin: true
     }
   }
@@ -105,7 +146,9 @@ server: {
 
 ---
 
-## Docker Deployment
+## Docker Deployment (Optional)
+
+**Note:** Docker is **optional** and only needed for containerized deployments. The recommended development workflow uses native tools (see Local Development above).
 
 ### Directory Structure
 
