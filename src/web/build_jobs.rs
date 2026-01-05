@@ -812,7 +812,7 @@ mod tests {
 
         let jobs = manager.list_jobs();
         // First job may still be running, second will be pending
-        assert!(jobs.len() >= 1);
+        assert!(!jobs.is_empty());
     }
 
     #[test]

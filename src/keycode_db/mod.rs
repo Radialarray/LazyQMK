@@ -5,6 +5,17 @@
 
 #![allow(clippy::doc_link_with_quotes)]
 
+#[cfg(feature = "web")]
+mod display;
+
+// Re-exports for web feature - used by web::mod.rs but may appear unused
+// when compiling the main binary with web feature enabled.
+#[cfg(feature = "web")]
+#[allow(unused_imports)]
+pub use display::{
+    ActionKind, KeyDetailAction, KeyDisplay, KeyDisplayMetadata, TapDanceDisplayInfo,
+};
+
 use anyhow::{Context, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};

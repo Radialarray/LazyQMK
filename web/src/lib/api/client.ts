@@ -26,7 +26,8 @@ import type {
 	JobStatusResponse,
 	JobLogsResponse,
 	CancelJobResponse,
-	BuildJob
+	BuildJob,
+	RenderMetadataResponse
 } from './types';
 
 export class ApiClient {
@@ -108,6 +109,12 @@ export class ApiClient {
 			{
 				method: 'POST'
 			}
+		);
+	}
+
+	async getRenderMetadata(filename: string): Promise<RenderMetadataResponse> {
+		return this.request<RenderMetadataResponse>(
+			`/api/layouts/${encodeURIComponent(filename)}/render-metadata`
 		);
 	}
 

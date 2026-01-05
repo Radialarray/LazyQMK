@@ -716,7 +716,9 @@ async fn test_save_as_template_success() {
 
     assert_eq!(status, StatusCode::OK, "Response: {:?}", json);
     assert_eq!(json["name"], unique_name);
-    assert!(json["filename"].as_str().unwrap().ends_with(".md"));
+    assert!(std::path::Path::new(json["filename"].as_str().unwrap())
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md")));
     assert_eq!(json["layer_count"], 2);
     assert!(json["tags"].as_array().unwrap().contains(&json!("custom")));
 }

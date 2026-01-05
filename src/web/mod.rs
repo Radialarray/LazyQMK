@@ -11,6 +11,7 @@
 //! - `GET /api/layouts/{filename}` - Load and parse a layout file
 //! - `PUT /api/layouts/{filename}` - Save a layout file
 //! - `POST /api/layouts/{filename}/save-as-template` - Save layout as template
+//! - `GET /api/layouts/{filename}/render-metadata` - Get key display metadata for rendering
 //! - `GET /api/templates` - List available templates
 //! - `GET /api/templates/{filename}` - Get a specific template
 //! - `POST /api/templates/{filename}/apply` - Apply template to create new layout
@@ -368,6 +369,96 @@ pub struct InspectSettings {
     pub tapping_term: u16,
     /// Tap-hold preset name.
     pub tap_hold_preset: String,
+}
+
+// ============================================================================
+// Render Metadata Types (for Key Details panel)
+// ============================================================================
+
+/// Display metadata for a single key.
+#[derive(Debug, Clone, Serialize)]
+pub struct KeyDisplayDto {
+    /// Primary/main label for the key (short form for in-key display)
+    pub primary: String,
+    /// Secondary label (e.g., hold action) - optional
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary: Option<String>,
+    /// Tertiary label (e.g., double-tap for tap-dance) - optional
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tertiary: Option<String>,
+}
+
+/// Type of action in a multi-action keycode.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionKindDto {
+    /// Single key press
+    Tap,
+    /// Hold action
+    Hold,
+    /// Double tap action (tap dance)
+    DoubleTap,
+    /// Layer switch
+    Layer,
+    /// Modifier
+    Modifier,
+    /// Simple keycode with no multi-action behavior
+    Simple,
+}
+
+impl From<crate::keycode_db::ActionKind> for ActionKindDto {
+    fn from(kind: crate::keycode_db::ActionKind) -> Self {
+        match kind {
+            crate::keycode_db::ActionKind::Tap => ActionKindDto::Tap,
+            crate::keycode_db::ActionKind::Hold => ActionKindDto::Hold,
+            crate::keycode_db::ActionKind::DoubleTap => ActionKindDto::DoubleTap,
+            crate::keycode_db::ActionKind::Layer => ActionKindDto::Layer,
+            crate::keycode_db::ActionKind::Modifier => ActionKindDto::Modifier,
+            crate::keycode_db::ActionKind::Simple => ActionKindDto::Simple,
+        }
+    }
+}
+
+/// Detailed description of a single action within a keycode.
+#[derive(Debug, Clone, Serialize)]
+pub struct KeyDetailActionDto {
+    /// Type of action
+    pub kind: ActionKindDto,
+    /// Raw keycode or parameter (e.g., "KC_A", "1", "MOD_LCTL")
+    pub code: String,
+    /// Human-readable description
+    pub description: String,
+}
+
+/// Complete key render metadata for a single key.
+#[derive(Debug, Clone, Serialize)]
+pub struct KeyRenderMetadata {
+    /// Visual index (layout array index from info.json)
+    pub visual_index: u8,
+    /// Short labels for in-key display
+    pub display: KeyDisplayDto,
+    /// Full action breakdown for Key Details panel
+    pub details: Vec<KeyDetailActionDto>,
+}
+
+/// Response for layout render metadata.
+#[derive(Debug, Serialize)]
+pub struct RenderMetadataResponse {
+    /// Layout filename
+    pub filename: String,
+    /// Layer-indexed key metadata (layer_index -> list of key metadata)
+    pub layers: Vec<LayerRenderMetadata>,
+}
+
+/// Render metadata for a single layer.
+#[derive(Debug, Serialize)]
+pub struct LayerRenderMetadata {
+    /// Layer number
+    pub number: u8,
+    /// Layer name
+    pub name: String,
+    /// Per-key render metadata
+    pub keys: Vec<KeyRenderMetadata>,
 }
 
 /// Export response with markdown content.
@@ -1140,6 +1231,112 @@ async fn inspect_layout(
         tap_dances,
         settings,
     }))
+}
+
+/// GET /api/layouts/{filename}/render-metadata - Get key display metadata for rendering.
+///
+/// Returns per-key display information (primary/secondary/tertiary labels and
+/// full action details) for all layers. This data is used by the frontend to
+/// render multi-action keycodes (tap-hold, layer-tap, mod-tap, tap-dance, etc.)
+/// with compact in-key labels and full descriptions in a Key Details panel.
+async fn get_render_metadata(
+    State(state): State<AppState>,
+    Path(filename): Path<String>,
+) -> Result<Json<RenderMetadataResponse>, (StatusCode, Json<ApiError>)> {
+    // Validate filename to prevent path traversal
+    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+
+    // Ensure .md extension
+    let filename = if std::path::Path::new(filename)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+    {
+        filename.to_string()
+    } else {
+        format!("{filename}.md")
+    };
+
+    let path = state.workspace_root.join(&filename);
+
+    if !path.exists() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ApiError::new(format!("Layout file not found: {filename}"))),
+        ));
+    }
+
+    let layout = LayoutService::load(&path).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError::with_details(
+                "Failed to load layout",
+                e.to_string(),
+            )),
+        )
+    })?;
+
+    // Build tap dance lookup for display info
+    let tap_dance_map: std::collections::HashMap<String, &TapDanceAction> = layout
+        .tap_dances
+        .iter()
+        .map(|td| (td.name.clone(), td))
+        .collect();
+
+    // Build render metadata for each layer
+    let layers: Vec<LayerRenderMetadata> = layout
+        .layers
+        .iter()
+        .map(|layer| {
+            let keys: Vec<KeyRenderMetadata> = layer
+                .keys
+                .iter()
+                .enumerate()
+                .map(|(idx, key)| {
+                    // Check if this is a tap dance keycode and get its info
+                    let td_info = state
+                        .keycode_db
+                        .parse_tap_dance_keycode(&key.keycode)
+                        .and_then(|td_name| tap_dance_map.get(&td_name))
+                        .map(|td| crate::keycode_db::TapDanceDisplayInfo {
+                            single_tap: td.single_tap.clone(),
+                            double_tap: td.double_tap.clone(),
+                            hold: td.hold.clone(),
+                        });
+
+                    // Get display metadata from keycode_db
+                    let meta = state
+                        .keycode_db
+                        .get_display_metadata(&key.keycode, td_info.as_ref());
+
+                    KeyRenderMetadata {
+                        visual_index: idx as u8,
+                        display: KeyDisplayDto {
+                            primary: meta.display.primary,
+                            secondary: meta.display.secondary,
+                            tertiary: meta.display.tertiary,
+                        },
+                        details: meta
+                            .details
+                            .into_iter()
+                            .map(|d| KeyDetailActionDto {
+                                kind: d.kind.into(),
+                                code: d.code,
+                                description: d.description,
+                            })
+                            .collect(),
+                    }
+                })
+                .collect();
+
+            LayerRenderMetadata {
+                number: layer.number,
+                name: layer.name.clone(),
+                keys,
+            }
+        })
+        .collect();
+
+    Ok(Json(RenderMetadataResponse { filename, layers }))
 }
 
 /// GET /api/layouts/{filename}/export - Export layout to markdown.
@@ -2413,6 +2610,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/layouts/{filename}/validate", get(validate_layout))
         .route("/api/layouts/{filename}/inspect", get(inspect_layout))
         .route("/api/layouts/{filename}/export", get(export_layout))
+        .route(
+            "/api/layouts/{filename}/render-metadata",
+            get(get_render_metadata),
+        )
         .route(
             "/api/layouts/{filename}/generate",
             axum::routing::post(generate_firmware),

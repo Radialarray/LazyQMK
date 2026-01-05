@@ -378,3 +378,56 @@ export interface CancelJobResponse {
 	success: boolean;
 	message: string;
 }
+
+// Render Metadata Types (for Key Details Panel)
+
+/** Display labels for a key (short form for in-key display) */
+export interface KeyDisplayDto {
+	/** Primary/main label for the key */
+	primary: string;
+	/** Secondary label (e.g., hold action) - optional */
+	secondary?: string;
+	/** Tertiary label (e.g., double-tap for tap-dance) - optional */
+	tertiary?: string;
+}
+
+/** Type of action in a multi-action keycode */
+export type ActionKindDto = 'tap' | 'hold' | 'double_tap' | 'layer' | 'modifier' | 'simple';
+
+/** Detailed description of a single action within a keycode */
+export interface KeyDetailActionDto {
+	/** Type of action */
+	kind: ActionKindDto;
+	/** Raw keycode or parameter (e.g., "KC_A", "1", "MOD_LCTL") */
+	code: string;
+	/** Human-readable description */
+	description: string;
+}
+
+/** Complete key render metadata for a single key */
+export interface KeyRenderMetadata {
+	/** Visual index (layout array index from info.json) */
+	visual_index: number;
+	/** Short labels for in-key display */
+	display: KeyDisplayDto;
+	/** Full action breakdown for Key Details panel */
+	details: KeyDetailActionDto[];
+}
+
+/** Render metadata for a single layer */
+export interface LayerRenderMetadata {
+	/** Layer number */
+	number: number;
+	/** Layer name */
+	name: string;
+	/** Per-key render metadata */
+	keys: KeyRenderMetadata[];
+}
+
+/** Response for layout render metadata */
+export interface RenderMetadataResponse {
+	/** Layout filename */
+	filename: string;
+	/** Layer-indexed key metadata */
+	layers: LayerRenderMetadata[];
+}
