@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { KeyGeometryInfo, KeyAssignment, Layer, Category } from '$api/types';
+	import type { KeyGeometryInfo, KeyAssignment, Layer, Category, KeyRenderMetadata } from '$api/types';
 	import {
 		transformGeometry,
 		getKeyTransform,
@@ -23,10 +23,14 @@
 		layer?: Layer;
 		/** Categories (for color resolution) */
 		categories?: Category[];
+		/** Render metadata for rich key labels (optional) */
+		renderMetadata?: KeyRenderMetadata[];
 		/** Callback when a key is clicked */
 		onKeyClick?: (visualIndex: number, matrixRow: number, matrixCol: number, shiftKey: boolean) => void;
 		/** Callback when keyboard navigation occurs */
 		onNavigate?: (newKeyIndex: number | null, newSelectedIndices: Set<number>) => void;
+		/** Callback when a key is hovered */
+		onKeyHover?: (visualIndex: number | null) => void;
 		/** Custom class for the container */
 		class?: string;
 		/** Position to visual index mapping from backend (optional, for fallback lookups) */
@@ -40,8 +44,10 @@
 		selectedKeyIndices = new Set(),
 		layer,
 		categories = [],
+		renderMetadata = [],
 		onKeyClick,
 		onNavigate,
+		onKeyHover,
 		class: className = '',
 		positionToVisualIndexMap
 	}: Props = $props();
@@ -90,6 +96,15 @@
 			if (visualIndex >= 0) {
 				map.set(visualIndex, formatKeycode(assignment.keycode));
 			}
+		}
+		return map;
+	});
+
+	// Create a lookup map from visual index to render metadata
+	const renderMetadataMap = $derived.by(() => {
+		const map = new Map<number, KeyRenderMetadata>();
+		for (const metadata of renderMetadata) {
+			map.set(metadata.visual_index, metadata);
 		}
 		return map;
 	});
@@ -153,6 +168,10 @@
 	function handleKeyClick(key: KeySvgData, event: MouseEvent) {
 		onKeyClick?.(key.visualIndex, key.matrixRow, key.matrixCol, event.shiftKey);
 	}
+
+	function handleKeyHover(visualIndex: number | null) {
+		onKeyHover?.(visualIndex);
+	}
 	
 	/**
 	 * Handle keyboard events for navigation
@@ -215,6 +234,7 @@
 			{#each transformed.keys as key (getKeyId(key))}
 				{@const isSelected = selectedKeyIndex === key.visualIndex || selectedKeyIndices.has(key.visualIndex)}
 				{@const label = keycodeMap.get(key.visualIndex) ?? ''}
+				{@const metadata = renderMetadataMap.get(key.visualIndex)}
 				{@const transform = getKeyTransform(key)}
 				{@const fontSize = getFontSize(label)}
 				{@const resolvedColor = colorMap.get(key.visualIndex)}
@@ -225,11 +245,28 @@
 					class="key-group"
 					transform={transform}
 					onclick={(e) => handleKeyClick(key, e)}
+					onmouseenter={() => handleKeyHover(key.visualIndex)}
+					onmouseleave={() => handleKeyHover(null)}
 					data-testid="key-{key.visualIndex}"
 					data-visual-index={key.visualIndex}
 					data-matrix-row={key.matrixRow}
 					data-matrix-col={key.matrixCol}
 				>
+					<!-- RGB Glow filter (applied when color exists) -->
+					{#if resolvedColor && !isSelected}
+						<defs>
+							<filter id="glow-{key.visualIndex}" x="-50%" y="-50%" width="200%" height="200%">
+								<feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+								<feFlood flood-color={resolvedColor} flood-opacity="0.3" result="color" />
+								<feComposite in="color" in2="blur" operator="in" result="glow" />
+								<feMerge>
+									<feMergeNode in="glow" />
+									<feMergeNode in="SourceGraphic" />
+								</feMerge>
+							</filter>
+						</defs>
+					{/if}
+
 					<!-- Key background -->
 					<rect
 						x={key.x}
@@ -240,7 +277,7 @@
 						ry={KEY_BORDER_RADIUS}
 						class="key-bg {isSelected ? 'selected' : ''}"
 						style={resolvedColor && !isSelected ? `fill: ${resolvedColor}` : ''}
-						filter="url(#key-shadow)"
+						filter={resolvedColor && !isSelected ? `url(#glow-${key.visualIndex})` : 'url(#key-shadow)'}
 					/>
 
 					<!-- Key top surface (slightly inset for 3D effect) -->
@@ -255,8 +292,73 @@
 						style={resolvedColor && !isSelected ? `fill: ${resolvedColor}; opacity: 0.8` : ''}
 					/>
 
-					<!-- Key label -->
-					{#if label}
+					<!-- Key label - use render metadata if available, otherwise fallback to formatted keycode -->
+					{#if metadata}
+						{@const primaryLabel = metadata.display.primary}
+						{@const secondaryLabel = metadata.display.secondary}
+						{@const tertiaryLabel = metadata.display.tertiary}
+						{@const labelCount = [primaryLabel, secondaryLabel, tertiaryLabel].filter(Boolean).length}
+						{@const labelFontSize = labelCount > 1 ? 9 : 12}
+						
+						{#if labelCount === 1}
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2 + labelFontSize / 3}
+								text-anchor="middle"
+								class="key-label"
+								font-size={labelFontSize}
+							>
+								{primaryLabel}
+							</text>
+						{:else if labelCount === 2}
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2 - labelFontSize / 2}
+								text-anchor="middle"
+								class="key-label"
+								font-size={labelFontSize}
+							>
+								{primaryLabel}
+							</text>
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2 + labelFontSize + 2}
+								text-anchor="middle"
+								class="key-label secondary"
+								font-size={labelFontSize}
+							>
+								{secondaryLabel}
+							</text>
+						{:else if labelCount === 3}
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2 - labelFontSize}
+								text-anchor="middle"
+								class="key-label"
+								font-size={labelFontSize}
+							>
+								{primaryLabel}
+							</text>
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2}
+								text-anchor="middle"
+								class="key-label secondary"
+								font-size={labelFontSize}
+							>
+								{secondaryLabel}
+							</text>
+							<text
+								x={key.x + key.width / 2}
+								y={key.y + key.height / 2 + labelFontSize + 2}
+								text-anchor="middle"
+								class="key-label tertiary"
+								font-size={labelFontSize}
+							>
+								{tertiaryLabel}
+							</text>
+						{/if}
+					{:else if label}
 						{@const lines = label.split('\n')}
 						{#if lines.length === 1}
 							<text
@@ -339,6 +441,17 @@
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 		font-weight: 500;
 		pointer-events: none;
+	}
+
+	.key-label.secondary {
+		opacity: 0.7;
+		font-weight: 400;
+	}
+
+	.key-label.tertiary {
+		opacity: 0.5;
+		font-weight: 400;
+		font-size: 8px;
 	}
 
 	.key-bg.selected + .key-top + .key-label,

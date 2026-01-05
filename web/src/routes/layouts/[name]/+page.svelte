@@ -24,7 +24,8 @@
 		Category,
 		RgbColor,
 		LayoutVariantInfo,
-		SwitchVariantResponse
+		SwitchVariantResponse,
+		RenderMetadataResponse
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
@@ -86,6 +87,7 @@
 	let geometryLoading = $state(false);
 	let selectedKeyIndex = $state<number | null>(null);
 	let selectedLayerIndex = $state(0);
+	let hoveredKeyIndex = $state<number | null>(null);
 
 	// Multi-selection state
 	let selectionMode = $state(false);
@@ -128,6 +130,11 @@
 	let saveTemplateLoading = $state(false);
 	let saveTemplateError = $state<string | null>(null);
 
+	// State for render metadata (preview features)
+	let renderMetadata = $state<RenderMetadataResponse | null>(null);
+	let renderMetadataLoading = $state(false);
+	let renderMetadataError = $state<string | null>(null);
+
 	// State for switch layout variant
 	let showVariantSwitchDialog = $state(false);
 	let availableVariants = $state<LayoutVariantInfo[]>([]);
@@ -143,6 +150,13 @@
 			loadGeometry(layout.metadata.keyboard, layout.metadata.layout_variant);
 		} else if (layout?.metadata.keyboard && layout?.metadata.layout) {
 			loadGeometry(layout.metadata.keyboard, layout.metadata.layout);
+		}
+	});
+
+	// Load render metadata when filename or layer changes
+	$effect(() => {
+		if (filename) {
+			loadRenderMetadata(filename);
 		}
 	});
 
@@ -180,6 +194,23 @@
 		}
 		
 		geometryLoading = false;
+	}
+
+	async function loadRenderMetadata(layoutFilename: string) {
+		renderMetadataLoading = true;
+		renderMetadataError = null;
+		try {
+			console.log(`[loadRenderMetadata] Loading render metadata for ${layoutFilename}`);
+			renderMetadata = await apiClient.getRenderMetadata(layoutFilename);
+			console.log(`[loadRenderMetadata] Success - Loaded metadata for ${renderMetadata.layers.length} layers`);
+		} catch (e) {
+			const errorMsg = e instanceof Error ? e.message : 'Failed to load render metadata';
+			console.warn(`[loadRenderMetadata] Failed:`, errorMsg);
+			renderMetadataError = errorMsg;
+			renderMetadata = null;
+		} finally {
+			renderMetadataLoading = false;
+		}
 	}
 
 	async function openVariantSwitch() {
@@ -259,6 +290,13 @@
 	function handleKeyboardNavigation(newKeyIndex: number | null, newSelectedIndices: Set<number>) {
 		selectedKeyIndex = newKeyIndex;
 		selectedKeyIndices = newSelectedIndices;
+	}
+
+	/**
+	 * Handle key hover from KeyboardPreview
+	 */
+	function handleKeyHover(newHoveredIndex: number | null) {
+		hoveredKeyIndex = newHoveredIndex;
 	}
 	
 	/**
@@ -397,10 +435,31 @@
 	// Get key assignments for the current layer
 	const currentLayerKeys = $derived(layout?.layers[selectedLayerIndex]?.keys ?? []);
 
+	// Get render metadata for the current layer
+	const currentLayerRenderMetadata = $derived.by(() => {
+		if (!renderMetadata || !renderMetadata.layers) return [];
+		const layerMeta = renderMetadata.layers.find(l => l.number === selectedLayerIndex);
+		return layerMeta?.keys ?? [];
+	});
+
 	// Get selected key details
 	const selectedKey = $derived.by(() => {
 		if (selectedKeyIndex === null || !currentLayerKeys.length) return null;
 		return currentLayerKeys.find((k) => k.visual_index === selectedKeyIndex) ?? null;
+	});
+
+	// Get hovered key details (for preview panel)
+	const hoveredKey = $derived.by(() => {
+		if (hoveredKeyIndex === null || !currentLayerKeys.length) return null;
+		return currentLayerKeys.find((k) => k.visual_index === hoveredKeyIndex) ?? null;
+	});
+
+	// Get active key for details panel (hover takes precedence over selection for preview)
+	const activeKeyIndex = $derived(hoveredKeyIndex ?? selectedKeyIndex);
+	const activeKey = $derived(hoveredKey ?? selectedKey);
+	const activeKeyRenderMetadata = $derived.by(() => {
+		if (activeKeyIndex === null || !currentLayerRenderMetadata.length) return null;
+		return currentLayerRenderMetadata.find((k) => k.visual_index === activeKeyIndex) ?? null;
 	});
 
 	// Save functionality
@@ -1120,8 +1179,10 @@
 							{selectedKeyIndices}
 							layer={layout.layers[selectedLayerIndex]}
 							categories={layout.categories || []}
+							renderMetadata={currentLayerRenderMetadata}
 							onKeyClick={handleKeyClick}
 							onNavigate={handleKeyboardNavigation}
+							onKeyHover={handleKeyHover}
 							positionToVisualIndexMap={geometry.position_to_visual_index}
 							class="max-w-4xl mx-auto"
 						/>
@@ -1133,91 +1194,128 @@
 				</Card>
 
 				<!-- Key Details Card -->
-				{#if selectedKey}
-					<Card class="p-6">
-						<h2 class="text-lg font-semibold mb-4">Key Details & Customization</h2>
-						<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-							<div>
-								<dt class="font-medium text-muted-foreground">Visual Index</dt>
-								<dd class="font-mono">{selectedKey.visual_index}</dd>
-							</div>
-							<div>
-								<dt class="font-medium text-muted-foreground">Matrix Position</dt>
-								<dd class="font-mono">
-									[{selectedKey.matrix_position[0]}, {selectedKey.matrix_position[1]}]
-								</dd>
-							</div>
-							<div>
-								<dt class="font-medium text-muted-foreground">LED Index</dt>
-								<dd class="font-mono">{selectedKey.led_index ?? 'N/A'}</dd>
-							</div>
-							<div>
-								<dt class="font-medium text-muted-foreground">Keycode</dt>
-								<dd class="font-mono">{selectedKey.keycode}</dd>
-							</div>
-						</dl>
-
-						<div class="border-t border-border pt-4 space-y-4">
-							<h3 class="font-medium text-sm">Key Customization</h3>
-
-							<!-- Edit Keycode Button -->
-							<div>
-								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
-								<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
-							</div>
-
-							<!-- Key Color Override -->
-							<div>
-								<p class="block text-xs font-medium text-muted-foreground mb-2">Color Override</p>
-								{#if selectedKey.color_override}
-									<div class="flex items-center gap-2">
-										<div
-											class="w-8 h-8 rounded border border-border"
-											style="background-color: rgb({selectedKey.color_override.r}, {selectedKey.color_override
-												.g}, {selectedKey.color_override.b})"
-										></div>
-										<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" variant="outline">
-											Change
-										</Button>
-										<Button onclick={clearKeyColorOverride} size="sm" variant="outline" data-testid="clear-color-override-button">Clear</Button>
-									</div>
-								{:else}
-									<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" data-testid="set-color-button">Set Color</Button>
-								{/if}
-								{#if showKeyColorPicker}
-									<div class="mt-3 p-4 border border-border rounded-lg">
-										<ColorPicker
-											color={selectedKey.color_override}
-											onSelect={setKeyColorOverride}
-											onClear={clearKeyColorOverride}
-											label="Key Color Override"
-											showClear={!!selectedKey.color_override}
-										/>
-									</div>
-								{/if}
-							</div>
-
-							<!-- Key Category -->
-							<div>
-								<label for="key-category" class="block text-xs font-medium text-muted-foreground mb-2">Category</label>
-								<select
-									id="key-category"
-									class="w-full px-3 py-2 border border-border rounded-lg bg-background"
-									value={selectedKey.category_id || ''}
-									onchange={(e) => setKeyCategory(e.currentTarget.value || undefined)}
-								>
-									<option value="">None</option>
-									{#if layout.categories}
-										{#each layout.categories as category}
-											<option value={category.id}>{category.name}</option>
-										{/each}
-									{/if}
-								</select>
+				{#if activeKey || (selectedKeyIndices.size > 1 && hoveredKeyIndex === null)}
+					<Card class="p-6" data-testid="key-details-card">
+						<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
+							{hoveredKeyIndex !== null ? 'Key Preview' : 'Key Details & Customization'}
+						</h2>
+						
+						{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
+							<!-- Multi-selection summary -->
+							<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="multi-selection-summary">
+								<p class="font-medium text-sm">Multiple Keys Selected ({selectedKeyIndices.size} keys)</p>
 								<p class="text-xs text-muted-foreground mt-1">
-									Assign this key to a category for automatic coloring
+									Use Copy, Cut, or Paste operations to modify the selection
 								</p>
 							</div>
-						</div>
+						{:else if activeKey}
+							<!-- Single key details -->
+							<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+								<div>
+									<dt class="font-medium text-muted-foreground">Visual Index</dt>
+									<dd class="font-mono">{activeKey.visual_index}</dd>
+								</div>
+								<div>
+									<dt class="font-medium text-muted-foreground">Matrix Position</dt>
+									<dd class="font-mono">
+										[{activeKey.matrix_position[0]}, {activeKey.matrix_position[1]}]
+									</dd>
+								</div>
+								<div>
+									<dt class="font-medium text-muted-foreground">LED Index</dt>
+									<dd class="font-mono">{activeKey.led_index ?? 'N/A'}</dd>
+								</div>
+								<div>
+									<dt class="font-medium text-muted-foreground">Keycode</dt>
+									<dd class="font-mono">{activeKey.keycode}</dd>
+								</div>
+							</dl>
+
+							{#if activeKeyRenderMetadata && activeKeyRenderMetadata.details.length > 0}
+								<!-- Rich key action breakdown -->
+								<div class="border-t border-border pt-4 mb-4">
+									<h3 class="font-medium text-sm mb-3">Key Actions</h3>
+									<div class="space-y-2">
+										{#each activeKeyRenderMetadata.details as action}
+											<div class="flex items-start gap-3 text-sm">
+												<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium uppercase min-w-[80px] justify-center">
+													{action.kind.replace('_', ' ')}
+												</span>
+												<div class="flex-1">
+													<code class="text-xs bg-muted px-1.5 py-0.5 rounded">{action.code}</code>
+													<p class="text-muted-foreground mt-1">{action.description}</p>
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+
+							{#if hoveredKeyIndex === null && selectedKey}
+								<!-- Customization controls (only shown when not hovering) -->
+								<div class="border-t border-border pt-4 space-y-4">
+									<h3 class="font-medium text-sm">Key Customization</h3>
+
+									<!-- Edit Keycode Button -->
+									<div>
+										<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
+										<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
+									</div>
+
+									<!-- Key Color Override -->
+									<div>
+										<p class="block text-xs font-medium text-muted-foreground mb-2">Color Override</p>
+										{#if selectedKey.color_override}
+											<div class="flex items-center gap-2">
+												<div
+													class="w-8 h-8 rounded border border-border"
+													style="background-color: rgb({selectedKey.color_override.r}, {selectedKey.color_override
+														.g}, {selectedKey.color_override.b})"
+												></div>
+												<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" variant="outline">
+													Change
+												</Button>
+												<Button onclick={clearKeyColorOverride} size="sm" variant="outline" data-testid="clear-color-override-button">Clear</Button>
+											</div>
+										{:else}
+											<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" data-testid="set-color-button">Set Color</Button>
+										{/if}
+										{#if showKeyColorPicker}
+											<div class="mt-3 p-4 border border-border rounded-lg">
+												<ColorPicker
+													color={selectedKey.color_override}
+													onSelect={setKeyColorOverride}
+													onClear={clearKeyColorOverride}
+													label="Key Color Override"
+													showClear={!!selectedKey.color_override}
+												/>
+											</div>
+										{/if}
+									</div>
+
+									<!-- Key Category -->
+									<div>
+										<label for="key-category" class="block text-xs font-medium text-muted-foreground mb-2">Category</label>
+										<select
+											id="key-category"
+											class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+											value={selectedKey.category_id || ''}
+											onchange={(e) => setKeyCategory(e.currentTarget.value || undefined)}
+										>
+											<option value="">None</option>
+											{#if layout.categories}
+												{#each layout.categories as category}
+													<option value={category.id}>{category.name}</option>
+												{/each}
+											{/if}
+										</select>
+										<p class="text-xs text-muted-foreground mt-1">
+											Assign this key to a category for automatic coloring
+										</p>
+									</div>
+								</div>
+							{/if}
+						{/if}
 					</Card>
 				{/if}
 			</div>

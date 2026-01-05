@@ -61,6 +61,37 @@ test.describe('Keyboard Preview', () => {
 		}
 	};
 
+	// Mock render metadata data
+	const mockRenderMetadata = {
+		filename: 'test-layout',
+		layers: [
+			{
+				number: 0,
+				name: 'Base',
+				keys: [
+					{ visual_index: 0, display: { primary: 'Q' }, details: [{ kind: 'simple', code: 'KC_Q', description: 'Letter Q' }] },
+					{ visual_index: 1, display: { primary: 'W' }, details: [{ kind: 'simple', code: 'KC_W', description: 'Letter W' }] },
+					{ visual_index: 2, display: { primary: 'E' }, details: [{ kind: 'simple', code: 'KC_E', description: 'Letter E' }] },
+					{ visual_index: 3, display: { primary: 'A' }, details: [{ kind: 'simple', code: 'KC_A', description: 'Letter A' }] },
+					{ visual_index: 4, display: { primary: 'S' }, details: [{ kind: 'simple', code: 'KC_S', description: 'Letter S' }] },
+					{ visual_index: 5, display: { primary: 'D' }, details: [{ kind: 'simple', code: 'KC_D', description: 'Letter D' }] }
+				]
+			},
+			{
+				number: 1,
+				name: 'Lower',
+				keys: [
+					{ visual_index: 0, display: { primary: '1' }, details: [{ kind: 'simple', code: 'KC_1', description: 'Number 1' }] },
+					{ visual_index: 1, display: { primary: '2' }, details: [{ kind: 'simple', code: 'KC_2', description: 'Number 2' }] },
+					{ visual_index: 2, display: { primary: '3' }, details: [{ kind: 'simple', code: 'KC_3', description: 'Number 3' }] },
+					{ visual_index: 3, display: { primary: '4' }, details: [{ kind: 'simple', code: 'KC_4', description: 'Number 4' }] },
+					{ visual_index: 4, display: { primary: '5' }, details: [{ kind: 'simple', code: 'KC_5', description: 'Number 5' }] },
+					{ visual_index: 5, display: { primary: '6' }, details: [{ kind: 'simple', code: 'KC_6', description: 'Number 6' }] }
+				]
+			}
+		]
+	};
+
 	test.beforeEach(async ({ page }) => {
 		// Mock the layout API endpoint - needs to be set up before navigation
 		await page.route('**/api/layouts/test-layout*', async (route) => {
@@ -77,6 +108,15 @@ test.describe('Keyboard Preview', () => {
 				status: 200,
 				contentType: 'application/json',
 				body: JSON.stringify(mockGeometry)
+			});
+		});
+
+		// Mock the render metadata API endpoint
+		await page.route('**/api/layouts/test-layout/render-metadata', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(mockRenderMetadata)
 			});
 		});
 	});
@@ -127,11 +167,15 @@ test.describe('Keyboard Preview', () => {
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
+		// Move mouse away to clear hover state
+		await page.mouse.move(0, 0);
+
 		// Verify selection is shown - check for the keycode display
 		await expect(page.getByText('Selected:')).toBeVisible();
 
-		// Verify key details card appears
-		await expect(page.getByRole('heading', { name: 'Key Details & Customization' })).toBeVisible();
+		// Verify key details card appears - use data-testid for stability
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
 		await expect(page.getByText('Visual Index')).toBeVisible();
 	});
 
@@ -150,8 +194,12 @@ test.describe('Keyboard Preview', () => {
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
+		// Move mouse away to clear hover state
+		await page.mouse.move(0, 0);
+		
 		// Verify key details card is visible for first key
-		await expect(page.getByRole('heading', { name: 'Key Details & Customization' })).toBeVisible();
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
 
 		// Click on second key to change selection - opens picker again
 		await page.locator('[data-testid="key-1"]').click();
@@ -161,8 +209,12 @@ test.describe('Keyboard Preview', () => {
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
+		// Move mouse away to clear hover state
+		await page.mouse.move(0, 0);
+
 		// Verify key details card is still visible (for second key)
-		await expect(page.getByRole('heading', { name: 'Key Details & Customization' })).toBeVisible();
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
 	});
 
 	test('switching layers updates displayed layer', async ({ page }) => {
@@ -198,14 +250,19 @@ test.describe('Keyboard Preview', () => {
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
+		// Move mouse away to clear hover state
+		await page.mouse.move(0, 0);
+		
 		// Verify key details card is visible
-		await expect(page.getByRole('heading', { name: 'Key Details & Customization' })).toBeVisible();
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
 		
 		// Switch to a different layer
 		await page.getByRole('button', { name: 'Lower' }).first().click();
 		
 		// Key details should still be visible (selection persists across layer changes - correct behavior)
-		await expect(page.getByRole('heading', { name: 'Key Details & Customization' })).toBeVisible();
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
 	});
 
 	test('shows error message when geometry fails to load', async ({ page }) => {
@@ -225,5 +282,65 @@ test.describe('Keyboard Preview', () => {
 
 		// Should show error message
 		await expect(page.getByText('Failed to load keyboard geometry')).toBeVisible();
+	});
+
+	test('hovering a key shows preview details', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
+
+		// First, select a key to ensure the card stays visible
+		await page.locator('[data-testid="key-0"]').click();
+		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
+		
+		// Move mouse away to clear initial hover
+		await page.mouse.move(0, 0);
+		
+		// Verify we're in customization mode (not hovering)
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
+
+		// Now hover over the selected key
+		await page.locator('[data-testid="key-0"]').hover();
+
+		// Key details panel should change to "Key Preview" mode
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Preview');
+
+		// Should show key action details
+		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('SIMPLE')).toBeVisible();
+		await expect(page.getByText('Letter Q')).toBeVisible();
+
+		// Move mouse away
+		await page.mouse.move(0, 0);
+
+		// Should revert to customization mode
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Details & Customization');
+	});
+
+	test('shows multi-selection summary when multiple keys selected', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
+
+		// Enable selection mode
+		await page.getByTestId('selection-mode-button').click();
+
+		// Click multiple keys
+		await page.locator('[data-testid="key-0"]').click();
+		await page.locator('[data-testid="key-1"]').click();
+		
+		// Move mouse away to clear hover state and show multi-selection summary
+		await page.mouse.move(0, 0);
+
+		// Should show multi-selection summary
+		await expect(page.getByTestId('multi-selection-summary')).toBeVisible();
+		await expect(page.getByText('Multiple Keys Selected (2 keys)')).toBeVisible();
+		await expect(page.getByText('Use Copy, Cut, or Paste operations')).toBeVisible();
 	});
 });
