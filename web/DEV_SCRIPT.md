@@ -43,11 +43,17 @@ The tests validate:
    - Runs: `cargo run --features web --bin lazyqmk-web -- --port 3001`
    - Working directory: `../` (project root)
 
-2. **Starts Vite dev server** on `http://localhost:5173`
+2. **Waits for backend to be ready**
+   - Polls `/health` endpoint every second (up to 30 seconds)
+   - Provides progress updates every 5 attempts
+   - Exits with error if backend doesn't start within timeout
+
+3. **Starts Vite dev server** on `http://localhost:5173`
    - Runs: `pnpm dev` (or `npm run dev`)
    - Proxies `/api` and `/health` requests to backend (configured in `vite.config.ts`)
+   - Only starts after backend health check succeeds
 
-3. **Handles cleanup** on exit (Ctrl+C)
+4. **Handles cleanup** on exit (Ctrl+C)
    - Gracefully terminates both processes
    - Works on Windows (taskkill) and Unix (SIGTERM)
 
@@ -73,6 +79,26 @@ The tests validate:
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
+```
+
+### Backend takes too long to start
+
+**Error:** `Backend never became healthy. Check logs above for errors.`
+
+**Possible causes:**
+- Backend compilation is slow (first run or after clean)
+- Port 3001 is already in use
+- Cargo configuration issues
+
+**Solution:** Check backend logs above the error. Common fixes:
+```bash
+# Clean and rebuild
+cd ..
+cargo clean
+cargo build --features web --bin lazyqmk-web
+
+# Or manually start backend to see detailed errors
+cargo run --features web --bin lazyqmk-web -- --port 3001
 ```
 
 ### Frontend fails to start
@@ -119,7 +145,8 @@ pnpm dev
 The script uses Node.js `child_process.spawn` to launch both services:
 
 - **Backend:** Spawns `cargo run` in parent directory (`../`)
-- **Frontend:** Spawns `pnpm dev` (or `npm run dev`) in current directory
+- **Health check:** Polls `GET /health` every 1 second (max 30 attempts) before starting frontend
+- **Frontend:** Spawns `pnpm dev` (or `npm run dev`) in current directory (only after backend is healthy)
 - **Process management:** Tracks all child processes and cleans up on exit
 - **Platform detection:** Uses `os.platform()` to handle Windows vs. Unix differences
 - **Color output:** ANSI escape codes for clear, colored terminal output
@@ -127,7 +154,7 @@ The script uses Node.js `child_process.spawn` to launch both services:
 - **Exit code 143:** Properly handled (SIGTERM exit code) to avoid triggering cleanup loops
 - **Signal handling:** Responds to SIGINT (Ctrl+C) and SIGTERM, but not the 'exit' event to prevent cascading
 
-No external dependencies required - uses only Node.js built-in modules (`child_process`, `os`).
+No external dependencies required - uses only Node.js built-in modules (`child_process`, `os`, `fetch`).
 
 ## Behavior Notes
 

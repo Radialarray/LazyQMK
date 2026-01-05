@@ -144,14 +144,37 @@
 	async function loadGeometry(keyboard: string, layoutName: string) {
 		geometryLoading = true;
 		geometryError = null;
-		try {
-			geometry = await apiClient.getGeometry(keyboard, layoutName);
-		} catch (e) {
-			geometryError = e instanceof Error ? e.message : 'Failed to load keyboard geometry';
-			geometry = null;
-		} finally {
-			geometryLoading = false;
+		
+		const maxRetries = 3;
+		const retryDelayMs = 500;
+		
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				console.log(`[loadGeometry] Attempt ${attempt}/${maxRetries} - Loading geometry for ${keyboard}/${layoutName}`);
+				geometry = await apiClient.getGeometry(keyboard, layoutName);
+				console.log(`[loadGeometry] Success - Loaded ${geometry.keys.length} keys`);
+				geometryLoading = false;
+				return; // Success, exit early
+			} catch (e) {
+				const errorMsg = e instanceof Error ? e.message : 'Failed to load keyboard geometry';
+				console.warn(`[loadGeometry] Attempt ${attempt}/${maxRetries} failed:`, errorMsg);
+				
+				// On last attempt, set error state and give up
+				if (attempt === maxRetries) {
+					geometryError = errorMsg;
+					geometry = null;
+					console.error(`[loadGeometry] All attempts failed. Final error:`, errorMsg);
+				} else {
+					// Wait before retry, but only log on first retry to avoid spam
+					if (attempt === 1) {
+						console.log(`[loadGeometry] Backend may still be starting, will retry...`);
+					}
+					await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+				}
+			}
 		}
+		
+		geometryLoading = false;
 	}
 
 	async function openVariantSwitch() {

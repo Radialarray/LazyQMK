@@ -154,6 +154,42 @@ function startFrontend() {
   return frontend;
 }
 
+/**
+ * Poll the backend health endpoint until it's ready
+ * @param {number} maxAttempts - Maximum number of attempts (default 30 = 30 seconds)
+ * @param {number} intervalMs - Milliseconds between attempts (default 1000)
+ * @returns {Promise<boolean>} - True if backend is ready, false if timeout
+ */
+async function waitForBackend(maxAttempts = 30, intervalMs = 1000) {
+  log(colors.yellow, 'INFO', 'Waiting for backend to be ready...');
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Try to fetch the health endpoint
+      const response = await fetch('http://localhost:3001/health');
+      
+      if (response.ok) {
+        const data = await response.json();
+        log(colors.green, 'BACKEND', `Ready! (version ${data.version || 'unknown'})`);
+        return true;
+      }
+    } catch (err) {
+      // Expected during startup - backend not ready yet
+      // Only log every 5 attempts to avoid spam
+      if (attempt % 5 === 0) {
+        log(colors.yellow, 'INFO', `Still waiting for backend... (attempt ${attempt}/${maxAttempts})`);
+      }
+    }
+    
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+  
+  // Timeout reached
+  log(colors.red, 'BACKEND', `Failed to start after ${maxAttempts} seconds`);
+  return false;
+}
+
 // Main execution
 async function main() {
   console.log(`${colors.bright}${colors.cyan}╔════════════════════════════════════════════════╗${colors.reset}`);
@@ -168,9 +204,14 @@ async function main() {
   // Start backend first (frontend depends on it)
   startBackend();
   
-  // Wait a bit for backend to start
-  log(colors.yellow, 'INFO', 'Waiting for backend to initialize...');
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // Poll health endpoint until backend is ready
+  const backendReady = await waitForBackend();
+  
+  if (!backendReady) {
+    log(colors.red, 'ERROR', 'Backend never became healthy. Check logs above for errors.');
+    cleanup();
+    return;
+  }
   
   // Start frontend
   startFrontend();
