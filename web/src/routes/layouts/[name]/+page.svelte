@@ -30,9 +30,10 @@
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
 
 	let { data }: { data: PageData } = $props();
-	// Initialize layout from data, but make it mutable state
-	let layout = $state(data.layout);
-	// React to data changes
+	// Initialize layout as mutable state without referencing props
+	// The $effect below syncs it with data.layout when data changes
+	let layout = $state() as Layout;
+	// React to data changes and sync layout
 	$effect(() => {
 		layout = data.layout;
 	});

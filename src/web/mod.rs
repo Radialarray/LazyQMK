@@ -226,6 +226,8 @@ pub struct ConfigResponse {
     pub qmk_firmware_path: Option<String>,
     /// Output directory for generated files.
     pub output_dir: String,
+    /// Workspace root directory where layout files are stored.
+    pub workspace_root: String,
 }
 
 /// Configuration update request.
@@ -758,6 +760,7 @@ async fn get_config(State(state): State<AppState>) -> Json<ConfigResponse> {
             .as_ref()
             .map(|p| p.display().to_string()),
         output_dir: state.config.build.output_dir.display().to_string(),
+        workspace_root: state.workspace_root.display().to_string(),
     })
 }
 

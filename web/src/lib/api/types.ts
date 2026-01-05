@@ -152,6 +152,7 @@ export interface CategoryListResponse {
 export interface ConfigResponse {
 	qmk_firmware_path?: string;
 	output_dir: string;
+	workspace_root: string;
 }
 
 export interface ConfigUpdateRequest {

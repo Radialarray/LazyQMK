@@ -104,10 +104,10 @@
 			<Card class="p-6">
 				<h2 class="text-xl font-semibold mb-4">Workspace Root</h2>
 				<p class="text-sm text-muted-foreground mb-4">
-					Directory containing your layout files (configured when starting the backend)
+					Directory containing your layout files. Use <code class="bg-muted px-1 rounded">--workspace</code> when starting the backend to change this.
 				</p>
 				<p class="text-sm">
-					Current workspace: <code class="bg-muted px-2 py-1 rounded">{config?.output_dir || 'Unknown'}</code>
+					<code class="bg-muted px-2 py-1 rounded">{config?.workspace_root || 'Unknown'}</code>
 				</p>
 			</Card>
 

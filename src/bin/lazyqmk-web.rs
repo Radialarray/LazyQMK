@@ -6,7 +6,7 @@
 //! # Usage
 //!
 //! ```bash
-//! # Start with default settings (port 3001, current directory)
+//! # Start with default settings (port 3001, uses ~/.config/LazyQMK/layouts/)
 //! lazyqmk-web
 //!
 //! # Specify port and workspace
@@ -16,6 +16,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::Parser;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -35,13 +36,32 @@ struct Args {
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
 
-    /// Workspace directory containing layout files
+    /// Workspace directory containing layout files.
+    /// Defaults to the platform-specific layouts directory:
+    /// - Linux: ~/.config/LazyQMK/layouts/
+    /// - macOS: ~/Library/Application Support/LazyQMK/layouts/
+    /// - Windows: %APPDATA%\LazyQMK\layouts\
     #[arg(short, long)]
     workspace: Option<PathBuf>,
 
     /// Enable verbose logging
     #[arg(short, long)]
     verbose: bool,
+}
+
+/// Gets the default layouts directory, creating it if it doesn't exist.
+fn get_default_layouts_dir() -> anyhow::Result<PathBuf> {
+    let layouts_dir = Config::config_dir()?.join("layouts");
+
+    // Create directory if it doesn't exist
+    if !layouts_dir.exists() {
+        std::fs::create_dir_all(&layouts_dir).context(format!(
+            "Failed to create layouts directory: {}",
+            layouts_dir.display()
+        ))?;
+    }
+
+    Ok(layouts_dir)
 }
 
 #[tokio::main]
@@ -60,10 +80,13 @@ async fn main() -> anyhow::Result<()> {
     // Load or create configuration
     let config = Config::load().unwrap_or_default();
 
-    // Determine workspace root
-    let workspace_root = args
-        .workspace
-        .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current directory"));
+    // Determine workspace root:
+    // 1. Use --workspace if provided
+    // 2. Otherwise, use Config::config_dir()/layouts (same as TUI)
+    let workspace_root = match args.workspace {
+        Some(path) => path,
+        None => get_default_layouts_dir()?,
+    };
 
     info!("Workspace root: {}", workspace_root.display());
 
