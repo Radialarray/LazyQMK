@@ -33,18 +33,29 @@ function log(color, prefix, message) {
 
 // Track child processes for cleanup
 const processes = [];
+let cleanupInProgress = false;
 
 function cleanup() {
+  // Guard against multiple cleanup calls
+  if (cleanupInProgress) {
+    return;
+  }
+  cleanupInProgress = true;
+  
   log(colors.yellow, 'CLEANUP', 'Stopping all processes...');
   
   processes.forEach(proc => {
     if (proc && !proc.killed) {
-      if (IS_WINDOWS) {
-        // Windows: kill process tree
-        spawn('taskkill', ['/pid', proc.pid, '/f', '/t'], { shell: true });
-      } else {
-        // Unix: send SIGTERM
-        proc.kill('SIGTERM');
+      try {
+        if (IS_WINDOWS) {
+          // Windows: kill process tree
+          spawn('taskkill', ['/pid', proc.pid, '/f', '/t'], { shell: true });
+        } else {
+          // Unix: send SIGTERM
+          proc.kill('SIGTERM');
+        }
+      } catch (err) {
+        // Process may have already exited, ignore errors
       }
     }
   });
@@ -54,10 +65,9 @@ function cleanup() {
   }, 1000);
 }
 
-// Handle cleanup on exit
+// Handle cleanup on signals only (not on 'exit' to avoid cascading cleanup)
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
-process.on('exit', cleanup);
 
 function startBackend() {
   log(colors.cyan, 'BACKEND', 'Starting Rust backend on http://localhost:3001...');
@@ -84,9 +94,24 @@ function startBackend() {
     cleanup();
   });
   
-  backend.on('exit', (code) => {
-    if (code !== 0 && code !== null) {
+  backend.on('exit', (code, signal) => {
+    // Don't trigger cleanup if process was terminated by our cleanup (SIGTERM = code 143 or signal 'SIGTERM')
+    // or if cleanup is already in progress
+    if (cleanupInProgress) {
+      return;
+    }
+    
+    if (code !== 0 && code !== null && code !== 143) {
+      // Check for common errors and provide helpful messages
       log(colors.red, 'BACKEND', `Exited with code ${code}`);
+      
+      if (code === 98 || (signal === null && code !== null)) {
+        // Address already in use (Unix: 98, Windows varies)
+        log(colors.yellow, 'BACKEND', 'Port 3001 may already be in use');
+        log(colors.yellow, 'BACKEND', 'Run: lsof -ti:3001 | xargs kill (macOS/Linux)');
+        log(colors.yellow, 'BACKEND', 'Or check DEV_SCRIPT.md for Windows instructions');
+      }
+      
       cleanup();
     }
   });
@@ -113,8 +138,14 @@ function startFrontend() {
     cleanup();
   });
   
-  frontend.on('exit', (code) => {
-    if (code !== 0 && code !== null) {
+  frontend.on('exit', (code, signal) => {
+    // Don't trigger cleanup if process was terminated by our cleanup (SIGTERM = code 143 or signal 'SIGTERM')
+    // or if cleanup is already in progress
+    if (cleanupInProgress) {
+      return;
+    }
+    
+    if (code !== 0 && code !== null && code !== 143) {
       log(colors.red, 'FRONTEND', `Exited with code ${code}`);
       cleanup();
     }

@@ -14,6 +14,29 @@ npm run dev:web
 node dev.mjs
 ```
 
+## Testing
+
+The dev script includes unit tests to ensure stability and correct signal handling:
+
+```bash
+# Run all tests (including dev script tests)
+pnpm test
+
+# Run only dev script tests
+pnpm test:dev-script
+
+# Run only vitest unit tests
+pnpm test:unit
+```
+
+The tests validate:
+- ✅ Cleanup guard prevents multiple cleanup calls
+- ✅ Exit code 143 (SIGTERM) is properly ignored
+- ✅ Non-zero exit codes trigger cleanup
+- ✅ Cleanup in progress flag prevents cascading cleanup
+- ✅ Platform detection works correctly
+- ✅ Process kill errors are handled gracefully
+
 ## What It Does
 
 1. **Starts Rust backend** on `http://localhost:3001`
@@ -100,5 +123,25 @@ The script uses Node.js `child_process.spawn` to launch both services:
 - **Process management:** Tracks all child processes and cleans up on exit
 - **Platform detection:** Uses `os.platform()` to handle Windows vs. Unix differences
 - **Color output:** ANSI escape codes for clear, colored terminal output
+- **Cleanup guard:** Prevents cascading cleanup calls when child processes exit due to SIGTERM
+- **Exit code 143:** Properly handled (SIGTERM exit code) to avoid triggering cleanup loops
+- **Signal handling:** Responds to SIGINT (Ctrl+C) and SIGTERM, but not the 'exit' event to prevent cascading
 
 No external dependencies required - uses only Node.js built-in modules (`child_process`, `os`).
+
+## Behavior Notes
+
+### Graceful Shutdown
+- Press Ctrl+C once to stop both services
+- The script sends SIGTERM to child processes and waits 1 second before exiting
+- Exit code 143 (SIGTERM) is treated as normal shutdown, not an error
+
+### Error Handling
+- If backend fails to start, the script displays a clear error and exits cleanly
+- Port conflict detection provides platform-specific instructions
+- Cleanup guard prevents infinite loops if multiple exit events fire
+
+### Cross-Platform Compatibility
+- **Unix (macOS/Linux):** Uses `proc.kill('SIGTERM')` for graceful termination
+- **Windows:** Uses `taskkill /f /t` to terminate process tree
+- **Exit codes:** Handles platform differences (e.g., Unix exit 143 for SIGTERM)
