@@ -29,7 +29,8 @@ describe('transformGeometry', () => {
 				y: 0,
 				width: 1,
 				height: 1,
-				rotation: 0
+				rotation: 0,
+				visual_index: 0
 			}
 		];
 
@@ -53,9 +54,9 @@ describe('transformGeometry', () => {
 
 	it('transforms multiple keys with correct positions', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0 },
-			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0 },
-			{ matrix_row: 1, matrix_col: 0, x: 0, y: 1, width: 1, height: 1, rotation: 0 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, visual_index: 0 },
+			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0, visual_index: 1 },
+			{ matrix_row: 1, matrix_col: 0, x: 0, y: 1, width: 1, height: 1, rotation: 0, visual_index: 2 }
 		];
 
 		const result = transformGeometry(keys);
@@ -77,8 +78,8 @@ describe('transformGeometry', () => {
 
 	it('handles wide keys (1.5u, 2u)', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1.5, height: 1, rotation: 0 },
-			{ matrix_row: 0, matrix_col: 1, x: 1.5, y: 0, width: 2, height: 1, rotation: 0 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1.5, height: 1, rotation: 0, visual_index: 0 },
+			{ matrix_row: 0, matrix_col: 1, x: 1.5, y: 0, width: 2, height: 1, rotation: 0, visual_index: 1 }
 		];
 
 		const result = transformGeometry(keys);
@@ -89,7 +90,7 @@ describe('transformGeometry', () => {
 
 	it('preserves rotation values', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 15 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 15, visual_index: 0 }
 		];
 
 		const result = transformGeometry(keys);
@@ -98,7 +99,7 @@ describe('transformGeometry', () => {
 
 	it('preserves LED index when present', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, led_index: 5 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, led_index: 5, visual_index: 0 }
 		];
 
 		const result = transformGeometry(keys);
@@ -107,7 +108,7 @@ describe('transformGeometry', () => {
 
 	it('handles negative coordinates (normalizes to positive)', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: -1, y: -1, width: 1, height: 1, rotation: 0 }
+			{ matrix_row: 0, matrix_col: 0, x: -1, y: -1, width: 1, height: 1, rotation: 0, visual_index: 0 }
 		];
 
 		const result = transformGeometry(keys);
@@ -119,8 +120,8 @@ describe('transformGeometry', () => {
 
 	it('assigns visual index based on array order', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 1, matrix_col: 2, x: 0, y: 0, width: 1, height: 1, rotation: 0 },
-			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0 }
+			{ matrix_row: 1, matrix_col: 2, x: 0, y: 0, width: 1, height: 1, rotation: 0, visual_index: 0 },
+			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0, visual_index: 1 }
 		];
 
 		const result = transformGeometry(keys);
@@ -131,7 +132,7 @@ describe('transformGeometry', () => {
 
 	it('allows custom unit size', () => {
 		const keys: KeyGeometryInfo[] = [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, visual_index: 0 }
 		];
 
 		const customUnitSize = 100;

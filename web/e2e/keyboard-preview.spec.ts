@@ -45,12 +45,12 @@ test.describe('Keyboard Preview', () => {
 		keyboard: 'crkbd',
 		layout: 'LAYOUT_split_3x6_3',
 		keys: [
-			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, led_index: 0 },
-			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0, led_index: 1 },
-			{ matrix_row: 0, matrix_col: 2, x: 2, y: 0, width: 1, height: 1, rotation: 0, led_index: 2 },
-			{ matrix_row: 1, matrix_col: 0, x: 0, y: 1, width: 1, height: 1, rotation: 0, led_index: 3 },
-			{ matrix_row: 1, matrix_col: 1, x: 1, y: 1, width: 1, height: 1, rotation: 0, led_index: 4 },
-			{ matrix_row: 1, matrix_col: 2, x: 2, y: 1, width: 1, height: 1, rotation: 0, led_index: 5 }
+			{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, led_index: 0, visual_index: 0 },
+			{ matrix_row: 0, matrix_col: 1, x: 1, y: 0, width: 1, height: 1, rotation: 0, led_index: 1, visual_index: 1 },
+			{ matrix_row: 0, matrix_col: 2, x: 2, y: 0, width: 1, height: 1, rotation: 0, led_index: 2, visual_index: 2 },
+			{ matrix_row: 1, matrix_col: 0, x: 0, y: 1, width: 1, height: 1, rotation: 0, led_index: 3, visual_index: 3 },
+			{ matrix_row: 1, matrix_col: 1, x: 1, y: 1, width: 1, height: 1, rotation: 0, led_index: 4, visual_index: 4 },
+			{ matrix_row: 1, matrix_col: 2, x: 2, y: 1, width: 1, height: 1, rotation: 0, led_index: 5, visual_index: 5 }
 		],
 		matrix_rows: 2,
 		matrix_cols: 3,

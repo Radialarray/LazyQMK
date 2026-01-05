@@ -173,6 +173,7 @@ export interface KeyGeometryInfo {
 	height: number;
 	rotation: number;
 	led_index?: number;
+	visual_index: number;
 }
 
 export interface GeometryResponse {

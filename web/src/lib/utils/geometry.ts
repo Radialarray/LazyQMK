@@ -101,7 +101,7 @@ export function transformGeometry(
 	}
 
 	// First pass: compute raw SVG coordinates for all keys
-	const rawKeys: KeySvgData[] = keys.map((key, index) => ({
+	const rawKeys: KeySvgData[] = keys.map((key) => ({
 		matrixRow: key.matrix_row,
 		matrixCol: key.matrix_col,
 		x: key.x * unitSize,
@@ -110,7 +110,7 @@ export function transformGeometry(
 		height: key.height * unitSize - gap,
 		rotation: key.rotation,
 		ledIndex: key.led_index,
-		visualIndex: index
+		visualIndex: key.visual_index
 	}));
 
 	// Compute bounds (accounting for rotation is complex, for now ignore rotation for bounds)

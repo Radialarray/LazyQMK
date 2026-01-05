@@ -848,6 +848,9 @@ pub struct KeyGeometryInfo {
     /// RGB LED index for this key.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub led_index: Option<u8>,
+    /// Visual index (layout array index from info.json).
+    /// This matches the visual_index in KeyAssignment and should be used for mapping keycodes.
+    pub visual_index: u8,
 }
 
 /// GET /api/keyboards/{keyboard}/geometry/{layout} - Get keyboard geometry.
@@ -920,6 +923,7 @@ async fn get_geometry(
             height: k.height,
             rotation: k.rotation,
             led_index: Some(k.led_index),
+            visual_index: k.layout_index,
         })
         .collect();
 
