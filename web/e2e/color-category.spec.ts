@@ -161,6 +161,12 @@ test.describe('Color and Category Management', () => {
 		// Click key again to check if color override persisted
 		await page.click('[data-testid="key-0"]');
 
+		// Move mouse away from key to clear hover state (shows "Key Details & Customization" instead of "Key Preview")
+		await page.mouse.move(0, 0);
+
+		// Wait for hover state to clear and customization panel to show
+		await expect(page.locator('text=Key Details & Customization')).toBeVisible();
+
 		// Verify the color override indicator is present (color swatch and "Clear" button)
 		await expect(page.locator('text=Color Override')).toBeVisible();
 		await expect(page.locator('[data-testid="clear-color-override-button"]')).toBeVisible();
@@ -197,6 +203,10 @@ test.describe('Color and Category Management', () => {
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
+		// Move mouse away from key to clear hover state and show customization panel
+		await page.mouse.move(0, 0);
+		await expect(page.locator('text=Key Details & Customization')).toBeVisible();
+
 		// Assign key to navigation category
 		await page.selectOption('#key-category', 'navigation');
 
@@ -220,6 +230,10 @@ test.describe('Color and Category Management', () => {
 		// Click key to verify category
 		await page.click('[data-testid="key-0"]');
 
+		// Move mouse away from key to clear hover state and show customization panel
+		await page.mouse.move(0, 0);
+		await expect(page.locator('text=Key Details & Customization')).toBeVisible();
+
 		// Verify category is selected in dropdown
 		const selectedCategory = await page.inputValue('#key-category');
 		expect(selectedCategory).toBe('navigation');
@@ -242,6 +256,9 @@ test.describe('Color and Category Management', () => {
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByRole('button', { name: 'Cancel' }).click();
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
+
+		// Move mouse away from key to clear hover state and show customization panel
+		await page.mouse.move(0, 0);
 
 		// Wait for key details to be visible
 		await expect(page.locator('text=Key Details & Customization')).toBeVisible();
