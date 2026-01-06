@@ -568,5 +568,55 @@ test.describe('Keyboard Preview', () => {
 		// More importantly: height should be stable when switching between preview states
 		expect(previewCardHeight).toBe(differentKeyPreviewHeight);
 	});
+
+	test('render metadata visual_index correctly maps to geometry keys (regression test for LazyQMK-eon)', async ({ page }) => {
+		// This test verifies that the render metadata's visual_index values
+		// correctly match the geometry's visual_index values, allowing the
+		// frontend to look up key details by hovering/selecting keys.
+		//
+		// BUG: Previously, the backend used array enumeration index as visual_index
+		// instead of computing it from the key's position using the geometry mapping.
+		// This caused "Key data not available for this position" for every key.
+
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
+
+		// Select a key to ensure the details card is visible
+		await page.locator('[data-testid="key-0"]').click();
+		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
+
+		// Move mouse away first to clear hover
+		await page.mouse.move(0, 0);
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+
+		// Hover over key 0 - should show key details, NOT "Key data not available"
+		await page.locator('[data-testid="key-0"]').hover();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Preview');
+
+		// The key should have proper details - check for "Key Actions" section
+		// If visual_index mapping is broken, we'd see "Key data not available" instead
+		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('Letter Q')).toBeVisible();
+
+		// The fallback message should NOT be visible
+		await expect(page.getByTestId('key-hover-fallback')).not.toBeVisible();
+
+		// Verify multiple keys work correctly (not just the first one)
+		await page.locator('[data-testid="key-3"]').hover();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Preview');
+
+		// Key 3 is LT(1, KC_ESC) - should show both tap and hold actions
+		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('Tap: Escape')).toBeVisible();
+		await expect(page.getByText('Hold: Activate layer 1')).toBeVisible();
+
+		// The fallback message should NOT be visible
+		await expect(page.getByTestId('key-hover-fallback')).not.toBeVisible();
+	});
 });
 

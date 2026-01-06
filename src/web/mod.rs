@@ -1275,6 +1275,50 @@ async fn get_render_metadata(
         )
     })?;
 
+    // Build position_to_visual_index mapping from geometry (if keyboard info is available)
+    // This mapping converts key positions (row,col) to the visual_index expected by the frontend
+    let position_to_visual_index: std::collections::HashMap<String, u8> =
+        if let (Some(keyboard), Some(qmk_path)) = (
+            layout.metadata.keyboard.as_ref(),
+            state.config.paths.qmk_firmware.as_ref(),
+        ) {
+            // Determine layout variant (fall back to default if not specified)
+            let layout_variant = layout
+                .metadata
+                .layout_variant
+                .clone()
+                .unwrap_or_else(|| "LAYOUT".to_string());
+
+            // Try to load geometry - if it fails, we'll fall back to array index
+            parser::keyboard_json::parse_keyboard_info_json(qmk_path, keyboard)
+                .ok()
+                .and_then(|keyboard_info| {
+                    parser::keyboard_json::build_keyboard_geometry_with_rgb(
+                        &keyboard_info,
+                        keyboard,
+                        &layout_variant,
+                        None,
+                    )
+                    .ok()
+                })
+                .map(|geometry| {
+                    // Build mapping from position (row,col) to visual_index
+                    geometry
+                        .keys
+                        .iter()
+                        .map(|k| {
+                            let row = k.visual_y.round() as u8;
+                            let col = k.visual_x.round() as u8;
+                            let pos_key = format!("{row},{col}");
+                            (pos_key, k.layout_index)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        } else {
+            std::collections::HashMap::new()
+        };
+
     // Build tap dance lookup for display info
     let tap_dance_map: std::collections::HashMap<String, &TapDanceAction> = layout
         .tap_dances
@@ -1299,6 +1343,13 @@ async fn get_render_metadata(
                 .iter()
                 .enumerate()
                 .map(|(idx, key)| {
+                    // Look up visual_index from position mapping, fall back to array index
+                    let pos_key = format!("{},{}", key.position.row, key.position.col);
+                    let visual_index = position_to_visual_index
+                        .get(&pos_key)
+                        .copied()
+                        .unwrap_or(idx as u8);
+
                     // Check if this is a tap dance keycode and get its info
                     let td_info = state
                         .keycode_db
@@ -1318,7 +1369,7 @@ async fn get_render_metadata(
                     );
 
                     KeyRenderMetadata {
-                        visual_index: idx as u8,
+                        visual_index,
                         display: KeyDisplayDto {
                             primary: meta.display.primary,
                             secondary: meta.display.secondary,
