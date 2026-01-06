@@ -655,6 +655,30 @@
 		}
 	}
 
+	function setKeyDescription(description: string | undefined) {
+		if (!layout || selectedKeyIndex === null) return;
+		const keyIndex = layout.layers[selectedLayerIndex].keys.findIndex(
+			(k) => k.visual_index === selectedKeyIndex
+		);
+		if (keyIndex !== -1) {
+			// Normalize empty string to undefined
+			const normalizedDescription = description?.trim() || undefined;
+			// Create new key object with description
+			const updatedKey = { ...layout.layers[selectedLayerIndex].keys[keyIndex], description: normalizedDescription };
+			// Create new keys array
+			const updatedKeys = [...layout.layers[selectedLayerIndex].keys];
+			updatedKeys[keyIndex] = updatedKey;
+			// Create new layers array with updated layer
+			const updatedLayers = [...layout.layers];
+			updatedLayers[selectedLayerIndex] = { ...layout.layers[selectedLayerIndex], keys: updatedKeys };
+			// Assign to trigger reactivity
+			layout.layers = updatedLayers;
+			// Force full layout reactivity
+			layout = { ...layout };
+			isDirty = true;
+		}
+	}
+
 	// Layer color/category management
 	function setLayerDefaultColor(color: RgbColor) {
 		if (!layout) return;
@@ -1197,7 +1221,7 @@
 			<Card class="p-6" style="min-height: 400px;" data-testid="key-details-card">
 				{#if activeKey || hoveredKeyIndex !== null || (selectedKeyIndices.size > 1 && hoveredKeyIndex === null)}
 					<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
-						{hoveredKeyIndex !== null ? 'Key Preview' : 'Key Details & Customization'}
+						Key Metadata
 					</h2>
 					
 					{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
@@ -1323,6 +1347,23 @@
 											Assign this key to a category for automatic coloring
 										</p>
 									</div>
+
+									<!-- Key Description -->
+									<div>
+										<label for="key-description" class="block text-xs font-medium text-muted-foreground mb-2">Description</label>
+										<textarea
+											id="key-description"
+											class="w-full px-3 py-2 border border-border rounded-lg bg-background resize-none text-sm"
+											rows="2"
+											placeholder="Add a note about this key..."
+											value={selectedKey.description || ''}
+											onchange={(e) => setKeyDescription(e.currentTarget.value)}
+											data-testid="key-description-input"
+										></textarea>
+										<p class="text-xs text-muted-foreground mt-1">
+											Optional note or reminder for this key binding
+										</p>
+									</div>
 								</div>
 							{/if}
 						{/if}
@@ -1334,6 +1375,7 @@
 			<LayerManager
 				layers={layout.layers}
 				{selectedLayerIndex}
+				categories={layout.categories || []}
 				onLayersChange={handleLayersChange}
 				onLayerSelect={handleLayerChange}
 			/>

@@ -108,6 +108,7 @@ export interface KeyAssignment {
 	position?: { row: number; col: number };
 	color_override?: RgbColor;
 	category_id?: string;
+	description?: string;
 }
 
 export interface TapDance {
