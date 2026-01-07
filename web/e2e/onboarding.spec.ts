@@ -95,10 +95,25 @@ test.describe('Onboarding flow - First run', () => {
 			});
 		});
 
+		// Mock preflight to return first_run: false so dashboard doesn't redirect back
+		await page.route('**/api/preflight', async (route) => {
+			// After clicking skip, return configured state so dashboard loads
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					qmk_configured: true,
+					has_layouts: false,
+					first_run: false,
+					qmk_firmware_path: '/path/to/qmk_firmware'
+				})
+			});
+		});
+
 		// Click skip link
 		await page.getByRole('link', { name: /Skip to Dashboard/i }).click();
 
-		// Should navigate to dashboard
+		// Should navigate to dashboard (/) without redirecting back to onboarding
 		await expect(page).toHaveURL('/');
 	});
 });
