@@ -617,5 +617,147 @@ test.describe('Keyboard Preview', () => {
 		// The fallback message should NOT be visible
 		await expect(page.getByTestId('key-hover-fallback')).not.toBeVisible();
 	});
+
+	test('heading is always visible even when no key is selected (LazyQMK-mpm)', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+
+		// Key details card should be visible with heading even without selection
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		
+		// Empty state message should be shown
+		await expect(page.getByTestId('key-details-empty')).toBeVisible();
+		await expect(page.getByText('Select or hover over a key to view details')).toBeVisible();
+	});
+
+	test('key legend displays primary/secondary/tertiary labels (LazyQMK-t47)', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-3"]')).toBeVisible();
+
+		// First, select a key to keep the details panel visible
+		await page.locator('[data-testid="key-0"]').click();
+		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		
+		// Move mouse away first
+		await page.mouse.move(0, 0);
+		
+		// Hover over the multi-action key (LT(1, KC_ESC)) which has secondary label
+		await page.locator('[data-testid="key-3"]').hover();
+
+		// Key legend display should be visible
+		await expect(page.getByTestId('key-legend-display')).toBeVisible();
+		
+		// Primary label should show "ESC"
+		await expect(page.getByTestId('key-legend-primary')).toBeVisible();
+		await expect(page.getByTestId('key-legend-primary')).toContainText('ESC');
+		
+		// Secondary label should show "L1" (for layer 1)
+		await expect(page.getByTestId('key-legend-secondary')).toBeVisible();
+		await expect(page.getByTestId('key-legend-secondary')).toContainText('L1');
+	});
+
+	test('key legend for simple key shows only primary label (LazyQMK-t47)', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
+
+		// Select a simple key to see its legend
+		await page.locator('[data-testid="key-0"]').click();
+		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		
+		// Move mouse away to show customization mode
+		await page.mouse.move(0, 0);
+		
+		// Hover over the same key to see legend
+		await page.locator('[data-testid="key-0"]').hover();
+
+		// Key legend display should be visible
+		await expect(page.getByTestId('key-legend-display')).toBeVisible();
+		
+		// Primary label should show "Q"
+		await expect(page.getByTestId('key-legend-primary')).toBeVisible();
+		await expect(page.getByTestId('key-legend-primary')).toContainText('Q');
+		
+		// Secondary label should NOT be visible for simple keys
+		await expect(page.getByTestId('key-legend-secondary')).not.toBeVisible();
+	});
+
+	test('description field is editable in selection mode (LazyQMK-yij)', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
+
+		// Enable selection mode
+		await page.getByTestId('selection-mode-button').click();
+
+		// Select a single key in selection mode
+		await page.locator('[data-testid="key-0"]').click();
+		
+		// Move mouse away to exit hover state and show customization controls
+		await page.mouse.move(0, 0);
+
+		// Key details card should show customization section with description field
+		await expect(page.getByTestId('key-details-card')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		
+		// Description input should be visible and editable
+		const descriptionInput = page.getByTestId('key-description-input');
+		await expect(descriptionInput).toBeVisible();
+		
+		// Type a description
+		await descriptionInput.fill('My custom description for this key');
+		
+		// Trigger change event by blurring
+		await descriptionInput.blur();
+		
+		// The value should be set
+		await expect(descriptionInput).toHaveValue('My custom description for this key');
+	});
+
+	test('description field can be added when empty (LazyQMK-yij)', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		// Wait for keyboard preview to load
+		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
+		await expect(page.locator('[data-testid="key-1"]')).toBeVisible();
+
+		// Select a key (not in selection mode - normal click opens picker)
+		await page.locator('[data-testid="key-1"]').click();
+		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+		
+		// Move mouse away to show customization controls
+		await page.mouse.move(0, 0);
+
+		// Description input should be visible (empty initially)
+		const descriptionInput = page.getByTestId('key-description-input');
+		await expect(descriptionInput).toBeVisible();
+		await expect(descriptionInput).toHaveValue('');
+		
+		// Placeholder should be visible
+		await expect(descriptionInput).toHaveAttribute('placeholder', 'Add a note about this key...');
+		
+		// Add a new description
+		await descriptionInput.fill('New description');
+		await descriptionInput.blur();
+		
+		// Check that the value was set
+		await expect(descriptionInput).toHaveValue('New description');
+		
+		// Unsaved changes indicator should appear
+		await expect(page.getByText('Unsaved changes')).toBeVisible();
+	});
 });
 

@@ -1219,154 +1219,187 @@
 
 			<!-- Key Details Card - Fixed height to prevent scrollbar jumping -->
 			<Card class="p-6" style="min-height: 400px;" data-testid="key-details-card">
-				{#if activeKey || hoveredKeyIndex !== null || (selectedKeyIndices.size > 1 && hoveredKeyIndex === null)}
-					<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
-						Key Metadata
-					</h2>
-					
-					{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
-						<!-- Multi-selection summary -->
-						<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="multi-selection-summary">
-							<p class="font-medium text-sm">Multiple Keys Selected ({selectedKeyIndices.size} keys)</p>
-							<p class="text-xs text-muted-foreground mt-1">
-								Use Copy, Cut, or Paste operations to modify the selection
-							</p>
-						</div>
+				<!-- Heading is always visible (LazyQMK-mpm: no flicker) -->
+				<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
+					Key Metadata
+				</h2>
+				
+				{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
+					<!-- Multi-selection summary -->
+					<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="multi-selection-summary">
+						<p class="font-medium text-sm">Multiple Keys Selected ({selectedKeyIndices.size} keys)</p>
+						<p class="text-xs text-muted-foreground mt-1">
+							Use Copy, Cut, or Paste operations to modify the selection
+						</p>
+					</div>
 				{:else if hoveredKeyIndex !== null && hoveredKey === null}
 					<!-- Hover with missing key data fallback -->
-						<div class="p-4 bg-muted/30 rounded-lg" data-testid="key-hover-fallback">
-							<p class="text-sm text-muted-foreground">
-								Hovering key index: <span class="font-mono">{hoveredKeyIndex}</span>
-							</p>
-							<p class="text-xs text-muted-foreground mt-1">
-								Key data not available for this position.
-							</p>
+					<div class="p-4 bg-muted/30 rounded-lg" data-testid="key-hover-fallback">
+						<p class="text-sm text-muted-foreground">
+							Hovering key index: <span class="font-mono">{hoveredKeyIndex}</span>
+						</p>
+						<p class="text-xs text-muted-foreground mt-1">
+							Key data not available for this position.
+						</p>
+					</div>
+				{:else if activeKey}
+					<!-- Key Legend Display (LazyQMK-t47: show primary/secondary/tertiary) -->
+					{#if activeKeyRenderMetadata?.display}
+						<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="key-legend-display">
+							<div class="flex items-center gap-4">
+								<!-- Primary label (large) -->
+								<div class="flex flex-col items-center justify-center min-w-[60px] h-[60px] bg-background border border-border rounded-lg shadow-sm" data-testid="key-legend-primary">
+									<span class="text-2xl font-bold">{activeKeyRenderMetadata.display.primary}</span>
+								</div>
+								<!-- Secondary/Tertiary labels (if present) -->
+								{#if activeKeyRenderMetadata.display.secondary || activeKeyRenderMetadata.display.tertiary}
+									<div class="flex flex-col gap-1">
+										{#if activeKeyRenderMetadata.display.secondary}
+											<div class="flex items-center gap-2" data-testid="key-legend-secondary">
+												<span class="text-xs font-medium text-muted-foreground uppercase">Hold:</span>
+												<span class="text-sm font-medium px-2 py-0.5 bg-primary/10 text-primary rounded">{activeKeyRenderMetadata.display.secondary}</span>
+											</div>
+										{/if}
+										{#if activeKeyRenderMetadata.display.tertiary}
+											<div class="flex items-center gap-2" data-testid="key-legend-tertiary">
+												<span class="text-xs font-medium text-muted-foreground uppercase">Double:</span>
+												<span class="text-sm font-medium px-2 py-0.5 bg-secondary/10 text-secondary-foreground rounded">{activeKeyRenderMetadata.display.tertiary}</span>
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
 						</div>
-					{:else if activeKey}
-							<!-- Single key details -->
-							<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-								<div>
-									<dt class="font-medium text-muted-foreground">Visual Index</dt>
-									<dd class="font-mono">{activeKey.visual_index}</dd>
-								</div>
-								<div>
-									<dt class="font-medium text-muted-foreground">Matrix Position</dt>
-									<dd class="font-mono">
-										[{activeKey.matrix_position[0]}, {activeKey.matrix_position[1]}]
-									</dd>
-								</div>
-								<div>
-									<dt class="font-medium text-muted-foreground">LED Index</dt>
-									<dd class="font-mono">{activeKey.led_index ?? 'N/A'}</dd>
-								</div>
-								<div>
-									<dt class="font-medium text-muted-foreground">Keycode</dt>
-									<dd class="font-mono">{activeKey.keycode}</dd>
-								</div>
-							</dl>
+					{/if}
+					
+					<!-- Single key details -->
+					<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+						<div>
+							<dt class="font-medium text-muted-foreground">Visual Index</dt>
+							<dd class="font-mono">{activeKey.visual_index}</dd>
+						</div>
+						<div>
+							<dt class="font-medium text-muted-foreground">Matrix Position</dt>
+							<dd class="font-mono">
+								[{activeKey.matrix_position[0]}, {activeKey.matrix_position[1]}]
+							</dd>
+						</div>
+						<div>
+							<dt class="font-medium text-muted-foreground">LED Index</dt>
+							<dd class="font-mono">{activeKey.led_index ?? 'N/A'}</dd>
+						</div>
+						<div>
+							<dt class="font-medium text-muted-foreground">Keycode</dt>
+							<dd class="font-mono">{activeKey.keycode}</dd>
+						</div>
+					</dl>
 
-							{#if activeKeyRenderMetadata && activeKeyRenderMetadata.details.length > 0}
-								<!-- Rich key action breakdown -->
-								<div class="border-t border-border pt-4 mb-4">
-									<h3 class="font-medium text-sm mb-3">Key Actions</h3>
-									<div class="space-y-2">
-										{#each activeKeyRenderMetadata.details as action}
-											<div class="flex items-start gap-3 text-sm">
-												<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium uppercase min-w-[80px] justify-center">
-													{action.kind.replace('_', ' ')}
-												</span>
-												<div class="flex-1">
-													<code class="text-xs bg-muted px-1.5 py-0.5 rounded">{action.code}</code>
-													<p class="text-muted-foreground mt-1">{action.description}</p>
-												</div>
-											</div>
+					{#if activeKeyRenderMetadata && activeKeyRenderMetadata.details.length > 0}
+						<!-- Rich key action breakdown (LazyQMK-t47: full keycode DB descriptions) -->
+						<div class="border-t border-border pt-4 mb-4">
+							<h3 class="font-medium text-sm mb-3">Key Actions</h3>
+							<div class="space-y-2">
+								{#each activeKeyRenderMetadata.details as action}
+									<div class="flex items-start gap-3 text-sm">
+										<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium uppercase min-w-[80px] justify-center">
+											{action.kind.replace('_', ' ')}
+										</span>
+										<div class="flex-1">
+											<code class="text-xs bg-muted px-1.5 py-0.5 rounded">{action.code}</code>
+											<p class="text-muted-foreground mt-1">{action.description}</p>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if hoveredKeyIndex === null && selectedKey}
+						<!-- Customization controls (only shown when not hovering, works in selection mode - LazyQMK-yij) -->
+						<div class="border-t border-border pt-4 space-y-4">
+							<h3 class="font-medium text-sm">Key Customization</h3>
+
+							<!-- Edit Keycode Button -->
+							<div>
+								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
+								<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
+							</div>
+
+							<!-- Key Color Override -->
+							<div>
+								<p class="block text-xs font-medium text-muted-foreground mb-2">Color Override</p>
+								{#if selectedKey.color_override}
+									<div class="flex items-center gap-2">
+										<div
+											class="w-8 h-8 rounded border border-border"
+											style="background-color: rgb({selectedKey.color_override.r}, {selectedKey.color_override
+												.g}, {selectedKey.color_override.b})"
+										></div>
+										<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" variant="outline">
+											Change
+										</Button>
+										<Button onclick={clearKeyColorOverride} size="sm" variant="outline" data-testid="clear-color-override-button">Clear</Button>
+									</div>
+								{:else}
+									<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" data-testid="set-color-button">Set Color</Button>
+								{/if}
+								{#if showKeyColorPicker}
+									<div class="mt-3 p-4 border border-border rounded-lg">
+										<ColorPicker
+											color={selectedKey.color_override}
+											onSelect={setKeyColorOverride}
+											onClear={clearKeyColorOverride}
+											label="Key Color Override"
+											showClear={!!selectedKey.color_override}
+										/>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Key Category -->
+							<div>
+								<label for="key-category" class="block text-xs font-medium text-muted-foreground mb-2">Category</label>
+								<select
+									id="key-category"
+									class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+									value={selectedKey.category_id || ''}
+									onchange={(e) => setKeyCategory(e.currentTarget.value || undefined)}
+								>
+									<option value="">None</option>
+									{#if layout.categories}
+										{#each layout.categories as category}
+											<option value={category.id}>{category.name}</option>
 										{/each}
-									</div>
-								</div>
-							{/if}
+									{/if}
+								</select>
+								<p class="text-xs text-muted-foreground mt-1">
+									Assign this key to a category for automatic coloring
+								</p>
+							</div>
 
-							{#if hoveredKeyIndex === null && selectedKey}
-								<!-- Customization controls (only shown when not hovering) -->
-								<div class="border-t border-border pt-4 space-y-4">
-									<h3 class="font-medium text-sm">Key Customization</h3>
-
-									<!-- Edit Keycode Button -->
-									<div>
-										<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
-										<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
-									</div>
-
-									<!-- Key Color Override -->
-									<div>
-										<p class="block text-xs font-medium text-muted-foreground mb-2">Color Override</p>
-										{#if selectedKey.color_override}
-											<div class="flex items-center gap-2">
-												<div
-													class="w-8 h-8 rounded border border-border"
-													style="background-color: rgb({selectedKey.color_override.r}, {selectedKey.color_override
-														.g}, {selectedKey.color_override.b})"
-												></div>
-												<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" variant="outline">
-													Change
-												</Button>
-												<Button onclick={clearKeyColorOverride} size="sm" variant="outline" data-testid="clear-color-override-button">Clear</Button>
-											</div>
-										{:else}
-											<Button onclick={() => (showKeyColorPicker = !showKeyColorPicker)} size="sm" data-testid="set-color-button">Set Color</Button>
-										{/if}
-										{#if showKeyColorPicker}
-											<div class="mt-3 p-4 border border-border rounded-lg">
-												<ColorPicker
-													color={selectedKey.color_override}
-													onSelect={setKeyColorOverride}
-													onClear={clearKeyColorOverride}
-													label="Key Color Override"
-													showClear={!!selectedKey.color_override}
-												/>
-											</div>
-										{/if}
-									</div>
-
-									<!-- Key Category -->
-									<div>
-										<label for="key-category" class="block text-xs font-medium text-muted-foreground mb-2">Category</label>
-										<select
-											id="key-category"
-											class="w-full px-3 py-2 border border-border rounded-lg bg-background"
-											value={selectedKey.category_id || ''}
-											onchange={(e) => setKeyCategory(e.currentTarget.value || undefined)}
-										>
-											<option value="">None</option>
-											{#if layout.categories}
-												{#each layout.categories as category}
-													<option value={category.id}>{category.name}</option>
-												{/each}
-											{/if}
-										</select>
-										<p class="text-xs text-muted-foreground mt-1">
-											Assign this key to a category for automatic coloring
-										</p>
-									</div>
-
-									<!-- Key Description -->
-									<div>
-										<label for="key-description" class="block text-xs font-medium text-muted-foreground mb-2">Description</label>
-										<textarea
-											id="key-description"
-											class="w-full px-3 py-2 border border-border rounded-lg bg-background resize-none text-sm"
-											rows="2"
-											placeholder="Add a note about this key..."
-											value={selectedKey.description || ''}
-											onchange={(e) => setKeyDescription(e.currentTarget.value)}
-											data-testid="key-description-input"
-										></textarea>
-										<p class="text-xs text-muted-foreground mt-1">
-											Optional note or reminder for this key binding
-										</p>
-									</div>
-								</div>
-							{/if}
-						{/if}
+							<!-- Key Description (LazyQMK-yij: editable in selection mode) -->
+							<div>
+								<label for="key-description" class="block text-xs font-medium text-muted-foreground mb-2">Description</label>
+								<textarea
+									id="key-description"
+									class="w-full px-3 py-2 border border-border rounded-lg bg-background resize-none text-sm"
+									rows="2"
+									placeholder="Add a note about this key..."
+									value={selectedKey.description || ''}
+									onchange={(e) => setKeyDescription(e.currentTarget.value)}
+									data-testid="key-description-input"
+								></textarea>
+								<p class="text-xs text-muted-foreground mt-1">
+									Optional note or reminder for this key binding
+								</p>
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<!-- Empty state when no key is selected or hovered -->
+					<div class="p-4 text-center text-muted-foreground" data-testid="key-details-empty">
+						<p class="text-sm">Select or hover over a key to view details</p>
+					</div>
 				{/if}
 			</Card>
 			</div>
