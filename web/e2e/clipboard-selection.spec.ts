@@ -275,6 +275,12 @@ test.describe('Clipboard and Multi-Selection', () => {
 		// Wait for color picker to close
 		await expect(page.locator('text=Preset colors')).not.toBeVisible();
 
+		// Move mouse away from key to clear hover state
+		await page.mouse.move(0, 0);
+
+		// Verify the clear button is now visible
+		await expect(page.locator('[data-testid="clear-color-override-button"]')).toBeVisible();
+
 		// Enable selection mode and select the key
 		await page.click('[data-testid="selection-mode-button"]');
 		await page.click('[data-testid="key-0"]');
@@ -291,6 +297,11 @@ test.describe('Clipboard and Multi-Selection', () => {
 
 		// Click target key to verify color override was copied
 		await page.click('[data-testid="key-2"]');
+		
+		// Move mouse away from key to clear hover state
+		await page.mouse.move(0, 0);
+		
+		// Verify the clear button is visible (indicating color override was copied)
 		await expect(page.locator('[data-testid="clear-color-override-button"]')).toBeVisible();
 	});
 
