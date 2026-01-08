@@ -458,28 +458,6 @@ impl<'a> FirmwareValidator<'a> {
     }
 }
 
-/// Checks for deprecated VIAL configuration options in keyboard files.
-///
-/// **DEPRECATED**: This function is no longer used as we have migrated to standard QMK.
-/// Vial-specific options (VIAL_ENABLE, VIAL_KEYBOARD_UID) are no longer checked.
-///
-/// This function is kept for API compatibility and now returns an empty vector.
-///
-/// # Arguments
-///
-/// * `qmk_path` - Path to QMK firmware directory (unused)
-/// * `keyboard` - Keyboard path (unused)
-///
-/// # Returns
-///
-/// Always returns an empty vector (no warnings).
-#[allow(dead_code)]
-#[must_use]
-pub fn check_deprecated_options(_qmk_path: &std::path::Path, _keyboard: &str) -> Vec<String> {
-    // Migration to standard QMK means we no longer check for Vial-specific options
-    Vec::new()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
