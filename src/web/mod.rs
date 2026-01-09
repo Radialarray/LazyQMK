@@ -27,6 +27,8 @@
 //! - `GET /api/build/jobs/{job_id}` - Get build job status
 //! - `GET /api/build/jobs/{job_id}/logs` - Get build job logs
 //! - `POST /api/build/jobs/{job_id}/cancel` - Cancel a build job
+//! - `GET /api/build/jobs/{job_id}/artifacts` - List build artifacts
+//! - `GET /api/build/jobs/{job_id}/artifacts/{artifact_id}/download` - Download build artifact
 //! - `GET /api/generate/jobs` - List all generate jobs
 //! - `GET /api/generate/jobs/{job_id}` - Get generate job status
 //! - `GET /api/generate/jobs/{job_id}/logs` - Get generate job logs
@@ -94,8 +96,9 @@ impl AppState {
 
         // Set up build job manager
         let logs_dir = workspace_root.join(".lazyqmk").join("build_logs");
+        let output_dir = workspace_root.join(".lazyqmk").join("build_output");
         let qmk_path = config.paths.qmk_firmware.clone();
-        let build_manager = BuildJobManager::new(logs_dir, qmk_path.clone());
+        let build_manager = BuildJobManager::new(logs_dir, output_dir, qmk_path.clone());
 
         // Set up generate job manager
         let gen_logs_dir = workspace_root.join(".lazyqmk").join("generate_logs");
@@ -124,9 +127,11 @@ impl AppState {
 
         // Set up build job manager with mock builder
         let logs_dir = workspace_root.join(".lazyqmk").join("build_logs");
+        let output_dir = workspace_root.join(".lazyqmk").join("build_output");
         let qmk_path = config.paths.qmk_firmware.clone();
         let mock_builder = Arc::new(MockFirmwareBuilder::default());
-        let build_manager = BuildJobManager::with_builder(logs_dir, qmk_path.clone(), mock_builder);
+        let build_manager =
+            BuildJobManager::with_builder(logs_dir, output_dir, qmk_path.clone(), mock_builder);
 
         // Set up generate job manager with mock worker
         let gen_logs_dir = workspace_root.join(".lazyqmk").join("generate_logs");
@@ -1811,6 +1816,101 @@ async fn cancel_build_job(
     Json(state.build_manager.cancel_job(&job_id))
 }
 
+/// Response for listing build artifacts.
+#[derive(Debug, Serialize)]
+pub struct BuildArtifactsResponse {
+    /// Job ID.
+    pub job_id: String,
+    /// List of artifacts.
+    pub artifacts: Vec<build_jobs::BuildArtifact>,
+}
+
+/// GET /api/build/jobs/{job_id}/artifacts - List artifacts for a build job.
+async fn get_build_artifacts(
+    State(state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<BuildArtifactsResponse>, (StatusCode, Json<ApiError>)> {
+    let artifacts = state.build_manager.get_artifacts(&job_id).ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError::new(format!("Build job not found: {job_id}"))),
+        )
+    })?;
+
+    Ok(Json(BuildArtifactsResponse { job_id, artifacts }))
+}
+
+/// GET /api/build/jobs/{job_id}/artifacts/{artifact_id}/download - Download a build artifact.
+async fn download_build_artifact(
+    State(state): State<AppState>,
+    Path((job_id, artifact_id)): Path<(String, String)>,
+) -> Result<axum::response::Response, (StatusCode, Json<ApiError>)> {
+    use axum::body::Body;
+    use axum::http::header;
+    use axum::response::IntoResponse;
+
+    // Get the artifact path (includes security validation)
+    let artifact_path = state
+        .build_manager
+        .get_artifact_path(&job_id, &artifact_id)
+        .ok_or_else(|| {
+            (
+                StatusCode::NOT_FOUND,
+                Json(ApiError::new(format!(
+                    "Artifact '{artifact_id}' not found for job '{job_id}'"
+                ))),
+            )
+        })?;
+
+    // Check file exists
+    if !artifact_path.exists() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ApiError::new("Artifact file not found on disk")),
+        ));
+    }
+
+    // Read the file
+    let file_content = std::fs::read(&artifact_path).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError::with_details(
+                "Failed to read artifact file",
+                e.to_string(),
+            )),
+        )
+    })?;
+
+    // Get filename for Content-Disposition header
+    let filename = artifact_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("firmware");
+
+    // Determine content type based on extension
+    let content_type = match artifact_id.as_str() {
+        "uf2" => "application/octet-stream",
+        "bin" => "application/octet-stream",
+        "hex" => "text/plain",
+        _ => "application/octet-stream",
+    };
+
+    // Build response with proper headers for file download
+    let response = (
+        [
+            (header::CONTENT_TYPE, content_type),
+            (
+                header::CONTENT_DISPOSITION,
+                &format!("attachment; filename=\"{filename}\""),
+            ),
+        ],
+        Body::from(file_content),
+    )
+        .into_response();
+
+    Ok(response)
+}
+
 // ============================================================================
 // Generate Job Endpoints
 // ============================================================================
@@ -3012,6 +3112,14 @@ pub fn create_router(state: AppState) -> Router {
         .route(
             "/api/build/jobs/{job_id}/cancel",
             axum::routing::post(cancel_build_job),
+        )
+        .route(
+            "/api/build/jobs/{job_id}/artifacts",
+            get(get_build_artifacts),
+        )
+        .route(
+            "/api/build/jobs/{job_id}/artifacts/{artifact_id}/download",
+            get(download_build_artifact),
         )
         // Generate job endpoints
         .route("/api/generate/jobs", get(list_generate_jobs))

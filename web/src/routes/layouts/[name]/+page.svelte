@@ -27,7 +27,9 @@
 		RgbColor,
 		LayoutVariantInfo,
 		SwitchVariantResponse,
-		RenderMetadataResponse
+		RenderMetadataResponse,
+		BuildJob,
+		BuildArtifact
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
@@ -63,7 +65,8 @@
 		{ id: 'validate', label: 'Validate', icon: '✓' },
 		{ id: 'inspect', label: 'Inspect', icon: '🔍' },
 		{ id: 'export', label: 'Export', icon: '📄' },
-		{ id: 'generate', label: 'Generate', icon: '⚙️' }
+		{ id: 'generate', label: 'Generate', icon: '⚙️' },
+		{ id: 'build', label: 'Build', icon: '🔨' }
 	];
 	let activeTab = $state('preview');
 
@@ -140,6 +143,7 @@
 	// Cleanup polling on component destroy
 	onDestroy(() => {
 		stopPolling();
+		stopBuildPolling();
 	});
 
 	function stopPolling() {
@@ -244,6 +248,226 @@
 	let switchVariantError = $state<string | null>(null);
 	let switchVariantWarning = $state<string | null>(null);
 
+	// State for Build tab (firmware compilation)
+	let buildJob = $state<BuildJob | null>(null);
+	let buildLogs = $state<LogEntry[]>([]);
+	let buildArtifacts = $state<BuildArtifact[]>([]);
+	let buildHistory = $state<BuildJob[]>([]);
+	let buildLoading = $state(false);
+	let buildPollingActive = $state(false);
+	let buildCancelling = $state(false);
+	let buildAutoScroll = $state(true);
+	let buildPollIntervalId = $state<ReturnType<typeof setInterval> | null>(null);
+	let buildLogOffset = $state(0);
+	let buildLogsElement: HTMLDivElement | undefined = $state();
+	const BUILD_POLL_INTERVAL_MS = 1000; // Poll every 1 second
+
+	// Build polling and management functions
+	function stopBuildPolling() {
+		if (buildPollIntervalId) {
+			clearInterval(buildPollIntervalId);
+			buildPollIntervalId = null;
+		}
+		buildPollingActive = false;
+	}
+
+	function resetBuildState() {
+		stopBuildPolling();
+		buildJob = null;
+		buildLogs = [];
+		buildArtifacts = [];
+		buildLogOffset = 0;
+		buildLoading = false;
+		buildCancelling = false;
+	}
+
+	async function pollBuildJobStatus(jobId: string) {
+		try {
+			const response = await apiClient.getBuildJob(jobId);
+			buildJob = response.job;
+
+			// Fetch logs incrementally
+			const logsResponse = await apiClient.getBuildLogs(jobId, buildLogOffset, 100);
+			if (logsResponse.logs.length > 0) {
+				buildLogs = [...buildLogs, ...logsResponse.logs];
+				buildLogOffset += logsResponse.logs.length;
+				
+				// Auto-scroll logs if enabled
+				if (buildAutoScroll && buildLogsElement) {
+					setTimeout(() => {
+						buildLogsElement?.scrollTo({ top: buildLogsElement.scrollHeight, behavior: 'smooth' });
+					}, 50);
+				}
+			}
+
+			// Check if job is complete
+			const terminalStates: BuildJob['status'][] = ['completed', 'failed', 'cancelled'];
+			if (terminalStates.includes(response.job.status)) {
+				stopBuildPolling();
+				buildLoading = false;
+				
+				// Fetch artifacts if completed
+				if (response.job.status === 'completed') {
+					await loadBuildArtifacts(jobId);
+				}
+			}
+		} catch (e) {
+			console.error('Error polling build job:', e);
+			// Don't stop polling on transient errors
+		}
+	}
+
+	function startBuildPolling(jobId: string) {
+		stopBuildPolling(); // Clear any existing polling
+		buildPollingActive = true;
+
+		// Start polling interval
+		buildPollIntervalId = setInterval(() => {
+			pollBuildJobStatus(jobId);
+		}, BUILD_POLL_INTERVAL_MS);
+
+		// Initial poll immediately
+		pollBuildJobStatus(jobId);
+	}
+
+	async function loadBuildArtifacts(jobId: string) {
+		try {
+			const response = await apiClient.getBuildArtifacts(jobId);
+			buildArtifacts = response.artifacts;
+		} catch (e) {
+			console.error('Error loading build artifacts:', e);
+			buildArtifacts = [];
+		}
+	}
+
+	async function loadBuildHistory() {
+		try {
+			const jobs = await apiClient.listBuildJobs();
+			// Filter to jobs for this layout
+			buildHistory = jobs.filter(j => j.layout_filename === filename).slice(0, 10);
+		} catch (e) {
+			console.error('Error loading build history:', e);
+			buildHistory = [];
+		}
+	}
+
+	async function startBuild() {
+		if (!filename) return;
+
+		// Require save before build
+		if (isDirty) {
+			// This shouldn't happen - UI should prevent it - but just in case
+			console.warn('Cannot start build: layout has unsaved changes');
+			return;
+		}
+
+		resetBuildState();
+		buildLoading = true;
+
+		try {
+			const response = await apiClient.startBuild(filename);
+			buildJob = response.job;
+			startBuildPolling(response.job.id);
+			// Refresh history to show new job
+			await loadBuildHistory();
+		} catch (e) {
+			buildLoading = false;
+			console.error('Error starting build:', e);
+		}
+	}
+
+	async function cancelBuildJob() {
+		if (!buildJob) return;
+		buildCancelling = true;
+		try {
+			const result = await apiClient.cancelBuild(buildJob.id);
+			if (result.success) {
+				// Will be picked up by next poll
+				await pollBuildJobStatus(buildJob.id);
+			}
+		} catch (e) {
+			console.error('Error cancelling build job:', e);
+		} finally {
+			buildCancelling = false;
+		}
+	}
+
+	async function selectBuildJob(job: BuildJob) {
+		resetBuildState();
+		buildJob = job;
+		
+		// Load logs for this job
+		try {
+			const logsResponse = await apiClient.getBuildLogs(job.id, 0, 500);
+			buildLogs = logsResponse.logs;
+			buildLogOffset = logsResponse.logs.length;
+		} catch (e) {
+			console.error('Error loading build logs:', e);
+		}
+
+		// Load artifacts if completed
+		if (job.status === 'completed') {
+			await loadBuildArtifacts(job.id);
+		}
+
+		// Resume polling if job is active
+		const activeStates: BuildJob['status'][] = ['pending', 'running'];
+		if (activeStates.includes(job.status)) {
+			buildLoading = true;
+			startBuildPolling(job.id);
+		}
+	}
+
+	function copyBuildLogs() {
+		const logText = buildLogs.map(log => `[${log.level}] ${log.message}`).join('\n');
+		navigator.clipboard.writeText(logText).then(() => {
+			console.log('Build logs copied to clipboard');
+		}).catch(e => {
+			console.error('Failed to copy build logs:', e);
+		});
+	}
+
+	function formatBytes(bytes: number): string {
+		if (bytes === 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+	}
+
+	function getLogLevelColor(level: string): string {
+		switch (level.toUpperCase()) {
+			case 'ERROR':
+				return 'text-red-500';
+			case 'WARN':
+			case 'WARNING':
+				return 'text-yellow-500';
+			case 'INFO':
+				return 'text-blue-400';
+			case 'DEBUG':
+				return 'text-gray-500';
+			default:
+				return 'text-muted-foreground';
+		}
+	}
+
+	function getBuildStatusBadge(status: string): { class: string; icon: string; text: string } {
+		switch (status) {
+			case 'pending':
+				return { class: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', icon: '⏳', text: 'Pending' };
+			case 'running':
+				return { class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: '🔄', text: 'Running' };
+			case 'completed':
+				return { class: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: '✅', text: 'Completed' };
+			case 'failed':
+				return { class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: '❌', text: 'Failed' };
+			case 'cancelled':
+				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: '🚫', text: 'Cancelled' };
+			default:
+				return { class: 'bg-gray-100 text-gray-800', icon: '❓', text: status };
+		}
+	}
+
 	// Load geometry when layout is available
 	$effect(() => {
 		if (layout?.metadata.keyboard && layout?.metadata.layout_variant) {
@@ -257,6 +481,13 @@
 	$effect(() => {
 		if (filename) {
 			loadRenderMetadata(filename);
+		}
+	});
+
+	// Load build history when switching to Build tab
+	$effect(() => {
+		if (activeTab === 'build' && filename) {
+			loadBuildHistory();
 		}
 	});
 
@@ -2069,6 +2300,241 @@
 					</div>
 				{/if}
 			</Card>
+		{:else if activeTab === 'build'}
+			<!-- Build Tab - Firmware Compilation -->
+			<div class="space-y-6">
+				<!-- Build Controls Card -->
+				<Card class="p-6">
+					<div class="flex items-center justify-between mb-4">
+						<div>
+							<h2 class="text-lg font-semibold">Build Firmware</h2>
+							<p class="text-sm text-muted-foreground">
+								Compile QMK firmware (.bin/.hex) for this layout
+							</p>
+						</div>
+						<div class="flex gap-2">
+							{#if buildJob && (buildJob.status === 'pending' || buildJob.status === 'running')}
+								<Button 
+									onclick={cancelBuildJob} 
+									disabled={buildCancelling}
+									variant="destructive"
+									data-testid="cancel-build-button"
+								>
+									{buildCancelling ? 'Cancelling...' : 'Cancel Build'}
+								</Button>
+							{/if}
+							<Button 
+								onclick={startBuild} 
+								disabled={buildLoading || buildPollingActive || isDirty}
+								data-testid="start-build-button"
+							>
+								{buildLoading || buildPollingActive ? 'Building...' : 'Start Build'}
+							</Button>
+						</div>
+					</div>
+
+					<!-- Save Warning -->
+					{#if isDirty}
+						<div class="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30" data-testid="build-save-warning">
+							<p class="font-medium text-yellow-700 dark:text-yellow-300">Unsaved Changes</p>
+							<p class="text-sm text-muted-foreground">
+								Please save your layout before starting a build. Click the "Save" button in the header.
+							</p>
+						</div>
+					{/if}
+
+					<!-- Active Build Status -->
+					{#if buildJob}
+						{@const badge = getBuildStatusBadge(buildJob.status)}
+						<div class="mb-4">
+							<!-- Status Badge -->
+							<div class="flex items-center gap-3 mb-3">
+								<span class="text-sm font-medium text-muted-foreground">Status:</span>
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {badge.class}" data-testid="build-status">
+									{badge.icon} {badge.text}
+								</span>
+							</div>
+
+							<!-- Progress Bar -->
+							{#if buildJob.status === 'running' || buildJob.status === 'pending'}
+								<div class="mb-3">
+									<div class="flex justify-between text-xs text-muted-foreground mb-1">
+										<span>Progress</span>
+										<span>{buildJob.progress}%</span>
+									</div>
+									<div class="w-full bg-muted rounded-full h-2">
+										<div 
+											class="bg-primary h-2 rounded-full transition-all duration-300" 
+											style="width: {buildJob.progress}%"
+											data-testid="build-progress-bar"
+										></div>
+									</div>
+								</div>
+							{/if}
+
+							<!-- Error Message -->
+							{#if buildJob.status === 'failed' && buildJob.error}
+								<div class="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30" data-testid="build-error">
+									<p class="text-sm font-medium text-red-700 dark:text-red-300">Build Error:</p>
+									<p class="text-sm text-red-600 dark:text-red-400">{buildJob.error}</p>
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<!-- Initial state - no active build -->
+						<div class="text-center py-8 text-muted-foreground" data-testid="build-empty-state">
+							<p class="text-sm">Start a build to compile firmware for this layout.</p>
+							<p class="text-xs mt-2">
+								CLI Alternative: <code class="bg-muted px-2 py-0.5 rounded font-mono">lazyqmk build {filename}</code>
+							</p>
+						</div>
+					{/if}
+				</Card>
+
+				<!-- Build Artifacts Card -->
+				{#if buildArtifacts.length > 0}
+					<Card class="p-6" data-testid="build-artifacts-card">
+						<h3 class="text-lg font-semibold mb-4">Build Artifacts</h3>
+						<p class="text-sm text-muted-foreground mb-4">
+							Download compiled firmware files for flashing to your keyboard.
+						</p>
+						<div class="space-y-3">
+							{#each buildArtifacts as artifact}
+								<div class="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/30 transition-colors" data-testid="artifact-row">
+									<div class="flex-1">
+										<p class="font-medium text-sm font-mono">{artifact.filename}</p>
+										<div class="flex gap-4 text-xs text-muted-foreground mt-1">
+											<span>Type: {artifact.artifact_type}</span>
+											<span>Size: {formatBytes(artifact.size)}</span>
+											{#if artifact.hash}
+												<span title={artifact.hash}>Hash: {artifact.hash.substring(0, 8)}...</span>
+											{/if}
+										</div>
+									</div>
+									<a 
+										href={buildJob ? apiClient.getBuildArtifactDownloadUrl(buildJob.id, artifact.filename) : '#'}
+										download={artifact.filename}
+										class="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
+										data-testid="artifact-download"
+									>
+										📥 Download
+									</a>
+								</div>
+							{/each}
+						</div>
+					</Card>
+				{/if}
+
+				<!-- Build Logs Card -->
+				{#if buildLogs.length > 0 || buildJob}
+					<Card class="p-6" data-testid="build-logs-card">
+						<div class="flex items-center justify-between mb-4">
+							<h3 class="text-lg font-semibold">Build Logs</h3>
+							<div class="flex items-center gap-3">
+								<label class="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+									<input 
+										type="checkbox" 
+										bind:checked={buildAutoScroll}
+										class="w-4 h-4 rounded"
+									/>
+									Auto-scroll
+								</label>
+								<Button 
+									size="sm" 
+									variant="outline" 
+									onclick={copyBuildLogs}
+									disabled={buildLogs.length === 0}
+									data-testid="copy-logs-button"
+								>
+									📋 Copy Logs
+								</Button>
+							</div>
+						</div>
+						<div 
+							bind:this={buildLogsElement}
+							class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm h-80 overflow-y-auto"
+							data-testid="build-logs"
+						>
+							{#if buildLogs.length === 0}
+								<p class="text-gray-500">Waiting for logs...</p>
+							{:else}
+								{#each buildLogs as log}
+									<div class="flex gap-2 py-0.5">
+										<span class="text-gray-500 shrink-0 w-20">
+											{new Date(log.timestamp).toLocaleTimeString()}
+										</span>
+										<span class="shrink-0 w-14 {getLogLevelColor(log.level)}">[{log.level}]</span>
+										<span class="break-all">{log.message}</span>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					</Card>
+				{/if}
+
+				<!-- Build History Card -->
+				<Card class="p-6" data-testid="build-history-card">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-semibold">Build History</h3>
+						<Button 
+							size="sm" 
+							variant="outline" 
+							onclick={loadBuildHistory}
+							data-testid="refresh-history-button"
+						>
+							🔄 Refresh
+						</Button>
+					</div>
+					{#if buildHistory.length === 0}
+						<p class="text-sm text-muted-foreground text-center py-4">
+							No previous builds for this layout. Start your first build above.
+						</p>
+					{:else}
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-b border-border">
+										<th class="text-left py-2 px-2">Status</th>
+										<th class="text-left py-2 px-2">Created</th>
+										<th class="text-left py-2 px-2">Keyboard</th>
+										<th class="text-left py-2 px-2">Progress</th>
+										<th class="text-right py-2 px-2">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each buildHistory as job}
+										{@const badge = getBuildStatusBadge(job.status)}
+										<tr class="border-b border-border/50 hover:bg-muted/30 transition-colors" data-testid="history-row">
+											<td class="py-2 px-2">
+												<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {badge.class}">
+													{badge.icon} {badge.text}
+												</span>
+											</td>
+											<td class="py-2 px-2 text-muted-foreground">
+												{new Date(job.created_at).toLocaleString(undefined, { 
+													month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+												})}
+											</td>
+											<td class="py-2 px-2 font-mono text-xs">{job.keyboard}</td>
+											<td class="py-2 px-2">{job.progress}%</td>
+											<td class="py-2 px-2 text-right">
+												<Button 
+													size="sm" 
+													variant="ghost" 
+													onclick={() => selectBuildJob(job)}
+													data-testid="view-job-button"
+												>
+													View
+												</Button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</Card>
+			</div>
 		{/if}
 	{/if}
 </div>

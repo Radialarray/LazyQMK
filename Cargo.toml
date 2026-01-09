@@ -26,7 +26,7 @@ required-features = ["web"]
 [features]
 default = ["ratatui"]
 ratatui = ["dep:ratatui"]
-web = ["dep:axum", "dep:tower-http", "dep:tokio", "dep:tracing", "dep:tracing-subscriber"]
+web = ["dep:axum", "dep:tower-http", "dep:tokio", "dep:tracing", "dep:tracing-subscriber", "dep:sha2"]
 
 [dependencies]
 ratatui = { version = "0.29", optional = true }
@@ -52,6 +52,7 @@ tower-http = { version = "0.6", features = ["cors", "trace"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 tempfile = "3.0"

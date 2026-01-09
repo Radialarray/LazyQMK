@@ -424,6 +424,20 @@ export interface CancelJobResponse {
 	message: string;
 }
 
+// Build Artifacts
+export interface BuildArtifact {
+	filename: string;
+	artifact_type: string;
+	size: number;
+	hash?: string;
+	created_at: string;
+}
+
+export interface BuildArtifactsResponse {
+	job_id: string;
+	artifacts: BuildArtifact[];
+}
+
 // Render Metadata Types (for Key Details Panel)
 
 /** Display labels for a key (short form for in-key display) */

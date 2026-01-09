@@ -32,6 +32,7 @@ import type {
 	JobLogsResponse,
 	CancelJobResponse,
 	BuildJob,
+	BuildArtifactsResponse,
 	RenderMetadataResponse
 } from './types';
 
@@ -254,6 +255,20 @@ export class ApiClient {
 		return this.request<CancelJobResponse>(`/api/build/jobs/${encodeURIComponent(jobId)}/cancel`, {
 			method: 'POST'
 		});
+	}
+
+	async getBuildArtifacts(jobId: string): Promise<BuildArtifactsResponse> {
+		return this.request<BuildArtifactsResponse>(`/api/build/jobs/${encodeURIComponent(jobId)}/artifacts`);
+	}
+
+	/**
+	 * Returns the download URL for a specific build artifact.
+	 * @param jobId The build job ID
+	 * @param filename The artifact filename
+	 * @returns Full URL to download the artifact
+	 */
+	getBuildArtifactDownloadUrl(jobId: string, filename: string): string {
+		return `${this.baseUrl}/api/build/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(filename)}`;
 	}
 
 	// Generate Job Operations

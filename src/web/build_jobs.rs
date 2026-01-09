@@ -10,6 +10,13 @@
 //! - Concurrency limit of 1 (single build at a time)
 //! - Logs are persisted to disk for durability
 //! - Uses mpsc channels for thread communication
+//! - Firmware artifacts (.uf2/.bin/.hex) are copied to job-specific directories
+//!
+//! ## Artifact Management
+//!
+//! After a successful build, firmware artifacts are discovered in QMK's `.build`
+//! directory and copied to `.lazyqmk/build_output/<job_id>/`. Each artifact gets
+//! a stable ID based on its extension (e.g., "uf2", "bin", "hex") for easy reference.
 //!
 //! ## Mock Support
 //!
@@ -18,17 +25,39 @@
 
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 /// Maximum number of concurrent builds.
 const MAX_CONCURRENT_BUILDS: usize = 1;
+
+/// Supported firmware artifact extensions.
+const ARTIFACT_EXTENSIONS: &[&str] = &["uf2", "bin", "hex"];
+
+/// A firmware artifact produced by a build job.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildArtifact {
+    /// Stable artifact identifier (based on extension, e.g., "uf2", "bin", "hex").
+    pub id: String,
+    /// Original filename of the artifact.
+    pub filename: String,
+    /// File extension/type (e.g., "uf2", "bin", "hex").
+    pub artifact_type: String,
+    /// Size of the artifact in bytes.
+    pub size: u64,
+    /// SHA256 hash of the artifact content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    /// Download URL for this artifact.
+    pub download_url: String,
+}
 
 /// Build job status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,10 +112,14 @@ pub struct BuildJob {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     /// Path to generated firmware file (if successful).
+    /// Deprecated: Use `artifacts` field instead for new integrations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub firmware_path: Option<String>,
     /// Progress percentage (0-100).
     pub progress: u8,
+    /// List of firmware artifacts produced by this build.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub artifacts: Vec<BuildArtifact>,
 }
 
 impl BuildJob {
@@ -104,6 +137,7 @@ impl BuildJob {
             error: None,
             firmware_path: None,
             progress: 0,
+            artifacts: Vec::new(),
         }
     }
 }
@@ -169,20 +203,41 @@ struct BuildCommand {
     keymap: String,
     qmk_path: PathBuf,
     log_path: PathBuf,
+    /// Job-specific output directory for artifacts.
+    output_dir: PathBuf,
+}
+
+/// Result of a successful firmware build.
+#[derive(Debug, Clone)]
+pub struct BuildResult {
+    /// Primary firmware path (first discovered artifact).
+    pub firmware_path: PathBuf,
+    /// All discovered artifacts with their metadata.
+    pub artifacts: Vec<BuildArtifact>,
 }
 
 /// Trait for firmware builders, allowing mock injection for tests.
 pub trait FirmwareBuilder: Send + Sync {
     /// Runs the firmware build.
     ///
-    /// Returns `Ok(firmware_path)` on success or `Err(error_message)` on failure.
+    /// # Arguments
+    /// * `qmk_path` - Path to QMK firmware directory
+    /// * `keyboard` - Keyboard identifier
+    /// * `keymap` - Keymap name
+    /// * `output_dir` - Directory to copy artifacts into
+    /// * `job_id` - Job identifier (for generating download URLs)
+    /// * `log_writer` - Writer for build log output
+    ///
+    /// Returns `Ok(BuildResult)` on success or `Err(error_message)` on failure.
     fn build(
         &self,
         qmk_path: &PathBuf,
         keyboard: &str,
         keymap: &str,
+        output_dir: &Path,
+        job_id: &str,
         log_writer: &mut dyn Write,
-    ) -> Result<PathBuf, String>;
+    ) -> Result<BuildResult, String>;
 }
 
 /// Real firmware builder using QMK CLI.
@@ -194,8 +249,10 @@ impl FirmwareBuilder for RealFirmwareBuilder {
         qmk_path: &PathBuf,
         keyboard: &str,
         keymap: &str,
+        output_dir: &Path,
+        job_id: &str,
         log_writer: &mut dyn Write,
-    ) -> Result<PathBuf, String> {
+    ) -> Result<BuildResult, String> {
         use std::process::{Command, Stdio};
 
         let _ = writeln!(log_writer, "[INFO] Starting QMK compile...");
@@ -240,27 +297,175 @@ impl FirmwareBuilder for RealFirmwareBuilder {
             return Err("QMK compile failed. Check build log for details.".to_string());
         }
 
-        // Find firmware file
-        let keyboard_clean = keyboard.replace('/', "_");
-        let extensions = ["uf2", "hex", "bin"];
+        // Discover and copy artifacts
+        let _ = writeln!(log_writer, "[INFO] Discovering firmware artifacts...");
+        let artifacts = discover_and_copy_artifacts(
+            qmk_path, keyboard, keymap, output_dir, job_id, log_writer,
+        )?;
 
-        for ext in &extensions {
-            let firmware_name = format!("{keyboard_clean}_{keymap}.{ext}");
-            let firmware_path = qmk_path.join(".build").join(&firmware_name);
-            if firmware_path.exists() {
-                let _ = writeln!(
-                    log_writer,
-                    "[INFO] Firmware generated: {}",
-                    firmware_path.display()
-                );
-                return Ok(firmware_path);
-            }
+        if artifacts.is_empty() {
+            return Err(format!(
+                "Could not find any firmware files for {keyboard} {keymap}"
+            ));
         }
 
-        Err(format!(
-            "Could not find firmware file for {keyboard} {keymap}"
-        ))
+        // Use first artifact as primary firmware path (for backward compatibility)
+        let primary_path = output_dir.join(&artifacts[0].filename);
+
+        Ok(BuildResult {
+            firmware_path: primary_path,
+            artifacts,
+        })
     }
+}
+
+/// Discovers firmware artifacts in QMK's `.build` directory and copies them to the output directory.
+///
+/// Looks for files matching the pattern `<keyboard_clean>_<keymap>.<ext>` where keyboard slashes
+/// are replaced with underscores. Supports multiple file extensions (uf2, bin, hex) and handles
+/// variant suffixes via glob matching.
+///
+/// # Arguments
+/// * `qmk_path` - Path to QMK firmware directory
+/// * `keyboard` - Keyboard identifier (may contain slashes)
+/// * `keymap` - Keymap name
+/// * `output_dir` - Directory to copy artifacts into
+/// * `job_id` - Job identifier for generating download URLs
+/// * `log_writer` - Writer for log output
+///
+/// # Returns
+/// Vector of `BuildArtifact` metadata for all discovered and copied artifacts.
+fn discover_and_copy_artifacts(
+    qmk_path: &Path,
+    keyboard: &str,
+    keymap: &str,
+    output_dir: &Path,
+    job_id: &str,
+    log_writer: &mut dyn Write,
+) -> Result<Vec<BuildArtifact>, String> {
+    let build_dir = qmk_path.join(".build");
+    if !build_dir.exists() {
+        return Err("QMK .build directory not found".to_string());
+    }
+
+    // Create output directory
+    fs::create_dir_all(output_dir)
+        .map_err(|e| format!("Failed to create output directory: {e}"))?;
+
+    let keyboard_clean = keyboard.replace('/', "_");
+    let base_prefix = format!("{keyboard_clean}_{keymap}");
+
+    let mut artifacts = Vec::new();
+
+    // First pass: look for exact matches
+    for ext in ARTIFACT_EXTENSIONS {
+        let exact_filename = format!("{base_prefix}.{ext}");
+        let source_path = build_dir.join(&exact_filename);
+
+        if source_path.exists() {
+            if let Some(artifact) =
+                copy_artifact(&source_path, output_dir, ext, job_id, log_writer)?
+            {
+                artifacts.push(artifact);
+            }
+        }
+    }
+
+    // Second pass: glob for variant suffixes (e.g., keyboard_keymap_avr.hex)
+    // Only if we haven't found exact matches for all extensions
+    if let Ok(entries) = fs::read_dir(&build_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let filename = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+
+            // Check if this file starts with our prefix and has a supported extension
+            if !filename.starts_with(&base_prefix) {
+                continue;
+            }
+
+            for ext in ARTIFACT_EXTENSIONS {
+                if filename.ends_with(&format!(".{ext}")) {
+                    // Skip if we already have an artifact with this extension
+                    if artifacts.iter().any(|a| a.artifact_type == *ext) {
+                        continue;
+                    }
+
+                    if let Some(artifact) =
+                        copy_artifact(&path, output_dir, ext, job_id, log_writer)?
+                    {
+                        artifacts.push(artifact);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(artifacts)
+}
+
+/// Copies a single artifact file to the output directory and creates metadata.
+fn copy_artifact(
+    source_path: &Path,
+    output_dir: &Path,
+    ext: &str,
+    job_id: &str,
+    log_writer: &mut dyn Write,
+) -> Result<Option<BuildArtifact>, String> {
+    let filename = source_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "Invalid source filename".to_string())?;
+
+    let dest_path = output_dir.join(filename);
+
+    // Copy the file
+    fs::copy(source_path, &dest_path).map_err(|e| format!("Failed to copy artifact: {e}"))?;
+
+    // Get file metadata
+    let metadata = fs::metadata(&dest_path).map_err(|e| format!("Failed to read metadata: {e}"))?;
+    let size = metadata.len();
+
+    // Calculate SHA256 hash
+    let sha256 = calculate_sha256(&dest_path).ok();
+
+    let _ = writeln!(
+        log_writer,
+        "[INFO] Copied artifact: {} ({} bytes)",
+        filename, size
+    );
+
+    // Use extension as stable artifact ID
+    let artifact_id = ext.to_string();
+    let download_url = format!("/api/build/jobs/{job_id}/artifacts/{artifact_id}/download");
+
+    Ok(Some(BuildArtifact {
+        id: artifact_id,
+        filename: filename.to_string(),
+        artifact_type: ext.to_string(),
+        size,
+        sha256,
+        download_url,
+    }))
+}
+
+/// Calculates the SHA256 hash of a file.
+fn calculate_sha256(path: &Path) -> Result<String, std::io::Error> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 8192];
+
+    loop {
+        let bytes_read = file.read(&mut buffer)?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
+
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// Mock firmware builder for testing.
@@ -289,8 +494,10 @@ impl FirmwareBuilder for MockFirmwareBuilder {
         _qmk_path: &PathBuf,
         keyboard: &str,
         keymap: &str,
+        output_dir: &Path,
+        job_id: &str,
         log_writer: &mut dyn Write,
-    ) -> Result<PathBuf, String> {
+    ) -> Result<BuildResult, String> {
         let _ = writeln!(log_writer, "[INFO] Mock build starting...");
         let _ = writeln!(
             log_writer,
@@ -309,13 +516,36 @@ impl FirmwareBuilder for MockFirmwareBuilder {
 
         if self.should_succeed {
             let keyboard_clean = keyboard.replace('/', "_");
-            let firmware_path = PathBuf::from(format!("/tmp/{keyboard_clean}_{keymap}.uf2"));
+            let filename = format!("{keyboard_clean}_{keymap}.uf2");
+
+            // Create the output directory and mock firmware file
+            let _ = fs::create_dir_all(output_dir);
+            let firmware_path = output_dir.join(&filename);
+            let _ = fs::write(&firmware_path, b"mock firmware content");
+
             let _ = writeln!(
                 log_writer,
                 "[INFO] Mock firmware generated: {}",
                 firmware_path.display()
             );
-            Ok(firmware_path)
+
+            // Create mock artifact metadata
+            let artifact_id = "uf2".to_string();
+            let download_url = format!("/api/build/jobs/{job_id}/artifacts/{artifact_id}/download");
+
+            let artifacts = vec![BuildArtifact {
+                id: artifact_id,
+                filename,
+                artifact_type: "uf2".to_string(),
+                size: 21, // "mock firmware content".len()
+                sha256: None,
+                download_url,
+            }];
+
+            Ok(BuildResult {
+                firmware_path,
+                artifacts,
+            })
         } else {
             let err = self
                 .error_message
@@ -339,6 +569,8 @@ pub struct BuildJobManager {
     command_tx: Mutex<Option<mpsc::Sender<BuildCommand>>>,
     /// Directory for storing job logs.
     logs_dir: PathBuf,
+    /// Directory for storing build artifacts.
+    output_dir: PathBuf,
     /// QMK firmware path from config.
     qmk_path: Option<PathBuf>,
     /// Firmware builder (real or mock).
@@ -347,18 +579,25 @@ pub struct BuildJobManager {
 
 impl BuildJobManager {
     /// Creates a new build job manager.
-    pub fn new(logs_dir: PathBuf, qmk_path: Option<PathBuf>) -> Arc<Self> {
-        Self::with_builder(logs_dir, qmk_path, Arc::new(RealFirmwareBuilder))
+    pub fn new(logs_dir: PathBuf, output_dir: PathBuf, qmk_path: Option<PathBuf>) -> Arc<Self> {
+        Self::with_builder(
+            logs_dir,
+            output_dir,
+            qmk_path,
+            Arc::new(RealFirmwareBuilder),
+        )
     }
 
     /// Creates a new build job manager with a custom builder (for testing).
     pub fn with_builder(
         logs_dir: PathBuf,
+        output_dir: PathBuf,
         qmk_path: Option<PathBuf>,
         builder: Arc<dyn FirmwareBuilder>,
     ) -> Arc<Self> {
-        // Ensure logs directory exists
+        // Ensure directories exist
         let _ = fs::create_dir_all(&logs_dir);
+        let _ = fs::create_dir_all(&output_dir);
 
         let manager = Arc::new(Self {
             jobs: RwLock::new(HashMap::new()),
@@ -366,6 +605,7 @@ impl BuildJobManager {
             running_count: Mutex::new(0),
             command_tx: Mutex::new(None),
             logs_dir,
+            output_dir,
             qmk_path,
             builder,
         });
@@ -394,7 +634,7 @@ impl BuildJobManager {
     fn process_build(self: &Arc<Self>, cmd: BuildCommand) {
         // Check if cancelled before starting
         if self.is_cancelled(&cmd.job_id) {
-            self.update_job_status(&cmd.job_id, JobStatus::Cancelled, None, None);
+            self.update_job_status(&cmd.job_id, JobStatus::Cancelled, None, None, Vec::new());
             return;
         }
 
@@ -424,8 +664,14 @@ impl BuildJobManager {
                     Err("Build cancelled".to_string())
                 } else {
                     // Run the build
-                    self.builder
-                        .build(&cmd.qmk_path, &cmd.keyboard, &cmd.keymap, &mut file)
+                    self.builder.build(
+                        &cmd.qmk_path,
+                        &cmd.keyboard,
+                        &cmd.keymap,
+                        &cmd.output_dir,
+                        &cmd.job_id,
+                        &mut file,
+                    )
                 }
             }
             Err(e) => Err(format!("Failed to open log file: {e}")),
@@ -439,22 +685,29 @@ impl BuildJobManager {
 
         // Check if cancelled after build
         if self.is_cancelled(&cmd.job_id) {
-            self.update_job_status(&cmd.job_id, JobStatus::Cancelled, None, None);
+            self.update_job_status(&cmd.job_id, JobStatus::Cancelled, None, None, Vec::new());
             return;
         }
 
         // Update job with result
         match result {
-            Ok(firmware_path) => {
+            Ok(build_result) => {
                 self.update_job_status(
                     &cmd.job_id,
                     JobStatus::Completed,
                     None,
-                    Some(firmware_path.display().to_string()),
+                    Some(build_result.firmware_path.display().to_string()),
+                    build_result.artifacts,
                 );
             }
             Err(error) => {
-                self.update_job_status(&cmd.job_id, JobStatus::Failed, Some(error), None);
+                self.update_job_status(
+                    &cmd.job_id,
+                    JobStatus::Failed,
+                    Some(error),
+                    None,
+                    Vec::new(),
+                );
             }
         }
     }
@@ -471,6 +724,7 @@ impl BuildJobManager {
         status: JobStatus,
         error: Option<String>,
         firmware_path: Option<String>,
+        artifacts: Vec<BuildArtifact>,
     ) {
         let mut jobs = self.jobs.write().unwrap();
         if let Some(job) = jobs.get_mut(job_id) {
@@ -483,6 +737,7 @@ impl BuildJobManager {
             };
             job.error = error;
             job.firmware_path = firmware_path;
+            job.artifacts = artifacts;
         }
     }
 
@@ -524,6 +779,9 @@ impl BuildJobManager {
         // Create log file path
         let log_path = self.logs_dir.join(format!("{job_id}.log"));
 
+        // Create job-specific output directory for artifacts
+        let output_dir = self.output_dir.join(&job_id);
+
         // Increment running count
         {
             let mut count = self.running_count.lock().unwrap();
@@ -538,6 +796,7 @@ impl BuildJobManager {
             keymap,
             qmk_path,
             log_path,
+            output_dir,
         };
 
         {
@@ -630,7 +889,7 @@ impl BuildJobManager {
                     self.cancelled.write().unwrap().insert(job_id.to_string());
 
                     // Update job status
-                    self.update_job_status(job_id, JobStatus::Cancelled, None, None);
+                    self.update_job_status(job_id, JobStatus::Cancelled, None, None, Vec::new());
 
                     CancelJobResponse {
                         success: true,
@@ -656,6 +915,62 @@ impl BuildJobManager {
         list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         list
     }
+
+    /// Gets the artifacts for a completed job.
+    pub fn get_artifacts(&self, job_id: &str) -> Option<Vec<BuildArtifact>> {
+        self.jobs
+            .read()
+            .unwrap()
+            .get(job_id)
+            .map(|job| job.artifacts.clone())
+    }
+
+    /// Gets the file path for a specific artifact.
+    ///
+    /// Validates the artifact ID to prevent path traversal attacks.
+    /// Returns `None` if the job doesn't exist, the artifact isn't found,
+    /// or the artifact ID is invalid.
+    pub fn get_artifact_path(&self, job_id: &str, artifact_id: &str) -> Option<PathBuf> {
+        // Validate artifact_id to prevent path traversal
+        if !is_valid_artifact_id(artifact_id) {
+            return None;
+        }
+
+        // Get artifact filename from job
+        let artifact_filename = self
+            .jobs
+            .read()
+            .unwrap()
+            .get(job_id)?
+            .artifacts
+            .iter()
+            .find(|a| a.id == artifact_id)
+            .map(|a| a.filename.clone())?;
+
+        // Construct path and validate it's within output directory
+        let artifact_path = self.output_dir.join(job_id).join(&artifact_filename);
+
+        // Security: Ensure the resolved path is within the expected output directory
+        let canonical_output = self.output_dir.canonicalize().ok()?;
+        let canonical_artifact = artifact_path.canonicalize().ok()?;
+
+        if canonical_artifact.starts_with(&canonical_output) {
+            Some(artifact_path)
+        } else {
+            None
+        }
+    }
+}
+
+/// Validates an artifact ID to prevent path traversal.
+///
+/// Valid artifact IDs are lowercase alphanumeric strings (matching file extensions).
+fn is_valid_artifact_id(id: &str) -> bool {
+    if id.is_empty() || id.len() > 10 {
+        return false;
+    }
+    id.chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
 }
 
 /// Parses a log line into (level, message).
@@ -685,6 +1000,7 @@ mod tests {
         });
         BuildJobManager::with_builder(
             temp_dir.join("logs"),
+            temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
         )
@@ -747,7 +1063,8 @@ mod tests {
     fn test_start_build_no_qmk_path() {
         let temp_dir = std::env::temp_dir().join(format!("lazyqmk_test_{}", Uuid::new_v4()));
         let manager = BuildJobManager::with_builder(
-            temp_dir,
+            temp_dir.join("logs"),
+            temp_dir.join("output"),
             None, // No QMK path
             Arc::new(MockFirmwareBuilder::default()),
         );
@@ -774,6 +1091,7 @@ mod tests {
         });
         let manager = BuildJobManager::with_builder(
             temp_dir.join("logs"),
+            temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
         );
@@ -840,6 +1158,7 @@ mod tests {
         });
         let manager = BuildJobManager::with_builder(
             temp_dir.join("logs"),
+            temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
         );
@@ -859,5 +1178,75 @@ mod tests {
         assert_eq!(updated.status, JobStatus::Failed);
         assert!(updated.error.is_some());
         assert!(updated.error.unwrap().contains("Compilation error"));
+    }
+
+    #[test]
+    fn test_is_valid_artifact_id() {
+        // Valid artifact IDs
+        assert!(is_valid_artifact_id("uf2"));
+        assert!(is_valid_artifact_id("bin"));
+        assert!(is_valid_artifact_id("hex"));
+        assert!(is_valid_artifact_id("a"));
+        assert!(is_valid_artifact_id("abc123"));
+
+        // Invalid artifact IDs
+        assert!(!is_valid_artifact_id("")); // Empty
+        assert!(!is_valid_artifact_id("verylongartifactid")); // Too long (>10)
+        assert!(!is_valid_artifact_id("UF2")); // Uppercase
+        assert!(!is_valid_artifact_id("uf-2")); // Hyphen
+        assert!(!is_valid_artifact_id("uf.2")); // Dot
+        assert!(!is_valid_artifact_id("../etc")); // Path traversal attempt
+        assert!(!is_valid_artifact_id("uf2/")); // Slash
+    }
+
+    #[test]
+    fn test_build_job_has_artifacts_after_success() {
+        let manager = create_test_manager();
+
+        let job = manager
+            .start_build(
+                "test.md".to_string(),
+                "crkbd".to_string(),
+                "default".to_string(),
+            )
+            .unwrap();
+
+        // Wait for build to complete
+        thread::sleep(Duration::from_millis(200));
+
+        let updated = manager.get_job(&job.id).unwrap();
+        assert_eq!(updated.status, JobStatus::Completed);
+
+        // Verify artifacts are populated
+        assert!(!updated.artifacts.is_empty());
+        assert_eq!(updated.artifacts[0].id, "uf2");
+        assert_eq!(updated.artifacts[0].artifact_type, "uf2");
+        assert!(updated.artifacts[0].download_url.contains(&job.id));
+    }
+
+    #[test]
+    fn test_get_artifacts_returns_none_for_unknown_job() {
+        let manager = create_test_manager();
+        assert!(manager.get_artifacts("nonexistent-job-id").is_none());
+    }
+
+    #[test]
+    fn test_get_artifact_path_validates_artifact_id() {
+        let manager = create_test_manager();
+
+        // Start and complete a build
+        let job = manager
+            .start_build(
+                "test.md".to_string(),
+                "crkbd".to_string(),
+                "default".to_string(),
+            )
+            .unwrap();
+        thread::sleep(Duration::from_millis(200));
+
+        // Invalid artifact IDs should return None
+        assert!(manager.get_artifact_path(&job.id, "../etc").is_none());
+        assert!(manager.get_artifact_path(&job.id, "UF2").is_none());
+        assert!(manager.get_artifact_path(&job.id, "").is_none());
     }
 }

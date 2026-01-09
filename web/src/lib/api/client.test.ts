@@ -475,4 +475,59 @@ describe('ApiClient', () => {
 			expect(url).toBe('http://localhost:3000/api/generate/jobs/job%20with%20spaces/download');
 		});
 	});
+
+	// Build Artifacts Tests
+	describe('getBuildArtifacts', () => {
+		it('fetches build artifacts', async () => {
+			const mockResponse = {
+				job_id: 'job-123',
+				artifacts: [
+					{
+						filename: 'firmware.hex',
+						artifact_type: 'hex',
+						size: 12345,
+						hash: 'abc123',
+						created_at: '2024-01-01T00:00:00Z'
+					}
+				]
+			};
+			(global.fetch as any).mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockResponse
+			});
+
+			const result = await client.getBuildArtifacts('job-123');
+			expect(result).toEqual(mockResponse);
+			expect(global.fetch).toHaveBeenCalledWith(
+				'http://localhost:3000/api/build/jobs/job-123/artifacts',
+				expect.any(Object)
+			);
+		});
+
+		it('encodes job ID in URL', async () => {
+			const mockResponse = { job_id: 'job', artifacts: [] };
+			(global.fetch as any).mockResolvedValueOnce({
+				ok: true,
+				json: async () => mockResponse
+			});
+
+			await client.getBuildArtifacts('job with spaces');
+			expect(global.fetch).toHaveBeenCalledWith(
+				'http://localhost:3000/api/build/jobs/job%20with%20spaces/artifacts',
+				expect.any(Object)
+			);
+		});
+	});
+
+	describe('getBuildArtifactDownloadUrl', () => {
+		it('returns the correct download URL', () => {
+			const url = client.getBuildArtifactDownloadUrl('job-123', 'firmware.hex');
+			expect(url).toBe('http://localhost:3000/api/build/jobs/job-123/artifacts/firmware.hex');
+		});
+
+		it('encodes job ID and filename in URL', () => {
+			const url = client.getBuildArtifactDownloadUrl('job with spaces', 'my firmware.hex');
+			expect(url).toBe('http://localhost:3000/api/build/jobs/job%20with%20spaces/artifacts/my%20firmware.hex');
+		});
+	});
 });
