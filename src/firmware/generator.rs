@@ -338,54 +338,9 @@ impl<'a> FirmwareGenerator<'a> {
         }
     }
 
-    /// Generates key assignments for a layer ordered by LED index.
-    ///
-    /// Used only for LED-related features. For keymap generation, use
-    /// `generate_layer_keys_by_layout` instead.
-    #[allow(dead_code)]
-    fn generate_layer_keys_by_led(
-        &self,
-        layer: &crate::models::layer::Layer,
-    ) -> Result<Vec<String>> {
-        let led_count = self.mapping.key_count();
-        let mut keys_by_led = vec![String::from("KC_NO"); led_count];
-
-        // Map each key to its LED position
-        for key in &layer.keys {
-            let visual_pos = key.position;
-
-            // Visual d1 Matrix
-            let matrix_pos = self
-                .mapping
-                .visual_to_matrix_pos(visual_pos.row, visual_pos.col)
-                .with_context(|| {
-                    format!(
-                        "Failed to map visual position ({}, {}) to matrix",
-                        visual_pos.row, visual_pos.col
-                    )
-                })?;
-
-            // Matrix d1 LED
-            let led_idx = self
-                .mapping
-                .visual_to_led_index(visual_pos.row, visual_pos.col)
-                .with_context(|| {
-                    format!(
-                        "Failed to map matrix position ({}, {}) to LED index",
-                        matrix_pos.0, matrix_pos.1
-                    )
-                })?;
-
-            // Store keycode at LED position
-            keys_by_led[led_idx as usize].clone_from(&key.keycode);
-        }
-
-        Ok(keys_by_led)
-    }
-
     /// Generates resolved colors for a layer ordered by LED index.
     ///
-    /// Colors use the same visual -> LED mapping as `generate_layer_keys_by_led`
+    /// Colors use the same visual -> LED mapping for LED-based features
     /// and honor the layout's four-level color priority system and the
     /// `inactive_key_behavior` setting.
     ///
@@ -1064,19 +1019,6 @@ mod tests {
         assert!(keymap_c.contains("#ifdef RGB_MATRIX_ENABLE"));
         assert!(keymap_c.contains("const uint8_t PROGMEM layer_base_colors"));
         assert!(keymap_c.contains("#endif"));
-    }
-
-    #[test]
-    fn test_generate_layer_keys_by_led() {
-        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
-        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
-
-        let layer = &layout.layers[0];
-        let keys_by_led = generator.generate_layer_keys_by_led(layer).unwrap();
-
-        assert_eq!(keys_by_led.len(), 2);
-        assert_eq!(keys_by_led[0], "KC_A");
-        assert_eq!(keys_by_led[1], "KC_B");
     }
 
     #[test]
