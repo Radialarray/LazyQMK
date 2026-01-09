@@ -1,12 +1,20 @@
 
 # LazyQMK
-### Terminal Keyboard Layout Editor for QMK Firmware
+### Keyboard Layout Editor for QMK Firmware
 
-**LazyQMK** is a terminal-based keyboard layout editor for QMK firmware. Design keymaps, manage layers, organize with colors and categories, and compile firmware—all without leaving your terminal.
+**LazyQMK** is a keyboard layout editor for QMK firmware, available in both **terminal (TUI)** and **web-based** interfaces. Design keymaps, manage layers, organize with colors and categories, and compile firmware—whether you prefer the terminal or the browser.
 
 ---
 
 ![LazyQMK Screen](docs/LazyQMK.png)
+
+## ✨ Two Interfaces, Same Power
+
+**Choose Your Workflow:**
+- **`lazyqmk`** - Terminal UI (TUI) for keyboard enthusiasts who live in the terminal
+- **`lazyqmk-web`** - Web-based editor for a modern browser experience
+
+Both interfaces provide full feature parity: visual keyboard preview, layer management, firmware generation, and compilation.
 
 ## 💡 Motivation
 
@@ -40,6 +48,9 @@ brew install lazyqmk
 ```
 
 ### Pre-built Binary + Custom QMK Fork
+
+> [!TIP]
+> Each release includes both `lazyqmk` (terminal UI) and `lazyqmk-web` (web server) binaries for all platforms.
 
 **Step 1: Download and install LazyQMK for your platform**
 
@@ -118,6 +129,90 @@ The onboarding wizard will ask for:
 - **Layout Variant**: Your physical layout (e.g., `LAYOUT_split_3x6_3`)
 
 That's it! You're ready to start editing your layout.
+
+## 🌐 Web Editor
+
+**New in v0.13.0:** LazyQMK now includes a web-based editor with full feature parity to the TUI!
+
+### Quick Start - Web Interface
+
+```bash
+# Download the web binary from releases
+# Linux example:
+wget https://github.com/Radialarray/LazyQMK/releases/latest/download/lazyqmk-web-linux-x86_64.tar.gz
+tar -xzf lazyqmk-web-linux-x86_64.tar.gz
+chmod +x lazyqmk-web
+sudo mv lazyqmk-web /usr/local/bin/
+
+# Start the web server
+lazyqmk-web
+
+# Open your browser to http://localhost:3001
+```
+
+The `lazyqmk-web` binary is a standalone server that provides:
+- **REST API** - Backend for layout management and firmware operations
+- **Web UI** - Modern browser-based editor (embedded, no separate installation needed)
+- **Single Binary** - Frontend is embedded at compile time for easy deployment
+
+### Web Editor Features
+- 📝 **Visual keyboard layout editor** - Drag-and-drop keycode assignment
+- 🎨 **Layer management** - Create, delete, and organize layers with color coding
+- 🔨 **Firmware generation** - Generate QMK keymap files (JSON + C code)
+- 🏗️ **Firmware building** - Compile firmware and download artifacts (.uf2/.hex/.bin)
+- 📊 **Real-time build logs** - Live streaming compilation output with syntax highlighting
+- 📦 **Build history** - Track all firmware builds with timestamps and checksums
+- 🚫 **Build cancellation** - Stop long-running compilations instantly
+- 🧹 **Automatic cleanup** - Old build artifacts are cleaned up automatically (7 days, 50 max)
+- 🌙 **Dark mode** - Respects system theme preferences
+- ⌨️ **Keyboard shortcuts** - TUI-like shortcuts for power users
+- 📱 **Responsive design** - Works on desktop, tablet, and mobile
+
+### Configuration Options
+
+```bash
+# Custom port
+lazyqmk-web --port 8080
+
+# Custom workspace directory
+lazyqmk-web --workspace ~/my-keyboard-layouts
+
+# Bind to all network interfaces (for LAN/remote access)
+lazyqmk-web --host 0.0.0.0
+
+# Custom QMK firmware path
+lazyqmk-web --qmk-path ~/custom-qmk-firmware
+```
+
+### When to Use Web vs TUI
+
+**Use the Web Editor (`lazyqmk-web`) when:**
+- You prefer a graphical interface with mouse interaction
+- You want to share access with others on your network
+- You're working on a device without terminal access
+- You need to download firmware files directly from the browser
+
+**Use the TUI (`lazyqmk`) when:**
+- You live in the terminal and prefer keyboard-only workflows
+- You want minimal resource usage (no web server overhead)
+- You're editing layouts over SSH
+- You prefer tools like `lazygit` and `neovim`
+
+Both interfaces share the same layout file format and can be used interchangeably!
+
+### Deployment
+
+For production deployment (systemd, Docker, reverse proxy), see [`docs/WEB_DEPLOYMENT.md`](docs/WEB_DEPLOYMENT.md).
+
+### Development
+
+Want to contribute to the web frontend? See [`web/README.md`](web/README.md) for development setup:
+
+```bash
+cd web
+npm install
+npm run dev:web  # Starts backend (port 3001) + Vite dev server (port 5173) with hot-reload
+```
 
 ## ✨ Features
 
