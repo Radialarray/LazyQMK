@@ -72,27 +72,49 @@ This single command:
 
 Open http://localhost:5173 to access the UI.
 
-### Alternative: Production Mode
+### Alternative: Production Mode (Standalone Binary)
 
-For out-of-the-box usage without development tools:
+For production deployment without a separate frontend server, the `lazyqmk-web` binary can embed the frontend build:
 
+**Step 1: Build the frontend**
 ```bash
-lazyqmk --web
+cd web
+npm install
+npm run build
 ```
 
-Then open http://localhost:3001 in your browser.
+**Step 2: Build the Rust binary with embedded frontend**
+```bash
+cd ..
+cargo build --release --features web --bin lazyqmk-web
+```
+
+**Step 3: Run the standalone binary**
+```bash
+./target/release/lazyqmk-web
+```
+
+The binary will serve both the API and the frontend at http://localhost:3001.
+
+**How it works:**
+- The `rust-embed` crate bundles all files from `web/build/` into the binary at compile time
+- Static files (HTML, JS, CSS, etc.) are served with correct MIME types
+- SPA routing is supported (refreshing `/layouts/my-layout` serves `index.html`)
+- If frontend files aren't embedded, the server falls back to CORS-only mode for development
 
 **Custom configuration:**
 ```bash
 # Custom workspace directory
-lazyqmk --web --workspace ~/my-layouts
+./target/release/lazyqmk-web --workspace ~/my-layouts
 
 # Custom port
-lazyqmk --web --port 8080
+./target/release/lazyqmk-web --port 8080
 
 # Bind to all interfaces (not just localhost)
-lazyqmk --web --host 0.0.0.0
+./target/release/lazyqmk-web --host 0.0.0.0
 ```
+
+### Alternative: Development Mode with Vite
 
 ### Alternative: Manual Two-Terminal Setup
 

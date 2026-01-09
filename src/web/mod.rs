@@ -45,7 +45,8 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{header, StatusCode},
+    response::{Html, IntoResponse, Response},
     routing::get,
     Json, Router,
 };
@@ -69,6 +70,75 @@ use build_jobs::MockFirmwareBuilder;
 
 #[cfg(test)]
 use generate_jobs::MockGenerateWorker;
+
+// ============================================================================
+// Static File Embedding
+// ============================================================================
+
+/// Embedded static files from the web frontend build.
+#[derive(rust_embed::RustEmbed)]
+#[folder = "web/build/"]
+struct Assets;
+
+/// Serves static files from the embedded assets.
+///
+/// Returns the file content with appropriate MIME type headers,
+/// or None if the file is not found.
+fn serve_static(uri: &str) -> Option<Response> {
+    // Remove leading slash
+    let path = uri.trim_start_matches('/');
+
+    // Try to get the file from embedded assets
+    let file = Assets::get(path)?;
+
+    // Guess MIME type from file extension
+    let mime_type = mime_guess::from_path(path)
+        .first_or_octet_stream()
+        .as_ref()
+        .to_string();
+
+    // Build response with appropriate headers
+    Some(([(header::CONTENT_TYPE, mime_type)], file.data).into_response())
+}
+
+/// Fallback handler for SPA routing.
+///
+/// Serves index.html for any non-API routes that don't match static files.
+/// This enables client-side routing in the SPA.
+fn spa_fallback() -> Response {
+    // Try to get index.html from embedded assets
+    if let Some(index) = Assets::get("index.html") {
+        Html(index.data).into_response()
+    } else {
+        // If index.html is not embedded (dev mode), return 404
+        (
+            StatusCode::NOT_FOUND,
+            "Frontend not embedded - use Vite dev server",
+        )
+            .into_response()
+    }
+}
+
+/// Handles static file requests and SPA fallback.
+///
+/// First tries to serve the requested file from embedded assets.
+/// If not found and it's not an API route, serves index.html for SPA routing.
+async fn static_handler(uri: axum::http::Uri) -> Response {
+    let path = uri.path();
+
+    // Try to serve the static file first
+    if let Some(response) = serve_static(path) {
+        return response;
+    }
+
+    // If file not found and path doesn't start with /api, serve index.html (SPA fallback)
+    if !path.starts_with("/api") {
+        return spa_fallback();
+    }
+
+    // For API routes that don't match, return 404
+    (StatusCode::NOT_FOUND, "Not found").into_response()
+}
 
 // ============================================================================
 // Application State
@@ -3137,6 +3207,9 @@ pub fn create_router(state: AppState) -> Router {
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+        // Fallback for static files and SPA routing (must be last)
+        // This serves embedded frontend files or returns 404 if not embedded (dev mode)
+        .fallback(static_handler)
 }
 
 /// Runs the web server.

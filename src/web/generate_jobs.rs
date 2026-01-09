@@ -1289,18 +1289,23 @@ mod tests {
         assert_eq!(count, 0, "Running count should remain 0 after failure");
 
         // Job should exist but be marked as failed
-        let jobs = manager.jobs.read().unwrap();
-        assert_eq!(jobs.len(), 1, "Job should be created even if enqueue fails");
-        let job = jobs.values().next().unwrap();
-        assert_eq!(
-            job.status,
-            GenerateJobStatus::Failed,
-            "Job should be marked as Failed"
-        );
-        assert!(job.error.is_some(), "Job should have an error message");
+        let job_id = {
+            let jobs = manager.jobs.read().unwrap();
+            assert_eq!(jobs.len(), 1, "Job should be created even if enqueue fails");
+            let job = jobs.values().next().unwrap();
+            assert_eq!(
+                job.status,
+                GenerateJobStatus::Failed,
+                "Job should be marked as Failed"
+            );
+            assert!(job.error.is_some(), "Job should have an error message");
+            let id = job.id.clone();
+            drop(jobs);
+            id
+        };
 
         // Log file should exist with error entry
-        let log_path = manager.logs_dir.join(format!("{}.log", job.id));
+        let log_path = manager.logs_dir.join(format!("{job_id}.log"));
         assert!(log_path.exists(), "Log file should be created");
         let log_content = fs::read_to_string(&log_path).unwrap();
         assert!(
@@ -1366,18 +1371,23 @@ mod tests {
         assert_eq!(count, 0, "Running count should be rolled back to 0");
 
         // Job should exist and be marked as failed
-        let jobs = manager.jobs.read().unwrap();
-        assert_eq!(jobs.len(), 1, "Job should exist");
-        let job = jobs.values().next().unwrap();
-        assert_eq!(
-            job.status,
-            GenerateJobStatus::Failed,
-            "Job should be marked as Failed"
-        );
-        assert!(job.error.is_some(), "Job should have error message");
+        let job_id = {
+            let jobs = manager.jobs.read().unwrap();
+            assert_eq!(jobs.len(), 1, "Job should exist");
+            let job = jobs.values().next().unwrap();
+            assert_eq!(
+                job.status,
+                GenerateJobStatus::Failed,
+                "Job should be marked as Failed"
+            );
+            assert!(job.error.is_some(), "Job should have error message");
+            let id = job.id.clone();
+            drop(jobs);
+            id
+        };
 
         // Log file should contain error
-        let log_path = manager.logs_dir.join(format!("{}.log", job.id));
+        let log_path = manager.logs_dir.join(format!("{job_id}.log"));
         assert!(log_path.exists(), "Log file should be created");
         let log_content = fs::read_to_string(&log_path).unwrap();
         assert!(
