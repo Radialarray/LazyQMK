@@ -426,11 +426,12 @@ export interface CancelJobResponse {
 
 // Build Artifacts
 export interface BuildArtifact {
+	id: string;
 	filename: string;
 	artifact_type: string;
 	size: number;
-	hash?: string;
-	created_at: string;
+	sha256?: string;
+	download_url: string;
 }
 
 export interface BuildArtifactsResponse {

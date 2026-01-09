@@ -2406,13 +2406,13 @@
 										<div class="flex gap-4 text-xs text-muted-foreground mt-1">
 											<span>Type: {artifact.artifact_type}</span>
 											<span>Size: {formatBytes(artifact.size)}</span>
-											{#if artifact.hash}
-												<span title={artifact.hash}>Hash: {artifact.hash.substring(0, 8)}...</span>
+											{#if artifact.sha256}
+												<span title={artifact.sha256}>Hash: {artifact.sha256.substring(0, 8)}...</span>
 											{/if}
 										</div>
 									</div>
 									<a 
-										href={buildJob ? apiClient.getBuildArtifactDownloadUrl(buildJob.id, artifact.filename) : '#'}
+										href={buildJob ? apiClient.getBuildArtifactDownloadUrl(buildJob.id, artifact.id) : '#'}
 										download={artifact.filename}
 										class="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
 										data-testid="artifact-download"
