@@ -2415,7 +2415,7 @@
 						<div>
 							<h2 class="text-lg font-semibold">Build Firmware</h2>
 							<p class="text-sm text-muted-foreground">
-								Compile QMK firmware (.bin/.hex) for this layout
+								Compile QMK firmware (.uf2/.hex/.bin) for this layout
 							</p>
 						</div>
 						<div class="flex gap-2">
