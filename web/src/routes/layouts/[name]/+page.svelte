@@ -54,8 +54,15 @@
 	let saveError = $state<string | null>(null);
 
 	// Tab navigation
-	const tabs = [
-		{ id: 'preview', label: 'Preview', icon: '⌨️' },
+	// Primary tabs - always visible in horizontal bar
+	const primaryTabs = [
+		{ id: 'preview', label: 'Editor', icon: '⌨️' },
+		{ id: 'generate', label: 'Generate', icon: '⚙️' },
+		{ id: 'build', label: 'Build', icon: '🔨' }
+	];
+	
+	// Secondary tabs - accessible via "More..." dropdown
+	const secondaryTabs = [
 		{ id: 'metadata', label: 'Metadata', icon: '📝' },
 		{ id: 'layers', label: 'Layers', icon: '📚' },
 		{ id: 'categories', label: 'Categories', icon: '🎨' },
@@ -64,11 +71,14 @@
 		{ id: 'idle-effect', label: 'Idle Effect', icon: '💤' },
 		{ id: 'validate', label: 'Validate', icon: '✓' },
 		{ id: 'inspect', label: 'Inspect', icon: '🔍' },
-		{ id: 'export', label: 'Export', icon: '📄' },
-		{ id: 'generate', label: 'Generate', icon: '⚙️' },
-		{ id: 'build', label: 'Build', icon: '🔨' }
+		{ id: 'export', label: 'Export', icon: '📄' }
 	];
+	
 	let activeTab = $state('preview');
+	let dropdownOpen = $state(false);
+	
+	// Check if active tab is in secondary tabs
+	const isActiveTabSecondary = $derived(secondaryTabs.some(tab => tab.id === activeTab));
 
 	// Metadata editing state
 	let metadataName = $state('');
@@ -1249,8 +1259,88 @@
 		</div>
 	</div>
 
-	<!-- Tab Navigation -->
-	<Tabs {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} class="mb-6" />
+	<!-- Tab Navigation with Dropdown -->
+	<div class="tabs-container mb-6" data-testid="tab-navigation">
+		<div class="flex border-b border-border relative">
+			<!-- Primary Tabs -->
+			{#each primaryTabs as tab}
+				<button
+					onclick={() => { activeTab = tab.id; dropdownOpen = false; }}
+					class="tab-button px-4 py-2 text-sm font-medium transition-colors
+						{activeTab === tab.id
+						? 'border-b-2 border-primary text-primary'
+						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
+					aria-selected={activeTab === tab.id}
+					role="tab"
+					data-testid="tab-{tab.id}"
+				>
+					{#if tab.icon}
+						<span class="mr-2">{tab.icon}</span>
+					{/if}
+					{tab.label}
+				</button>
+			{/each}
+			
+			<!-- More... Dropdown Button -->
+			<div class="relative">
+				<button
+					onclick={() => dropdownOpen = !dropdownOpen}
+					class="tab-button px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1
+						{isActiveTabSecondary
+						? 'border-b-2 border-primary text-primary'
+						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
+					aria-haspopup="true"
+					aria-expanded={dropdownOpen}
+					data-testid="tab-more-dropdown"
+				>
+					<span class="mr-1">⋯</span>
+					More...
+					<svg class="w-4 h-4 ml-1 transition-transform {dropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+					</svg>
+				</button>
+				
+				<!-- Dropdown Menu -->
+				{#if dropdownOpen}
+					<!-- Click-outside handler -->
+					<button
+						class="fixed inset-0 z-10"
+						onclick={() => dropdownOpen = false}
+						onkeydown={(e) => e.key === 'Escape' && (dropdownOpen = false)}
+						tabindex="-1"
+						aria-label="Close dropdown"
+					></button>
+					
+					<!-- Dropdown content -->
+					<div
+						class="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-20 py-1"
+						role="menu"
+						data-testid="tab-dropdown-menu"
+					>
+						{#each secondaryTabs as tab}
+							<button
+								onclick={() => { activeTab = tab.id; dropdownOpen = false; }}
+								class="w-full px-4 py-2 text-sm text-left flex items-center gap-2 transition-colors
+									{activeTab === tab.id
+									? 'bg-accent text-primary font-medium'
+									: 'text-foreground hover:bg-accent'}"
+								role="menuitem"
+								data-testid="dropdown-tab-{tab.id}"
+							>
+								{#if tab.icon}
+									<span>{tab.icon}</span>
+								{/if}
+								{tab.label}
+								{#if activeTab === tab.id}
+									<span class="ml-auto text-primary">✓</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
 
 	<!-- Tab Content -->
 	{#if layout}
@@ -2296,9 +2386,25 @@
 						<div class="bg-muted/30 p-4 rounded-lg">
 							<p class="text-sm font-medium mb-2">CLI Alternative:</p>
 							<code class="text-sm font-mono">lazyqmk generate {filename}</code>
-						</div>
-					</div>
-				{/if}
+		</div>
+	</div>
+{/if}
+
+<style>
+	.tabs-container {
+		width: 100%;
+	}
+
+	.tab-button {
+		position: relative;
+		white-space: nowrap;
+	}
+
+	.tab-button:focus {
+		outline: 2px solid hsl(var(--ring));
+		outline-offset: -2px;
+	}
+</style>
 			</Card>
 		{:else if activeTab === 'build'}
 			<!-- Build Tab - Firmware Compilation -->
