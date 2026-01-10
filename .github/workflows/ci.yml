@@ -41,6 +41,18 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Build web frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
       - name: Test (all features)
         run: cargo test --all-features --verbose
 
@@ -74,5 +86,17 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Build web frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
       - name: Test (all features)
         run: cargo test --all-features --verbose
