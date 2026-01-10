@@ -1,6 +1,6 @@
 [package]
 name = "lazyqmk"
-version = "0.13.2"
+version = "0.13.3"
 edition = "2021"
 authors = ["LazyQMK Contributors"]
 description = "Interactive terminal workspace for QMK firmware for mechanical keyboards"
