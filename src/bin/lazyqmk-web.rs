@@ -26,7 +26,63 @@ use lazyqmk::web;
 
 /// LazyQMK Web Server - REST API for the layout editor
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about = "LazyQMK Web Server - Browser-based keyboard layout editor",
+    long_about = "\
+LazyQMK Web Server - Browser-based keyboard layout editor
+
+DESCRIPTION:
+  Provides a modern browser-based interface for editing QMK keyboard layouts
+  with full feature parity to the terminal UI. Includes REST API backend and
+  embedded web frontend in a single binary.
+
+USAGE EXAMPLES:
+  Start with default settings:
+    lazyqmk-web
+  
+  Custom port and host:
+    lazyqmk-web --port 8080 --host 0.0.0.0
+  
+  Custom workspace directory:
+    lazyqmk-web --workspace ~/my-layouts
+  
+  Enable verbose logging:
+    lazyqmk-web --verbose
+
+ACCESSING THE WEB EDITOR:
+  After starting the server, open your browser to:
+    http://localhost:3001 (default)
+  
+  Or your custom host/port:
+    http://localhost:8080 (if using --port 8080)
+
+FEATURES:
+  - Visual keyboard layout editor
+  - Layer management and color coding
+  - Category system for key organization
+  - Firmware generation and compilation
+  - Build history with artifact management
+  - Real-time build logs with SSE streaming
+  - Template system for layout sharing
+  - Dark mode support
+  
+  For detailed feature documentation, see: docs/WEB_FEATURES.md
+
+BUILDING FROM SOURCE:
+  This binary requires the 'web' feature flag:
+    cargo build --features web --release --bin lazyqmk-web
+
+SECURITY:
+  By default, the server binds to 127.0.0.1 (localhost only) for security.
+  To expose the server to your local network:
+    lazyqmk-web --host 0.0.0.0
+  
+  For production deployment with HTTPS and authentication, see:
+    docs/WEB_DEPLOYMENT.md
+"
+)]
 struct Args {
     /// Port to listen on
     #[arg(short, long, default_value = "3001")]

@@ -32,7 +32,45 @@ use std::path::PathBuf;
 
 /// LazyQMK - Terminal-based keyboard layout editor
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about,
+    long_about = "\
+LazyQMK - Terminal-based keyboard layout editor for QMK firmware
+
+AVAILABLE BUILD FEATURES:
+  - ratatui (default): Terminal UI interface
+  - web: REST API server and web-based editor
+
+BUILDING WITH WEB FEATURES:
+  To build LazyQMK with web server support:
+  
+    cargo build --features web --release
+
+  Or build binaries separately:
+  
+    cargo build --bin lazyqmk --release        # TUI only
+    cargo build --bin lazyqmk-web --release    # Web server (requires 'web' feature)
+
+USING THE WEB EDITOR:
+  The web editor provides a modern browser-based interface with full feature parity.
+  After building with web features, start the server:
+  
+    lazyqmk-web                                # Default: http://localhost:3001
+    lazyqmk-web --port 8080 --host 0.0.0.0    # Custom port and host
+    lazyqmk-web --workspace ~/my-layouts       # Custom workspace directory
+  
+  Then open http://localhost:3001 in your browser.
+  
+  For more information, see: docs/WEB_FEATURES.md
+
+PRE-BUILT BINARIES:
+  Official releases include both 'lazyqmk' (TUI) and 'lazyqmk-web' (web server)
+  binaries for Linux, macOS, and Windows. Download from:
+  https://github.com/Radialarray/LazyQMK/releases
+"
+)]
 struct Cli {
     /// Subcommand to execute (if none provided, launches TUI)
     #[command(subcommand)]
