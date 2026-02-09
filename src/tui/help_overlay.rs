@@ -373,7 +373,10 @@ impl HelpOverlayState {
         )]));
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
-                if binding.action == "Selection mode" || binding.action == "Rectangle select" {
+                if binding.action == "Selection mode"
+                    || binding.action == "Rectangle select"
+                    || binding.action.contains("Swap two keys")
+                {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
                     let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
