@@ -59,7 +59,9 @@ use tracing::info;
 use crate::config::Config;
 use crate::export;
 use crate::keycode_db::{KeycodeCategory, KeycodeDb, KeycodeDefinition};
-use crate::models::{IdleEffectSettings, Layout, RgbMatrixEffect, TapDanceAction, TapHoldSettings};
+use crate::models::{
+    IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, TapDanceAction, TapHoldSettings,
+};
 use crate::parser;
 use crate::services::LayoutService;
 
@@ -621,7 +623,7 @@ pub struct ExportResponse {
 }
 
 /// Idle effect settings for API.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdleEffectSettingsDto {
     /// Whether idle effect is enabled.
     pub enabled: bool,
@@ -645,7 +647,7 @@ impl From<&IdleEffectSettings> for IdleEffectSettingsDto {
 }
 
 /// Tap hold settings for API.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TapHoldSettingsDto {
     /// Tapping term in milliseconds.
     pub tapping_term: u16,
@@ -733,6 +735,81 @@ impl From<&TapDanceAction> for TapDanceDto {
             hold: td.hold.clone(),
         }
     }
+}
+
+// ============================================================================
+// Layout DTO Types (for frontend compatibility)
+// ============================================================================
+
+/// Key assignment DTO enriched with geometry data for frontend.
+///
+/// This bridges the gap between Rust's `KeyDefinition` (which only has `position`)
+/// and TypeScript's `KeyAssignment` interface (which expects `visual_index`,
+/// `matrix_position`, and `led_index` for rendering and interaction).
+#[derive(Debug, Clone, Serialize)]
+pub struct KeyAssignmentDto {
+    /// QMK keycode (e.g., "KC_A", "KC_TRNS", "MO(1)")
+    pub keycode: String,
+    /// Matrix position [row, col] derived from geometry
+    pub matrix_position: [u8; 2],
+    /// Visual index (layout array index from info.json)
+    pub visual_index: u8,
+    /// RGB LED index derived from geometry
+    pub led_index: u8,
+    /// Visual position (row, col) for swap API compatibility
+    pub position: crate::models::Position,
+    /// Individual key color override
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_override: Option<RgbColor>,
+    /// Category assignment for this key
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<String>,
+    /// Optional user description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Layer DTO with enriched key data.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayerDto {
+    /// Unique layer identifier
+    pub id: String,
+    /// Layer number (0-based)
+    pub number: u8,
+    /// Human-readable name
+    pub name: String,
+    /// Base color for all keys on this layer
+    pub default_color: RgbColor,
+    /// Optional category assignment for entire layer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<String>,
+    /// Enriched key assignments
+    pub keys: Vec<KeyAssignmentDto>,
+    /// Whether layer-level RGB colors are enabled
+    pub layer_colors_enabled: bool,
+}
+
+/// Complete layout DTO with enriched layer data.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutDto {
+    /// Layout metadata
+    pub metadata: crate::models::LayoutMetadata,
+    /// Enriched layers
+    pub layers: Vec<LayerDto>,
+    /// Category definitions
+    pub categories: Vec<crate::models::Category>,
+    /// RGB lighting enabled
+    pub rgb_enabled: bool,
+    /// RGB brightness (0-255)
+    pub rgb_brightness: crate::models::RgbBrightness,
+    /// RGB saturation (0-255)
+    pub rgb_saturation: crate::models::RgbSaturation,
+    /// Idle effect settings
+    pub idle_effect_settings: IdleEffectSettingsDto,
+    /// Tap-hold settings
+    pub tap_hold_settings: TapHoldSettingsDto,
+    /// Tap dance definitions
+    pub tap_dances: Vec<TapDanceDto>,
 }
 
 // ============================================================================
@@ -860,7 +937,7 @@ async fn list_layouts(
 async fn get_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<Layout>, (StatusCode, Json<ApiError>)> {
+) -> Result<Json<LayoutDto>, (StatusCode, Json<ApiError>)> {
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
@@ -895,7 +972,116 @@ async fn get_layout(
         )
     })?;
 
-    Ok(Json(layout))
+    // Build position_to_geometry mapping from keyboard geometry (if available)
+    // This provides the authoritative mapping from visual position to geometry data
+    let position_to_geometry: std::collections::HashMap<String, (u8, [u8; 2], u8)> =
+        if let (Some(keyboard), Some(qmk_path)) = (
+            layout.metadata.keyboard.as_ref(),
+            state.config.paths.qmk_firmware.as_ref(),
+        ) {
+            // Determine layout variant (fall back to "LAYOUT" if not specified)
+            let layout_variant = layout
+                .metadata
+                .layout_variant
+                .clone()
+                .unwrap_or_else(|| "LAYOUT".to_string());
+
+            // Try to load geometry - if it fails, we'll fall back to array index
+            parser::keyboard_json::parse_keyboard_info_json(qmk_path, keyboard)
+                .ok()
+                .and_then(|keyboard_info| {
+                    parser::keyboard_json::build_keyboard_geometry_with_rgb(
+                        &keyboard_info,
+                        keyboard,
+                        &layout_variant,
+                        None,
+                    )
+                    .ok()
+                })
+                .map(|geometry| {
+                    // Build mapping from position (row,col) to (visual_index, matrix_position, led_index)
+                    geometry
+                        .keys
+                        .iter()
+                        .map(|k| {
+                            let row = k.visual_y.round() as u8;
+                            let col = k.visual_x.round() as u8;
+                            let pos_key = format!("{row},{col}");
+                            (
+                                pos_key,
+                                (
+                                    k.layout_index,
+                                    [k.matrix_position.0, k.matrix_position.1],
+                                    k.led_index,
+                                ),
+                            )
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        } else {
+            std::collections::HashMap::new()
+        };
+
+    // Convert Layout to LayoutDto with enriched key data
+    let layers: Vec<LayerDto> = layout
+        .layers
+        .iter()
+        .map(|layer| {
+            let keys: Vec<KeyAssignmentDto> = layer
+                .keys
+                .iter()
+                .enumerate()
+                .map(|(idx, key)| {
+                    // Look up geometry data from position mapping, fall back to array index
+                    let pos_key = format!("{},{}", key.position.row, key.position.col);
+                    let (visual_index, matrix_position, led_index) = position_to_geometry
+                        .get(&pos_key)
+                        .copied()
+                        .unwrap_or_else(|| {
+                            // Fallback: use array index for all fields
+                            let idx_u8 = idx as u8;
+                            (idx_u8, [idx_u8, 0], idx_u8)
+                        });
+
+                    KeyAssignmentDto {
+                        keycode: key.keycode.clone(),
+                        matrix_position,
+                        visual_index,
+                        led_index,
+                        position: key.position,
+                        color_override: key.color_override,
+                        category_id: key.category_id.clone(),
+                        description: key.description.clone(),
+                    }
+                })
+                .collect();
+
+            LayerDto {
+                id: layer.id.clone(),
+                number: layer.number,
+                name: layer.name.clone(),
+                default_color: layer.default_color,
+                category_id: layer.category_id.clone(),
+                keys,
+                layer_colors_enabled: layer.layer_colors_enabled,
+            }
+        })
+        .collect();
+
+    let layout_dto = LayoutDto {
+        metadata: layout.metadata,
+        layers,
+        categories: layout.categories,
+        rgb_enabled: layout.rgb_enabled,
+        rgb_brightness: layout.rgb_brightness,
+        rgb_saturation: layout.rgb_saturation,
+        idle_effect_settings: IdleEffectSettingsDto::from(&layout.idle_effect_settings),
+        tap_hold_settings: TapHoldSettingsDto::from(&layout.tap_hold_settings),
+        tap_dances: layout.tap_dances.iter().map(TapDanceDto::from).collect(),
+    };
+
+    Ok(Json(layout_dto))
 }
 
 /// PUT /api/layouts/{filename} - Save a layout file.
@@ -1005,6 +1191,23 @@ async fn swap_keys(
     // Get the layer
     let layer = &mut layout.layers[request.layer as usize];
 
+    // Debug logging
+    eprintln!(
+        "Swap request: layer={}, first=({},{}), second=({},{})",
+        request.layer,
+        request.first_position.row,
+        request.first_position.col,
+        request.second_position.row,
+        request.second_position.col
+    );
+    eprintln!("Layer has {} keys", layer.keys.len());
+    for (i, k) in layer.keys.iter().enumerate() {
+        eprintln!(
+            "  Key {}: pos=({},{}) keycode={}",
+            i, k.position.row, k.position.col, k.keycode
+        );
+    }
+
     // Find indices of both keys by position
     let first_idx = layer.keys.iter().position(|k| {
         k.position.row == request.first_position.row && k.position.col == request.first_position.col
@@ -1013,6 +1216,11 @@ async fn swap_keys(
         k.position.row == request.second_position.row
             && k.position.col == request.second_position.col
     });
+
+    eprintln!(
+        "Found first_idx={:?}, second_idx={:?}",
+        first_idx, second_idx
+    );
 
     match (first_idx, second_idx) {
         (Some(idx1), Some(idx2)) => {

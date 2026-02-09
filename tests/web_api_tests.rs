@@ -1754,3 +1754,64 @@ async fn test_generate_download_job_not_found() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert!(json["error"].as_str().unwrap().contains("not found"));
 }
+
+/// Test that GET /api/layouts/{filename} returns enriched key data with visual_index,
+/// matrix_position, and led_index fields needed by the frontend.
+#[tokio::test]
+async fn test_get_layout_returns_enriched_key_data() {
+    let (state, temp_dir) = create_test_state_with_qmk();
+
+    // Create a layout file
+    let layout = test_layout_basic(2, 3);
+    let path = temp_dir.path().join("test_layout.md");
+    write_layout_file(&layout, &path).expect("Failed to write layout");
+
+    let app = create_router(state);
+
+    // GET the layout
+    let (status, json) = get_json(&app, "/api/layouts/test_layout.md").await;
+
+    assert_eq!(status, StatusCode::OK);
+
+    // Verify layout structure
+    assert!(json["metadata"].is_object());
+    assert!(json["layers"].is_array());
+
+    // Get first layer
+    let layers = json["layers"].as_array().unwrap();
+    assert!(!layers.is_empty());
+
+    let first_layer = &layers[0];
+    let keys = first_layer["keys"].as_array().unwrap();
+    assert!(!keys.is_empty());
+
+    // Verify each key has the required enriched fields
+    for key in keys {
+        // Required fields for frontend compatibility
+        assert!(key["keycode"].is_string(), "Missing keycode field");
+        assert!(
+            key["visual_index"].is_number(),
+            "Missing visual_index field"
+        );
+        assert!(
+            key["matrix_position"].is_array(),
+            "Missing matrix_position field"
+        );
+        assert!(key["led_index"].is_number(), "Missing led_index field");
+        assert!(key["position"].is_object(), "Missing position field");
+
+        // Verify matrix_position is [row, col] array
+        let matrix_pos = key["matrix_position"].as_array().unwrap();
+        assert_eq!(matrix_pos.len(), 2, "matrix_position should be [row, col]");
+
+        // Verify position has row and col fields
+        assert!(
+            key["position"]["row"].is_number(),
+            "position.row should be a number"
+        );
+        assert!(
+            key["position"]["col"].is_number(),
+            "position.col should be a number"
+        );
+    }
+}
