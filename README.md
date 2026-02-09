@@ -202,6 +202,20 @@ lazyqmk web --host 0.0.0.0 --port 8080
 
 Both interfaces use the same binary and share the same configuration!
 
+### Troubleshooting
+
+**Web Editor Not Updating After Rebuild:**
+
+If you've updated LazyQMK but the web interface still shows the old version, your browser may be caching the old frontend files. Force a cache refresh:
+
+- **Chrome/Firefox/Edge:** `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (macOS)
+- **Safari:** `Cmd+Option+R` (macOS)
+
+Alternatively, clear your browser's cache completely:
+- **Chrome:** Settings → Privacy → Clear browsing data → Cached images and files
+- **Firefox:** Settings → Privacy → Clear Data → Cached Web Content
+- **Safari:** Safari → Clear History → All History
+
 ### Deployment
 
 For production deployment (systemd, Docker, reverse proxy), see [`docs/WEB_DEPLOYMENT.md`](docs/WEB_DEPLOYMENT.md).
