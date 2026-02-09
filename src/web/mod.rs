@@ -10,6 +10,7 @@
 //! - `GET /api/layouts` - List layout markdown files
 //! - `GET /api/layouts/{filename}` - Load and parse a layout file
 //! - `PUT /api/layouts/{filename}` - Save a layout file
+//! - `POST /api/layouts/{filename}/swap-keys` - Swap two keys in a layout
 //! - `POST /api/layouts/{filename}/generate` - Generate firmware and start job
 //! - `POST /api/layouts/{filename}/save-as-template` - Save layout as template
 //! - `GET /api/layouts/{filename}/render-metadata` - Get key display metadata for rendering
@@ -352,6 +353,26 @@ pub struct ConfigResponse {
 pub struct ConfigUpdateRequest {
     /// New path to QMK firmware directory.
     pub qmk_firmware_path: Option<String>,
+}
+
+/// Swap keys request.
+#[derive(Debug, Deserialize)]
+pub struct SwapKeysRequest {
+    /// Layer number (0-based).
+    pub layer: u8,
+    /// First key position (row, col).
+    pub first_position: KeyPosition,
+    /// Second key position (row, col).
+    pub second_position: KeyPosition,
+}
+
+/// Key position for swap operation.
+#[derive(Debug, Deserialize)]
+pub struct KeyPosition {
+    /// Row number.
+    pub row: u8,
+    /// Column number.
+    pub col: u8,
 }
 
 /// Preflight check response for onboarding flow.
@@ -918,6 +939,113 @@ async fn save_layout(
     })?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// POST /api/layouts/{filename}/swap-keys - Swap two keys in a layout.
+async fn swap_keys(
+    State(state): State<AppState>,
+    Path(filename): Path<String>,
+    Json(request): Json<SwapKeysRequest>,
+) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
+    // Validate filename to prevent path traversal
+    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+
+    // Ensure .md extension (case-insensitive)
+    let filename = if std::path::Path::new(filename)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+    {
+        filename.to_string()
+    } else {
+        format!("{filename}.md")
+    };
+
+    let path = state.workspace_root.join(&filename);
+
+    // Check if file exists
+    if !path.exists() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ApiError::new(format!("Layout file not found: {filename}"))),
+        ));
+    }
+
+    // Load the layout
+    let mut layout = LayoutService::load(&path).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError::with_details(
+                "Failed to load layout",
+                e.to_string(),
+            )),
+        )
+    })?;
+
+    // Validate layer number
+    if request.layer as usize >= layout.layers.len() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::new(format!(
+                "Invalid layer number: {}",
+                request.layer
+            ))),
+        ));
+    }
+
+    // Check if trying to swap a key with itself
+    if request.first_position.row == request.second_position.row
+        && request.first_position.col == request.second_position.col
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::new("Cannot swap a key with itself")),
+        ));
+    }
+
+    // Get the layer
+    let layer = &mut layout.layers[request.layer as usize];
+
+    // Find indices of both keys by position
+    let first_idx = layer.keys.iter().position(|k| {
+        k.position.row == request.first_position.row && k.position.col == request.first_position.col
+    });
+    let second_idx = layer.keys.iter().position(|k| {
+        k.position.row == request.second_position.row
+            && k.position.col == request.second_position.col
+    });
+
+    match (first_idx, second_idx) {
+        (Some(idx1), Some(idx2)) => {
+            // Swap all properties: keycode, color_override, category_id
+            let first_key = layer.keys[idx1].clone();
+            let second_key = layer.keys[idx2].clone();
+
+            layer.keys[idx1].keycode = second_key.keycode;
+            layer.keys[idx1].color_override = second_key.color_override;
+            layer.keys[idx1].category_id = second_key.category_id;
+
+            layer.keys[idx2].keycode = first_key.keycode;
+            layer.keys[idx2].color_override = first_key.color_override;
+            layer.keys[idx2].category_id = first_key.category_id;
+
+            // Save the layout
+            LayoutService::save(&layout, &path).map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError::with_details(
+                        "Failed to save layout after swap",
+                        e.to_string(),
+                    )),
+                )
+            })?;
+
+            Ok(StatusCode::NO_CONTENT)
+        }
+        _ => Err((
+            StatusCode::BAD_REQUEST,
+            Json(ApiError::new("One or both key positions not found")),
+        )),
+    }
 }
 
 /// GET /api/keycodes - Query keycode database.
@@ -3127,6 +3255,10 @@ pub fn create_router(state: AppState) -> Router {
         // Layout endpoints
         .route("/api/layouts", get(list_layouts))
         .route("/api/layouts/{filename}", get(get_layout).put(save_layout))
+        .route(
+            "/api/layouts/{filename}/swap-keys",
+            axum::routing::post(swap_keys),
+        )
         .route("/api/layouts/{filename}/validate", get(validate_layout))
         .route("/api/layouts/{filename}/inspect", get(inspect_layout))
         .route("/api/layouts/{filename}/export", get(export_layout))

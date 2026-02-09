@@ -6,6 +6,7 @@ import type {
 	CategoryListResponse,
 	ConfigResponse,
 	ConfigUpdateRequest,
+	SwapKeysRequest,
 	PreflightResponse,
 	GeometryResponse,
 	ApiError,
@@ -92,6 +93,13 @@ export class ApiClient {
 		return this.request<void>(`/api/layouts/${encodeURIComponent(filename)}`, {
 			method: 'PUT',
 			body: JSON.stringify(layout)
+		});
+	}
+
+	async swapKeys(filename: string, request: SwapKeysRequest): Promise<void> {
+		return this.request<void>(`/api/layouts/${encodeURIComponent(filename)}/swap-keys`, {
+			method: 'POST',
+			body: JSON.stringify(request)
 		});
 	}
 

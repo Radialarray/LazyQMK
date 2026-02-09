@@ -160,6 +160,15 @@ export interface ConfigUpdateRequest {
 	qmk_firmware_path?: string;
 }
 
+export interface SwapKeysRequest {
+	/** Layer number (0-based) */
+	layer: number;
+	/** First key position */
+	first_position: { row: number; col: number };
+	/** Second key position */
+	second_position: { row: number; col: number };
+}
+
 export interface PreflightResponse {
 	/** Whether QMK firmware path is configured and valid */
 	qmk_configured: boolean;
