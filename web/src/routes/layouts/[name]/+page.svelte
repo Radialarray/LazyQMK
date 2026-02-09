@@ -719,7 +719,7 @@
 		}
 	}
 
-	function handleSwap(targetIndex: number) {
+	async function handleSwap(targetIndex: number) {
 		if (swapFirstKey === null) {
 			// First key selection
 			swapFirstKey = targetIndex;
@@ -730,38 +730,42 @@
 			saveStatus = 'error';
 			saveError = 'Cannot swap a key with itself';
 		} else {
-			// Perform swap
+			// Perform swap via API
 			const layer = layout.layers[selectedLayerIndex];
 			const firstKey = layer.keys.find(k => k.visual_index === swapFirstKey);
 			const secondKey = layer.keys.find(k => k.visual_index === targetIndex);
 			
-			if (firstKey && secondKey) {
-				// Swap keycode, color_override, category_id
-				const temp = {
-					keycode: firstKey.keycode,
-					color_override: firstKey.color_override,
-					category_id: firstKey.category_id
-				};
-				firstKey.keycode = secondKey.keycode;
-				firstKey.color_override = secondKey.color_override;
-				firstKey.category_id = secondKey.category_id;
-				secondKey.keycode = temp.keycode;
-				secondKey.color_override = temp.color_override;
-				secondKey.category_id = temp.category_id;
-				
-				// Trigger reactivity
-				layout.layers = [...layout.layers];
-				isDirty = true;
-				
-				// Show status
-				saveStatus = 'saved';
-				saveError = 'Keys swapped';
-				setTimeout(() => {
-					if (saveStatus === 'saved' && saveError === 'Keys swapped') {
-						saveStatus = 'idle';
-						saveError = null;
-					}
-				}, 2000);
+			if (firstKey && secondKey && firstKey.position && secondKey.position) {
+				try {
+					saveStatus = 'saving';
+					saveError = null;
+					
+					// Call API to swap keys
+					await apiClient.swapKeys(filename, {
+						layer: selectedLayerIndex,
+						first_position: { row: firstKey.position.row, col: firstKey.position.col },
+						second_position: { row: secondKey.position.row, col: secondKey.position.col }
+					});
+					
+					// Reload layout to get the swapped data
+					layout = await apiClient.getLayout(filename);
+					
+					// Show status
+					saveStatus = 'saved';
+					saveError = 'Keys swapped';
+					setTimeout(() => {
+						if (saveStatus === 'saved' && saveError === 'Keys swapped') {
+							saveStatus = 'idle';
+							saveError = null;
+						}
+					}, 2000);
+				} catch (e) {
+					saveStatus = 'error';
+					saveError = e instanceof Error ? e.message : 'Failed to swap keys';
+				}
+			} else {
+				saveStatus = 'error';
+				saveError = 'Could not find key positions for swap';
 			}
 			
 			// Exit swap mode
