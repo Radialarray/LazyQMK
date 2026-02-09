@@ -19,6 +19,10 @@
 		selectedKeyIndex?: number | null;
 		/** Set of selected key indices for multi-selection */
 		selectedKeyIndices?: Set<number>;
+		/** Swap mode active flag */
+		swapMode?: boolean;
+		/** First key selected in swap mode */
+		swapFirstKey?: number | null;
 		/** Current layer (for color resolution) */
 		layer?: Layer;
 		/** Categories (for color resolution) */
@@ -42,6 +46,8 @@
 		keyAssignments = [],
 		selectedKeyIndex = null,
 		selectedKeyIndices = new Set(),
+		swapMode = false,
+		swapFirstKey = null,
 		layer,
 		categories = [],
 		renderMetadata = [],
@@ -232,6 +238,7 @@
 			<!-- Render each key -->
 			{#each transformed.keys as key (getKeyId(key))}
 				{@const isSelected = selectedKeyIndex === key.visualIndex || selectedKeyIndices.has(key.visualIndex)}
+				{@const isSwapFirst = swapMode && swapFirstKey === key.visualIndex}
 				{@const label = keycodeMap.get(key.visualIndex) ?? ''}
 				{@const metadata = renderMetadataMap.get(key.visualIndex)}
 				{@const transform = getKeyTransform(key)}
@@ -285,8 +292,8 @@
 						height={key.height}
 						rx={KEY_BORDER_RADIUS}
 						ry={KEY_BORDER_RADIUS}
-						class="key-bg {isSelected ? 'selected' : ''}"
-						style={resolvedColor && !isSelected ? `fill: ${resolvedColor}` : ''}
+						class="key-bg {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
+						style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}` : ''}
 						filter={resolvedColor ? `url(#glow-${key.visualIndex})` : 'url(#key-shadow)'}
 					/>
 
@@ -298,8 +305,8 @@
 						height={key.height - 4}
 						rx={KEY_BORDER_RADIUS - 1}
 						ry={KEY_BORDER_RADIUS - 1}
-						class="key-top {isSelected ? 'selected' : ''}"
-						style={resolvedColor && !isSelected ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
+						class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
+						style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
 					/>
 
 					<!-- Key label - use render metadata if available, otherwise fallback to formatted keycode -->
@@ -443,6 +450,12 @@
 		stroke: hsl(var(--primary));
 	}
 
+	.key-bg.swap-first {
+		fill: hsl(48 96% 53%); /* yellow-400 */
+		stroke: hsl(48 96% 53%);
+		stroke-width: 2;
+	}
+
 	.key-top {
 		fill: hsl(var(--card));
 		transition: fill 0.15s ease;
@@ -450,6 +463,10 @@
 
 	.key-top.selected {
 		fill: hsl(var(--primary) / 0.8);
+	}
+
+	.key-top.swap-first {
+		fill: hsl(48 96% 53% / 0.8); /* yellow-400 with opacity */
 	}
 
 	.key-label {
@@ -471,11 +488,11 @@
 	}
 
 	/* Hover effect */
-	.key-group:hover .key-bg:not(.selected) {
+	.key-group:hover .key-bg:not(.selected):not(.swap-first) {
 		fill: hsl(var(--accent));
 	}
 
-	.key-group:hover .key-top:not(.selected) {
+	.key-group:hover .key-top:not(.selected):not(.swap-first) {
 		fill: hsl(var(--accent) / 0.9);
 	}
 </style>

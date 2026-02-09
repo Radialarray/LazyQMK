@@ -109,6 +109,10 @@
 	let selectionMode = $state(false);
 	let selectedKeyIndices = $state<Set<number>>(new Set());
 
+	// Swap mode state
+	let swapMode = $state(false);
+	let swapFirstKey = $state<number | null>(null);
+
 	// Clipboard state
 	const clipboard = new ClipboardManager();
 	let clipboardSize = $state(0);
@@ -598,6 +602,12 @@
 	}
 
 	function handleKeyClick(visualIndex: number, matrixRow: number, matrixCol: number, shiftKey: boolean) {
+		// Handle swap mode first
+		if (swapMode) {
+			handleSwap(visualIndex);
+			return;
+		}
+
 		if (selectionMode || shiftKey) {
 			// Toggle selection in selection mode
 			const newSelection = new Set(selectedKeyIndices);
@@ -659,11 +669,21 @@
 			return;
 		}
 		
-		// Escape key: close picker or clear selection
+		// Shift+W for swap mode
+		if (event.shiftKey && event.key === 'W') {
+			event.preventDefault();
+			toggleSwapMode();
+			return;
+		}
+		
+		// Escape key: close picker, clear swap mode, or clear selection
 		if (shouldHandleEscape(event)) {
 			event.preventDefault();
 			if (keycodePickerOpen) {
 				handleKeycodePickerClose();
+			} else if (swapMode) {
+				swapMode = false;
+				swapFirstKey = null;
 			} else if (selectedKeyIndices.size > 0 || selectionMode) {
 				clearSelection();
 			}
@@ -684,6 +704,69 @@
 		selectionMode = !selectionMode;
 		if (!selectionMode) {
 			selectedKeyIndices = new Set();
+		}
+	}
+
+	function toggleSwapMode() {
+		swapMode = !swapMode;
+		if (!swapMode) {
+			swapFirstKey = null;
+		}
+		// Exit selection mode when entering swap mode (modes are mutually exclusive)
+		if (swapMode) {
+			selectionMode = false;
+			selectedKeyIndices = new Set();
+		}
+	}
+
+	function handleSwap(targetIndex: number) {
+		if (swapFirstKey === null) {
+			// First key selection
+			swapFirstKey = targetIndex;
+			saveStatus = 'idle';
+			saveError = 'Swap mode - click second key to swap';
+		} else if (swapFirstKey === targetIndex) {
+			// Clicked same key - show error
+			saveStatus = 'error';
+			saveError = 'Cannot swap a key with itself';
+		} else {
+			// Perform swap
+			const layer = layout.layers[selectedLayerIndex];
+			const firstKey = layer.keys.find(k => k.visual_index === swapFirstKey);
+			const secondKey = layer.keys.find(k => k.visual_index === targetIndex);
+			
+			if (firstKey && secondKey) {
+				// Swap keycode, color_override, category_id
+				const temp = {
+					keycode: firstKey.keycode,
+					color_override: firstKey.color_override,
+					category_id: firstKey.category_id
+				};
+				firstKey.keycode = secondKey.keycode;
+				firstKey.color_override = secondKey.color_override;
+				firstKey.category_id = secondKey.category_id;
+				secondKey.keycode = temp.keycode;
+				secondKey.color_override = temp.color_override;
+				secondKey.category_id = temp.category_id;
+				
+				// Trigger reactivity
+				layout.layers = [...layout.layers];
+				isDirty = true;
+				
+				// Show status
+				saveStatus = 'saved';
+				saveError = 'Keys swapped';
+				setTimeout(() => {
+					if (saveStatus === 'saved' && saveError === 'Keys swapped') {
+						saveStatus = 'idle';
+						saveError = null;
+					}
+				}, 2000);
+			}
+			
+			// Exit swap mode
+			swapMode = false;
+			swapFirstKey = null;
 		}
 	}
 
@@ -1563,6 +1646,15 @@
 						>
 							{selectionMode ? '✓ Selection Mode' : 'Selection Mode'}
 						</Button>
+						<Button
+							onclick={toggleSwapMode}
+							size="sm"
+							variant={swapMode ? 'default' : 'outline'}
+							data-testid="swap-mode-button"
+							title="Swap mode (Shift+W) - Click two keys to swap their properties"
+						>
+							{swapMode ? '✓ Swap Mode' : 'Swap Mode'}
+						</Button>
 						{#if selectionMode || selectedKeyIndices.size > 0}
 							<Button
 								onclick={clearSelection}
@@ -1631,6 +1723,8 @@
 							keyAssignments={currentLayerKeys}
 							{selectedKeyIndex}
 							{selectedKeyIndices}
+							{swapMode}
+							{swapFirstKey}
 							layer={layout.layers[selectedLayerIndex]}
 							categories={layout.categories || []}
 							renderMetadata={currentLayerRenderMetadata}
