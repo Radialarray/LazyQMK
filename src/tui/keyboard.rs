@@ -160,6 +160,14 @@ impl KeyboardWidget {
             // Check if this key is part of multi-selection
             let is_in_selection = state.selected_keys.contains(&key.position);
 
+            // Check if this key is the first key in swap mode (not the current cursor position)
+            let is_swap_first =
+                if let Some(super::SelectionMode::Swap { first }) = &state.selection_mode {
+                    key.position == *first && !is_selected
+                } else {
+                    false
+                };
+
             // Check if this key should flash (paste feedback)
             let is_flashing = state
                 .flash_highlight
@@ -258,6 +266,7 @@ impl KeyboardWidget {
                 is_selected,
                 is_cut_source,
                 is_in_selection,
+                is_swap_first,
                 is_flashing,
                 has_hold_like_inbound,
                 theme,
@@ -276,11 +285,12 @@ impl KeyboardWidget {
         is_selected: bool,
         is_cut_source: bool,
         is_in_selection: bool,
+        is_swap_first: bool,
         is_flashing: bool,
         has_hold_like_inbound: bool,
         theme: &super::Theme,
     ) {
-        // Determine colors based on selection, cut state, multi-selection, flash, and inbound holds
+        // Determine colors based on selection, cut state, multi-selection, swap, flash, and inbound holds
         let (border_style, content_bg, content_fg, overlay_border_color) = if is_flashing {
             // Flash highlight: bright accent background
             (
@@ -298,6 +308,16 @@ impl KeyboardWidget {
                     .add_modifier(Modifier::BOLD),
                 Some(theme.accent),
                 theme.background,
+                None,
+            )
+        } else if is_swap_first {
+            // First key in swap mode: distinct yellow/warning border
+            (
+                Style::default()
+                    .fg(theme.warning)
+                    .add_modifier(Modifier::BOLD),
+                Some(theme.surface),
+                theme.text,
                 None,
             )
         } else if is_in_selection {

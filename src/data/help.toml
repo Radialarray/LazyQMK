@@ -123,66 +123,72 @@ hint = "Rect"
 priority = 23
 
 [[contexts.main.bindings]]
+keys = ["Shift+W"]
+action = "Swap two keys (keycodes, colors, categories)"
+hint = "Swap"
+priority = 24
+
+[[contexts.main.bindings]]
 keys = ["Ctrl+S"]
 action = "Save layout"
-priority = 24
+priority = 25
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+E"]
 action = "Export layout to markdown"
 hint = "Export"
-priority = 25
+priority = 26
 
 [[contexts.main.bindings]]
 keys = ["Shift+E"]
 action = "Edit metadata"
-priority = 26
+priority = 27
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+G"]
 action = "Generate firmware"
-priority = 27
+priority = 28
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+B"]
 action = "Build firmware"
-priority = 27
+priority = 28
 
 [[contexts.main.bindings]]
 keys = ["Shift+B"]
 action = "View build log"
-priority = 28
+priority = 29
 
 [[contexts.main.bindings]]
 keys = ["Shift+D"]
 action = "Tap dance editor"
 hint = "TapDance"
-priority = 29
+priority = 30
 
 [[contexts.main.bindings]]
 keys = ["Shift+S"]
 action = "Settings"
-priority = 30
+priority = 31
 
 [[contexts.main.bindings]]
 keys = ["t"]
 action = "Browse templates"
-priority = 27
+priority = 32
 
 [[contexts.main.bindings]]
 keys = ["Shift+T"]
 action = "Save as template"
-priority = 28
+priority = 33
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+W"]
 action = "Setup wizard"
-priority = 31
+priority = 34
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+Y"]
 action = "Switch layout variant"
-priority = 32
+priority = 35
 
 [[contexts.main.bindings]]
 keys = ["?"]

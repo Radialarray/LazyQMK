@@ -153,9 +153,10 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
         Action::UndoPaste => key_ops::handle_undo_paste(state),
         Action::ToggleCurrentKey => key_ops::handle_toggle_current_key(state),
 
-        // Selection (2 actions)
+        // Selection (3 actions)
         Action::ToggleSelectionMode => selection::handle_toggle_selection_mode(state),
         Action::StartRectangleSelect => selection::handle_start_rectangle_select(state),
+        Action::SwapKeys => selection::handle_swap_keys(state),
 
         // Color management (4 actions)
         Action::SetIndividualKeyColor => color::handle_set_individual_key_color(state),
@@ -176,7 +177,7 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
 
         // Cancel (1 action)
         Action::Cancel => {
-            // Cancel selection/cut/clipboard (Escape)
+            // Cancel selection/swap/cut/clipboard (Escape)
             #[allow(clippy::redundant_pattern_matching)]
             if let Some(_) = state.selection_mode {
                 state.selection_mode = None;

@@ -56,6 +56,8 @@ pub enum Action {
     ToggleCurrentKey,
     /// Start a rectangle selection of multiple keys.
     StartRectangleSelect,
+    /// Swap properties between two keys.
+    SwapKeys,
 
     // === COLORS ===
     /// Open color picker to set color for the individual key.
@@ -154,6 +156,7 @@ impl Action {
             Self::ToggleSelectionMode => "toggle_selection_mode",
             Self::ToggleCurrentKey => "toggle_current_key",
             Self::StartRectangleSelect => "rectangle_select",
+            Self::SwapKeys => "swap_keys",
 
             // Colors
             Self::SetIndividualKeyColor => "set_individual_key_color",
@@ -290,6 +293,7 @@ impl ShortcutRegistry {
         self.register(ctx, K::Char('V'), M::SHIFT, Action::ToggleSelectionMode);
         self.register(ctx, K::Char(' '), M::NONE, Action::ToggleCurrentKey);
         self.register(ctx, K::Char('R'), M::SHIFT, Action::StartRectangleSelect);
+        self.register(ctx, K::Char('W'), M::SHIFT, Action::SwapKeys);
 
         // === COLORS (v0.4.0: c = individual, Shift+C = layer) ===
         self.register(ctx, K::Char('c'), M::NONE, Action::SetIndividualKeyColor);

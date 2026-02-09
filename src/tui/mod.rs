@@ -328,6 +328,11 @@ pub enum SelectionMode {
         /// Starting corner of the rectangle
         start: Position,
     },
+    /// Swap mode - select two keys to swap all properties
+    Swap {
+        /// First key selected for swap
+        first: Position,
+    },
 }
 
 /// Active component - holds the currently active popup component
