@@ -47,15 +47,8 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-      - name: Build web frontend
-        env:
-          RUST_EMBED: true
-        run: |
-          cd web
-          npm ci
-          npm run build
-          cd ..
       - name: Test (all features)
+        # Note: Web frontend is built automatically by build.rs when web feature is enabled
         run: cargo test --all-features --verbose
 
   full-matrix:
@@ -94,13 +87,6 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-      - name: Build web frontend
-        env:
-          RUST_EMBED: true
-        run: |
-          cd web
-          npm ci
-          npm run build
-          cd ..
       - name: Test (all features)
+        # Note: Web frontend is built automatically by build.rs when web feature is enabled
         run: cargo test --all-features --verbose
