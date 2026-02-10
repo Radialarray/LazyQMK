@@ -794,6 +794,9 @@
 					// Reload layout to get the swapped data
 					layout = await apiClient.getLayout(filename);
 					
+					// Reload render metadata to update key labels
+					await loadRenderMetadata(filename);
+					
 					// Show status
 					saveStatus = 'saved';
 					swapMessage = 'Keys swapped';

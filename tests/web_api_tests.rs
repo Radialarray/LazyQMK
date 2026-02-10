@@ -1815,3 +1815,133 @@ async fn test_get_layout_returns_enriched_key_data() {
         );
     }
 }
+
+#[tokio::test]
+async fn test_swap_keys_swaps_keycodes_and_colors() {
+    let (state, temp_dir) = create_test_state();
+    let workspace = temp_dir.path();
+
+    // Create test layout with two distinct keys
+    let layout_content = r#"---
+name: Swap Test
+description: Test layout for swap
+author: Test
+created: 2024-01-01T00:00:00Z
+modified: 2024-01-01T00:00:00Z
+tags: []
+is_template: false
+version: '1.0'
+keyboard: test
+layout_variant: LAYOUT_test
+keymap_name: test
+output_format: hex
+---
+
+# Swap Test
+
+## Layer 0: Base
+**ID**: test-layer
+**Color**: #FFFFFF
+
+| C0 | C1 |
+|------|------|
+| KC_Q{#FF0000} | KC_W{#00FF00} |
+"#;
+
+    fs::write(workspace.join("test_swap.md"), layout_content).unwrap();
+
+    let app = create_router(state);
+
+    // Get initial layout to verify starting state
+    let (status, initial_json) = get_json(&app, "/api/layouts/test_swap.md").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let initial_keys = initial_json["layers"][0]["keys"].as_array().unwrap();
+    let key0_initial = &initial_keys[0];
+    let key1_initial = &initial_keys[1];
+
+    assert_eq!(key0_initial["keycode"].as_str().unwrap(), "KC_Q");
+    assert_eq!(key1_initial["keycode"].as_str().unwrap(), "KC_W");
+    assert_eq!(key0_initial["color_override"]["r"].as_u64().unwrap(), 255);
+    assert_eq!(key0_initial["color_override"]["g"].as_u64().unwrap(), 0);
+    assert_eq!(key0_initial["color_override"]["b"].as_u64().unwrap(), 0);
+    assert_eq!(key1_initial["color_override"]["r"].as_u64().unwrap(), 0);
+    assert_eq!(key1_initial["color_override"]["g"].as_u64().unwrap(), 255);
+    assert_eq!(key1_initial["color_override"]["b"].as_u64().unwrap(), 0);
+
+    // Swap keys at positions (0,0) and (0,1)
+    let swap_request = json!({
+        "layer": 0,
+        "first_position": { "row": 0, "col": 0 },
+        "second_position": { "row": 0, "col": 1 }
+    });
+
+    let request = Request::builder()
+        .method("POST")
+        .uri("/api/layouts/test_swap.md/swap-keys")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_string(&swap_request).unwrap()))
+        .unwrap();
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    // Get layout again to verify swap
+    let (status, swapped_json) = get_json(&app, "/api/layouts/test_swap.md").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let swapped_keys = swapped_json["layers"][0]["keys"].as_array().unwrap();
+    let key0_swapped = &swapped_keys[0];
+    let key1_swapped = &swapped_keys[1];
+
+    // Verify keycodes swapped
+    assert_eq!(
+        key0_swapped["keycode"].as_str().unwrap(),
+        "KC_W",
+        "Key at position 0 should now have KC_W keycode"
+    );
+    assert_eq!(
+        key1_swapped["keycode"].as_str().unwrap(),
+        "KC_Q",
+        "Key at position 1 should now have KC_Q keycode"
+    );
+
+    // Verify colors swapped (green to key0, red to key1)
+    assert_eq!(
+        key0_swapped["color_override"]["r"].as_u64().unwrap(),
+        0,
+        "Key at position 0 should now have green color (r=0)"
+    );
+    assert_eq!(
+        key0_swapped["color_override"]["g"].as_u64().unwrap(),
+        255,
+        "Key at position 0 should now have green color (g=255)"
+    );
+    assert_eq!(
+        key0_swapped["color_override"]["b"].as_u64().unwrap(),
+        0,
+        "Key at position 0 should now have green color (b=0)"
+    );
+    assert_eq!(
+        key1_swapped["color_override"]["r"].as_u64().unwrap(),
+        255,
+        "Key at position 1 should now have red color (r=255)"
+    );
+    assert_eq!(
+        key1_swapped["color_override"]["g"].as_u64().unwrap(),
+        0,
+        "Key at position 1 should now have red color (g=0)"
+    );
+    assert_eq!(
+        key1_swapped["color_override"]["b"].as_u64().unwrap(),
+        0,
+        "Key at position 1 should now have red color (b=0)"
+    );
+
+    // Verify the file on disk was actually updated
+    let file_content = fs::read_to_string(workspace.join("test_swap.md")).unwrap();
+    assert!(
+        file_content.contains("KC_W{#00FF00} | KC_Q{#FF0000}"),
+        "Layout file should have swapped keys"
+    );
+}
