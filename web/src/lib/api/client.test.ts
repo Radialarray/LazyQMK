@@ -522,12 +522,12 @@ describe('ApiClient', () => {
 	describe('getBuildArtifactDownloadUrl', () => {
 		it('returns the correct download URL', () => {
 			const url = client.getBuildArtifactDownloadUrl('job-123', 'firmware.hex');
-			expect(url).toBe('http://localhost:3000/api/build/jobs/job-123/artifacts/firmware.hex');
+			expect(url).toBe('http://localhost:3000/api/build/jobs/job-123/artifacts/firmware.hex/download');
 		});
 
 		it('encodes job ID and filename in URL', () => {
 			const url = client.getBuildArtifactDownloadUrl('job with spaces', 'my firmware.hex');
-			expect(url).toBe('http://localhost:3000/api/build/jobs/job%20with%20spaces/artifacts/my%20firmware.hex');
+			expect(url).toBe('http://localhost:3000/api/build/jobs/job%20with%20spaces/artifacts/my%20firmware.hex/download');
 		});
 	});
 });

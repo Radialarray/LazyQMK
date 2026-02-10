@@ -30,7 +30,13 @@
 		/** Render metadata for rich key labels (optional) */
 		renderMetadata?: KeyRenderMetadata[];
 		/** Callback when a key is clicked */
-		onKeyClick?: (visualIndex: number, matrixRow: number, matrixCol: number, shiftKey: boolean) => void;
+		onKeyClick?: (
+			visualIndex: number,
+			matrixRow: number,
+			matrixCol: number,
+			shiftKey: boolean,
+			isVirtualClick?: boolean
+		) => void;
 		/** Callback when keyboard navigation occurs */
 		onNavigate?: (newKeyIndex: number | null, newSelectedIndices: Set<number>) => void;
 		/** Callback when a key is hovered */
@@ -172,8 +178,15 @@
 	}
 
 	function handleKeyClick(key: KeySvgData, event: MouseEvent) {
+		event.stopPropagation();
 		onKeyClick?.(key.visualIndex, key.matrixRow, key.matrixCol, event.shiftKey);
 	}
+
+	function handleKeyHitClick(event: MouseEvent, key: KeySvgData) {
+		event.stopPropagation();
+		onKeyClick?.(key.visualIndex, key.matrixRow, key.matrixCol, false, true);
+	}
+
 
 	function handleKeyHover(visualIndex: number | null) {
 		onKeyHover?.(visualIndex);
@@ -247,17 +260,17 @@
 
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<g
-					class="key-group"
-					transform={transform}
-					onclick={(e) => handleKeyClick(key, e)}
-					onmouseenter={() => handleKeyHover(key.visualIndex)}
-					onmouseleave={() => handleKeyHover(null)}
-					data-testid="key-{key.visualIndex}"
-					data-visual-index={key.visualIndex}
-					data-matrix-row={key.matrixRow}
-					data-matrix-col={key.matrixCol}
-				>
+			<g
+				class="key-group"
+				transform={transform}
+				onclick={(e) => handleKeyClick(key, e)}
+				onmouseenter={() => handleKeyHover(key.visualIndex)}
+				onmouseleave={() => handleKeyHover(null)}
+				data-testid="key-{key.visualIndex}"
+				data-visual-index={key.visualIndex}
+				data-matrix-row={key.matrixRow}
+				data-matrix-col={key.matrixCol}
+			>
 					<!-- Define clip path for label overflow prevention -->
 					<defs>
 						<clipPath id="clip-{key.visualIndex}">
@@ -298,16 +311,31 @@
 					/>
 
 					<!-- Key top surface (slightly inset for 3D effect) -->
-					<rect
-						x={key.x + 2}
-						y={key.y + 1}
-						width={key.width - 4}
-						height={key.height - 4}
-						rx={KEY_BORDER_RADIUS - 1}
-						ry={KEY_BORDER_RADIUS - 1}
-						class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
-						style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
-					/>
+				<foreignObject
+					x={key.x + 2}
+					y={key.y + 1}
+					width={key.width - 4}
+					height={key.height - 4}
+				>
+					<button
+						class="key-hit"
+						data-testid="key-hit-{key.visualIndex}"
+						type="button"
+						aria-label={`Key ${key.visualIndex}`}
+						onclick={(event) => handleKeyHitClick(event, key)}
+					></button>
+				</foreignObject>
+				<rect
+					x={key.x + 2}
+					y={key.y + 1}
+					width={key.width - 4}
+					height={key.height - 4}
+					rx={KEY_BORDER_RADIUS - 1}
+					ry={KEY_BORDER_RADIUS - 1}
+					class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
+					style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
+					pointer-events="none"
+				/>
 
 					<!-- Key label - use render metadata if available, otherwise fallback to formatted keycode -->
 					<!-- Wrap labels in a group with clip-path to prevent overflow -->
@@ -459,6 +487,7 @@
 	.key-top {
 		fill: hsl(var(--card));
 		transition: fill 0.15s ease;
+		pointer-events: none;
 	}
 
 	.key-top.selected {
@@ -467,6 +496,16 @@
 
 	.key-top.swap-first {
 		fill: hsl(48 96% 53% / 0.8); /* yellow-400 with opacity */
+	}
+
+	.key-hit {
+		width: 100%;
+		height: 100%;
+		background: transparent;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+		pointer-events: auto;
 	}
 
 	.key-label {

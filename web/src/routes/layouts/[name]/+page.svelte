@@ -36,7 +36,8 @@
 	import {
 		shouldCycleLayer,
 		shouldHandleEscape,
-		shouldOpenPicker
+		shouldOpenPicker,
+		isTypingContext
 	} from '$lib/utils/keyboardNavigation';
 	import { onDestroy } from 'svelte';
 
@@ -112,6 +113,8 @@
 	// Swap mode state
 	let swapMode = $state(false);
 	let swapFirstKey = $state<number | null>(null);
+	let swapMessage = $state<string | null>(null);
+	let swapMessageTone = $state<'info' | 'success' | 'error'>('info');
 
 	// Clipboard state
 	const clipboard = new ClipboardManager();
@@ -601,9 +604,16 @@
 		}
 	}
 
-	function handleKeyClick(visualIndex: number, matrixRow: number, matrixCol: number, shiftKey: boolean) {
+	function handleKeyClick(
+		visualIndex: number,
+		matrixRow: number,
+		matrixCol: number,
+		shiftKey: boolean,
+		isVirtualClick: boolean = false
+	) {
 		// Handle swap mode first
 		if (swapMode) {
+			// Ensure the click doesn't bubble into keyboard navigation or other handlers
 			handleSwap(visualIndex);
 			return;
 		}
@@ -626,7 +636,7 @@
 			selectedKeyIndices = newSelection;
 			// Keep single selection for key details panel
 			selectedKeyIndex = visualIndex;
-		} else {
+		} else if (!isVirtualClick) {
 			// Single selection mode (default behavior)
 			selectedKeyIndex = visualIndex;
 			selectedKeyIndices = new Set();
@@ -670,7 +680,7 @@
 		}
 		
 		// Shift+W for swap mode
-		if (event.shiftKey && event.key === 'W') {
+		if (!isTypingContext() && event.shiftKey && event.key.toLowerCase() === 'w') {
 			event.preventDefault();
 			toggleSwapMode();
 			return;
@@ -684,6 +694,7 @@
 			} else if (swapMode) {
 				swapMode = false;
 				swapFirstKey = null;
+				swapMessage = null;
 			} else if (selectedKeyIndices.size > 0 || selectionMode) {
 				clearSelection();
 			}
@@ -700,10 +711,26 @@
 		}
 	}
 
+	function swapMessageClass(tone: 'info' | 'success' | 'error') {
+		switch (tone) {
+			case 'success':
+				return 'text-green-500';
+			case 'error':
+				return 'text-red-500';
+			default:
+				return 'text-blue-400';
+		}
+	}
+
 	function toggleSelectionMode() {
 		selectionMode = !selectionMode;
 		if (!selectionMode) {
 			selectedKeyIndices = new Set();
+		}
+		if (swapMode) {
+			swapMode = false;
+			swapFirstKey = null;
+			swapMessage = null;
 		}
 	}
 
@@ -711,6 +738,10 @@
 		swapMode = !swapMode;
 		if (!swapMode) {
 			swapFirstKey = null;
+			swapMessage = null;
+		} else {
+			swapMessage = 'Swap mode - click first key to swap';
+			swapMessageTone = 'info';
 		}
 		// Exit selection mode when entering swap mode (modes are mutually exclusive)
 		if (swapMode) {
@@ -719,32 +750,45 @@
 		}
 	}
 
+	function getKeyPosition(key: { position?: { row: number; col: number }; matrix_position?: [number, number] }) {
+		if (key.position) {
+			return key.position;
+		}
+		if (key.matrix_position && key.matrix_position.length === 2) {
+			return { row: key.matrix_position[0], col: key.matrix_position[1] };
+		}
+		return null;
+	}
+
 	async function handleSwap(targetIndex: number) {
 		if (swapFirstKey === null) {
 			// First key selection
 			swapFirstKey = targetIndex;
-			saveStatus = 'idle';
-			saveError = 'Swap mode - click second key to swap';
+			swapMessage = 'Swap mode - click second key to swap';
+			swapMessageTone = 'info';
 		} else if (swapFirstKey === targetIndex) {
 			// Clicked same key - show error
-			saveStatus = 'error';
-			saveError = 'Cannot swap a key with itself';
+			swapMessage = 'Cannot swap a key with itself';
+			swapMessageTone = 'error';
+			return;
 		} else {
 			// Perform swap via API
 			const layer = layout.layers[selectedLayerIndex];
 			const firstKey = layer.keys.find(k => k.visual_index === swapFirstKey);
 			const secondKey = layer.keys.find(k => k.visual_index === targetIndex);
 			
-			if (firstKey && secondKey && firstKey.position && secondKey.position) {
+			const firstPosition = firstKey ? getKeyPosition(firstKey) : null;
+			const secondPosition = secondKey ? getKeyPosition(secondKey) : null;
+			if (firstKey && secondKey && firstPosition && secondPosition) {
 				try {
 					saveStatus = 'saving';
-					saveError = null;
+					swapMessage = null;
 					
 					// Call API to swap keys
 					await apiClient.swapKeys(filename, {
 						layer: selectedLayerIndex,
-						first_position: { row: firstKey.position.row, col: firstKey.position.col },
-						second_position: { row: secondKey.position.row, col: secondKey.position.col }
+						first_position: { row: firstPosition.row, col: firstPosition.col },
+						second_position: { row: secondPosition.row, col: secondPosition.col }
 					});
 					
 					// Reload layout to get the swapped data
@@ -752,20 +796,22 @@
 					
 					// Show status
 					saveStatus = 'saved';
-					saveError = 'Keys swapped';
+					swapMessage = 'Keys swapped';
+					swapMessageTone = 'success';
 					setTimeout(() => {
-						if (saveStatus === 'saved' && saveError === 'Keys swapped') {
-							saveStatus = 'idle';
-							saveError = null;
+						if (swapMessage === 'Keys swapped') {
+							swapMessage = null;
 						}
 					}, 2000);
 				} catch (e) {
 					saveStatus = 'error';
-					saveError = e instanceof Error ? e.message : 'Failed to swap keys';
+					swapMessage = e instanceof Error ? e.message : 'Failed to swap keys';
+					swapMessageTone = 'error';
 				}
 			} else {
 				saveStatus = 'error';
-				saveError = 'Could not find key positions for swap';
+				swapMessage = 'Could not find key positions for swap';
+				swapMessageTone = 'error';
 			}
 			
 			// Exit swap mode
@@ -895,6 +941,7 @@
 		if (!layout || !filename) return;
 		saveStatus = 'saving';
 		saveError = null;
+		swapMessage = null;
 		try {
 			await apiClient.saveLayout(filename, layout);
 			saveStatus = 'saved';
@@ -1242,6 +1289,7 @@
 			// Show success message
 			saveStatus = 'saved';
 			saveError = 'Saved as template!';
+			swapMessage = null;
 			setTimeout(() => {
 				if (saveStatus === 'saved') saveStatus = 'idle';
 			}, 3000);
@@ -1331,7 +1379,9 @@
 			{#if isDirty}
 				<span class="text-sm text-yellow-500">Unsaved changes</span>
 			{/if}
-			{#if saveStatus === 'saved'}
+			{#if swapMessage}
+				<span class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</span>
+			{:else if saveStatus === 'saved'}
 				<span class="text-sm text-green-500">Saved!</span>
 			{:else if saveStatus === 'error'}
 				<span class="text-sm text-red-500">{saveError}</span>
