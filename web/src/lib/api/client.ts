@@ -37,6 +37,10 @@ import type {
 	RenderMetadataResponse
 } from './types';
 
+interface LazyQmkApiWindow {
+	__LAZYQMK_API_BASE_URL?: string;
+}
+
 export class ApiClient {
 	private baseUrl: string;
 
@@ -45,8 +49,16 @@ export class ApiClient {
 		this.baseUrl = baseUrl || '';
 	}
 
+	private resolveBaseUrl(): string {
+		const runtimeBaseUrl = (globalThis as LazyQmkApiWindow).__LAZYQMK_API_BASE_URL;
+		if (runtimeBaseUrl && runtimeBaseUrl.length > 0) {
+			return runtimeBaseUrl;
+		}
+		return this.baseUrl;
+	}
+
 	private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-		const url = `${this.baseUrl}${endpoint}`;
+		const url = `${this.resolveBaseUrl()}${endpoint}`;
 		const response = await fetch(url, {
 			...options,
 			headers: {
@@ -276,7 +288,7 @@ export class ApiClient {
 	 * @returns Full URL to download the artifact
 	 */
 	getBuildArtifactDownloadUrl(jobId: string, artifactId: string): string {
-		return `${this.baseUrl}/api/build/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactId)}/download`;
+		return `${this.resolveBaseUrl()}/api/build/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactId)}/download`;
 	}
 
 	// Generate Job Operations
@@ -307,7 +319,7 @@ export class ApiClient {
 	 * @returns Full URL to download the generated zip file
 	 */
 	getGenerateDownloadUrl(jobId: string): string {
-		return `${this.baseUrl}/api/generate/jobs/${encodeURIComponent(jobId)}/download`;
+		return `${this.resolveBaseUrl()}/api/generate/jobs/${encodeURIComponent(jobId)}/download`;
 	}
 }
 

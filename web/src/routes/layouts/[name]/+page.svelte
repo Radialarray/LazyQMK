@@ -783,7 +783,6 @@
 				try {
 					saveStatus = 'saving';
 					swapMessage = null;
-					
 					// Call API to swap keys
 					await apiClient.swapKeys(filename, {
 						layer: selectedLayerIndex,
@@ -792,7 +791,9 @@
 					});
 					
 					// Reload layout to get the swapped data
-					layout = await apiClient.getLayout(filename);
+					const updatedLayout = await apiClient.getLayout(filename);
+					layout = updatedLayout;
+					layout.layers = [...updatedLayout.layers];
 					
 					// Reload render metadata to update key labels
 					await loadRenderMetadata(filename);

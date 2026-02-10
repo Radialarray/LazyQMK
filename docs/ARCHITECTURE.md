@@ -900,7 +900,7 @@ qmk_firmware = "/path/to/qmk_firmware"
 output_dir = ".build"
 
 [ui]
-theme = "auto"
+theme_mode = "auto"
 show_help_on_startup = true
 keyboard_scale = 1.0
 ```
@@ -1283,14 +1283,10 @@ compatible_layouts: ["LAYOUT_split_3x6_3", "LAYOUT_split_3x6_3_ex2"]
 qmk_firmware = "/path/to/qmk_firmware"
 
 [build]
-keyboard = "crkbd"
-layout = "LAYOUT_split_3x6_3"
-keymap = "default"
-output_format = "uf2"
 output_dir = ".build"
 
 [ui]
-theme = "auto"
+theme_mode = "auto"
 show_help_on_startup = true
 ```
 

@@ -42,7 +42,7 @@ pub mod generate_jobs;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use axum::{
     extract::{Path, Query, State},
@@ -151,7 +151,7 @@ async fn static_handler(uri: axum::http::Uri) -> Response {
 #[derive(Clone)]
 pub struct AppState {
     /// Application configuration
-    config: Arc<Config>,
+    config: Arc<RwLock<Config>>,
     /// Keycode database (immutable after load)
     keycode_db: Arc<KeycodeDb>,
     /// Working directory for layout files (defaults to current dir)
@@ -185,7 +185,7 @@ impl AppState {
         );
 
         Ok(Self {
-            config: Arc::new(config),
+            config: Arc::new(RwLock::new(config)),
             keycode_db,
             workspace_root,
             build_manager,
@@ -220,7 +220,7 @@ impl AppState {
         );
 
         Ok(Self {
-            config: Arc::new(config),
+            config: Arc::new(RwLock::new(config)),
             keycode_db,
             workspace_root,
             build_manager,
@@ -974,10 +974,11 @@ async fn get_layout(
 
     // Build position_to_geometry mapping from keyboard geometry (if available)
     // This provides the authoritative mapping from visual position to geometry data
+    let config_guard = state.config.read().unwrap();
     let position_to_geometry: std::collections::HashMap<String, (u8, [u8; 2], u8)> =
         if let (Some(keyboard), Some(qmk_path)) = (
             layout.metadata.keyboard.as_ref(),
-            state.config.paths.qmk_firmware.as_ref(),
+            config_guard.paths.qmk_firmware.as_ref(),
         ) {
             // Determine layout variant (fall back to "LAYOUT" if not specified)
             let layout_variant = layout
@@ -1299,11 +1300,20 @@ async fn get_config(State(state): State<AppState>) -> Json<ConfigResponse> {
     Json(ConfigResponse {
         qmk_firmware_path: state
             .config
+            .read()
+            .unwrap()
             .paths
             .qmk_firmware
             .as_ref()
             .map(|p| p.display().to_string()),
-        output_dir: state.config.build.output_dir.display().to_string(),
+        output_dir: state
+            .config
+            .read()
+            .unwrap()
+            .build
+            .output_dir
+            .display()
+            .to_string(),
         workspace_root: state.workspace_root.display().to_string(),
     })
 }
@@ -1314,7 +1324,7 @@ async fn update_config(
     Json(request): Json<ConfigUpdateRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
     // Create a mutable copy of the config
-    let mut config = (*state.config).clone();
+    let mut config = (*state.config.read().unwrap()).clone();
 
     // Update QMK firmware path if provided
     if let Some(path_str) = request.qmk_firmware_path {
@@ -1352,6 +1362,8 @@ async fn update_config(
         )
     })?;
 
+    *state.config.write().unwrap() = config;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -1360,6 +1372,8 @@ async fn get_preflight(State(state): State<AppState>) -> Json<PreflightResponse>
     // Check if QMK firmware path is configured and valid
     let qmk_configured = state
         .config
+        .read()
+        .unwrap()
         .paths
         .qmk_firmware
         .as_ref()
@@ -1367,6 +1381,8 @@ async fn get_preflight(State(state): State<AppState>) -> Json<PreflightResponse>
 
     let qmk_firmware_path = state
         .config
+        .read()
+        .unwrap()
         .paths
         .qmk_firmware
         .as_ref()
@@ -1449,7 +1465,8 @@ async fn get_geometry(
     validate_keyboard_path(&keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
     // Get QMK path from config
-    let qmk_path = state.config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+    let config_guard = state.config.read().unwrap();
+    let qmk_path = config_guard.paths.qmk_firmware.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
             Json(ApiError::new("QMK firmware path not configured")),
@@ -1767,10 +1784,11 @@ async fn get_render_metadata(
 
     // Build position_to_visual_index mapping from geometry (if keyboard info is available)
     // This mapping converts key positions (row,col) to the visual_index expected by the frontend
+    let config_guard = state.config.read().unwrap();
     let position_to_visual_index: std::collections::HashMap<String, u8> =
         if let (Some(keyboard), Some(qmk_path)) = (
             layout.metadata.keyboard.as_ref(),
-            state.config.paths.qmk_firmware.as_ref(),
+            config_guard.paths.qmk_firmware.as_ref(),
         ) {
             // Determine layout variant (fall back to default if not specified)
             let layout_variant = layout
@@ -1930,7 +1948,8 @@ async fn export_layout(
         layout.metadata.keyboard.as_ref(),
         layout.metadata.layout_variant.as_ref(),
     ) {
-        if let Some(qmk_path) = state.config.paths.qmk_firmware.as_ref() {
+        let config_guard = state.config.read().unwrap();
+        if let Some(qmk_path) = config_guard.paths.qmk_firmware.as_ref() {
             parser::keyboard_json::parse_keyboard_info_json(qmk_path, keyboard)
                 .ok()
                 .and_then(|info| {
@@ -2973,7 +2992,8 @@ async fn list_keyboards(
     State(state): State<AppState>,
 ) -> Result<Json<KeyboardListResponse>, (StatusCode, Json<ApiError>)> {
     // Get QMK path from config
-    let qmk_path = state.config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+    let config_guard = state.config.read().unwrap();
+    let qmk_path = config_guard.paths.qmk_firmware.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
             Json(ApiError::new("QMK firmware path not configured")),
@@ -3092,7 +3112,8 @@ async fn list_keyboard_layouts(
     validate_keyboard_path(&keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
     // Get QMK path from config
-    let qmk_path = state.config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+    let config_guard = state.config.read().unwrap();
+    let qmk_path = config_guard.paths.qmk_firmware.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
             Json(ApiError::new("QMK firmware path not configured")),
@@ -3158,7 +3179,8 @@ async fn create_layout(
     }
 
     // Get QMK path from config
-    let qmk_path = state.config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+    let config_guard = state.config.read().unwrap();
+    let qmk_path = config_guard.paths.qmk_firmware.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
             Json(ApiError::new("QMK firmware path not configured")),
@@ -3329,7 +3351,8 @@ async fn switch_layout_variant(
     })?;
 
     // Get QMK path from config
-    let qmk_path = state.config.paths.qmk_firmware.as_ref().ok_or_else(|| {
+    let config_guard = state.config.read().unwrap();
+    let qmk_path = config_guard.paths.qmk_firmware.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
             Json(ApiError::new("QMK firmware path not configured")),

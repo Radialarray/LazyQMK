@@ -9,8 +9,12 @@ export const ssr = false;
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	try {
+		const runtimeBaseUrl = (globalThis as { __LAZYQMK_API_BASE_URL?: string })
+			.__LAZYQMK_API_BASE_URL;
+		const endpoint = `/api/layouts/${encodeURIComponent(params.name)}`;
+		const requestUrl = runtimeBaseUrl ? `${runtimeBaseUrl}${endpoint}` : endpoint;
 		// Use SvelteKit's fetch which works in both SSR and client-side
-		const response = await fetch(`/api/layouts/${encodeURIComponent(params.name)}`);
+		const response = await fetch(requestUrl);
 
 		if (!response.ok) {
 			let errorData: ApiError;

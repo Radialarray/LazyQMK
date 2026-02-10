@@ -25,7 +25,7 @@ export default defineConfig({
 	webServer: [
 		// Start backend first and wait for health check
 		{
-			command: 'cd .. && cargo run --features web --bin lazyqmk-web',
+			command: 'cd .. && cargo run --features web -- web',
 			url: 'http://localhost:3001/health',
 			reuseExistingServer: !process.env.CI,
 			timeout: 120000 // 2 minutes for cargo build
