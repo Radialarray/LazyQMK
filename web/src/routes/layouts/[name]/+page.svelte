@@ -806,17 +806,17 @@
 						if (swapMessage === 'Keys swapped') {
 							swapMessage = null;
 						}
-					}, 2000);
-				} catch (e) {
-					saveStatus = 'error';
-					swapMessage = e instanceof Error ? e.message : 'Failed to swap keys';
-					swapMessageTone = 'error';
-				}
-			} else {
+				}, 2000);
+			} catch (e) {
 				saveStatus = 'error';
-				swapMessage = 'Could not find key positions for swap';
+				swapMessage = e instanceof Error ? e.message : 'Failed to swap keys';
 				swapMessageTone = 'error';
 			}
+		} else {
+			saveStatus = 'error';
+			swapMessage = 'Could not find key positions for swap';
+			swapMessageTone = 'error';
+		}
 			
 			// Exit swap mode
 			swapMode = false;

@@ -65,6 +65,38 @@
 	}: Props = $props();
 	
 	let containerElement: HTMLDivElement;
+	let svgElement: SVGSVGElement | null = null;
+
+	// Workaround for Svelte 5 not supporting onclick on SVG elements
+	// Manually attach event listener when SVG element is bound
+	$effect(() => {
+		const svg = svgElement;
+		if (!svg) return;
+		
+		const handleClick = (e: Event) => {
+			const target = e.target as SVGElement;
+			
+			// Find the key-group parent
+			const keyGroup = target.closest('.key-group');
+			
+			if (keyGroup) {
+				const visualIndex = parseInt(keyGroup.getAttribute('data-visual-index') || '-1');
+				
+				if (visualIndex >= 0) {
+					const key = transformed.keys.find(k => k.visualIndex === visualIndex);
+					if (key) {
+						handleKeyClick(key, e as MouseEvent);
+					}
+				}
+			}
+		};
+		
+		svg.addEventListener('click', handleClick);
+		
+		return () => {
+			svg.removeEventListener('click', handleClick);
+		};
+	});
 
 	// Transform geometry data for SVG rendering
 	const transformed = $derived(transformGeometry(geometry));
@@ -237,6 +269,7 @@
 >
 	{#if transformed.keys.length > 0}
 		<svg
+			bind:this={svgElement}
 			viewBox="0 0 {transformed.viewport.width} {transformed.viewport.height}"
 			class="w-full h-auto"
 			xmlns="http://www.w3.org/2000/svg"
@@ -263,7 +296,6 @@
 			<g
 				class="key-group"
 				transform={transform}
-				onclick={(e) => handleKeyClick(key, e)}
 				onmouseenter={() => handleKeyHover(key.visualIndex)}
 				onmouseleave={() => handleKeyHover(null)}
 				data-testid="key-{key.visualIndex}"
