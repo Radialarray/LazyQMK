@@ -23,10 +23,17 @@ fn main() {
 
 fn build_web_frontend() {
     let web_dir = Path::new("web");
+    let build_dir = web_dir.join("build");
 
     // Check if web directory exists
     if !web_dir.exists() {
         eprintln!("Warning: web directory not found, skipping frontend build");
+        return;
+    }
+
+    // If build directory already exists (from prior CI step), skip npm build
+    if build_dir.exists() {
+        println!("cargo:warning=Using existing web frontend build");
         return;
     }
 
@@ -43,7 +50,7 @@ fn build_web_frontend() {
         assert!(status.success(), "npm install failed");
     }
 
-    // Always build the web frontend to ensure latest changes are embedded
+    // Build the web frontend to ensure latest changes are embedded
     println!("cargo:warning=Building web frontend...");
     let status = Command::new("npm")
         .args(["run", "build"])
@@ -54,7 +61,6 @@ fn build_web_frontend() {
     assert!(status.success(), "Web frontend build failed");
 
     // Verify build output exists
-    let build_dir = web_dir.join("build");
     assert!(
         build_dir.exists(),
         "Web frontend build directory not found after build"
