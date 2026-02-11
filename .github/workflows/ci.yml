@@ -49,6 +49,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Test (all features)
         # Note: Web frontend is built automatically by build.rs when web feature is enabled
+        env:
+          RUST_EMBED: true
         run: cargo test --all-features --verbose
 
   full-matrix:
@@ -89,4 +91,6 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Test (all features)
         # Note: Web frontend is built automatically by build.rs when web feature is enabled
+        env:
+          RUST_EMBED: true
         run: cargo test --all-features --verbose

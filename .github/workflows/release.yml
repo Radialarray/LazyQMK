@@ -110,6 +110,8 @@ jobs:
           npm run build
           cd ..
       - name: Build artifacts
+        env:
+          RUST_EMBED: true
         run: |
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
       - id: cargo-dist
