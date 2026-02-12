@@ -17,6 +17,7 @@ pub mod branding;
 pub mod cli;
 pub mod config;
 pub mod constants;
+pub mod doctor;
 pub mod export;
 pub mod firmware;
 pub mod keycode_db;
