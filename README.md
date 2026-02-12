@@ -139,6 +139,16 @@ The onboarding wizard will ask for:
 - **Keyboard**: Your keyboard name (e.g., `crkbd/rev1` for Corne)
 - **Layout Variant**: Your physical layout (e.g., `LAYOUT_split_3x6_3`)
 
+**Step 4: Verify Your Setup**
+
+After installation, verify that all required tools are present:
+
+```bash
+lazyqmk doctor
+```
+
+This checks your QMK CLI, build toolchains, and firmware directory. If any tools are missing, install them and run `lazyqmk doctor` again. For details, see [QUICKSTART.md](QUICKSTART.md).
+
 That's it! You're ready to start editing your layout.
 
 ## 🌐 Web Editor

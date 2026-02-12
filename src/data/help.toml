@@ -1161,3 +1161,46 @@ priority = 4
 keys = ["LT/MT/LM/SH_T"]
 action = "Use multi-stage picker dialogs"
 priority = 5
+
+# =============================================================================
+# CLI COMMANDS (informational)
+# =============================================================================
+
+[contexts.cli_commands]
+name = "CLI Commands"
+description = "Command-line tools"
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk"]
+action = "Launch terminal UI editor"
+priority = 1
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk web"]
+action = "Start web server (http://localhost:3001)"
+priority = 2
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk doctor"]
+action = "Check development environment setup"
+priority = 3
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk doctor --verbose"]
+action = "Detailed environment diagnostics"
+priority = 4
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk doctor --json"]
+action = "Output environment check results as JSON"
+priority = 5
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk --version"]
+action = "Show version information"
+priority = 6
+
+[[contexts.cli_commands.bindings]]
+keys = ["lazyqmk --help"]
+action = "Show help information"
+priority = 7
