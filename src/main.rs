@@ -14,6 +14,7 @@
 mod app;
 mod cli;
 mod constants;
+mod doctor;
 mod export;
 mod firmware;
 mod keycode_db;
@@ -163,6 +164,8 @@ enum Command {
     Category(cli::CategoryArgs),
     /// Manage layout templates
     Template(cli::TemplateArgs),
+    /// Check development environment dependencies
+    Doctor(cli::DoctorArgs),
     /// Start web server for browser-based editor
     #[cfg(feature = "web")]
     Web(WebArgs),
@@ -275,6 +278,13 @@ fn main() -> Result<()> {
                 }
             },
             Command::Template(args) => match args.execute() {
+                Ok(()) => ExitCode::Success,
+                Err(e) => {
+                    eprintln!("Error: {}", e.message);
+                    e.exit_code
+                }
+            },
+            Command::Doctor(args) => match args.execute() {
                 Ok(()) => ExitCode::Success,
                 Err(e) => {
                     eprintln!("Error: {}", e.message);

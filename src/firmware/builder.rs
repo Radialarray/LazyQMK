@@ -229,6 +229,31 @@ impl Default for BuildState {
     }
 }
 
+/// Detects setup-related errors and appends helpful diagnostic suggestions.
+///
+/// Looks for patterns like "command not found", "no such file", etc. and suggests
+/// running `lazyqmk doctor` to diagnose the issue.
+fn enhance_qmk_error(error_str: &str) -> String {
+    let error_lower = error_str.to_lowercase();
+
+    // Check for command not found patterns across platforms
+    let is_command_not_found = error_lower.contains("not found")
+        || error_lower.contains("no such file")
+        || error_lower.contains("is not recognized") // Windows
+        || error_lower.contains("command not found")
+        || error_lower.contains("qmk: command not found")
+        || error_lower.contains("could not find executable");
+
+    if is_command_not_found {
+        format!(
+            "{}\n\nTip: Run 'lazyqmk doctor' to check your setup and install missing dependencies.",
+            error_str
+        )
+    } else {
+        error_str.to_string()
+    }
+}
+
 /// Runs the QMK build process in a background thread.
 ///
 /// The keyboard parameter may include variant subdirectories (e.g., "`keebart/corne_choc_pro/standard`").
@@ -268,9 +293,21 @@ fn run_build(
         .stderr(Stdio::piped());
 
     // Execute command
-    let output = cmd
-        .output()
-        .context("Failed to execute qmk compile command")?;
+    let output = match cmd.output() {
+        Ok(o) => o,
+        Err(e) => {
+            let error_msg = format!("Failed to execute qmk compile command: {e}");
+            let enhanced_msg = enhance_qmk_error(&error_msg);
+            sender
+                .send(BuildMessage::Complete {
+                    success: false,
+                    firmware_path: None,
+                    error: Some(enhanced_msg),
+                })
+                .ok();
+            return Ok(());
+        }
+    };
 
     // Parse output
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -319,11 +356,14 @@ fn run_build(
             })
             .ok();
     } else {
+        let base_error = "qmk compile command failed. Check build log for details.";
+        let combined = format!("{base_error}\n\n{}", stderr);
+        let enhanced_msg = enhance_qmk_error(&combined);
         sender
             .send(BuildMessage::Complete {
                 success: false,
                 firmware_path: None,
-                error: Some("qmk compile command failed. Check build log for details.".to_string()),
+                error: Some(enhanced_msg),
             })
             .ok();
     }
@@ -433,5 +473,49 @@ mod tests {
         assert_eq!(LogLevel::Info.color(), ratatui::style::Color::Gray);
         assert_eq!(LogLevel::Ok.color(), ratatui::style::Color::Green);
         assert_eq!(LogLevel::Error.color(), ratatui::style::Color::Red);
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_command_not_found() {
+        let error = "qmk: command not found";
+        let enhanced = enhance_qmk_error(error);
+        assert!(enhanced.contains("lazyqmk doctor"));
+        assert!(enhanced.contains(error));
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_not_found() {
+        let error = "qmk: not found";
+        let enhanced = enhance_qmk_error(error);
+        assert!(enhanced.contains("lazyqmk doctor"));
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_no_such_file() {
+        let error = "No such file or directory";
+        let enhanced = enhance_qmk_error(error);
+        assert!(enhanced.contains("lazyqmk doctor"));
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_windows_not_recognized() {
+        let error = "'qmk' is not recognized as an internal or external command";
+        let enhanced = enhance_qmk_error(error);
+        assert!(enhanced.contains("lazyqmk doctor"));
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_other_error() {
+        let error = "Some other qmk compilation error";
+        let enhanced = enhance_qmk_error(error);
+        assert_eq!(enhanced, error);
+        assert!(!enhanced.contains("lazyqmk doctor"));
+    }
+
+    #[test]
+    fn test_enhance_qmk_error_preserves_original_message() {
+        let error = "qmk compile failed: not found in PATH";
+        let enhanced = enhance_qmk_error(error);
+        assert!(enhanced.starts_with(error));
     }
 }

@@ -6,6 +6,7 @@
 pub mod category;
 pub mod common;
 pub mod config;
+pub mod doctor;
 pub mod export;
 pub mod generate;
 pub mod help;
@@ -22,6 +23,7 @@ pub mod validate;
 pub use category::CategoryArgs;
 pub use common::ExitCode;
 pub use config::ConfigArgs;
+pub use doctor::DoctorArgs;
 pub use export::ExportArgs;
 pub use generate::GenerateArgs;
 pub use help::HelpArgs;

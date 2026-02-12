@@ -9,5 +9,6 @@ pub mod formatter;
 // Re-export checker types
 pub use checker::{DependencyChecker, DependencyStatus, ToolStatus};
 
-// Re-export formatter types
+// Re-export formatter types (allow unused for public API exports)
+#[allow(unused_imports)]
 pub use formatter::{DoctorFormatter, JsonDependency, JsonOutput, OutputFormat, Platform};

@@ -137,6 +137,7 @@ impl DoctorFormatter {
 
     /// Creates a new formatter with specified platform (for testing).
     #[must_use]
+    #[allow(dead_code)] // Public API used in tests
     pub fn with_platform(platform: Platform) -> Self {
         Self {
             format: OutputFormat::Terminal,

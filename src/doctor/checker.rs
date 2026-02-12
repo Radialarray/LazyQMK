@@ -144,6 +144,7 @@ impl DependencyChecker {
 
     /// Creates a new dependency checker with custom timeout.
     #[must_use]
+    #[allow(dead_code)] // Public API for future timeout implementation
     pub fn with_timeout(timeout_secs: u64) -> Self {
         Self {
             command_timeout: Duration::from_secs(timeout_secs),
