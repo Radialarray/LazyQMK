@@ -112,6 +112,7 @@ jobs:
       - name: Build artifacts
         env:
           RUST_EMBED: true
+          SKIP_WEB_BUILD: 1
         run: |
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
       - id: cargo-dist
