@@ -342,6 +342,9 @@
 						{#if hasExistingLayouts}
 							<button
 								class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
+								onclick={() => {
+									document.getElementById('your-layouts')?.scrollIntoView({ behavior: 'smooth' });
+								}}
 								disabled={existingLoading}
 							>
 								<div class="text-4xl mb-4">📁</div>
@@ -366,7 +369,7 @@
 							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
 							onclick={() => {
 								if (hasTemplates) {
-									// Stay on choose, show templates below
+									document.getElementById('available-templates')?.scrollIntoView({ behavior: 'smooth' });
 								} else {
 									startCreateFromScratch();
 								}
@@ -406,7 +409,7 @@
 				<!-- Templates Grid (if available) -->
 				{#if hasTemplates}
 					<Card class="p-6">
-						<h3 class="text-lg font-semibold mb-4">Available Templates</h3>
+						<h3 id="available-templates" class="text-lg font-semibold mb-4">Available Templates</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each templates as template}
 								<button
@@ -430,7 +433,7 @@
 				<!-- Existing Layouts Grid (if available) -->
 				{#if hasExistingLayouts}
 					<Card class="p-6">
-						<h3 class="text-lg font-semibold mb-4">Your Layouts</h3>
+						<h3 id="your-layouts" class="text-lg font-semibold mb-4">Your Layouts</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each existingLayouts as layout}
 								<button
