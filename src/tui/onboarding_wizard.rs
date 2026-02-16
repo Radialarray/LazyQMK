@@ -23,6 +23,7 @@ use crate::config::Config;
 use crate::parser::keyboard_json::{
     extract_layout_names, parse_keyboard_info_json, scan_keyboards,
 };
+use crate::tui::layout_picker::LayoutPickerState;
 
 /// Onboarding wizard steps
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,6 +117,17 @@ pub enum KeyboardSelectionFocus {
     List,
 }
 
+/// Welcome screen choice
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WelcomeChoice {
+    /// Load an existing layout
+    LoadExisting,
+    /// Create layout from scratch
+    FromScratch,
+    /// Create layout from template
+    FromTemplate,
+}
+
 /// Onboarding wizard state
 #[derive(Debug, Clone)]
 pub struct OnboardingWizardState {
@@ -143,12 +155,29 @@ pub struct OnboardingWizardState {
     pub is_complete: bool,
     /// Whether this is a keyboard-only change (skip other config steps)
     pub keyboard_change_only: bool,
+    /// List of existing layouts found in layouts directory
+    pub existing_layouts: Vec<crate::tui::layout_picker::LayoutInfo>,
+    /// Welcome screen choice (None until user selects)
+    pub welcome_choice: Option<WelcomeChoice>,
+    /// Selected welcome option index
+    pub welcome_selected_index: usize,
 }
 
 impl OnboardingWizardState {
     /// Creates a new onboarding wizard state
     #[must_use]
     pub fn new() -> Self {
+        // Scan for existing layouts
+        let mut existing_layouts = Vec::new();
+        if let Ok(layouts_dir) = LayoutPickerState::layouts_dir() {
+            if layouts_dir.exists() {
+                let mut picker_state = LayoutPickerState::new();
+                if picker_state.scan_layouts().is_ok() {
+                    existing_layouts = picker_state.layouts;
+                }
+            }
+        }
+
         Self {
             current_step: WizardStep::Welcome,
             inputs: HashMap::new(),
@@ -162,6 +191,9 @@ impl OnboardingWizardState {
             error_message: None,
             is_complete: false,
             keyboard_change_only: false,
+            existing_layouts,
+            welcome_choice: None,
+            welcome_selected_index: 0,
         }
     }
 
@@ -198,6 +230,9 @@ impl OnboardingWizardState {
             error_message: None,
             is_complete: false,
             keyboard_change_only: true,
+            existing_layouts: Vec::new(), // Not used in keyboard selection mode
+            welcome_choice: None,         // Not used in keyboard selection mode
+            welcome_selected_index: 0,
         })
     }
 
@@ -245,7 +280,10 @@ impl OnboardingWizardState {
             layout_selected_index: 0,
             error_message: None,
             is_complete: false,
-            keyboard_change_only: false, // Go through all steps
+            keyboard_change_only: false,  // Go through all steps
+            existing_layouts: Vec::new(), // Not used in new layout mode
+            welcome_choice: None,         // Not used in new layout mode
+            welcome_selected_index: 0,
         })
     }
 
@@ -504,6 +542,35 @@ impl OnboardingWizardState {
 
         wizard
     }
+
+    /// Gets the number of welcome screen options based on whether existing layouts are found
+    fn get_welcome_options_count(&self) -> usize {
+        if self.existing_layouts.is_empty() {
+            2 // FromScratch, FromTemplate
+        } else {
+            3 // LoadExisting, FromScratch, FromTemplate
+        }
+    }
+
+    /// Gets the welcome choice for a given index
+    fn get_welcome_choice_for_index(&self, index: usize) -> Option<WelcomeChoice> {
+        if !self.existing_layouts.is_empty() {
+            // If existing layouts found: LoadExisting, FromScratch, FromTemplate
+            match index {
+                0 => Some(WelcomeChoice::LoadExisting),
+                1 => Some(WelcomeChoice::FromScratch),
+                2 => Some(WelcomeChoice::FromTemplate),
+                _ => None,
+            }
+        } else {
+            // No existing layouts: FromScratch, FromTemplate
+            match index {
+                0 => Some(WelcomeChoice::FromScratch),
+                1 => Some(WelcomeChoice::FromTemplate),
+                _ => None,
+            }
+        }
+    }
 }
 
 impl Default for OnboardingWizardState {
@@ -552,7 +619,7 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::
 
     // Render content based on current step
     match state.current_step {
-        WizardStep::Welcome => render_welcome(f, vertical_chunks[1], theme),
+        WizardStep::Welcome => render_welcome(f, state, vertical_chunks[1], theme),
         WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1], theme),
         WizardStep::KeyboardSelection => {
             render_keyboard_selection(f, state, vertical_chunks[1], theme);
@@ -575,8 +642,13 @@ pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::
     }
 }
 
-fn render_welcome(f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
-    let text = vec![
+fn render_welcome(
+    f: &mut Frame,
+    state: &OnboardingWizardState,
+    area: Rect,
+    theme: &crate::tui::theme::Theme,
+) {
+    let mut text = vec![
         Line::from(""),
         Line::from(Span::styled(
             "Welcome to Keyboard TUI!",
@@ -586,28 +658,65 @@ fn render_welcome(f: &mut Frame, area: Rect, theme: &crate::tui::theme::Theme) {
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "This wizard will help you set up your configuration.",
+            "Choose how to get started:",
             Style::default().fg(theme.text),
         )),
         Line::from(""),
-        Line::from(Span::styled(
-            "You will need:",
-            Style::default().fg(theme.text),
-        )),
-        Line::from(Span::styled(
-            "  - Path to your QMK firmware directory",
-            Style::default().fg(theme.text),
-        )),
-        Line::from(Span::styled(
-            "  - Knowledge of which keyboard you want to configure",
-            Style::default().fg(theme.text),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "Press Enter to continue...",
-            Style::default().fg(theme.text_muted),
-        )),
     ];
+
+    // Add options based on whether existing layouts exist
+    if !state.existing_layouts.is_empty() {
+        let load_existing_style = if state.welcome_selected_index == 0 {
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme.text)
+        };
+        text.push(Line::from(Span::styled(
+            format!(
+                "  [1] Load Existing Layout ({} found)",
+                state.existing_layouts.len()
+            ),
+            load_existing_style,
+        )));
+    }
+
+    let from_scratch_index = usize::from(!state.existing_layouts.is_empty());
+    let from_scratch_style = if state.welcome_selected_index == from_scratch_index {
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.text)
+    };
+    text.push(Line::from(Span::styled(
+        "  [2] Create From Scratch",
+        from_scratch_style,
+    )));
+
+    let from_template_index = if state.existing_layouts.is_empty() {
+        1
+    } else {
+        2
+    };
+    let from_template_style = if state.welcome_selected_index == from_template_index {
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.text)
+    };
+    text.push(Line::from(Span::styled(
+        "  [3] Create From Template",
+        from_template_style,
+    )));
+
+    text.push(Line::from(""));
+    text.push(Line::from(Span::styled(
+        "Use ↑↓ to navigate, Enter to select...",
+        Style::default().fg(theme.text_muted),
+    )));
 
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Center)
@@ -960,8 +1069,32 @@ fn render_instructions(
 pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<bool> {
     match state.current_step {
         WizardStep::Welcome => match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                if state.welcome_selected_index > 0 {
+                    state.welcome_selected_index -= 1;
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let max_index = state.get_welcome_options_count().saturating_sub(1);
+                if state.welcome_selected_index < max_index {
+                    state.welcome_selected_index += 1;
+                }
+            }
             KeyCode::Enter => {
-                state.next_step()?;
+                // Record the user's choice
+                if let Some(choice) =
+                    state.get_welcome_choice_for_index(state.welcome_selected_index)
+                {
+                    state.welcome_choice = Some(choice);
+
+                    // Only advance to next step if not loading existing layout
+                    if choice != WelcomeChoice::LoadExisting {
+                        state.next_step()?;
+                    } else {
+                        // Signal to exit and load layout picker
+                        return Ok(true);
+                    }
+                }
             }
             KeyCode::Esc => return Ok(true), // Exit
             _ => {}

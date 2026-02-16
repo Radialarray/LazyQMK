@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use crate::{config, tui};
 
-use super::launch;
+use super::{launch, layout_picker};
 
 /// Runs the onboarding wizard, saves config, and launches the editor
 pub fn run_onboarding_wizard_terminal() -> Result<()> {
@@ -29,7 +29,20 @@ pub fn run_onboarding_wizard_terminal() -> Result<()> {
                 let should_exit = tui::onboarding_wizard::handle_input(&mut wizard_state, key)?;
 
                 if should_exit {
-                    if wizard_state.is_complete {
+                    // Check if user chose to load existing layout
+                    if wizard_state.welcome_choice
+                        == Some(tui::onboarding_wizard::WelcomeChoice::LoadExisting)
+                    {
+                        // Restore terminal and launch layout picker
+                        tui::restore_terminal(terminal)?;
+
+                        // Load config if it exists, otherwise use default
+                        let config =
+                            config::Config::load().unwrap_or_else(|_| config::Config::new());
+
+                        // Launch the layout picker
+                        return layout_picker::run_layout_picker_terminal(&config);
+                    } else if wizard_state.is_complete {
                         // Build and save configuration
                         let config = wizard_state.build_config()?;
                         config.save()?;
