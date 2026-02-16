@@ -66,7 +66,7 @@ impl Platform {
 
     /// Returns the platform name as a string.
     #[must_use]
-    pub const fn name(&self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::MacOs => "macOS",
             Self::Linux => "Linux",

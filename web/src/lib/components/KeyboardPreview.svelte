@@ -65,7 +65,7 @@
 	}: Props = $props();
 	
 	let containerElement: HTMLDivElement;
-	let svgElement: SVGSVGElement | null = null;
+	let svgElement: SVGSVGElement | null = $state(null);
 
 	// Workaround for Svelte 5 not supporting onclick on SVG elements
 	// Manually attach event listener when SVG element is bound

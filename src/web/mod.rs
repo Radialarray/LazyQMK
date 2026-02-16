@@ -1789,13 +1789,7 @@ async fn get_render_metadata(
 
     // Build position_to_visual_index mapping from geometry (if keyboard info is available)
     // This mapping converts key positions (row,col) to the visual_index expected by the frontend
-    let qmk_path = state
-        .config
-        .read()
-        .unwrap()
-        .paths
-        .qmk_firmware
-        .clone();
+    let qmk_path = state.config.read().unwrap().paths.qmk_firmware.clone();
     let position_to_visual_index: std::collections::HashMap<String, u8> =
         if let (Some(keyboard), Some(qmk_path)) =
             (layout.metadata.keyboard.as_ref(), qmk_path.as_ref())
@@ -1958,13 +1952,7 @@ async fn export_layout(
         layout.metadata.keyboard.as_ref(),
         layout.metadata.layout_variant.as_ref(),
     ) {
-        let qmk_path = state
-            .config
-            .read()
-            .unwrap()
-            .paths
-            .qmk_firmware
-            .clone();
+        let qmk_path = state.config.read().unwrap().paths.qmk_firmware.clone();
         if let Some(qmk_path) = qmk_path {
             parser::keyboard_json::parse_keyboard_info_json(&qmk_path, keyboard)
                 .ok()
