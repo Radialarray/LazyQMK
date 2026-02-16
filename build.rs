@@ -31,10 +31,14 @@ fn build_web_frontend() {
         return;
     }
 
-    // If build directory already exists (from prior CI step), skip npm build
-    if build_dir.exists() {
-        println!("cargo:warning=Using existing web frontend build");
-        return;
+    // Skip build if SKIP_WEB_BUILD is set (for CI optimization)
+    if env::var("SKIP_WEB_BUILD").is_ok() {
+        if build_dir.exists() {
+            println!("cargo:warning=SKIP_WEB_BUILD set, using existing web frontend build");
+            return;
+        } else {
+            panic!("SKIP_WEB_BUILD is set but web/build/ directory does not exist");
+        }
     }
 
     // Check if node_modules exists, if not run npm install
@@ -51,9 +55,10 @@ fn build_web_frontend() {
     }
 
     // Build the web frontend to ensure latest changes are embedded
-    println!("cargo:warning=Building web frontend...");
+    println!("cargo:warning=Building web frontend with RUST_EMBED=true...");
     let status = Command::new("npm")
         .args(["run", "build"])
+        .env("RUST_EMBED", "true") // Tell Svelte to use static adapter
         .current_dir(web_dir)
         .status()
         .expect("Failed to run npm build - ensure Node.js and npm are installed");
