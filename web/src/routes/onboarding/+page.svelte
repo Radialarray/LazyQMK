@@ -10,7 +10,8 @@
 		type PreflightResponse,
 		type TemplateInfo,
 		type KeyboardInfo,
-		type LayoutVariantInfo
+		type LayoutVariantInfo,
+		type LayoutSummary
 	} from '$api';
 	import { Button, Card, Input } from '$components';
 
@@ -37,6 +38,11 @@
 	let applyLoading = $state(false);
 	let applyError = $state<string | null>(null);
 
+	// Existing layouts state
+	let existingLayouts = $state<LayoutSummary[]>([]);
+	let existingLoading = $state(false);
+	let existingError = $state<string | null>(null);
+
 	// Create from scratch state (mini setup wizard)
 	let keyboards = $state<KeyboardInfo[]>([]);
 	let keyboardsLoading = $state(false);
@@ -62,6 +68,7 @@
 
 	let qmkConfigured = $derived(preflight?.qmk_configured ?? false);
 	let hasTemplates = $derived(templates.length > 0);
+	let hasExistingLayouts = $derived(existingLayouts.length > 0);
 
 	onMount(async () => {
 		await loadPreflight();
@@ -76,7 +83,7 @@
 			// If QMK is configured, skip to choose step
 			if (preflight.qmk_configured) {
 				currentStep = 'choose';
-				await loadTemplates();
+				await Promise.all([loadTemplates(), loadExistingLayouts()]);
 			}
 
 			preflightError = null;
@@ -96,7 +103,7 @@
 			preflight = await apiClient.preflight();
 			if (preflight.qmk_configured) {
 				currentStep = 'choose';
-				await loadTemplates();
+				await Promise.all([loadTemplates(), loadExistingLayouts()]);
 			} else {
 				configError = 'Path saved but QMK directory validation failed. Please check the path.';
 			}
@@ -117,6 +124,19 @@
 			templatesError = e instanceof Error ? e.message : 'Failed to load templates';
 		} finally {
 			templatesLoading = false;
+		}
+	}
+
+	async function loadExistingLayouts() {
+		existingLoading = true;
+		existingError = null;
+		try {
+			const response = await apiClient.listLayouts();
+			existingLayouts = response.layouts;
+		} catch (e) {
+			existingError = e instanceof Error ? e.message : 'Failed to load existing layouts';
+		} finally {
+			existingLoading = false;
 		}
 	}
 
@@ -317,7 +337,30 @@
 						</div>
 					</div>
 
-					<div class="grid md:grid-cols-2 gap-6">
+					<div class="grid md:grid-cols-3 gap-6">
+						<!-- Load Existing Layout -->
+						{#if hasExistingLayouts}
+							<button
+								class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
+								disabled={existingLoading}
+							>
+								<div class="text-4xl mb-4">📁</div>
+								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
+									Load Existing Layout
+								</h3>
+								<p class="text-sm text-muted-foreground">
+									Continue working on your saved layouts
+								</p>
+								{#if existingLoading}
+									<p class="text-xs text-muted-foreground mt-2">Loading layouts...</p>
+								{:else}
+									<p class="text-xs text-muted-foreground mt-2">
+										{existingLayouts.length} {existingLayouts.length === 1 ? 'layout' : 'layouts'} found
+									</p>
+								{/if}
+							</button>
+						{/if}
+
 						<!-- From Template -->
 						<button
 							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
@@ -377,6 +420,33 @@
 									<div class="flex justify-between text-xs text-muted-foreground">
 										<span>{template.layer_count} layers</span>
 										<span>{template.author || 'Unknown'}</span>
+									</div>
+								</button>
+							{/each}
+						</div>
+					</Card>
+				{/if}
+
+				<!-- Existing Layouts Grid (if available) -->
+				{#if hasExistingLayouts}
+					<Card class="p-6">
+						<h3 class="text-lg font-semibold mb-4">Your Layouts</h3>
+						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+							{#each existingLayouts as layout}
+								<button
+									class="p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all"
+									onclick={() => goto(`/layouts/${encodeURIComponent(layout.filename)}`)}
+								>
+									<h4 class="font-semibold mb-1">{layout.name}</h4>
+									<p class="text-xs text-muted-foreground mb-2 line-clamp-2">
+										{layout.description || 'No description'}
+									</p>
+									<div class="flex justify-between text-xs text-muted-foreground">
+										{#if layout.modified}
+											<span>Modified {new Date(layout.modified).toLocaleDateString()}</span>
+										{:else}
+											<span>&nbsp;</span>
+										{/if}
 									</div>
 								</button>
 							{/each}
