@@ -29,6 +29,8 @@ export interface Layout {
 	uncolored_key_behavior?: number;
 	// Idle effect settings
 	idle_effect_settings?: IdleEffectSettings;
+	// RGB overlay ripple settings
+	rgb_overlay_ripple?: RgbOverlayRippleSettings;
 	// Tap-hold settings
 	tap_hold_settings?: TapHoldSettings;
 	// Categories
@@ -63,6 +65,23 @@ export interface IdleEffectSettings {
 	idle_timeout_ms: number;
 	idle_effect_duration_ms: number;
 	idle_effect_mode: string;
+}
+
+export interface RgbOverlayRippleSettings {
+	enabled: boolean;
+	max_ripples: number;
+	duration_ms: number;
+	speed: number;
+	band_width: number;
+	amplitude_pct: number;
+	color_mode: string;
+	fixed_color: RgbColor;
+	hue_shift_deg: number;
+	trigger_on_press: boolean;
+	trigger_on_release: boolean;
+	ignore_transparent: boolean;
+	ignore_modifiers: boolean;
+	ignore_layer_switch: boolean;
 }
 
 export interface TapHoldSettings {

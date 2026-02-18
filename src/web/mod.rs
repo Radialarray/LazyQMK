@@ -60,7 +60,8 @@ use crate::config::Config;
 use crate::export;
 use crate::keycode_db::{KeycodeCategory, KeycodeDb, KeycodeDefinition};
 use crate::models::{
-    IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, TapDanceAction, TapHoldSettings,
+    IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, RgbOverlayRippleSettings,
+    TapDanceAction, TapHoldSettings,
 };
 use crate::parser;
 use crate::services::LayoutService;
@@ -682,6 +683,61 @@ impl From<&TapHoldSettings> for TapHoldSettingsDto {
     }
 }
 
+/// RGB overlay ripple settings for API.
+#[allow(clippy::struct_excessive_bools)] // DTO mirrors model; bools are config flags
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RgbOverlayRippleSettingsDto {
+    /// Whether ripple overlay is enabled.
+    pub enabled: bool,
+    /// Maximum number of concurrent ripples (1-8).
+    pub max_ripples: u8,
+    /// Duration of each ripple in milliseconds.
+    pub duration_ms: u16,
+    /// Speed multiplier (0-255, higher = faster expansion).
+    pub speed: u8,
+    /// Band width in LED units.
+    pub band_width: u8,
+    /// Amplitude as percentage of base brightness (0-100).
+    pub amplitude_pct: u8,
+    /// Color mode for ripples.
+    pub color_mode: String,
+    /// Fixed color (used when color_mode = Fixed).
+    pub fixed_color: RgbColor,
+    /// Hue shift in degrees (used when color_mode = HueShift).
+    pub hue_shift_deg: i16,
+    /// Trigger on key press.
+    pub trigger_on_press: bool,
+    /// Trigger on key release.
+    pub trigger_on_release: bool,
+    /// Ignore transparent keys (KC_TRNS).
+    pub ignore_transparent: bool,
+    /// Ignore modifier keys.
+    pub ignore_modifiers: bool,
+    /// Ignore layer switch keys.
+    pub ignore_layer_switch: bool,
+}
+
+impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
+    fn from(s: &RgbOverlayRippleSettings) -> Self {
+        Self {
+            enabled: s.enabled,
+            max_ripples: s.max_ripples,
+            duration_ms: s.duration_ms,
+            speed: s.speed,
+            band_width: s.band_width,
+            amplitude_pct: s.amplitude_pct,
+            color_mode: s.color_mode.display_name().to_string(),
+            fixed_color: s.fixed_color,
+            hue_shift_deg: s.hue_shift_deg,
+            trigger_on_press: s.trigger_on_press,
+            trigger_on_release: s.trigger_on_release,
+            ignore_transparent: s.ignore_transparent,
+            ignore_modifiers: s.ignore_modifiers,
+            ignore_layer_switch: s.ignore_layer_switch,
+        }
+    }
+}
+
 /// Combo definition for API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComboDto {
@@ -806,6 +862,8 @@ pub struct LayoutDto {
     pub rgb_saturation: crate::models::RgbSaturation,
     /// Idle effect settings
     pub idle_effect_settings: IdleEffectSettingsDto,
+    /// RGB overlay ripple settings
+    pub rgb_overlay_ripple: RgbOverlayRippleSettingsDto,
     /// Tap-hold settings
     pub tap_hold_settings: TapHoldSettingsDto,
     /// Tap dance definitions
@@ -1077,6 +1135,7 @@ async fn get_layout(
         rgb_brightness: layout.rgb_brightness,
         rgb_saturation: layout.rgb_saturation,
         idle_effect_settings: IdleEffectSettingsDto::from(&layout.idle_effect_settings),
+        rgb_overlay_ripple: RgbOverlayRippleSettingsDto::from(&layout.rgb_overlay_ripple),
         tap_hold_settings: TapHoldSettingsDto::from(&layout.tap_hold_settings),
         tap_dances: layout.tap_dances.iter().map(TapDanceDto::from).collect(),
     };

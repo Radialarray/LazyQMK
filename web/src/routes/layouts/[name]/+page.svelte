@@ -70,6 +70,7 @@
 		{ id: 'tap-dance', label: 'Tap Dance', icon: '💃' },
 		{ id: 'combos', label: 'Combos', icon: '🔗' },
 		{ id: 'idle-effect', label: 'Idle Effect', icon: '💤' },
+		{ id: 'overlay-ripple', label: 'Overlay Ripple', icon: '🌊' },
 		{ id: 'validate', label: 'Validate', icon: '✓' },
 		{ id: 'inspect', label: 'Inspect', icon: '🔍' },
 		{ id: 'export', label: 'Export', icon: '📄' }
@@ -1043,6 +1044,60 @@
 			layout.idle_effect_settings.idle_effect_duration_ms = value as number;
 		} else if (field === 'idle_effect_mode') {
 			layout.idle_effect_settings.idle_effect_mode = value as string;
+		}
+		layout = { ...layout };
+		isDirty = true;
+	}
+
+	// Overlay ripple settings
+	function updateOverlayRipple(field: string, value: boolean | number | string | RgbColor) {
+		if (!layout) return;
+		if (!layout.rgb_overlay_ripple) {
+			layout.rgb_overlay_ripple = {
+				enabled: false,
+				max_ripples: 4,
+				duration_ms: 500,
+				speed: 128,
+				band_width: 3,
+				amplitude_pct: 50,
+				color_mode: 'Fixed Color',
+				fixed_color: { r: 0, g: 255, b: 255 },
+				hue_shift_deg: 60,
+				trigger_on_press: true,
+				trigger_on_release: false,
+				ignore_transparent: true,
+				ignore_modifiers: false,
+				ignore_layer_switch: false
+			};
+		}
+		if (field === 'enabled') {
+			layout.rgb_overlay_ripple.enabled = value as boolean;
+		} else if (field === 'max_ripples') {
+			layout.rgb_overlay_ripple.max_ripples = value as number;
+		} else if (field === 'duration_ms') {
+			layout.rgb_overlay_ripple.duration_ms = value as number;
+		} else if (field === 'speed') {
+			layout.rgb_overlay_ripple.speed = value as number;
+		} else if (field === 'band_width') {
+			layout.rgb_overlay_ripple.band_width = value as number;
+		} else if (field === 'amplitude_pct') {
+			layout.rgb_overlay_ripple.amplitude_pct = value as number;
+		} else if (field === 'color_mode') {
+			layout.rgb_overlay_ripple.color_mode = value as string;
+		} else if (field === 'fixed_color') {
+			layout.rgb_overlay_ripple.fixed_color = value as RgbColor;
+		} else if (field === 'hue_shift_deg') {
+			layout.rgb_overlay_ripple.hue_shift_deg = value as number;
+		} else if (field === 'trigger_on_press') {
+			layout.rgb_overlay_ripple.trigger_on_press = value as boolean;
+		} else if (field === 'trigger_on_release') {
+			layout.rgb_overlay_ripple.trigger_on_release = value as boolean;
+		} else if (field === 'ignore_transparent') {
+			layout.rgb_overlay_ripple.ignore_transparent = value as boolean;
+		} else if (field === 'ignore_modifiers') {
+			layout.rgb_overlay_ripple.ignore_modifiers = value as boolean;
+		} else if (field === 'ignore_layer_switch') {
+			layout.rgb_overlay_ripple.ignore_layer_switch = value as boolean;
 		}
 		layout = { ...layout };
 		isDirty = true;
@@ -2210,6 +2265,231 @@
 							<option value="Rainbow Pinwheels">Rainbow Pinwheels</option>
 							<option value="Jellybean Raindrops">Jellybean Raindrops</option>
 						</select>
+					</div>
+				</div>
+			</Card>
+		{:else if activeTab === 'overlay-ripple'}
+			<!-- Overlay Ripple Tab -->
+			<Card class="p-6">
+				<h2 class="text-lg font-semibold mb-4">Overlay Ripple Settings</h2>
+				<p class="text-muted-foreground text-sm mb-6">
+					Configure RGB ripple effects that overlay on top of base layer colors when keys are pressed.
+				</p>
+
+				<div class="space-y-6 max-w-2xl">
+					<!-- Enable Toggle -->
+					<div class="flex items-center gap-3">
+						<input
+							type="checkbox"
+							id="ripple-enabled"
+							checked={layout.rgb_overlay_ripple?.enabled ?? false}
+							onchange={(e) => updateOverlayRipple('enabled', e.currentTarget.checked)}
+							class="w-4 h-4"
+						/>
+						<label for="ripple-enabled" class="text-sm font-medium">Enable Overlay Ripple</label>
+					</div>
+
+					<!-- Ripple Parameters -->
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label for="max-ripples" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Max Ripples</label
+							>
+							<Input
+								id="max-ripples"
+								type="number"
+								value={layout.rgb_overlay_ripple?.max_ripples ?? 4}
+								oninput={(e) => updateOverlayRipple('max_ripples', parseInt(e.currentTarget.value))}
+								min="1"
+								max="8"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								Maximum concurrent ripples (1-8)
+							</p>
+						</div>
+
+						<div>
+							<label for="duration" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Duration (ms)</label
+							>
+							<Input
+								id="duration"
+								type="number"
+								value={layout.rgb_overlay_ripple?.duration_ms ?? 500}
+								oninput={(e) => updateOverlayRipple('duration_ms', parseInt(e.currentTarget.value))}
+								min="100"
+								max="2000"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								How long each ripple lasts
+							</p>
+						</div>
+
+						<div>
+							<label for="speed" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Speed</label
+							>
+							<Input
+								id="speed"
+								type="number"
+								value={layout.rgb_overlay_ripple?.speed ?? 128}
+								oninput={(e) => updateOverlayRipple('speed', parseInt(e.currentTarget.value))}
+								min="0"
+								max="255"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								Expansion speed (0-255)
+							</p>
+						</div>
+
+						<div>
+							<label for="band-width" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Band Width</label
+							>
+							<Input
+								id="band-width"
+								type="number"
+								value={layout.rgb_overlay_ripple?.band_width ?? 3}
+								oninput={(e) => updateOverlayRipple('band_width', parseInt(e.currentTarget.value))}
+								min="1"
+								max="10"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								Width in LED units (1-10)
+							</p>
+						</div>
+
+						<div>
+							<label for="amplitude" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Amplitude (%)</label
+							>
+							<Input
+								id="amplitude"
+								type="number"
+								value={layout.rgb_overlay_ripple?.amplitude_pct ?? 50}
+								oninput={(e) => updateOverlayRipple('amplitude_pct', parseInt(e.currentTarget.value))}
+								min="0"
+								max="100"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								Brightness boost percentage
+							</p>
+						</div>
+					</div>
+
+					<!-- Color Mode -->
+					<div>
+						<label for="color-mode" class="block text-sm font-medium text-muted-foreground mb-1">Color Mode</label>
+						<select
+							id="color-mode"
+							class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+							value={layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color'}
+							onchange={(e) => updateOverlayRipple('color_mode', e.currentTarget.value)}
+						>
+							<option value="Fixed Color">Fixed Color</option>
+							<option value="Key Color">Key Color</option>
+							<option value="Hue Shift">Hue Shift</option>
+						</select>
+						<p class="text-xs text-muted-foreground mt-1">
+							{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
+								Use the same color for all ripples
+							{:else if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Key Color'}
+								Use each key's base color from layer settings
+							{:else}
+								Shift hue from key's base color by fixed degrees
+							{/if}
+						</p>
+					</div>
+
+					<!-- Fixed Color Picker (shown when color_mode is Fixed) -->
+					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
+						<div>
+							<label class="block text-sm font-medium text-muted-foreground mb-2">Fixed Color</label>
+							<ColorPicker
+								color={layout.rgb_overlay_ripple?.fixed_color ?? { r: 0, g: 255, b: 255 }}
+								onColorChange={(color) => updateOverlayRipple('fixed_color', color)}
+							/>
+						</div>
+					{/if}
+
+					<!-- Hue Shift (shown when color_mode is Hue Shift) -->
+					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Hue Shift'}
+						<div>
+							<label for="hue-shift" class="block text-sm font-medium text-muted-foreground mb-1"
+								>Hue Shift (degrees)</label
+							>
+							<Input
+								id="hue-shift"
+								type="number"
+								value={layout.rgb_overlay_ripple?.hue_shift_deg ?? 60}
+								oninput={(e) => updateOverlayRipple('hue_shift_deg', parseInt(e.currentTarget.value))}
+								min="-180"
+								max="180"
+							/>
+							<p class="text-xs text-muted-foreground mt-1">
+								Degrees to shift hue (-180 to 180)
+							</p>
+						</div>
+					{/if}
+
+					<!-- Trigger Options -->
+					<div class="space-y-3">
+						<h3 class="text-sm font-semibold">Trigger Options</h3>
+						<div class="flex items-center gap-3">
+							<input
+								type="checkbox"
+								id="trigger-press"
+								checked={layout.rgb_overlay_ripple?.trigger_on_press ?? true}
+								onchange={(e) => updateOverlayRipple('trigger_on_press', e.currentTarget.checked)}
+								class="w-4 h-4"
+							/>
+							<label for="trigger-press" class="text-sm">Trigger on key press</label>
+						</div>
+						<div class="flex items-center gap-3">
+							<input
+								type="checkbox"
+								id="trigger-release"
+								checked={layout.rgb_overlay_ripple?.trigger_on_release ?? false}
+								onchange={(e) => updateOverlayRipple('trigger_on_release', e.currentTarget.checked)}
+								class="w-4 h-4"
+							/>
+							<label for="trigger-release" class="text-sm">Trigger on key release</label>
+						</div>
+					</div>
+
+					<!-- Ignore Options -->
+					<div class="space-y-3">
+						<h3 class="text-sm font-semibold">Ignore Options</h3>
+						<div class="flex items-center gap-3">
+							<input
+								type="checkbox"
+								id="ignore-transparent"
+								checked={layout.rgb_overlay_ripple?.ignore_transparent ?? true}
+								onchange={(e) => updateOverlayRipple('ignore_transparent', e.currentTarget.checked)}
+								class="w-4 h-4"
+							/>
+							<label for="ignore-transparent" class="text-sm">Ignore transparent keys (KC_TRNS)</label>
+						</div>
+						<div class="flex items-center gap-3">
+							<input
+								type="checkbox"
+								id="ignore-modifiers"
+								checked={layout.rgb_overlay_ripple?.ignore_modifiers ?? false}
+								onchange={(e) => updateOverlayRipple('ignore_modifiers', e.currentTarget.checked)}
+								class="w-4 h-4"
+							/>
+							<label for="ignore-modifiers" class="text-sm">Ignore modifier keys</label>
+						</div>
+						<div class="flex items-center gap-3">
+							<input
+								type="checkbox"
+								id="ignore-layer-switch"
+								checked={layout.rgb_overlay_ripple?.ignore_layer_switch ?? false}
+								onchange={(e) => updateOverlayRipple('ignore_layer_switch', e.currentTarget.checked)}
+								class="w-4 h-4"
+							/>
+							<label for="ignore-layer-switch" class="text-sm">Ignore layer switch keys</label>
+						</div>
 					</div>
 				</div>
 			</Card>
