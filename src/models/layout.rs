@@ -483,6 +483,26 @@ impl RgbOverlayRippleSettings {
         }
         Ok(())
     }
+
+    /// Checks if any settings differ from defaults.
+    #[must_use]
+    pub fn has_custom_settings(&self) -> bool {
+        let defaults = Self::default();
+        self.enabled != defaults.enabled
+            || self.max_ripples != defaults.max_ripples
+            || self.duration_ms != defaults.duration_ms
+            || self.speed != defaults.speed
+            || self.band_width != defaults.band_width
+            || self.amplitude_pct != defaults.amplitude_pct
+            || self.color_mode != defaults.color_mode
+            || self.fixed_color != defaults.fixed_color
+            || self.hue_shift_deg != defaults.hue_shift_deg
+            || self.trigger_on_press != defaults.trigger_on_press
+            || self.trigger_on_release != defaults.trigger_on_release
+            || self.ignore_transparent != defaults.ignore_transparent
+            || self.ignore_modifiers != defaults.ignore_modifiers
+            || self.ignore_layer_switch != defaults.ignore_layer_switch
+    }
 }
 
 // ============================================================================

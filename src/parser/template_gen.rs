@@ -292,9 +292,15 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         || layout.rgb_timeout_ms > 0;
     let has_uncolored_setting = layout.uncolored_key_behavior != default_uncolored;
     let has_idle_settings = layout.idle_effect_settings.has_custom_settings();
+    let has_ripple_settings = layout.rgb_overlay_ripple.has_custom_settings();
     let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
 
-    if !has_rgb_settings && !has_uncolored_setting && !has_idle_settings && !has_tap_hold_settings {
+    if !has_rgb_settings
+        && !has_uncolored_setting
+        && !has_idle_settings
+        && !has_ripple_settings
+        && !has_tap_hold_settings
+    {
         return None;
     }
 
@@ -399,6 +405,97 @@ fn generate_settings(layout: &Layout) -> Option<String> {
                 "**Idle Effect Mode**: {}\n",
                 ies.idle_effect_mode.display_name()
             ));
+        }
+    }
+
+    // Write ripple overlay settings if any are non-default
+    if layout.rgb_overlay_ripple.has_custom_settings() {
+        use crate::models::RippleColorMode;
+        let rip = &layout.rgb_overlay_ripple;
+        let defaults = crate::models::RgbOverlayRippleSettings::default();
+
+        // Write enabled/disabled if not default
+        if rip.enabled != defaults.enabled {
+            let value = if rip.enabled { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Overlay**: {value}\n"));
+        }
+
+        // Write max ripples if not default
+        if rip.max_ripples != defaults.max_ripples {
+            output.push_str(&format!("**Max Ripples**: {}\n", rip.max_ripples));
+        }
+
+        // Write duration if not default
+        if rip.duration_ms != defaults.duration_ms {
+            output.push_str(&format!("**Ripple Duration**: {}ms\n", rip.duration_ms));
+        }
+
+        // Write speed if not default
+        if rip.speed != defaults.speed {
+            output.push_str(&format!("**Ripple Speed**: {}\n", rip.speed));
+        }
+
+        // Write band width if not default
+        if rip.band_width != defaults.band_width {
+            output.push_str(&format!("**Ripple Band Width**: {}\n", rip.band_width));
+        }
+
+        // Write amplitude if not default
+        if rip.amplitude_pct != defaults.amplitude_pct {
+            output.push_str(&format!("**Ripple Amplitude**: {}%\n", rip.amplitude_pct));
+        }
+
+        // Write color mode if not default
+        if rip.color_mode != defaults.color_mode {
+            let mode_name = match rip.color_mode {
+                RippleColorMode::Fixed => "Fixed",
+                RippleColorMode::KeyBased => "Key Based",
+                RippleColorMode::HueShift => "Hue Shift",
+            };
+            output.push_str(&format!("**Ripple Color Mode**: {mode_name}\n"));
+        }
+
+        // Write fixed color if not default
+        if rip.fixed_color != defaults.fixed_color {
+            output.push_str(&format!(
+                "**Ripple Fixed Color**: {}\n",
+                rip.fixed_color.to_hex()
+            ));
+        }
+
+        // Write hue shift if not default
+        if rip.hue_shift_deg != defaults.hue_shift_deg {
+            output.push_str(&format!("**Ripple Hue Shift**: {}°\n", rip.hue_shift_deg));
+        }
+
+        // Write trigger on press if not default
+        if rip.trigger_on_press != defaults.trigger_on_press {
+            let value = if rip.trigger_on_press { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Trigger on Press**: {value}\n"));
+        }
+
+        // Write trigger on release if not default
+        if rip.trigger_on_release != defaults.trigger_on_release {
+            let value = if rip.trigger_on_release { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Trigger on Release**: {value}\n"));
+        }
+
+        // Write ignore transparent if not default
+        if rip.ignore_transparent != defaults.ignore_transparent {
+            let value = if rip.ignore_transparent { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Ignore Transparent**: {value}\n"));
+        }
+
+        // Write ignore modifiers if not default
+        if rip.ignore_modifiers != defaults.ignore_modifiers {
+            let value = if rip.ignore_modifiers { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Ignore Modifiers**: {value}\n"));
+        }
+
+        // Write ignore layer switch if not default
+        if rip.ignore_layer_switch != defaults.ignore_layer_switch {
+            let value = if rip.ignore_layer_switch { "On" } else { "Off" };
+            output.push_str(&format!("**Ripple Ignore Layer Switch**: {value}\n"));
         }
     }
 
@@ -1060,5 +1157,202 @@ mod tests {
             parsed.idle_effect_settings.idle_effect_mode,
             RgbMatrixEffect::RainbowBeacon
         );
+    }
+
+    // === RGB Overlay Ripple Settings Tests ===
+
+    #[test]
+    fn test_ripple_overlay_default_not_written() {
+        let layout = create_test_layout();
+        let markdown = generate_markdown(&layout).unwrap();
+
+        // Default settings should not be written
+        assert!(!markdown.contains("Ripple Overlay"));
+        assert!(!markdown.contains("Max Ripples"));
+        assert!(!markdown.contains("Ripple Duration"));
+    }
+
+    #[test]
+    fn test_ripple_overlay_enabled() {
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple = crate::models::RgbOverlayRippleSettings {
+            enabled: true,
+            ..crate::models::RgbOverlayRippleSettings::default()
+        };
+
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown:\n{markdown}");
+        assert!(markdown.contains("**Ripple Overlay**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert!(parsed.rgb_overlay_ripple.enabled);
+    }
+
+    #[test]
+    fn test_ripple_overlay_basic_settings_round_trip() {
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple.enabled = true;
+        layout.rgb_overlay_ripple.max_ripples = 6;
+        layout.rgb_overlay_ripple.duration_ms = 750;
+        layout.rgb_overlay_ripple.speed = 200;
+        layout.rgb_overlay_ripple.band_width = 5;
+        layout.rgb_overlay_ripple.amplitude_pct = 75;
+
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown:\n{markdown}");
+
+        assert!(markdown.contains("**Ripple Overlay**: On"));
+        assert!(markdown.contains("**Max Ripples**: 6"));
+        assert!(markdown.contains("**Ripple Duration**: 750ms"));
+        assert!(markdown.contains("**Ripple Speed**: 200"));
+        assert!(markdown.contains("**Ripple Band Width**: 5"));
+        assert!(markdown.contains("**Ripple Amplitude**: 75%"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert!(parsed.rgb_overlay_ripple.enabled);
+        assert_eq!(parsed.rgb_overlay_ripple.max_ripples, 6);
+        assert_eq!(parsed.rgb_overlay_ripple.duration_ms, 750);
+        assert_eq!(parsed.rgb_overlay_ripple.speed, 200);
+        assert_eq!(parsed.rgb_overlay_ripple.band_width, 5);
+        assert_eq!(parsed.rgb_overlay_ripple.amplitude_pct, 75);
+    }
+
+    #[test]
+    fn test_ripple_overlay_color_modes_round_trip() {
+        use crate::models::{RgbColor, RippleColorMode};
+
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple.enabled = true;
+
+        // Test Fixed mode with custom color
+        layout.rgb_overlay_ripple.color_mode = RippleColorMode::Fixed;
+        layout.rgb_overlay_ripple.fixed_color = RgbColor::new(255, 0, 255); // Magenta
+        let markdown = generate_markdown(&layout).unwrap();
+        assert!(markdown.contains("**Ripple Fixed Color**: #FF00FF"));
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.rgb_overlay_ripple.color_mode, RippleColorMode::Fixed);
+        assert_eq!(
+            parsed.rgb_overlay_ripple.fixed_color,
+            RgbColor::new(255, 0, 255)
+        );
+
+        // Test KeyBased mode
+        layout.rgb_overlay_ripple.color_mode = RippleColorMode::KeyBased;
+        let markdown = generate_markdown(&layout).unwrap();
+        assert!(markdown.contains("**Ripple Color Mode**: Key Based"));
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(
+            parsed.rgb_overlay_ripple.color_mode,
+            RippleColorMode::KeyBased
+        );
+
+        // Test HueShift mode with custom shift
+        layout.rgb_overlay_ripple.color_mode = RippleColorMode::HueShift;
+        layout.rgb_overlay_ripple.hue_shift_deg = 120;
+        let markdown = generate_markdown(&layout).unwrap();
+        assert!(markdown.contains("**Ripple Color Mode**: Hue Shift"));
+        assert!(markdown.contains("**Ripple Hue Shift**: 120°"));
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(
+            parsed.rgb_overlay_ripple.color_mode,
+            RippleColorMode::HueShift
+        );
+        assert_eq!(parsed.rgb_overlay_ripple.hue_shift_deg, 120);
+    }
+
+    #[test]
+    fn test_ripple_overlay_trigger_settings_round_trip() {
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple.enabled = true;
+        layout.rgb_overlay_ripple.trigger_on_press = false;
+        layout.rgb_overlay_ripple.trigger_on_release = true;
+
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown:\n{markdown}");
+
+        assert!(markdown.contains("**Ripple Trigger on Press**: Off"));
+        assert!(markdown.contains("**Ripple Trigger on Release**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert!(!parsed.rgb_overlay_ripple.trigger_on_press);
+        assert!(parsed.rgb_overlay_ripple.trigger_on_release);
+    }
+
+    #[test]
+    fn test_ripple_overlay_ignore_settings_round_trip() {
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple.enabled = true;
+        layout.rgb_overlay_ripple.ignore_transparent = false;
+        layout.rgb_overlay_ripple.ignore_modifiers = true;
+        layout.rgb_overlay_ripple.ignore_layer_switch = true;
+
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown:\n{markdown}");
+
+        assert!(markdown.contains("**Ripple Ignore Transparent**: Off"));
+        assert!(markdown.contains("**Ripple Ignore Modifiers**: On"));
+        assert!(markdown.contains("**Ripple Ignore Layer Switch**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert!(!parsed.rgb_overlay_ripple.ignore_transparent);
+        assert!(parsed.rgb_overlay_ripple.ignore_modifiers);
+        assert!(parsed.rgb_overlay_ripple.ignore_layer_switch);
+    }
+
+    #[test]
+    fn test_ripple_overlay_complete_settings() {
+        use crate::models::{RgbColor, RippleColorMode};
+
+        let mut layout = create_test_layout();
+        layout.rgb_overlay_ripple = crate::models::RgbOverlayRippleSettings {
+            enabled: true,
+            max_ripples: 8,
+            duration_ms: 1000,
+            speed: 255,
+            band_width: 4,
+            amplitude_pct: 100,
+            color_mode: RippleColorMode::HueShift,
+            fixed_color: RgbColor::new(255, 255, 0), // Yellow
+            hue_shift_deg: -90,
+            trigger_on_press: true,
+            trigger_on_release: true,
+            ignore_transparent: false,
+            ignore_modifiers: true,
+            ignore_layer_switch: true,
+        };
+
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown:\n{markdown}");
+
+        assert!(markdown.contains("**Ripple Overlay**: On"));
+        assert!(markdown.contains("**Max Ripples**: 8"));
+        assert!(markdown.contains("**Ripple Duration**: 1000ms"));
+        assert!(markdown.contains("**Ripple Speed**: 255"));
+        assert!(markdown.contains("**Ripple Band Width**: 4"));
+        assert!(markdown.contains("**Ripple Amplitude**: 100%"));
+        assert!(markdown.contains("**Ripple Color Mode**: Hue Shift"));
+        assert!(markdown.contains("**Ripple Fixed Color**: #FFFF00"));
+        assert!(markdown.contains("**Ripple Hue Shift**: -90°"));
+        assert!(markdown.contains("**Ripple Trigger on Release**: On"));
+        assert!(markdown.contains("**Ripple Ignore Transparent**: Off"));
+        assert!(markdown.contains("**Ripple Ignore Modifiers**: On"));
+        assert!(markdown.contains("**Ripple Ignore Layer Switch**: On"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        let rip = &parsed.rgb_overlay_ripple;
+        assert!(rip.enabled);
+        assert_eq!(rip.max_ripples, 8);
+        assert_eq!(rip.duration_ms, 1000);
+        assert_eq!(rip.speed, 255);
+        assert_eq!(rip.band_width, 4);
+        assert_eq!(rip.amplitude_pct, 100);
+        assert_eq!(rip.color_mode, RippleColorMode::HueShift);
+        assert_eq!(rip.fixed_color, RgbColor::new(255, 255, 0));
+        assert_eq!(rip.hue_shift_deg, -90);
+        assert!(rip.trigger_on_press);
+        assert!(rip.trigger_on_release);
+        assert!(!rip.ignore_transparent);
+        assert!(rip.ignore_modifiers);
+        assert!(rip.ignore_layer_switch);
     }
 }

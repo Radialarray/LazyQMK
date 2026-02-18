@@ -22,8 +22,8 @@ pub use layer::{
 };
 pub use layout::{
     HoldDecisionMode, IdleEffectSettings, Layout, LayoutMetadata, RgbBrightness, RgbMatrixEffect,
-    RgbOverlayRippleSettings, RgbSaturation, TapDanceAction, TapHoldPreset, TapHoldSettings,
-    UncoloredKeyBehavior,
+    RgbOverlayRippleSettings, RgbSaturation, RippleColorMode, TapDanceAction, TapHoldPreset,
+    TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

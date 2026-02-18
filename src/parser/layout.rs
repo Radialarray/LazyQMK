@@ -844,6 +844,160 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
             }
         }
 
+        // === RGB Overlay Ripple Settings ===
+
+        // Parse Ripple Overlay enabled/disabled
+        if line.starts_with("**Ripple Overlay**:") {
+            let value = line
+                .strip_prefix("**Ripple Overlay**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.enabled =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Max Ripples
+        if line.starts_with("**Max Ripples**:") {
+            let value = line.strip_prefix("**Max Ripples**:").unwrap().trim();
+            if let Ok(count) = value.parse::<u8>() {
+                layout.rgb_overlay_ripple.max_ripples = count;
+            }
+        }
+
+        // Parse Ripple Duration
+        if line.starts_with("**Ripple Duration**:") {
+            let value = line
+                .strip_prefix("**Ripple Duration**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches("ms")
+                .trim();
+            if let Ok(duration) = value.parse::<u16>() {
+                layout.rgb_overlay_ripple.duration_ms = duration;
+            }
+        }
+
+        // Parse Ripple Speed
+        if line.starts_with("**Ripple Speed**:") {
+            let value = line.strip_prefix("**Ripple Speed**:").unwrap().trim();
+            if let Ok(speed) = value.parse::<u8>() {
+                layout.rgb_overlay_ripple.speed = speed;
+            }
+        }
+
+        // Parse Ripple Band Width
+        if line.starts_with("**Ripple Band Width**:") {
+            let value = line.strip_prefix("**Ripple Band Width**:").unwrap().trim();
+            if let Ok(width) = value.parse::<u8>() {
+                layout.rgb_overlay_ripple.band_width = width;
+            }
+        }
+
+        // Parse Ripple Amplitude
+        if line.starts_with("**Ripple Amplitude**:") {
+            let value = line
+                .strip_prefix("**Ripple Amplitude**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches('%')
+                .trim();
+            if let Ok(amp) = value.parse::<u8>() {
+                layout.rgb_overlay_ripple.amplitude_pct = amp;
+            }
+        }
+
+        // Parse Ripple Color Mode
+        if line.starts_with("**Ripple Color Mode**:") {
+            let value = line
+                .strip_prefix("**Ripple Color Mode**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.color_mode = match value.as_str() {
+                "fixed" => crate::models::RippleColorMode::Fixed,
+                "key based" | "key-based" => crate::models::RippleColorMode::KeyBased,
+                "hue shift" | "hue-shift" => crate::models::RippleColorMode::HueShift,
+                _ => crate::models::RippleColorMode::Fixed,
+            };
+        }
+
+        // Parse Ripple Fixed Color
+        if line.starts_with("**Ripple Fixed Color**:") {
+            let color_str = line.strip_prefix("**Ripple Fixed Color**:").unwrap().trim();
+            if let Ok(color) = RgbColor::from_hex(color_str) {
+                layout.rgb_overlay_ripple.fixed_color = color;
+            }
+        }
+
+        // Parse Ripple Hue Shift
+        if line.starts_with("**Ripple Hue Shift**:") {
+            let value = line
+                .strip_prefix("**Ripple Hue Shift**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches('°')
+                .trim();
+            if let Ok(shift) = value.parse::<i16>() {
+                layout.rgb_overlay_ripple.hue_shift_deg = shift;
+            }
+        }
+
+        // Parse Trigger on Press
+        if line.starts_with("**Ripple Trigger on Press**:") {
+            let value = line
+                .strip_prefix("**Ripple Trigger on Press**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.trigger_on_press =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Trigger on Release
+        if line.starts_with("**Ripple Trigger on Release**:") {
+            let value = line
+                .strip_prefix("**Ripple Trigger on Release**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.trigger_on_release =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Ignore Transparent
+        if line.starts_with("**Ripple Ignore Transparent**:") {
+            let value = line
+                .strip_prefix("**Ripple Ignore Transparent**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.ignore_transparent =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Ignore Modifiers
+        if line.starts_with("**Ripple Ignore Modifiers**:") {
+            let value = line
+                .strip_prefix("**Ripple Ignore Modifiers**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.ignore_modifiers =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Ignore Layer Switch
+        if line.starts_with("**Ripple Ignore Layer Switch**:") {
+            let value = line
+                .strip_prefix("**Ripple Ignore Layer Switch**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.rgb_overlay_ripple.ignore_layer_switch =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
         line_num += 1;
     }
 
