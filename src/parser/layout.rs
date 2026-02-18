@@ -114,6 +114,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         rgb_enabled: true,
         rgb_brightness: crate::models::RgbBrightness::default(),
         rgb_saturation: crate::models::RgbSaturation::default(),
+        rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
         idle_effect_settings: crate::models::IdleEffectSettings::default(),
@@ -608,6 +609,14 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .trim_end_matches('%');
             if let Ok(percent) = value.parse::<u8>() {
                 layout.rgb_saturation = crate::models::RgbSaturation::from(percent);
+            }
+        }
+
+        // Parse RGB Matrix Default Speed
+        if line.starts_with("**RGB Matrix Speed**:") {
+            let value = line.strip_prefix("**RGB Matrix Speed**:").unwrap().trim();
+            if let Ok(speed) = value.parse::<u8>() {
+                layout.rgb_matrix_default_speed = speed;
             }
         }
 

@@ -1116,6 +1116,11 @@ pub struct Layout {
     /// Global RGB saturation (0-200%)
     #[serde(default)]
     pub rgb_saturation: RgbSaturation,
+    /// RGB Matrix default animation speed (0-255)
+    /// Controls the speed of RGB animations. 0 = slowest, 255 = fastest
+    /// Default: 127 (mid-speed)
+    #[serde(default)]
+    pub rgb_matrix_default_speed: u8,
     /// RGB Matrix timeout in milliseconds (0 = disabled)
     /// Automatically turns off RGB after this many ms of inactivity
     #[serde(default)]
@@ -1162,6 +1167,7 @@ impl Layout {
             rgb_enabled: true,
             rgb_brightness: RgbBrightness::default(),
             rgb_saturation: RgbSaturation::default(),
+            rgb_matrix_default_speed: 127,
             rgb_timeout_ms: 0,
             uncolored_key_behavior: UncoloredKeyBehavior::default(),
             idle_effect_settings: IdleEffectSettings::default(),

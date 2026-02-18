@@ -289,6 +289,7 @@ fn generate_settings(layout: &Layout) -> Option<String> {
     let has_rgb_settings = !layout.rgb_enabled
         || layout.rgb_brightness != RgbBrightness::default()
         || layout.rgb_saturation != RgbSaturation::default()
+        || layout.rgb_matrix_default_speed != 127
         || layout.rgb_timeout_ms > 0;
     let has_uncolored_setting = layout.uncolored_key_behavior != default_uncolored;
     let has_idle_settings = layout.idle_effect_settings.has_custom_settings();
@@ -320,6 +321,12 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         output.push_str(&format!(
             "**RGB Saturation**: {}%\n",
             layout.rgb_saturation.as_percent()
+        ));
+    }
+    if layout.rgb_matrix_default_speed != 127 {
+        output.push_str(&format!(
+            "**RGB Matrix Speed**: {}\n",
+            layout.rgb_matrix_default_speed
         ));
     }
 
@@ -674,6 +681,7 @@ mod tests {
             rgb_enabled: true,
             rgb_brightness: crate::models::RgbBrightness::default(),
             rgb_saturation: crate::models::RgbSaturation::default(),
+            rgb_matrix_default_speed: 127,
             rgb_timeout_ms: 0,
             uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
             idle_effect_settings: crate::models::IdleEffectSettings::default(),
@@ -828,6 +836,15 @@ mod tests {
 
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(parsed.rgb_saturation.as_percent(), 75);
+
+        // Test RGB Matrix Speed
+        layout.rgb_matrix_default_speed = 200;
+        let markdown = generate_markdown(&layout).unwrap();
+        println!("Generated markdown with RGB speed 200:\n{markdown}");
+        assert!(markdown.contains("**RGB Matrix Speed**: 200"));
+
+        let parsed = parse_markdown_layout_str(&markdown).unwrap();
+        assert_eq!(parsed.rgb_matrix_default_speed, 200);
     }
 
     mod test_helpers {

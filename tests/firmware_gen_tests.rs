@@ -453,6 +453,7 @@ fn create_test_layout() -> Layout {
         rgb_enabled: true,
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),
         rgb_saturation: lazyqmk::models::RgbSaturation::default(),
+        rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         tap_dances: vec![],
     }

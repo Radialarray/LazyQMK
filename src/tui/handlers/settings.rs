@@ -144,6 +144,14 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         200,
                     );
                 }
+                SettingItem::RgbMatrixSpeed => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_matrix_default_speed),
+                        0,
+                        255,
+                    );
+                }
                 SettingItem::RgbTimeout => {
                     let current_secs = (state.layout.rgb_timeout_ms / 1000) as u16;
                     manager
@@ -577,6 +585,11 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
         SettingItem::RgbSaturation => {
             state.layout.rgb_saturation = RgbSaturation::from(value as u8);
             state.set_status(format!("RGB saturation set to: {value}%"));
+        }
+        SettingItem::RgbMatrixSpeed => {
+            state.layout.rgb_matrix_default_speed = value as u8;
+            state.dirty = true;
+            state.set_status(format!("RGB Matrix speed set to: {value}"));
         }
         SettingItem::UncoloredKeyBehavior => {
             state.layout.uncolored_key_behavior = UncoloredKeyBehavior::from(value as u8);

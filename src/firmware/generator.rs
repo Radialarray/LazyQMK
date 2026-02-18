@@ -1166,6 +1166,15 @@ impl<'a> FirmwareGenerator<'a> {
             ));
         }
 
+        // RGB Matrix default speed (0-255)
+        if self.layout.rgb_matrix_default_speed != 127 {
+            content.push_str("\n// RGB Matrix Default Animation Speed\n");
+            content.push_str(&format!(
+                "#define RGB_MATRIX_DEFAULT_SPD {}\n",
+                self.layout.rgb_matrix_default_speed
+            ));
+        }
+
         // === Idle Effect Settings ===
         // When idle effect is enabled, we use a custom state machine instead of RGB_MATRIX_TIMEOUT
         let idle_settings = &self.layout.idle_effect_settings;

@@ -2627,6 +2627,10 @@
 									<dd>{inspectResult.settings.rgb_brightness}%</dd>
 								</div>
 								<div>
+									<dt class="text-muted-foreground">Matrix Speed</dt>
+									<dd>{inspectResult.settings.rgb_matrix_default_speed}</dd>
+								</div>
+								<div>
 									<dt class="text-muted-foreground">Idle Effect</dt>
 									<dd>{inspectResult.settings.idle_effect_mode}</dd>
 								</div>

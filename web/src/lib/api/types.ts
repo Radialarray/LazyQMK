@@ -25,6 +25,7 @@ export interface Layout {
 	rgb_enabled?: boolean;
 	rgb_brightness?: number;
 	rgb_saturation?: number;
+	rgb_matrix_default_speed?: number;
 	rgb_timeout_ms?: number;
 	uncolored_key_behavior?: number;
 	// Idle effect settings
@@ -279,6 +280,7 @@ export interface InspectSettings {
 	rgb_enabled: boolean;
 	rgb_brightness: number;
 	rgb_saturation: number;
+	rgb_matrix_default_speed: number;
 	idle_effect_enabled: boolean;
 	idle_timeout_ms: number;
 	idle_effect_mode: string;

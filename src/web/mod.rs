@@ -512,6 +512,8 @@ pub struct InspectSettings {
     pub rgb_brightness: u8,
     /// RGB saturation level (0-255).
     pub rgb_saturation: u8,
+    /// RGB Matrix default speed (0-255).
+    pub rgb_matrix_default_speed: u8,
     /// Whether idle effect is enabled.
     pub idle_effect_enabled: bool,
     /// Idle timeout in milliseconds.
@@ -860,6 +862,8 @@ pub struct LayoutDto {
     pub rgb_brightness: crate::models::RgbBrightness,
     /// RGB saturation (0-255)
     pub rgb_saturation: crate::models::RgbSaturation,
+    /// RGB Matrix default animation speed (0-255)
+    pub rgb_matrix_default_speed: u8,
     /// Idle effect settings
     pub idle_effect_settings: IdleEffectSettingsDto,
     /// RGB overlay ripple settings
@@ -1134,6 +1138,7 @@ async fn get_layout(
         rgb_enabled: layout.rgb_enabled,
         rgb_brightness: layout.rgb_brightness,
         rgb_saturation: layout.rgb_saturation,
+        rgb_matrix_default_speed: layout.rgb_matrix_default_speed,
         idle_effect_settings: IdleEffectSettingsDto::from(&layout.idle_effect_settings),
         rgb_overlay_ripple: RgbOverlayRippleSettingsDto::from(&layout.rgb_overlay_ripple),
         tap_hold_settings: TapHoldSettingsDto::from(&layout.tap_hold_settings),
@@ -1785,6 +1790,7 @@ async fn inspect_layout(
         rgb_enabled: layout.rgb_enabled,
         rgb_brightness: layout.rgb_brightness.as_percent(),
         rgb_saturation: layout.rgb_saturation.as_percent(),
+        rgb_matrix_default_speed: layout.rgb_matrix_default_speed,
         idle_effect_enabled: layout.idle_effect_settings.enabled,
         idle_timeout_ms: layout.idle_effect_settings.idle_timeout_ms,
         idle_effect_mode: layout
@@ -3356,6 +3362,7 @@ async fn create_layout(
         rgb_enabled: true,
         rgb_brightness: RgbBrightness::default(),
         rgb_saturation: RgbSaturation::default(),
+        rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
         idle_effect_settings: IdleEffectSettings::default(),

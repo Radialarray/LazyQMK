@@ -96,6 +96,8 @@ pub enum SettingItem {
     RgbBrightness,
     /// RGB color saturation (0-200%)
     RgbSaturation,
+    /// RGB Matrix default animation speed (0-255)
+    RgbMatrixSpeed,
     /// RGB Matrix timeout (auto-off after inactivity)
     RgbTimeout,
     /// Idle effect master switch (idle → effect → off)
@@ -177,6 +179,7 @@ impl SettingItem {
             Self::RgbEnabled,
             Self::RgbBrightness,
             Self::RgbSaturation,
+            Self::RgbMatrixSpeed,
             Self::RgbTimeout,
             Self::IdleEffectEnabled,
             Self::IdleTimeout,
@@ -223,6 +226,7 @@ impl SettingItem {
             Self::RgbEnabled
             | Self::RgbBrightness
             | Self::RgbSaturation
+            | Self::RgbMatrixSpeed
             | Self::RgbTimeout
             | Self::IdleEffectEnabled
             | Self::IdleTimeout
@@ -270,6 +274,7 @@ impl SettingItem {
             Self::RgbEnabled => "RGB Master Switch",
             Self::RgbBrightness => "RGB Brightness",
             Self::RgbSaturation => "RGB Saturation",
+            Self::RgbMatrixSpeed => "RGB Matrix Speed",
             Self::RgbTimeout => "RGB Timeout",
             Self::IdleEffectEnabled => "Idle Effect Enabled",
             Self::IdleTimeout => "Idle Timeout",
@@ -318,6 +323,9 @@ impl SettingItem {
             Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
             Self::RgbSaturation => {
                 "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)"
+            }
+            Self::RgbMatrixSpeed => {
+                "Animation speed for RGB effects (0=Slowest, 127=Default, 255=Fastest)"
             }
             Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
             Self::IdleEffectEnabled => "Enable idle effect (triggers RGB animation before timeout)",
@@ -1414,6 +1422,13 @@ fn get_setting_value_display(
                 .map(|l| l.rgb_saturation.as_percent())
                 .unwrap_or(100);
             format!("{}%", saturation)
+        }
+        SettingItem::RgbMatrixSpeed => {
+            let speed = layout
+                .as_ref()
+                .map(|l| l.rgb_matrix_default_speed)
+                .unwrap_or(127);
+            format!("{}", speed)
         }
         SettingItem::RgbTimeout => {
             if rgb_timeout_ms == 0 {

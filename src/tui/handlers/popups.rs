@@ -1482,6 +1482,7 @@ mod tests {
             rgb_enabled: true,
             rgb_brightness: crate::models::RgbBrightness::default(),
             rgb_saturation: crate::models::RgbSaturation::default(),
+            rgb_matrix_default_speed: 127,
             rgb_timeout_ms: 0,
             uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
             idle_effect_settings: crate::models::IdleEffectSettings::default(),

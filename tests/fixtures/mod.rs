@@ -113,6 +113,7 @@ pub fn test_layout_basic(rows: usize, cols: usize) -> Layout {
         rgb_enabled: true,
         rgb_brightness: RgbBrightness::default(),
         rgb_saturation: RgbSaturation::default(),
+        rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
         idle_effect_settings: IdleEffectSettings::default(),
