@@ -532,6 +532,12 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
     // Track if a preset was explicitly specified in the file
     let mut explicit_preset: Option<TapHoldPreset> = None;
 
+    // Pre-compile regex for combo parsing (outside loop to avoid recreating)
+    let combo_regex = Regex::new(
+        r"^\*\*Combo\s+(\d+)\*\*:\s*\((\d+),(\d+)\)\s*\+\s*\((\d+),(\d+)\)\s*→\s*(.+?)\s*(?:\[(\d+)ms\])?$"
+    )
+    .unwrap();
+
     while line_num < lines.len() {
         let line = lines[line_num].trim();
 
@@ -1025,11 +1031,6 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
         // Parse individual combo definitions
         // Format: **Combo N**: (row1,col1)+(row2,col2) → Action [duration]
         // Example: **Combo 1**: (0,0)+(0,1) → Disable Effects [500ms]
-        let combo_regex = Regex::new(
-            r"^\*\*Combo\s+(\d+)\*\*:\s*\((\d+),(\d+)\)\s*\+\s*\((\d+),(\d+)\)\s*→\s*(.+?)\s*(?:\[(\d+)ms\])?$"
-        )
-        .unwrap();
-
         if let Some(captures) = combo_regex.captures(line) {
             let combo_num: usize = captures[1].parse().unwrap_or(0);
             let row1: u8 = captures[2].parse().unwrap_or(0);
@@ -1571,7 +1572,7 @@ mod combo_parsing_tests {
     #[test]
     fn test_parse_combos_from_markdown() {
         use crate::models::{
-            ComboAction, ComboDefinition, ComboSettings, KeyDefinition, Layer, Position, RgbColor,
+            ComboAction, ComboDefinition, KeyDefinition, Layer, Position, RgbColor,
         };
         use crate::parser::template_gen;
 

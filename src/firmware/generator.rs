@@ -193,6 +193,10 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str(&self.generate_ripple_overlay_code()?);
 
+        // Add combo code if enabled
+        code.push('\n');
+        code.push_str(&self.generate_combo_code()?);
+
         Ok(code)
     }
 
@@ -932,6 +936,152 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(code)
     }
 
+    /// Generates combo code if enabled.
+    ///
+    /// Emits QMK combo arrays and process_combo_event handler for two-key hold actions.
+    /// Combos are base-layer only and require holding both keys for the configured duration.
+    #[allow(clippy::unnecessary_wraps)]
+    fn generate_combo_code(&self) -> Result<String> {
+        // Only generate if combos are enabled and at least one combo is defined
+        if !self.layout.combo_settings.enabled || self.layout.combo_settings.combos.is_empty() {
+            return Ok(String::new());
+        }
+
+        let mut code = String::new();
+
+        code.push_str("#ifdef COMBO_ENABLE\n");
+        code.push('\n');
+        code.push_str("// Combo Configuration\n");
+        code.push('\n');
+
+        // Generate combo enum
+        code.push_str("enum combo_events {\n");
+        for (idx, _combo) in self.layout.combo_settings.combos.iter().enumerate() {
+            code.push_str(&format!("    COMBO_{}", idx));
+            if idx < self.layout.combo_settings.combos.len() - 1 {
+                code.push_str(",\n");
+            } else {
+                code.push('\n');
+            }
+        }
+        code.push_str("};\n");
+        code.push('\n');
+
+        // Generate combo key arrays (must use matrix coordinates via keycodes)
+        for (idx, combo) in self.layout.combo_settings.combos.iter().enumerate() {
+            // Get keycodes for the two positions from base layer (layer 0)
+            let base_layer = self
+                .layout
+                .get_layer(0)
+                .expect("Base layer must exist for combos");
+
+            let key1 = base_layer
+                .get_key(combo.key1)
+                .map(|k| k.keycode.clone())
+                .unwrap_or_else(|| "KC_NO".to_string());
+            let key2 = base_layer
+                .get_key(combo.key2)
+                .map(|k| k.keycode.clone())
+                .unwrap_or_else(|| "KC_NO".to_string());
+
+            code.push_str(&format!(
+                "const uint16_t PROGMEM combo_{}_keys[] = {{{}, {}, COMBO_END}};\n",
+                idx, key1, key2
+            ));
+        }
+        code.push('\n');
+
+        // Generate combo array
+        code.push_str("combo_t key_combos[] = {\n");
+        for (idx, _combo) in self.layout.combo_settings.combos.iter().enumerate() {
+            code.push_str(&format!(
+                "    [COMBO_{}] = COMBO_ACTION(combo_{}_keys),\n",
+                idx, idx
+            ));
+        }
+        code.push_str("};\n");
+        code.push('\n');
+
+        // Generate combo state tracking for hold durations
+        code.push_str("// Combo hold state tracking\n");
+        code.push_str("static struct {\n");
+        code.push_str("    uint16_t timer;\n");
+        code.push_str("    bool active;\n");
+        code.push_str(&format!(
+            "}} combo_state[{}];\n",
+            self.layout.combo_settings.combos.len()
+        ));
+        code.push('\n');
+
+        // Generate process_combo_event handler
+        code.push_str("void process_combo_event(uint16_t combo_index, bool pressed) {\n");
+        code.push_str("    // Only activate combos on base layer (layer 0)\n");
+        code.push_str("    if (get_highest_layer(layer_state) != 0) {\n");
+        code.push_str("        return;\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    if (pressed) {\n");
+        code.push_str("        // Start hold timer\n");
+        code.push_str("        combo_state[combo_index].timer = timer_read();\n");
+        code.push_str("        combo_state[combo_index].active = true;\n");
+        code.push_str("    } else {\n");
+        code.push_str("        // Check if hold duration was met\n");
+        code.push_str("        if (combo_state[combo_index].active) {\n");
+        code.push_str(
+            "            uint16_t elapsed = timer_elapsed(combo_state[combo_index].timer);\n",
+        );
+        code.push_str("            \n");
+        code.push_str("            switch (combo_index) {\n");
+
+        // Generate cases for each combo
+        for (idx, combo) in self.layout.combo_settings.combos.iter().enumerate() {
+            code.push_str(&format!("                case COMBO_{}:\n", idx));
+            code.push_str(&format!(
+                "                    if (elapsed >= {}) {{\n",
+                combo.hold_duration_ms
+            ));
+
+            // Generate action based on combo action type
+            match combo.action {
+                crate::models::ComboAction::DisableEffects => {
+                    code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
+                    code.push_str("                        // Disable RGB effects, revert to TUI layer colors\n");
+                    if self.layout_has_custom_colors() {
+                        code.push_str("                        rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS);\n");
+                    } else {
+                        code.push_str("                        rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);\n");
+                    }
+                    code.push_str("#endif\n");
+                }
+                crate::models::ComboAction::DisableLighting => {
+                    code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
+                    code.push_str("                        // Turn off RGB lighting completely\n");
+                    code.push_str("                        rgb_matrix_disable_noeeprom();\n");
+                    code.push_str("#endif\n");
+                }
+                crate::models::ComboAction::Bootloader => {
+                    code.push_str("                        // Enter bootloader mode\n");
+                    code.push_str("                        reset_keyboard();\n");
+                }
+            }
+
+            code.push_str("                    }\n");
+            code.push_str("                    break;\n");
+        }
+
+        code.push_str("            }\n");
+        code.push_str("            \n");
+        code.push_str("            combo_state[combo_index].active = false;\n");
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        code.push_str("#endif // COMBO_ENABLE\n");
+
+        Ok(code)
+    }
+
     /// Generates tap dance enum definition.
     ///
     /// Creates `enum tap_dance_ids { TD_NAME1, TD_NAME2, ... };`
@@ -1259,6 +1409,16 @@ impl<'a> FirmwareGenerator<'a> {
                 } else {
                     "0"
                 }
+            ));
+        }
+
+        // === Combo Settings ===
+        if self.layout.combo_settings.enabled && !self.layout.combo_settings.combos.is_empty() {
+            content.push_str("\n// Combo Configuration\n");
+            content.push_str("#define COMBO_ENABLE\n");
+            content.push_str(&format!(
+                "#define COMBO_COUNT {}\n",
+                self.layout.combo_settings.combos.len()
             ));
         }
 
@@ -1962,4 +2122,160 @@ mod tests {
     //     let encoder_count = encoder_map.matches("ENCODER_CCW_CW").count();
     //     assert_eq!(encoder_count, 4, "Should have 2 encoders * 2 layers = 4 total bindings");
     // }
+
+    // === Combo Tests ===
+
+    #[test]
+    fn test_combo_disabled_no_code() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        layout.combo_settings.enabled = false;
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should not contain combo code
+        assert!(!keymap_c.contains("COMBO_ENABLE"));
+        assert!(!keymap_c.contains("combo_events"));
+    }
+
+    #[test]
+    fn test_combo_enabled_generates_code() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos and add a combo definition
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should contain combo structures
+        assert!(keymap_c.contains("#ifdef COMBO_ENABLE"));
+        assert!(keymap_c.contains("enum combo_events"));
+        assert!(keymap_c.contains("COMBO_0"));
+        assert!(keymap_c.contains("combo_0_keys"));
+        assert!(keymap_c.contains("key_combos"));
+        assert!(keymap_c.contains("combo_state"));
+        assert!(keymap_c.contains("process_combo_event"));
+        assert!(keymap_c.contains("get_highest_layer(layer_state) != 0"));
+        assert!(keymap_c.contains("#endif // COMBO_ENABLE"));
+    }
+
+    #[test]
+    fn test_combo_multiple_combos() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos and add two combos
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::with_duration(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+                500,
+            ))
+            .unwrap();
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::with_duration(
+                Position::new(0, 0),
+                Position::new(1, 0),
+                crate::models::ComboAction::Bootloader,
+                1000,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should contain both combos
+        assert!(keymap_c.contains("COMBO_0"));
+        assert!(keymap_c.contains("COMBO_1"));
+        assert!(keymap_c.contains("combo_0_keys"));
+        assert!(keymap_c.contains("combo_1_keys"));
+        assert!(keymap_c.contains("elapsed >= 500"));
+        assert!(keymap_c.contains("elapsed >= 1000"));
+    }
+
+    #[test]
+    fn test_combo_actions_generated() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add a category to enable TUI layer colors
+        let category =
+            crate::models::Category::new("nav", "Navigation", RgbColor::new(0, 255, 0)).unwrap();
+        layout.add_category(category).unwrap();
+
+        // Enable combos with all action types
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // DisableEffects should revert to TUI layer colors
+        assert!(keymap_c.contains("rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS)"));
+    }
+
+    #[test]
+    fn test_combo_config_h_defines() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos and add a combo
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Should contain combo defines
+        assert!(config_h.contains("// Combo Configuration"));
+        assert!(config_h.contains("#define COMBO_ENABLE"));
+        assert!(config_h.contains("#define COMBO_COUNT 1"));
+    }
+
+    #[test]
+    fn test_combo_uses_keycodes_from_base_layer() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos and add a combo
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::Bootloader,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+
+        // Should use the keycodes from base layer (KC_A and KC_B from create_test_setup)
+        assert!(keymap_c.contains("combo_0_keys[] = {KC_A, KC_B, COMBO_END}"));
+        assert!(keymap_c.contains("reset_keyboard()"));
+    }
 }

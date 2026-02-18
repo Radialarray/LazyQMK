@@ -91,6 +91,7 @@ fn create_test_layout_with_layers() -> Layout {
         rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         tap_dances: vec![],
+        combo_settings: lazyqmk::models::ComboSettings::default(),
     }
 }
 

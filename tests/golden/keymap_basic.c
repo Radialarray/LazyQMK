@@ -108,3 +108,4 @@ void keyboard_post_init_user(void) {
 
 #endif // LQMK_IDLE_TIMEOUT_MS
 #endif // RGB_MATRIX_ENABLE
+

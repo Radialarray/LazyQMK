@@ -7,9 +7,7 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::keycode_db::KeycodeDb;
-#[cfg(test)]
-use crate::models::layer::Position;
-use crate::models::layer::{KeyDefinition, Layer};
+use crate::models::layer::{KeyDefinition, Layer, Position};
 use crate::models::{Category, RgbColor};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -554,7 +552,9 @@ pub enum ComboAction {
 
 impl ComboAction {
     /// Returns all available combo actions.
+    /// Part of public API for future UI/settings integration.
     #[must_use]
+    #[allow(dead_code)]
     pub const fn all() -> &'static [Self] {
         &[
             Self::DisableEffects,
@@ -574,7 +574,9 @@ impl ComboAction {
     }
 
     /// Returns a description of this action.
+    /// Part of public API for future UI/settings integration.
     #[must_use]
+    #[allow(dead_code)]
     pub const fn description(&self) -> &'static str {
         match self {
             Self::DisableEffects => "Disable RGB effects and revert to TUI layer colors",
@@ -647,10 +649,12 @@ impl ComboDefinition {
     }
 
     /// Validates the combo definition.
+    /// Part of public API for future validation in UI/settings.
     ///
     /// Checks:
     /// - Key positions are different
     /// - Hold duration is reasonable (50-2000ms)
+    #[allow(dead_code)]
     pub fn validate(&self) -> Result<()> {
         if self.key1 == self.key2 {
             anyhow::bail!(
@@ -688,7 +692,9 @@ pub struct ComboSettings {
 
 impl ComboSettings {
     /// Creates new combo settings with enabled flag.
+    /// Part of public API for future UI/settings integration.
     #[must_use]
+    #[allow(dead_code)]
     pub const fn new(enabled: bool) -> Self {
         Self {
             enabled,
@@ -697,6 +703,8 @@ impl ComboSettings {
     }
 
     /// Adds a combo definition.
+    /// Part of public API for future UI/settings integration.
+    #[allow(dead_code)]
     pub fn add_combo(&mut self, combo: ComboDefinition) -> Result<()> {
         if self.combos.len() >= 3 {
             anyhow::bail!("Maximum of 3 combos allowed");
@@ -724,6 +732,8 @@ impl ComboSettings {
     }
 
     /// Removes a combo by index.
+    /// Part of public API for future UI/settings integration.
+    #[allow(dead_code)]
     pub fn remove_combo(&mut self, index: usize) -> Option<ComboDefinition> {
         if index < self.combos.len() {
             Some(self.combos.remove(index))
@@ -733,6 +743,8 @@ impl ComboSettings {
     }
 
     /// Validates all combo definitions.
+    /// Part of public API for future validation in UI/settings.
+    #[allow(dead_code)]
     pub fn validate(&self) -> Result<()> {
         for combo in &self.combos {
             combo.validate()?;
