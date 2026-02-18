@@ -60,7 +60,7 @@ use crate::config::Config;
 use crate::export;
 use crate::keycode_db::{KeycodeCategory, KeycodeDb, KeycodeDefinition};
 use crate::models::{
-    IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, RgbOverlayRippleSettings,
+    ComboSettings, IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, RgbOverlayRippleSettings,
     TapDanceAction, TapHoldSettings,
 };
 use crate::parser;
@@ -1427,6 +1427,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         idle_effect_settings,
         rgb_overlay_ripple,
         tap_hold_settings,
+        combo_settings: ComboSettings::default(), // TODO: Add combo DTO when UI is implemented
         tap_dances,
     }
 }
@@ -3656,6 +3657,7 @@ async fn create_layout(
         idle_effect_settings: IdleEffectSettings::default(),
         rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
         tap_hold_settings: TapHoldSettings::default(),
+        combo_settings: ComboSettings::default(),
         tap_dances: vec![],
     };
 

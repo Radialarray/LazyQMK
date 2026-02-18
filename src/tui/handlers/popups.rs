@@ -1488,6 +1488,7 @@ mod tests {
             idle_effect_settings: crate::models::IdleEffectSettings::default(),
             rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
+            combo_settings: crate::models::ComboSettings::default(),
             tap_dances: vec![],
         };
         let mut state = AppState::new(

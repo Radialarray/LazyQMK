@@ -295,12 +295,14 @@ fn generate_settings(layout: &Layout) -> Option<String> {
     let has_idle_settings = layout.idle_effect_settings.has_custom_settings();
     let has_ripple_settings = layout.rgb_overlay_ripple.has_custom_settings();
     let has_tap_hold_settings = layout.tap_hold_settings != default_tap_hold;
+    let has_combo_settings = layout.combo_settings.has_custom_settings();
 
     if !has_rgb_settings
         && !has_uncolored_setting
         && !has_idle_settings
         && !has_ripple_settings
         && !has_tap_hold_settings
+        && !has_combo_settings
     {
         return None;
     }
@@ -568,6 +570,34 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         }
     }
 
+    // Write combo settings if any are non-default
+    if has_combo_settings {
+        let cs = &layout.combo_settings;
+
+        // Write enabled/disabled
+        if cs.enabled {
+            output.push_str("**Combos**: On\n");
+        }
+
+        // Write individual combo definitions
+        for (idx, combo) in cs.combos.iter().enumerate() {
+            let combo_num = idx + 1;
+            let action_name = combo.action.display_name();
+
+            // Format: **Combo N**: (row1,col1)+(row2,col2) → Action [duration]
+            output.push_str(&format!(
+                "**Combo {}**: ({},{})+({},{}) → {} [{}ms]\n",
+                combo_num,
+                combo.key1.row,
+                combo.key1.col,
+                combo.key2.row,
+                combo.key2.col,
+                action_name,
+                combo.hold_duration_ms
+            ));
+        }
+    }
+
     Some(output)
 }
 
@@ -687,6 +717,7 @@ mod tests {
             idle_effect_settings: crate::models::IdleEffectSettings::default(),
             rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
+            combo_settings: crate::models::ComboSettings::default(),
             tap_dances: vec![],
         }
     }

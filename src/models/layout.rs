@@ -534,6 +534,220 @@ impl RgbOverlayRippleSettings {
 }
 
 // ============================================================================
+// Combo Settings
+// ============================================================================
+
+/// Action to perform when a combo is activated.
+///
+/// Combos are two-key combinations that trigger special actions when held together.
+/// All combos are restricted to the base layer (layer 0) only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ComboAction {
+    /// Disable RGB effects and revert to static TUI layer colors
+    DisableEffects,
+    /// Turn off all RGB lighting completely
+    DisableLighting,
+    /// Enter bootloader mode for firmware flashing
+    Bootloader,
+}
+
+impl ComboAction {
+    /// Returns all available combo actions.
+    #[must_use]
+    pub const fn all() -> &'static [Self] {
+        &[
+            Self::DisableEffects,
+            Self::DisableLighting,
+            Self::Bootloader,
+        ]
+    }
+
+    /// Returns a human-readable name for this action.
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
+        match self {
+            Self::DisableEffects => "Disable Effects",
+            Self::DisableLighting => "Disable Lighting",
+            Self::Bootloader => "Bootloader",
+        }
+    }
+
+    /// Returns a description of this action.
+    #[must_use]
+    pub const fn description(&self) -> &'static str {
+        match self {
+            Self::DisableEffects => "Disable RGB effects and revert to TUI layer colors",
+            Self::DisableLighting => "Turn off all RGB lighting completely",
+            Self::Bootloader => "Enter bootloader mode for firmware flashing",
+        }
+    }
+
+    /// Parses an action from a string name (case-insensitive).
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        let name_lower = name.to_lowercase().replace([' ', '_', '-'], "");
+        match name_lower.as_str() {
+            "disableeffects" | "effects" => Some(Self::DisableEffects),
+            "disablelighting" | "lighting" | "off" => Some(Self::DisableLighting),
+            "bootloader" | "boot" | "flash" => Some(Self::Bootloader),
+            _ => None,
+        }
+    }
+}
+
+/// A two-key hold combo configuration.
+///
+/// Combos detect when two specific keys are held together on the base layer
+/// and trigger a special action after a configurable hold duration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ComboDefinition {
+    /// First key position (matrix coordinates)
+    pub key1: Position,
+    /// Second key position (matrix coordinates)
+    pub key2: Position,
+    /// Action to perform when combo is held
+    pub action: ComboAction,
+    /// Duration in milliseconds both keys must be held to activate
+    /// Default: 500ms
+    #[serde(default = "default_combo_hold_duration")]
+    pub hold_duration_ms: u16,
+}
+
+const fn default_combo_hold_duration() -> u16 {
+    500 // 500ms default
+}
+
+impl ComboDefinition {
+    /// Creates a new combo with default hold duration.
+    #[must_use]
+    pub fn new(key1: Position, key2: Position, action: ComboAction) -> Self {
+        Self {
+            key1,
+            key2,
+            action,
+            hold_duration_ms: default_combo_hold_duration(),
+        }
+    }
+
+    /// Creates a new combo with custom hold duration.
+    #[must_use]
+    pub fn with_duration(
+        key1: Position,
+        key2: Position,
+        action: ComboAction,
+        hold_duration_ms: u16,
+    ) -> Self {
+        Self {
+            key1,
+            key2,
+            action,
+            hold_duration_ms,
+        }
+    }
+
+    /// Validates the combo definition.
+    ///
+    /// Checks:
+    /// - Key positions are different
+    /// - Hold duration is reasonable (50-2000ms)
+    pub fn validate(&self) -> Result<()> {
+        if self.key1 == self.key2 {
+            anyhow::bail!(
+                "Combo keys must be different (both are at row {}, col {})",
+                self.key1.row,
+                self.key1.col
+            );
+        }
+
+        if self.hold_duration_ms < 50 || self.hold_duration_ms > 2000 {
+            anyhow::bail!(
+                "Combo hold duration must be between 50 and 2000ms (got {}ms)",
+                self.hold_duration_ms
+            );
+        }
+
+        Ok(())
+    }
+}
+
+/// Configuration for two-key hold combos.
+///
+/// Supports up to three custom combos that are active only on the base layer (layer 0).
+/// Each combo triggers when two specific keys are held together for a minimum duration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ComboSettings {
+    /// Whether combo feature is enabled
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// List of combo definitions (max 3)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub combos: Vec<ComboDefinition>,
+}
+
+impl ComboSettings {
+    /// Creates new combo settings with enabled flag.
+    #[must_use]
+    pub const fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            combos: Vec::new(),
+        }
+    }
+
+    /// Adds a combo definition.
+    pub fn add_combo(&mut self, combo: ComboDefinition) -> Result<()> {
+        if self.combos.len() >= 3 {
+            anyhow::bail!("Maximum of 3 combos allowed");
+        }
+
+        combo.validate()?;
+
+        // Check for duplicate key pairs (order-independent)
+        for existing in &self.combos {
+            if (existing.key1 == combo.key1 && existing.key2 == combo.key2)
+                || (existing.key1 == combo.key2 && existing.key2 == combo.key1)
+            {
+                anyhow::bail!(
+                    "Combo with keys ({},{}) and ({},{}) already exists",
+                    combo.key1.row,
+                    combo.key1.col,
+                    combo.key2.row,
+                    combo.key2.col
+                );
+            }
+        }
+
+        self.combos.push(combo);
+        Ok(())
+    }
+
+    /// Removes a combo by index.
+    pub fn remove_combo(&mut self, index: usize) -> Option<ComboDefinition> {
+        if index < self.combos.len() {
+            Some(self.combos.remove(index))
+        } else {
+            None
+        }
+    }
+
+    /// Validates all combo definitions.
+    pub fn validate(&self) -> Result<()> {
+        for combo in &self.combos {
+            combo.validate()?;
+        }
+        Ok(())
+    }
+
+    /// Checks if any settings differ from defaults.
+    #[must_use]
+    pub fn has_custom_settings(&self) -> bool {
+        self.enabled || !self.combos.is_empty()
+    }
+}
+
+// ============================================================================
 // Tap Dance Settings
 // ============================================================================
 
@@ -1144,6 +1358,11 @@ pub struct Layout {
     #[serde(default)]
     pub tap_hold_settings: TapHoldSettings,
 
+    // === Combo Settings ===
+    /// Two-key hold combo configuration (base layer only)
+    #[serde(default)]
+    pub combo_settings: ComboSettings,
+
     // === Tap Dance Actions ===
     /// Tap dance action definitions
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1173,6 +1392,7 @@ impl Layout {
             idle_effect_settings: IdleEffectSettings::default(),
             rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
             tap_hold_settings: TapHoldSettings::default(),
+            combo_settings: ComboSettings::default(),
             tap_dances: Vec::new(),
         })
     }
@@ -2219,5 +2439,202 @@ mod tests {
     fn test_layout_new_has_default_idle_settings() {
         let layout = Layout::new("Test").unwrap();
         assert_eq!(layout.idle_effect_settings, IdleEffectSettings::default());
+    }
+
+    // === Combo Settings Tests ===
+
+    #[test]
+    fn test_combo_action_all() {
+        let actions = ComboAction::all();
+        assert_eq!(actions.len(), 3);
+        assert!(actions.contains(&ComboAction::DisableEffects));
+        assert!(actions.contains(&ComboAction::DisableLighting));
+        assert!(actions.contains(&ComboAction::Bootloader));
+    }
+
+    #[test]
+    fn test_combo_action_display_name() {
+        assert_eq!(
+            ComboAction::DisableEffects.display_name(),
+            "Disable Effects"
+        );
+        assert_eq!(
+            ComboAction::DisableLighting.display_name(),
+            "Disable Lighting"
+        );
+        assert_eq!(ComboAction::Bootloader.display_name(), "Bootloader");
+    }
+
+    #[test]
+    fn test_combo_action_from_name() {
+        assert_eq!(
+            ComboAction::from_name("disable effects"),
+            Some(ComboAction::DisableEffects)
+        );
+        assert_eq!(
+            ComboAction::from_name("DisableEffects"),
+            Some(ComboAction::DisableEffects)
+        );
+        assert_eq!(
+            ComboAction::from_name("lighting"),
+            Some(ComboAction::DisableLighting)
+        );
+        assert_eq!(
+            ComboAction::from_name("bootloader"),
+            Some(ComboAction::Bootloader)
+        );
+        assert_eq!(ComboAction::from_name("invalid"), None);
+    }
+
+    #[test]
+    fn test_combo_definition_new() {
+        let combo = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+        );
+        assert_eq!(combo.key1, Position::new(0, 0));
+        assert_eq!(combo.key2, Position::new(0, 1));
+        assert_eq!(combo.action, ComboAction::DisableEffects);
+        assert_eq!(combo.hold_duration_ms, 500);
+    }
+
+    #[test]
+    fn test_combo_definition_with_duration() {
+        let combo = ComboDefinition::with_duration(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::Bootloader,
+            1000,
+        );
+        assert_eq!(combo.hold_duration_ms, 1000);
+    }
+
+    #[test]
+    fn test_combo_definition_validate_same_keys() {
+        let combo = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 0),
+            ComboAction::DisableEffects,
+        );
+        assert!(combo.validate().is_err());
+    }
+
+    #[test]
+    fn test_combo_definition_validate_duration() {
+        let combo = ComboDefinition::with_duration(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+            30, // Too short
+        );
+        assert!(combo.validate().is_err());
+
+        let combo = ComboDefinition::with_duration(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+            3000, // Too long
+        );
+        assert!(combo.validate().is_err());
+
+        let combo = ComboDefinition::with_duration(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+            500, // Valid
+        );
+        assert!(combo.validate().is_ok());
+    }
+
+    #[test]
+    fn test_combo_settings_default() {
+        let settings = ComboSettings::default();
+        assert!(!settings.enabled);
+        assert!(settings.combos.is_empty());
+        assert!(!settings.has_custom_settings());
+    }
+
+    #[test]
+    fn test_combo_settings_add_combo() {
+        let mut settings = ComboSettings::new(true);
+
+        let combo1 = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+        );
+        assert!(settings.add_combo(combo1).is_ok());
+        assert_eq!(settings.combos.len(), 1);
+
+        let combo2 = ComboDefinition::new(
+            Position::new(1, 0),
+            Position::new(1, 1),
+            ComboAction::DisableLighting,
+        );
+        assert!(settings.add_combo(combo2).is_ok());
+        assert_eq!(settings.combos.len(), 2);
+
+        let combo3 = ComboDefinition::new(
+            Position::new(2, 0),
+            Position::new(2, 1),
+            ComboAction::Bootloader,
+        );
+        assert!(settings.add_combo(combo3).is_ok());
+        assert_eq!(settings.combos.len(), 3);
+
+        // Fourth combo should fail (max 3)
+        let combo4 = ComboDefinition::new(
+            Position::new(3, 0),
+            Position::new(3, 1),
+            ComboAction::DisableEffects,
+        );
+        assert!(settings.add_combo(combo4).is_err());
+    }
+
+    #[test]
+    fn test_combo_settings_duplicate_detection() {
+        let mut settings = ComboSettings::new(true);
+
+        let combo1 = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+        );
+        assert!(settings.add_combo(combo1).is_ok());
+
+        // Same key pair in same order
+        let combo2 = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableLighting,
+        );
+        assert!(settings.add_combo(combo2).is_err());
+
+        // Same key pair in reverse order
+        let combo3 = ComboDefinition::new(
+            Position::new(0, 1),
+            Position::new(0, 0),
+            ComboAction::Bootloader,
+        );
+        assert!(settings.add_combo(combo3).is_err());
+    }
+
+    #[test]
+    fn test_combo_settings_has_custom_settings() {
+        let settings = ComboSettings::default();
+        assert!(!settings.has_custom_settings());
+
+        let settings = ComboSettings::new(true);
+        assert!(settings.has_custom_settings());
+
+        let mut settings = ComboSettings::default();
+        let combo = ComboDefinition::new(
+            Position::new(0, 0),
+            Position::new(0, 1),
+            ComboAction::DisableEffects,
+        );
+        settings.add_combo(combo).unwrap();
+        assert!(settings.has_custom_settings());
     }
 }

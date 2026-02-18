@@ -120,6 +120,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         idle_effect_settings: crate::models::IdleEffectSettings::default(),
         rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
         tap_hold_settings: crate::models::TapHoldSettings::default(),
+        combo_settings: crate::models::ComboSettings::default(),
         tap_dances: Vec::new(),
     };
 
@@ -1007,6 +1008,68 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
 
+        // === Combo Settings ===
+
+        // Parse Combo Enabled
+        if line.starts_with("**Combos**:") || line.starts_with("**Combos Enabled**:") {
+            let value = line
+                .strip_prefix("**Combos**:")
+                .or_else(|| line.strip_prefix("**Combos Enabled**:"))
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.combo_settings.enabled =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse individual combo definitions
+        // Format: **Combo N**: (row1,col1)+(row2,col2) → Action [duration]
+        // Example: **Combo 1**: (0,0)+(0,1) → Disable Effects [500ms]
+        let combo_regex = Regex::new(
+            r"^\*\*Combo\s+(\d+)\*\*:\s*\((\d+),(\d+)\)\s*\+\s*\((\d+),(\d+)\)\s*→\s*(.+?)\s*(?:\[(\d+)ms\])?$"
+        )
+        .unwrap();
+
+        if let Some(captures) = combo_regex.captures(line) {
+            let combo_num: usize = captures[1].parse().unwrap_or(0);
+            let row1: u8 = captures[2].parse().unwrap_or(0);
+            let col1: u8 = captures[3].parse().unwrap_or(0);
+            let row2: u8 = captures[4].parse().unwrap_or(0);
+            let col2: u8 = captures[5].parse().unwrap_or(0);
+            let action_str = captures[6].trim();
+            let duration_ms: u16 = captures
+                .get(7)
+                .and_then(|m| m.as_str().parse().ok())
+                .unwrap_or(500);
+
+            // Parse action
+            if let Some(action) = crate::models::ComboAction::from_name(action_str) {
+                let combo = crate::models::ComboDefinition::with_duration(
+                    Position::new(row1, col1),
+                    Position::new(row2, col2),
+                    action,
+                    duration_ms,
+                );
+
+                // Add combo at the specified index (1-based in markdown, 0-based in vec)
+                if combo_num > 0 && combo_num <= 3 {
+                    let idx = combo_num - 1;
+                    // Ensure vec is large enough
+                    while layout.combo_settings.combos.len() < combo_num {
+                        layout
+                            .combo_settings
+                            .combos
+                            .push(crate::models::ComboDefinition::new(
+                                Position::new(0, 0),
+                                Position::new(0, 1),
+                                crate::models::ComboAction::DisableEffects,
+                            ));
+                    }
+                    layout.combo_settings.combos[idx] = combo;
+                }
+            }
+        }
+
         line_num += 1;
     }
 
@@ -1498,5 +1561,120 @@ mod tap_dance_parsing_tests {
         assert_eq!(td2.single_tap, "KC_LSFT");
         assert_eq!(td2.double_tap, Some("KC_CAPS".to_string()));
         assert_eq!(td2.hold, Some("KC_LCTL".to_string()));
+    }
+}
+
+#[cfg(test)]
+mod combo_parsing_tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_combos_from_markdown() {
+        use crate::models::{
+            ComboAction, ComboDefinition, ComboSettings, KeyDefinition, Layer, Position, RgbColor,
+        };
+        use crate::parser::template_gen;
+
+        // Create a layout with combo settings
+        let mut layout = Layout::new("Test Layout").expect("Failed to create layout");
+
+        let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_A"));
+        layer.add_key(KeyDefinition::new(Position::new(0, 1), "KC_B"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 0), "KC_C"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 1), "KC_D"));
+        layout.add_layer(layer).unwrap();
+
+        // Add combo settings
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                ComboAction::DisableEffects,
+            ))
+            .unwrap();
+        layout
+            .combo_settings
+            .add_combo(ComboDefinition::with_duration(
+                Position::new(1, 0),
+                Position::new(1, 1),
+                ComboAction::Bootloader,
+                750,
+            ))
+            .unwrap();
+
+        // Generate markdown
+        let markdown =
+            template_gen::generate_markdown(&layout).expect("Failed to generate markdown");
+
+        println!("Generated markdown:\n{}", markdown);
+
+        // Verify settings section is present
+        assert!(markdown.contains("## Settings"), "Settings section missing");
+        assert!(
+            markdown.contains("**Combos**: On"),
+            "Combos enabled missing"
+        );
+        assert!(
+            markdown.contains("**Combo 1**: (0,0)+(0,1) → Disable Effects [500ms]"),
+            "Combo 1 definition missing"
+        );
+        assert!(
+            markdown.contains("**Combo 2**: (1,0)+(1,1) → Bootloader [750ms]"),
+            "Combo 2 definition missing"
+        );
+
+        // Parse it back
+        let parsed_layout = parse_markdown_layout_str(&markdown).expect("Parse failed");
+
+        // Verify combo settings were parsed correctly
+        assert!(
+            parsed_layout.combo_settings.enabled,
+            "Combos not enabled after parse"
+        );
+        assert_eq!(
+            parsed_layout.combo_settings.combos.len(),
+            2,
+            "Combo count mismatch"
+        );
+
+        let combo1 = &parsed_layout.combo_settings.combos[0];
+        assert_eq!(combo1.key1, Position::new(0, 0));
+        assert_eq!(combo1.key2, Position::new(0, 1));
+        assert_eq!(combo1.action, ComboAction::DisableEffects);
+        assert_eq!(combo1.hold_duration_ms, 500);
+
+        let combo2 = &parsed_layout.combo_settings.combos[1];
+        assert_eq!(combo2.key1, Position::new(1, 0));
+        assert_eq!(combo2.key2, Position::new(1, 1));
+        assert_eq!(combo2.action, ComboAction::Bootloader);
+        assert_eq!(combo2.hold_duration_ms, 750);
+    }
+
+    #[test]
+    fn test_combos_not_written_when_default() {
+        use crate::models::{KeyDefinition, Layer, Position, RgbColor};
+        use crate::parser::template_gen;
+
+        // Create layout with default combo settings (disabled)
+        let mut layout = Layout::new("Test Layout").expect("Failed to create layout");
+
+        let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_A"));
+        layout.add_layer(layer).unwrap();
+
+        // Don't modify combo_settings - leave as default
+
+        // Generate markdown
+        let markdown =
+            template_gen::generate_markdown(&layout).expect("Failed to generate markdown");
+
+        // Settings section should not exist since everything is default
+        assert!(
+            !markdown.contains("**Combos**"),
+            "Combos should not be written when default"
+        );
     }
 }

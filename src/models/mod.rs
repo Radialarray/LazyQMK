@@ -21,9 +21,9 @@ pub use layer::{
     MAX_QMK_LAYER_LIMIT,
 };
 pub use layout::{
-    HoldDecisionMode, IdleEffectSettings, Layout, LayoutMetadata, RgbBrightness, RgbMatrixEffect,
-    RgbOverlayRippleSettings, RgbSaturation, RippleColorMode, TapDanceAction, TapHoldPreset,
-    TapHoldSettings, UncoloredKeyBehavior,
+    ComboAction, ComboDefinition, ComboSettings, HoldDecisionMode, IdleEffectSettings, Layout,
+    LayoutMetadata, RgbBrightness, RgbMatrixEffect, RgbOverlayRippleSettings, RgbSaturation,
+    RippleColorMode, TapDanceAction, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;
