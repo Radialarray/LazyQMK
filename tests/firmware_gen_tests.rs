@@ -1263,3 +1263,90 @@ fn test_rgb_overlay_ripple_disabled() {
     assert!(!config_h.contains("RGB Overlay Ripple Configuration"));
     assert!(!config_h.contains("#define LQMK_RIPPLE_OVERLAY_ENABLED"));
 }
+
+/// Comprehensive test verifying all critical fixes from code review (commit d0e0de7):
+/// 1. Ripple trigger integrated with idle effect (not commented)
+/// 2. __attribute__((weak)) on rgb_matrix_indicators_advanced_user
+/// 3. Keypress->LED mapping (not hardcoded center LED)
+/// 4. layer_base_colors dependency properly guarded
+#[test]
+fn test_rgb_overlay_ripple_with_idle_effect_integration() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let mut layout = test_layout_basic(2, 3);
+
+    // Enable BOTH ripple overlay AND idle effect to test integration
+    layout.rgb_overlay_ripple.enabled = true;
+    layout.rgb_overlay_ripple.trigger_on_press = true;
+    layout.idle_effect_settings.enabled = true;
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+
+    // Generate keymap.c
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    // Fix 1: Ripple trigger must be integrated (not commented out) when idle effect enabled
+    assert!(
+        keymap_c.contains("lazyqmk_ripple_trigger(keycode, record)"),
+        "Ripple trigger should be integrated into idle effect's process_record_user"
+    );
+    assert!(
+        !keymap_c.contains("/*")
+            || keymap_c.find("/*").unwrap() > keymap_c.find("lazyqmk_ripple_trigger").unwrap(),
+        "Ripple trigger code should not be commented out"
+    );
+
+    // Fix 2: Must have __attribute__((weak)) to avoid duplicate symbol conflicts
+    assert!(
+        keymap_c.contains("__attribute__((weak)) bool rgb_matrix_indicators_advanced_user"),
+        "rgb_matrix_indicators_advanced_user must have weak attribute"
+    );
+
+    // Fix 3: Must use actual keypress position, not hardcoded center LED
+    assert!(
+        keymap_c.contains("static uint8_t lazyqmk_matrix_to_led(uint8_t row, uint8_t col)"),
+        "Must have matrix-to-LED mapping function"
+    );
+    assert!(
+        keymap_c.contains("g_led_config.matrix_co[row][col]"),
+        "Must use QMK's g_led_config for mapping"
+    );
+    assert!(
+        keymap_c.contains("lazyqmk_matrix_to_led(record->event.key.row, record->event.key.col)"),
+        "Ripple must use actual keypress matrix position"
+    );
+    assert!(
+        !keymap_c.contains("RGB_MATRIX_LED_COUNT / 2")
+            || keymap_c.find("RGB_MATRIX_LED_COUNT / 2").unwrap()
+                > keymap_c.find("// Fallback to center").unwrap(),
+        "Should not use hardcoded center LED except as fallback"
+    );
+
+    // Fix 4: layer_base_colors must be guarded to handle missing dependency
+    assert!(
+        keymap_c.contains("#ifdef LAYER_BASE_COLORS_LAYER_COUNT"),
+        "layer_base_colors access must be guarded with ifdef"
+    );
+
+    // Verify the ripple trigger helper function exists with proper signature
+    assert!(
+        keymap_c
+            .contains("static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record)"),
+        "Must have ripple trigger helper function"
+    );
+
+    // Verify layer_base_colors table is actually generated
+    assert!(
+        keymap_c.contains("const uint8_t PROGMEM layer_base_colors"),
+        "layer_base_colors table must be generated when RGB enabled"
+    );
+}

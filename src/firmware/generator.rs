@@ -585,6 +585,9 @@ impl<'a> FirmwareGenerator<'a> {
             return Ok(String::new());
         }
 
+        // Check if ripple is also enabled (need to add ripple trigger)
+        let has_ripple = self.layout.rgb_overlay_ripple.enabled;
+
         let mut code = String::new();
 
         code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
@@ -637,6 +640,16 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        // Reset activity timer\n");
         code.push_str("        last_activity_time = timer_read32();\n");
         code.push('\n');
+
+        // Add ripple trigger integration if both features are enabled
+        if has_ripple {
+            code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
+            code.push_str("        // Trigger ripple effect on keypress\n");
+            code.push_str("        lazyqmk_ripple_trigger(keycode, record);\n");
+            code.push_str("#endif\n");
+            code.push('\n');
+        }
+
         code.push_str("        if (idle_state != IDLE_STATE_ACTIVE) {\n");
         code.push_str("            // Re-enable RGB if it was disabled\n");
         code.push_str("            if (idle_state == IDLE_STATE_OFF) {\n");
@@ -742,6 +755,19 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
+        // Helper: Map matrix position to LED index
+        code.push_str("static uint8_t lazyqmk_matrix_to_led(uint8_t row, uint8_t col) {\n");
+        code.push_str("    // Use QMK's g_led_config to map matrix position to LED index\n");
+        code.push_str("    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {\n");
+        code.push_str("        if (g_led_config.matrix_co[row][col] == i) {\n");
+        code.push_str("            return i;\n");
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push_str("    // Fallback to center LED if mapping not found\n");
+        code.push_str("    return RGB_MATRIX_LED_COUNT / 2;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
         // Helper: Apply ripple effect to LED
         code.push_str("static void lazyqmk_ripple_apply(uint8_t led_index, RGB *led_color) {\n");
         code.push_str("    uint32_t now = timer_read32();\n");
@@ -822,20 +848,60 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        // RGB Matrix indicators hook
+        // Helper: Trigger ripple on keypress
         code.push_str(
-            "bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
+            "static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record) {\n",
+        );
+
+        // Add filters
+        if settings.ignore_transparent {
+            code.push_str("    if (keycode == KC_TRNS) return;\n");
+        }
+        if settings.ignore_modifiers {
+            code.push_str("    if (IS_MODIFIER_KEYCODE(keycode)) return;\n");
+        }
+        if settings.ignore_layer_switch {
+            code.push_str("    if (IS_LAYER_SWITCH_KEYCODE(keycode)) return;\n");
+        }
+
+        code.push_str("    // Get LED index from matrix position\n");
+        code.push_str("    uint8_t led_index = lazyqmk_matrix_to_led(record->event.key.row, record->event.key.col);\n");
+        code.push('\n');
+
+        // Check trigger conditions
+        let needs_press_check = settings.trigger_on_press || settings.trigger_on_release;
+        if needs_press_check {
+            code.push_str("    bool should_trigger = false;\n");
+            if settings.trigger_on_press {
+                code.push_str("    if (record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_PRESS) should_trigger = true;\n");
+            }
+            if settings.trigger_on_release {
+                code.push_str("    if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;\n");
+            }
+            code.push_str("    if (should_trigger) {\n");
+            code.push_str("        lazyqmk_ripple_add(led_index);\n");
+            code.push_str("    }\n");
+        }
+
+        code.push_str("}\n");
+        code.push('\n');
+
+        // RGB Matrix indicators hook with weak attribute
+        code.push_str(
+            "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
         code.push_str("        RGB color = {0, 0, 0};\n");
         code.push_str("        \n");
-        code.push_str("        // Get base color from layer colors table\n");
+        code.push_str("        // Get base color from layer colors table if available\n");
+        code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
         code.push_str("        uint8_t layer = get_highest_layer(layer_state);\n");
         code.push_str("        if (layer < layer_base_colors_layer_count) {\n");
         code.push_str("            color.r = pgm_read_byte(&layer_base_colors[layer][i][0]);\n");
         code.push_str("            color.g = pgm_read_byte(&layer_base_colors[layer][i][1]);\n");
         code.push_str("            color.b = pgm_read_byte(&layer_base_colors[layer][i][2]);\n");
         code.push_str("        }\n");
+        code.push_str("#endif\n");
         code.push_str("        \n");
         code.push_str("        // Apply ripple overlay\n");
         code.push_str("        lazyqmk_ripple_apply(i, &color);\n");
@@ -850,58 +916,15 @@ impl<'a> FirmwareGenerator<'a> {
         // Check if idle effect is enabled to determine if we need to wrap or create new hook
         let has_idle_effect = self.layout.idle_effect_settings.enabled;
 
-        if has_idle_effect {
-            // Idle effect already defines process_record_user, so we add ripple trigger inside it
-            code.push_str(
-                "// Ripple trigger code is integrated into existing process_record_user\n",
-            );
-            code.push_str("// (generated by idle effect code above)\n");
-            code.push_str("// Add this snippet manually or via helper function:\n");
-            code.push_str("/*\n");
-            code.push_str("    // Inside process_record_user, add ripple trigger:\n");
-            code.push_str("    if (record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_PRESS) {\n");
-            code.push_str(
-                "        // Get LED index for this key (requires matrix to LED mapping)\n",
-            );
-            code.push_str("        // For now, trigger ripple at center (LED 0)\n");
-            code.push_str("        lazyqmk_ripple_add(0);\n");
-            code.push_str("    }\n");
-            code.push_str("*/\n");
-        } else {
-            // No idle effect, generate process_record_user for ripple
+        if !has_idle_effect {
+            // No idle effect, generate standalone process_record_user for ripple
             code.push_str("bool process_record_user(uint16_t keycode, keyrecord_t *record) {\n");
-
-            if settings.trigger_on_press {
-                code.push_str("    if (record->event.pressed) {\n");
-
-                // Add filters
-                if settings.ignore_transparent {
-                    code.push_str("        if (keycode == KC_TRNS) return true;\n");
-                }
-                if settings.ignore_modifiers {
-                    code.push_str("        if (IS_MODIFIER_KEYCODE(keycode)) return true;\n");
-                }
-                if settings.ignore_layer_switch {
-                    code.push_str("        if (IS_LAYER_SWITCH_KEYCODE(keycode)) return true;\n");
-                }
-
-                code.push_str("        // TODO: Get LED index from matrix position\n");
-                code.push_str("        // For now, trigger ripple at center LED\n");
-                code.push_str("        lazyqmk_ripple_add(RGB_MATRIX_LED_COUNT / 2);\n");
-                code.push_str("    }\n");
-            }
-
-            if settings.trigger_on_release {
-                code.push_str("    if (!record->event.pressed) {\n");
-                code.push_str("        // TODO: Get LED index from matrix position\n");
-                code.push_str("        lazyqmk_ripple_add(RGB_MATRIX_LED_COUNT / 2);\n");
-                code.push_str("    }\n");
-            }
-
+            code.push_str("    lazyqmk_ripple_trigger(keycode, record);\n");
             code.push_str("    return true;\n");
             code.push_str("}\n");
             code.push('\n');
         }
+        // If idle effect is enabled, the ripple trigger is already integrated in idle effect code
 
         code.push_str("#endif // LQMK_RIPPLE_OVERLAY_ENABLED\n");
         code.push_str("#endif // RGB_MATRIX_ENABLE\n");
