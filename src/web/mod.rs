@@ -874,6 +874,114 @@ pub struct LayoutDto {
     pub tap_dances: Vec<TapDanceDto>,
 }
 
+/// Layout DTO for save requests (accepts optional fields from frontend).
+///
+/// The frontend sends back the LayoutDto it received from GET, but we need to be
+/// flexible about which fields are required since the TypeScript interface has many
+/// optional fields.
+#[derive(Debug, Clone, Deserialize)]
+pub struct LayoutSaveDto {
+    /// Layout metadata
+    pub metadata: crate::models::LayoutMetadata,
+    /// Enriched layers
+    pub layers: Vec<LayerSaveDto>,
+    /// Category definitions
+    #[serde(default)]
+    pub categories: Vec<crate::models::Category>,
+    /// RGB lighting enabled
+    #[serde(default = "default_rgb_enabled_true")]
+    pub rgb_enabled: bool,
+    /// RGB brightness (0-100%)
+    #[serde(default)]
+    pub rgb_brightness: crate::models::RgbBrightness,
+    /// RGB saturation (0-200%)
+    #[serde(default)]
+    pub rgb_saturation: crate::models::RgbSaturation,
+    /// RGB Matrix default animation speed (0-255)
+    #[serde(default = "default_rgb_matrix_speed")]
+    pub rgb_matrix_default_speed: u8,
+    /// RGB Matrix timeout in milliseconds
+    #[serde(default)]
+    pub rgb_timeout_ms: u32,
+    /// Behavior for keys without individual or category colors
+    #[serde(default)]
+    pub uncolored_key_behavior: u8,
+    /// Idle effect settings
+    #[serde(default)]
+    pub idle_effect_settings: Option<IdleEffectSettingsDto>,
+    /// RGB overlay ripple settings
+    #[serde(default)]
+    pub rgb_overlay_ripple: Option<RgbOverlayRippleSettingsDto>,
+    /// Tap-hold settings
+    #[serde(default)]
+    pub tap_hold_settings: Option<TapHoldSettingsDto>,
+    /// Tap dance definitions
+    #[serde(default)]
+    pub tap_dances: Vec<TapDanceDto>,
+}
+
+fn default_rgb_enabled_true() -> bool {
+    true
+}
+
+fn default_rgb_matrix_speed() -> u8 {
+    127
+}
+
+/// Layer DTO for save requests (accepts optional fields from frontend).
+#[derive(Debug, Clone, Deserialize)]
+pub struct LayerSaveDto {
+    /// Unique layer identifier
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Layer number (0-based)
+    #[serde(default)]
+    pub number: Option<u8>,
+    /// Human-readable name
+    pub name: String,
+    /// Base color for all keys on this layer
+    #[serde(default)]
+    pub default_color: Option<RgbColor>,
+    /// Optional category assignment for entire layer
+    pub category_id: Option<String>,
+    /// Enriched key assignments
+    pub keys: Vec<KeyAssignmentSaveDto>,
+    /// Whether layer-level RGB colors are enabled
+    #[serde(default = "default_layer_colors_true")]
+    pub layer_colors_enabled: bool,
+    /// Legacy field from TypeScript interface (ignored)
+    #[serde(default, skip_deserializing)]
+    pub color: Option<String>,
+}
+
+fn default_layer_colors_true() -> bool {
+    true
+}
+
+/// Key assignment DTO for save requests (accepts optional fields from frontend).
+#[derive(Debug, Clone, Deserialize)]
+pub struct KeyAssignmentSaveDto {
+    /// QMK keycode (e.g., "KC_A", "KC_TRNS", "MO(1)")
+    pub keycode: String,
+    /// Matrix position [row, col] - enriched field from GET response
+    #[serde(default)]
+    pub matrix_position: [u8; 2],
+    /// Visual index - enriched field from GET response
+    #[serde(default)]
+    pub visual_index: u8,
+    /// RGB LED index - enriched field from GET response
+    #[serde(default)]
+    pub led_index: u8,
+    /// Visual position (row, col) - the authoritative position field
+    pub position: Option<crate::models::Position>,
+    /// Individual key color override
+    pub color_override: Option<RgbColor>,
+    /// Category assignment for this key
+    pub category_id: Option<String>,
+    /// Optional user description
+    pub description: Option<String>,
+}
+
 // ============================================================================
 // Path Validation (Security)
 // ============================================================================
@@ -1148,11 +1256,186 @@ async fn get_layout(
     Ok(Json(layout_dto))
 }
 
+/// Parses a RippleColorMode from its display name.
+fn parse_ripple_color_mode(name: &str) -> crate::models::RippleColorMode {
+    use crate::models::RippleColorMode;
+    match name {
+        "Fixed Color" | "fixed" => RippleColorMode::Fixed,
+        "Key Color" | "key_based" => RippleColorMode::KeyBased,
+        "Hue Shift" | "hue_shift" => RippleColorMode::HueShift,
+        _ => RippleColorMode::default(),
+    }
+}
+
+/// Parses a HoldDecisionMode from its display name.
+fn parse_hold_decision_mode(name: &str) -> crate::models::HoldDecisionMode {
+    use crate::models::HoldDecisionMode;
+    match name {
+        "Default (Timing Only)" | "Default" | "default" => HoldDecisionMode::Default,
+        "Permissive Hold" | "permissive_hold" => HoldDecisionMode::PermissiveHold,
+        "Hold On Other Key" | "hold_on_other_key_press" => HoldDecisionMode::HoldOnOtherKeyPress,
+        _ => HoldDecisionMode::default(),
+    }
+}
+
+/// Parses a TapHoldPreset from its display name.
+fn parse_tap_hold_preset(name: &str) -> crate::models::TapHoldPreset {
+    use crate::models::TapHoldPreset;
+    match name {
+        "Default" | "default" => TapHoldPreset::Default,
+        "Home Row Mods" | "home_row_mods" => TapHoldPreset::HomeRowMods,
+        "Responsive" | "responsive" => TapHoldPreset::Responsive,
+        "Deliberate" | "deliberate" => TapHoldPreset::Deliberate,
+        "Custom" | "custom" => TapHoldPreset::Custom,
+        _ => TapHoldPreset::default(),
+    }
+}
+
+/// Converts a LayoutSaveDto (from frontend) back to the internal Layout model.
+///
+/// This strips the enriched fields (visual_index, matrix_position, led_index)
+/// that were added during the GET response and keeps only the core data needed
+/// for persistence (position, keycode, color_override, etc.).
+fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
+    use crate::models::layer::{KeyDefinition, Layer, Position};
+
+    // Convert DTOs back to internal models
+    let layers: Vec<Layer> = dto
+        .layers
+        .into_iter()
+        .enumerate()
+        .map(|(idx, layer_dto)| {
+            let keys: Vec<KeyDefinition> = layer_dto
+                .keys
+                .into_iter()
+                .map(|key_dto| {
+                    // Extract position - use the position field if present,
+                    // otherwise infer from matrix_position
+                    let position = key_dto.position.unwrap_or_else(|| Position {
+                        row: key_dto.matrix_position[0],
+                        col: key_dto.matrix_position[1],
+                    });
+
+                    KeyDefinition {
+                        position,
+                        keycode: key_dto.keycode,
+                        label: None, // Not exposed in DTO
+                        color_override: key_dto.color_override,
+                        category_id: key_dto.category_id,
+                        combo_participant: false, // Not exposed in DTO
+                        description: key_dto.description,
+                    }
+                })
+                .collect();
+
+            Layer {
+                id: layer_dto
+                    .id
+                    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+                number: layer_dto.number.unwrap_or(idx as u8),
+                name: layer_dto.name,
+                default_color: layer_dto
+                    .default_color
+                    .unwrap_or_else(|| RgbColor::new(0, 0, 0)),
+                category_id: layer_dto.category_id,
+                keys,
+                layer_colors_enabled: layer_dto.layer_colors_enabled,
+            }
+        })
+        .collect();
+
+    // Convert idle effect settings
+    let idle_effect_settings = if let Some(settings_dto) = dto.idle_effect_settings {
+        IdleEffectSettings {
+            enabled: settings_dto.enabled,
+            idle_timeout_ms: settings_dto.idle_timeout_ms,
+            idle_effect_duration_ms: settings_dto.idle_effect_duration_ms,
+            idle_effect_mode: RgbMatrixEffect::from_name(&settings_dto.idle_effect_mode)
+                .unwrap_or_default(),
+        }
+    } else {
+        IdleEffectSettings::default()
+    };
+
+    // Convert RGB overlay ripple settings
+    let rgb_overlay_ripple = if let Some(ripple_dto) = dto.rgb_overlay_ripple {
+        // Parse color mode from display name
+        let color_mode = parse_ripple_color_mode(&ripple_dto.color_mode);
+
+        RgbOverlayRippleSettings {
+            enabled: ripple_dto.enabled,
+            max_ripples: ripple_dto.max_ripples,
+            duration_ms: ripple_dto.duration_ms,
+            speed: ripple_dto.speed,
+            band_width: ripple_dto.band_width,
+            amplitude_pct: ripple_dto.amplitude_pct,
+            color_mode,
+            fixed_color: ripple_dto.fixed_color,
+            hue_shift_deg: ripple_dto.hue_shift_deg,
+            trigger_on_press: ripple_dto.trigger_on_press,
+            trigger_on_release: ripple_dto.trigger_on_release,
+            ignore_transparent: ripple_dto.ignore_transparent,
+            ignore_modifiers: ripple_dto.ignore_modifiers,
+            ignore_layer_switch: ripple_dto.ignore_layer_switch,
+        }
+    } else {
+        RgbOverlayRippleSettings::default()
+    };
+
+    // Convert tap-hold settings
+    let tap_hold_settings = if let Some(th_dto) = dto.tap_hold_settings {
+        // Parse hold mode and preset from display names
+        let hold_mode = parse_hold_decision_mode(&th_dto.hold_mode);
+        let preset = parse_tap_hold_preset(&th_dto.preset);
+
+        TapHoldSettings {
+            tapping_term: th_dto.tapping_term,
+            quick_tap_term: th_dto.quick_tap_term,
+            hold_mode,
+            retro_tapping: th_dto.retro_tapping,
+            tapping_toggle: th_dto.tapping_toggle,
+            flow_tap_term: th_dto.flow_tap_term,
+            chordal_hold: th_dto.chordal_hold,
+            preset,
+        }
+    } else {
+        TapHoldSettings::default()
+    };
+
+    // Convert tap dances
+    let tap_dances: Vec<TapDanceAction> = dto
+        .tap_dances
+        .into_iter()
+        .map(|td_dto| TapDanceAction {
+            name: td_dto.name,
+            single_tap: td_dto.single_tap,
+            double_tap: td_dto.double_tap,
+            hold: td_dto.hold,
+        })
+        .collect();
+
+    Layout {
+        metadata: dto.metadata,
+        layers,
+        categories: dto.categories,
+        rgb_enabled: dto.rgb_enabled,
+        rgb_brightness: dto.rgb_brightness,
+        rgb_saturation: dto.rgb_saturation,
+        rgb_matrix_default_speed: dto.rgb_matrix_default_speed,
+        rgb_timeout_ms: dto.rgb_timeout_ms,
+        uncolored_key_behavior: dto.uncolored_key_behavior.into(),
+        idle_effect_settings,
+        rgb_overlay_ripple,
+        tap_hold_settings,
+        tap_dances,
+    }
+}
+
 /// PUT /api/layouts/{filename} - Save a layout file.
 async fn save_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-    Json(layout): Json<Layout>,
+    Json(layout_dto): Json<LayoutSaveDto>,
 ) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
@@ -1168,6 +1451,11 @@ async fn save_layout(
     };
 
     let path = state.workspace_root.join(&filename);
+
+    // Convert LayoutDto back to Layout model
+    // The DTO contains enriched fields (visual_index, matrix_position, led_index)
+    // that we need to discard when converting back to the internal model
+    let layout = convert_dto_to_layout(layout_dto);
 
     // Validate the layout
     layout.validate().map_err(|e| {
