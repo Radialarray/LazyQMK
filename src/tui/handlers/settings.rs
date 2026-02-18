@@ -4,8 +4,8 @@ use anyhow::Result;
 use crossterm::event;
 
 use crate::models::{
-    HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, TapHoldPreset,
-    UncoloredKeyBehavior,
+    HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, RippleColorMode,
+    TapHoldPreset, UncoloredKeyBehavior,
 };
 use crate::tui::settings_manager::{
     ManagerMode, SettingItem, SettingsManagerContext, SettingsManagerEvent,
@@ -36,6 +36,7 @@ pub fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent)
             rgb_timeout_ms: state.layout.rgb_timeout_ms,
             uncolored_key_behavior: state.layout.uncolored_key_behavior,
             idle_effect_settings: state.layout.idle_effect_settings.clone(),
+            overlay_ripple_settings: state.layout.rgb_overlay_ripple.clone(),
             tap_hold_settings: state.layout.tap_hold_settings.clone(),
             config: state.config.clone(),
             layout: state.layout.clone(),
@@ -284,6 +285,105 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.idle_effect_settings.idle_effect_mode,
                     );
                 }
+                SettingItem::OverlayRippleEnabled => {
+                    manager
+                        .state_mut()
+                        .start_toggling_boolean(*setting, state.layout.rgb_overlay_ripple.enabled);
+                }
+                SettingItem::OverlayRippleMaxRipples => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_overlay_ripple.max_ripples),
+                        1,
+                        8,
+                    );
+                }
+                SettingItem::OverlayRippleDuration => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.duration_ms,
+                        100,
+                        5000,
+                    );
+                }
+                SettingItem::OverlayRippleSpeed => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_overlay_ripple.speed),
+                        1,
+                        255,
+                    );
+                }
+                SettingItem::OverlayRippleBandWidth => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_overlay_ripple.band_width),
+                        1,
+                        20,
+                    );
+                }
+                SettingItem::OverlayRippleAmplitude => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_overlay_ripple.amplitude_pct),
+                        0,
+                        100,
+                    );
+                }
+                SettingItem::OverlayRippleColorMode => {
+                    manager.state_mut().start_selecting_ripple_color_mode(
+                        state.layout.rgb_overlay_ripple.color_mode,
+                    );
+                }
+                // Note: OverlayRippleFixedColor is not editable via simple numeric input
+                // Would require a full color picker UI component
+                SettingItem::OverlayRippleFixedColor => {
+                    state.set_status(
+                        "Fixed color editing requires color picker (not yet implemented)",
+                    );
+                    return Ok(false);
+                }
+                SettingItem::OverlayRippleHueShift => {
+                    // hue_shift_deg is i16, but we need to convert for u16 editor
+                    let current = if state.layout.rgb_overlay_ripple.hue_shift_deg < 0 {
+                        0
+                    } else {
+                        state.layout.rgb_overlay_ripple.hue_shift_deg as u16
+                    };
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current, 0, 359);
+                }
+                SettingItem::OverlayRippleTriggerPress => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.trigger_on_press,
+                    );
+                }
+                SettingItem::OverlayRippleTriggerRelease => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.trigger_on_release,
+                    );
+                }
+                SettingItem::OverlayRippleIgnoreModifiers => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.ignore_modifiers,
+                    );
+                }
+                SettingItem::OverlayRippleIgnoreLayerSwitch => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.ignore_layer_switch,
+                    );
+                }
+                SettingItem::OverlayRippleIgnoreTransparent => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.ignore_transparent,
+                    );
+                }
             }
             state.set_status("Select option with ↑↓, Enter to apply");
         }
@@ -417,6 +517,18 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     }
                 }
             }
+            crate::tui::settings_manager::ManagerMode::SelectingRippleColorMode { .. } => {
+                if let Some(selected_idx) = manager_state.get_selected_option() {
+                    if let Some(&mode) = RippleColorMode::all().get(selected_idx) {
+                        state.layout.rgb_overlay_ripple.color_mode = mode;
+                        state.mark_dirty();
+                        state.set_status(format!(
+                            "Ripple color mode set to: {}",
+                            mode.display_name()
+                        ));
+                    }
+                }
+            }
             crate::tui::settings_manager::ManagerMode::Browsing => {}
         }
     }
@@ -524,6 +636,30 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
             };
             state.set_status(format!("Idle effect duration set to: {display}"));
         }
+        SettingItem::OverlayRippleMaxRipples => {
+            state.layout.rgb_overlay_ripple.max_ripples = value as u8;
+            state.set_status(format!("Overlay ripple max ripples set to: {value}"));
+        }
+        SettingItem::OverlayRippleDuration => {
+            state.layout.rgb_overlay_ripple.duration_ms = value;
+            state.set_status(format!("Overlay ripple duration set to: {value}ms"));
+        }
+        SettingItem::OverlayRippleSpeed => {
+            state.layout.rgb_overlay_ripple.speed = value as u8;
+            state.set_status(format!("Overlay ripple speed set to: {value}"));
+        }
+        SettingItem::OverlayRippleBandWidth => {
+            state.layout.rgb_overlay_ripple.band_width = value as u8;
+            state.set_status(format!("Overlay ripple band width set to: {value}"));
+        }
+        SettingItem::OverlayRippleAmplitude => {
+            state.layout.rgb_overlay_ripple.amplitude_pct = value as u8;
+            state.set_status(format!("Overlay ripple amplitude set to: {value}%"));
+        }
+        SettingItem::OverlayRippleHueShift => {
+            state.layout.rgb_overlay_ripple.hue_shift_deg = value as i16;
+            state.set_status(format!("Overlay ripple hue shift set to: {value}°"));
+        }
         _ => {}
     }
 }
@@ -561,6 +697,42 @@ fn apply_boolean_setting(state: &mut AppState, setting: SettingItem, value: bool
             state.layout.idle_effect_settings.enabled = value;
             let display = if value { "On" } else { "Off" };
             state.set_status(format!("Idle effect enabled set to: {display}"));
+        }
+        SettingItem::OverlayRippleEnabled => {
+            state.layout.rgb_overlay_ripple.enabled = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Overlay ripple enabled set to: {display}"));
+        }
+        SettingItem::OverlayRippleTriggerPress => {
+            state.layout.rgb_overlay_ripple.trigger_on_press = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Overlay ripple trigger on press set to: {display}"));
+        }
+        SettingItem::OverlayRippleTriggerRelease => {
+            state.layout.rgb_overlay_ripple.trigger_on_release = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!(
+                "Overlay ripple trigger on release set to: {display}"
+            ));
+        }
+        SettingItem::OverlayRippleIgnoreModifiers => {
+            state.layout.rgb_overlay_ripple.ignore_modifiers = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Overlay ripple ignore modifiers set to: {display}"));
+        }
+        SettingItem::OverlayRippleIgnoreLayerSwitch => {
+            state.layout.rgb_overlay_ripple.ignore_layer_switch = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!(
+                "Overlay ripple ignore layer switch keys set to: {display}"
+            ));
+        }
+        SettingItem::OverlayRippleIgnoreTransparent => {
+            state.layout.rgb_overlay_ripple.ignore_transparent = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!(
+                "Overlay ripple ignore transparent set to: {display}"
+            ));
         }
         _ => {}
     }

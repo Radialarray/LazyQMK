@@ -14,8 +14,8 @@ use ratatui::{
 };
 
 use crate::models::{
-    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, TapHoldPreset,
-    TapHoldSettings, UncoloredKeyBehavior,
+    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, RgbOverlayRippleSettings,
+    RippleColorMode, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
 };
 
 use super::Theme;
@@ -108,6 +108,34 @@ pub enum SettingItem {
     IdleEffectMode,
     /// Brightness for keys without individual/category colors (0-100%)
     UncoloredKeyBehavior,
+    /// Overlay ripple master switch
+    OverlayRippleEnabled,
+    /// Maximum concurrent ripples (1-8)
+    OverlayRippleMaxRipples,
+    /// Ripple duration in milliseconds
+    OverlayRippleDuration,
+    /// Ripple expansion speed (0-255)
+    OverlayRippleSpeed,
+    /// Ripple band width in LED units
+    OverlayRippleBandWidth,
+    /// Ripple amplitude as percentage (0-100%)
+    OverlayRippleAmplitude,
+    /// Ripple color mode (Fixed, KeyBased, HueShift)
+    OverlayRippleColorMode,
+    /// Fixed color for ripples
+    OverlayRippleFixedColor,
+    /// Hue shift in degrees (-180 to 180)
+    OverlayRippleHueShift,
+    /// Trigger on key press
+    OverlayRippleTriggerPress,
+    /// Trigger on key release
+    OverlayRippleTriggerRelease,
+    /// Ignore transparent keys
+    OverlayRippleIgnoreTransparent,
+    /// Ignore modifier keys
+    OverlayRippleIgnoreModifiers,
+    /// Ignore layer switch keys
+    OverlayRippleIgnoreLayerSwitch,
 
     // === Tap-Hold Settings (Per-Layout) ===
     /// Preset for common tap-hold configurations
@@ -155,6 +183,20 @@ impl SettingItem {
             Self::IdleEffectDuration,
             Self::IdleEffectMode,
             Self::UncoloredKeyBehavior,
+            Self::OverlayRippleEnabled,
+            Self::OverlayRippleMaxRipples,
+            Self::OverlayRippleDuration,
+            Self::OverlayRippleSpeed,
+            Self::OverlayRippleBandWidth,
+            Self::OverlayRippleAmplitude,
+            Self::OverlayRippleColorMode,
+            Self::OverlayRippleFixedColor,
+            Self::OverlayRippleHueShift,
+            Self::OverlayRippleTriggerPress,
+            Self::OverlayRippleTriggerRelease,
+            Self::OverlayRippleIgnoreTransparent,
+            Self::OverlayRippleIgnoreModifiers,
+            Self::OverlayRippleIgnoreLayerSwitch,
             // Tap-Hold (Per-Layout)
             Self::TapHoldPreset,
             Self::TappingTerm,
@@ -186,7 +228,21 @@ impl SettingItem {
             | Self::IdleTimeout
             | Self::IdleEffectDuration
             | Self::IdleEffectMode
-            | Self::UncoloredKeyBehavior => SettingGroup::Rgb,
+            | Self::UncoloredKeyBehavior
+            | Self::OverlayRippleEnabled
+            | Self::OverlayRippleMaxRipples
+            | Self::OverlayRippleDuration
+            | Self::OverlayRippleSpeed
+            | Self::OverlayRippleBandWidth
+            | Self::OverlayRippleAmplitude
+            | Self::OverlayRippleColorMode
+            | Self::OverlayRippleFixedColor
+            | Self::OverlayRippleHueShift
+            | Self::OverlayRippleTriggerPress
+            | Self::OverlayRippleTriggerRelease
+            | Self::OverlayRippleIgnoreTransparent
+            | Self::OverlayRippleIgnoreModifiers
+            | Self::OverlayRippleIgnoreLayerSwitch => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
             | Self::QuickTapTerm
@@ -220,6 +276,20 @@ impl SettingItem {
             Self::IdleEffectDuration => "Idle Effect Duration",
             Self::IdleEffectMode => "Idle Effect Mode",
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
+            Self::OverlayRippleEnabled => "Overlay Ripple Enabled",
+            Self::OverlayRippleMaxRipples => "Max Concurrent Ripples",
+            Self::OverlayRippleDuration => "Ripple Duration",
+            Self::OverlayRippleSpeed => "Ripple Speed",
+            Self::OverlayRippleBandWidth => "Ripple Band Width",
+            Self::OverlayRippleAmplitude => "Ripple Amplitude",
+            Self::OverlayRippleColorMode => "Ripple Color Mode",
+            Self::OverlayRippleFixedColor => "Ripple Fixed Color",
+            Self::OverlayRippleHueShift => "Ripple Hue Shift",
+            Self::OverlayRippleTriggerPress => "Trigger on Press",
+            Self::OverlayRippleTriggerRelease => "Trigger on Release",
+            Self::OverlayRippleIgnoreTransparent => "Ignore Transparent Keys",
+            Self::OverlayRippleIgnoreModifiers => "Ignore Modifier Keys",
+            Self::OverlayRippleIgnoreLayerSwitch => "Ignore Layer Switch Keys",
             Self::TapHoldPreset => "Preset",
             Self::TappingTerm => "Tapping Term",
             Self::QuickTapTerm => "Quick Tap Term",
@@ -259,6 +329,26 @@ impl SettingItem {
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
             }
+            Self::OverlayRippleEnabled => "Enable ripple overlay on keypresses",
+            Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
+            Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
+            Self::OverlayRippleSpeed => "Expansion speed multiplier (0-255, higher = faster)",
+            Self::OverlayRippleBandWidth => "Width of ripple band in LED units",
+            Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)",
+            Self::OverlayRippleColorMode => {
+                "How to determine ripple colors (Fixed, Key Color, Hue Shift)"
+            }
+            Self::OverlayRippleFixedColor => "Color to use when color mode is Fixed",
+            Self::OverlayRippleHueShift => {
+                "Hue shift in degrees when mode is Hue Shift (-180 to 180)"
+            }
+            Self::OverlayRippleTriggerPress => "Trigger ripple effect on key press",
+            Self::OverlayRippleTriggerRelease => "Trigger ripple effect on key release",
+            Self::OverlayRippleIgnoreTransparent => {
+                "Don't trigger ripples on transparent keys (KC_TRNS)"
+            }
+            Self::OverlayRippleIgnoreModifiers => "Don't trigger ripples on modifier keys",
+            Self::OverlayRippleIgnoreLayerSwitch => "Don't trigger ripples on layer switch keys",
             Self::TapHoldPreset => "Quick configuration preset for common use cases",
             Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
             Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
@@ -336,6 +426,11 @@ pub enum ManagerMode {
     },
     /// Selecting idle effect mode
     SelectingIdleEffectMode {
+        /// Currently highlighted option index
+        selected_option: usize,
+    },
+    /// Selecting ripple color mode
+    SelectingRippleColorMode {
         /// Currently highlighted option index
         selected_option: usize,
     },
@@ -430,7 +525,8 @@ impl SettingsManagerState {
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
-            | ManagerMode::SelectingIdleEffectMode { selected_option } => {
+            | ManagerMode::SelectingIdleEffectMode { selected_option }
+            | ManagerMode::SelectingRippleColorMode { selected_option } => {
                 if *selected_option > 0 {
                     *selected_option -= 1;
                 } else {
@@ -451,7 +547,8 @@ impl SettingsManagerState {
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
-            | ManagerMode::SelectingIdleEffectMode { selected_option } => {
+            | ManagerMode::SelectingIdleEffectMode { selected_option }
+            | ManagerMode::SelectingRippleColorMode { selected_option } => {
                 *selected_option = (*selected_option + 1) % option_count;
             }
             ManagerMode::TogglingBoolean { value, .. } => {
@@ -469,7 +566,8 @@ impl SettingsManagerState {
             | ManagerMode::SelectingHoldMode { selected_option }
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
-            | ManagerMode::SelectingIdleEffectMode { selected_option } => Some(*selected_option),
+            | ManagerMode::SelectingIdleEffectMode { selected_option }
+            | ManagerMode::SelectingRippleColorMode { selected_option } => Some(*selected_option),
             _ => None,
         }
     }
@@ -579,6 +677,15 @@ impl SettingsManagerState {
         self.mode = ManagerMode::SelectingIdleEffectMode { selected_option };
     }
 
+    /// Start selecting ripple color mode
+    pub fn start_selecting_ripple_color_mode(&mut self, current: RippleColorMode) {
+        let selected_option = RippleColorMode::all()
+            .iter()
+            .position(|&m| m == current)
+            .unwrap_or(0);
+        self.mode = ManagerMode::SelectingRippleColorMode { selected_option };
+    }
+
     /// Handle character input for string/path editing
     pub fn handle_string_char_input(&mut self, c: char) {
         match &mut self.mode {
@@ -657,6 +764,8 @@ pub struct SettingsManagerContext {
     pub uncolored_key_behavior: UncoloredKeyBehavior,
     /// Idle effect settings
     pub idle_effect_settings: IdleEffectSettings,
+    /// Overlay ripple settings
+    pub overlay_ripple_settings: RgbOverlayRippleSettings,
     /// Tap-hold settings
     pub tap_hold_settings: TapHoldSettings,
     /// Application config
@@ -720,6 +829,9 @@ impl SettingsManager {
             ManagerMode::SelectingIdleEffectMode { .. } => {
                 self.handle_idle_effect_mode_selection(key)
             }
+            ManagerMode::SelectingRippleColorMode { .. } => {
+                self.handle_ripple_color_mode_selection(key)
+            }
         }
     }
 
@@ -740,6 +852,7 @@ impl SettingsManager {
             context.rgb_timeout_ms,
             context.uncolored_key_behavior,
             &context.idle_effect_settings,
+            &context.overlay_ripple_settings,
             &context.tap_hold_settings,
             &context.config,
             &context.layout,
@@ -967,6 +1080,30 @@ impl SettingsManager {
             _ => None,
         }
     }
+
+    fn handle_ripple_color_mode_selection(
+        &mut self,
+        key: KeyEvent,
+    ) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = RippleColorMode::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = RippleColorMode::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
 }
 
 impl Default for SettingsManager {
@@ -994,6 +1131,7 @@ pub fn render_settings_manager(
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
     idle_effect_settings: &IdleEffectSettings,
+    overlay_ripple_settings: &RgbOverlayRippleSettings,
     tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
     layout: &crate::models::Layout,
@@ -1042,6 +1180,7 @@ pub fn render_settings_manager(
                 rgb_timeout_ms,
                 uncolored_key_behavior,
                 idle_effect_settings,
+                overlay_ripple_settings,
                 tap_hold_settings,
                 config,
                 layout,
@@ -1080,6 +1219,9 @@ pub fn render_settings_manager(
         ManagerMode::SelectingIdleEffectMode { selected_option } => {
             render_idle_effect_mode_selector(f, inner_area, *selected_option, theme);
         }
+        ManagerMode::SelectingRippleColorMode { selected_option } => {
+            render_ripple_color_mode_selector(f, inner_area, *selected_option, theme);
+        }
     }
 }
 
@@ -1093,6 +1235,7 @@ fn render_settings_list(
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
     idle_effect_settings: &IdleEffectSettings,
+    overlay_ripple_settings: &RgbOverlayRippleSettings,
     tap_hold_settings: &TapHoldSettings,
     config: &crate::config::Config,
     layout: &crate::models::Layout,
@@ -1146,6 +1289,7 @@ fn render_settings_list(
             rgb_timeout_ms,
             uncolored_key_behavior,
             idle_effect_settings,
+            overlay_ripple_settings,
             tap_hold_settings,
             config,
             Some(layout),
@@ -1218,6 +1362,7 @@ fn get_setting_value_display(
     rgb_timeout_ms: u32,
     uncolored_key_behavior: UncoloredKeyBehavior,
     idle_effect_settings: &IdleEffectSettings,
+    overlay_ripple_settings: &RgbOverlayRippleSettings,
     tap_hold: &TapHoldSettings,
     config: &crate::config::Config,
     layout: Option<&crate::models::Layout>,
@@ -1316,6 +1461,60 @@ fn get_setting_value_display(
             .display_name()
             .to_string(),
         SettingItem::UncoloredKeyBehavior => format!("{}%", uncolored_key_behavior.as_percent()),
+        // Per-Layout: Overlay Ripple
+        SettingItem::OverlayRippleEnabled => if overlay_ripple_settings.enabled {
+            "On"
+        } else {
+            "Off"
+        }
+        .to_string(),
+        SettingItem::OverlayRippleMaxRipples => format!("{}", overlay_ripple_settings.max_ripples),
+        SettingItem::OverlayRippleDuration => format!("{}ms", overlay_ripple_settings.duration_ms),
+        SettingItem::OverlayRippleSpeed => format!("{}", overlay_ripple_settings.speed),
+        SettingItem::OverlayRippleBandWidth => format!("{}", overlay_ripple_settings.band_width),
+        SettingItem::OverlayRippleAmplitude => {
+            format!("{}%", overlay_ripple_settings.amplitude_pct)
+        }
+        SettingItem::OverlayRippleColorMode => overlay_ripple_settings
+            .color_mode
+            .display_name()
+            .to_string(),
+        SettingItem::OverlayRippleFixedColor => overlay_ripple_settings.fixed_color.to_hex(),
+        SettingItem::OverlayRippleHueShift => format!("{}°", overlay_ripple_settings.hue_shift_deg),
+        SettingItem::OverlayRippleTriggerPress => if overlay_ripple_settings.trigger_on_press {
+            "On"
+        } else {
+            "Off"
+        }
+        .to_string(),
+        SettingItem::OverlayRippleTriggerRelease => if overlay_ripple_settings.trigger_on_release {
+            "On"
+        } else {
+            "Off"
+        }
+        .to_string(),
+        SettingItem::OverlayRippleIgnoreTransparent => {
+            if overlay_ripple_settings.ignore_transparent {
+                "On"
+            } else {
+                "Off"
+            }
+            .to_string()
+        }
+        SettingItem::OverlayRippleIgnoreModifiers => if overlay_ripple_settings.ignore_modifiers {
+            "On"
+        } else {
+            "Off"
+        }
+        .to_string(),
+        SettingItem::OverlayRippleIgnoreLayerSwitch => {
+            if overlay_ripple_settings.ignore_layer_switch {
+                "On"
+            } else {
+                "Off"
+            }
+            .to_string()
+        }
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),
@@ -1851,6 +2050,23 @@ fn render_idle_effect_mode_selector(f: &mut Frame, area: Rect, selected: usize, 
     );
 }
 
+/// Render ripple color mode selector
+fn render_ripple_color_mode_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
+    let options = RippleColorMode::all();
+    render_enum_selector(
+        f,
+        area,
+        "Ripple Color Mode",
+        options
+            .iter()
+            .map(|o| (o.display_name(), o.description()))
+            .collect::<Vec<_>>()
+            .as_slice(),
+        selected,
+        theme,
+    );
+}
+
 /// Render boolean toggle
 fn render_boolean_toggle(
     f: &mut Frame,
@@ -1996,6 +2212,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2015,6 +2232,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2037,6 +2255,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2056,6 +2275,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2075,6 +2295,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2097,6 +2318,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,
@@ -2116,6 +2338,7 @@ mod tests {
             0,
             UncoloredKeyBehavior::from(100),
             &idle_settings,
+            &RgbOverlayRippleSettings::default(),
             &TapHoldSettings::default(),
             &crate::config::Config::default(),
             None,

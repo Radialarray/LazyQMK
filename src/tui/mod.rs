@@ -1037,6 +1037,7 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                     rgb_timeout_ms: state.layout.rgb_timeout_ms,
                     uncolored_key_behavior: state.layout.uncolored_key_behavior,
                     idle_effect_settings: state.layout.idle_effect_settings.clone(),
+                    overlay_ripple_settings: state.layout.rgb_overlay_ripple.clone(),
                     tap_hold_settings: state.layout.tap_hold_settings.clone(),
                     config: state.config.clone(),
                     layout: state.layout.clone(),

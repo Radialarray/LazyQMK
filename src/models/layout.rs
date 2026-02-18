@@ -346,6 +346,34 @@ pub enum RippleColorMode {
     HueShift,
 }
 
+impl RippleColorMode {
+    /// Returns all available color modes
+    #[must_use]
+    pub const fn all() -> &'static [Self] {
+        &[Self::Fixed, Self::KeyBased, Self::HueShift]
+    }
+
+    /// Returns a human-readable display name
+    #[must_use]
+    pub const fn display_name(&self) -> &'static str {
+        match self {
+            Self::Fixed => "Fixed Color",
+            Self::KeyBased => "Key Color",
+            Self::HueShift => "Hue Shift",
+        }
+    }
+
+    /// Returns a description of the color mode
+    #[must_use]
+    pub const fn description(&self) -> &'static str {
+        match self {
+            Self::Fixed => "Use the same color for all ripples",
+            Self::KeyBased => "Use each key's base color from layer settings",
+            Self::HueShift => "Shift hue from key's base color by fixed degrees",
+        }
+    }
+}
+
 /// Configuration for RGB overlay ripple effects.
 ///
 /// Ripples are triggered on keypress and rendered as an additive overlay
