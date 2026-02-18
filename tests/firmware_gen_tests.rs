@@ -6,6 +6,8 @@
 //! 3. File writing with atomic operations
 //! 4. Coordinate system transformations (visual -> matrix -> LED)
 
+mod fixtures;
+
 use chrono::Utc;
 use lazyqmk::config::{BuildConfig, Config, PathConfig, UiConfig};
 use lazyqmk::firmware::{FirmwareGenerator, FirmwareValidator};
@@ -446,6 +448,7 @@ fn create_test_layout() -> Layout {
         categories: vec![],
         uncolored_key_behavior: lazyqmk::models::UncoloredKeyBehavior::default(),
         idle_effect_settings: lazyqmk::models::IdleEffectSettings::default(),
+        rgb_overlay_ripple: lazyqmk::models::RgbOverlayRippleSettings::default(),
         tap_hold_settings: lazyqmk::models::TapHoldSettings::default(),
         rgb_enabled: true,
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),
@@ -1164,4 +1167,99 @@ fn test_tap_dance_mixed_two_and_three_way() {
         content.contains("ACTION_TAP_DANCE_FN_ADVANCED(NULL, td_three_finished, td_three_reset)"),
         "Should have 3-way macro"
     );
+}
+
+/// Test RGB overlay ripple code generation.
+#[test]
+fn test_rgb_overlay_ripple_generation() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let mut layout = test_layout_basic(2, 3);
+
+    // Enable RGB overlay ripple
+    layout.rgb_overlay_ripple.enabled = true;
+    layout.rgb_overlay_ripple.max_ripples = 4;
+    layout.rgb_overlay_ripple.duration_ms = 500;
+    layout.rgb_overlay_ripple.speed = 128;
+    layout.rgb_overlay_ripple.band_width = 3;
+    layout.rgb_overlay_ripple.amplitude_pct = 50;
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+
+    // Generate keymap.c
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    // Verify ripple overlay code is present
+    assert!(keymap_c.contains("#ifdef RGB_MATRIX_ENABLE"));
+    assert!(keymap_c.contains("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED"));
+    assert!(keymap_c.contains("typedef struct {"));
+    assert!(keymap_c.contains("ripple_t"));
+    assert!(keymap_c.contains("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES]"));
+    assert!(keymap_c.contains("static void lazyqmk_ripple_add(uint8_t led_index)"));
+    assert!(keymap_c.contains("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2)"));
+    assert!(
+        keymap_c.contains("static void lazyqmk_ripple_apply(uint8_t led_index, RGB *led_color)")
+    );
+    assert!(keymap_c
+        .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
+    assert!(keymap_c.contains("lazyqmk_ripple_apply(i, &color)"));
+
+    // Generate config.h
+    let config_h = generator
+        .generate_merged_config_h()
+        .expect("Should generate config.h");
+
+    // Verify ripple configuration defines are present
+    assert!(config_h.contains("RGB Overlay Ripple Configuration"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_OVERLAY_ENABLED"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_MAX_RIPPLES 4"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_DURATION_MS 500"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_SPEED 128"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_BAND_WIDTH 3"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_AMPLITUDE_PCT 50"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_TRIGGER_ON_PRESS 1"));
+}
+
+/// Test that ripple overlay code is NOT generated when disabled.
+#[test]
+fn test_rgb_overlay_ripple_disabled() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let layout = test_layout_basic(2, 3); // Ripple disabled by default
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+
+    // Generate keymap.c
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    // Verify ripple overlay code is NOT present
+    assert!(!keymap_c.contains("LQMK_RIPPLE_OVERLAY_ENABLED"));
+    assert!(!keymap_c.contains("lazyqmk_ripple_add"));
+
+    // Generate config.h
+    let config_h = generator
+        .generate_merged_config_h()
+        .expect("Should generate config.h");
+
+    // Verify ripple configuration defines are NOT present
+    assert!(!config_h.contains("RGB Overlay Ripple Configuration"));
+    assert!(!config_h.contains("#define LQMK_RIPPLE_OVERLAY_ENABLED"));
 }

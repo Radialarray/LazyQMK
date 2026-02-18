@@ -3243,7 +3243,7 @@ async fn create_layout(
 
     use crate::models::{
         IdleEffectSettings, KeyDefinition, Layer, LayoutMetadata, Position, RgbBrightness,
-        RgbColor, RgbSaturation, TapHoldSettings, UncoloredKeyBehavior,
+        RgbColor, RgbOverlayRippleSettings, RgbSaturation, TapHoldSettings, UncoloredKeyBehavior,
     };
 
     // Build key definitions from geometry
@@ -3300,6 +3300,7 @@ async fn create_layout(
         rgb_timeout_ms: 0,
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
         idle_effect_settings: IdleEffectSettings::default(),
+        rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
         tap_hold_settings: TapHoldSettings::default(),
         tap_dances: vec![],
     };

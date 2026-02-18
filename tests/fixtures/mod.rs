@@ -5,8 +5,8 @@ use chrono::{TimeZone, Utc};
 use lazyqmk::config::{BuildConfig, Config, PathConfig, UiConfig};
 use lazyqmk::models::{
     Category, IdleEffectSettings, KeyDefinition, KeyGeometry, KeyboardGeometry, Layer, Layout,
-    LayoutMetadata, Position, RgbBrightness, RgbColor, RgbMatrixEffect, RgbSaturation,
-    TapDanceAction, TapHoldSettings, UncoloredKeyBehavior, VisualLayoutMapping,
+    LayoutMetadata, Position, RgbBrightness, RgbColor, RgbMatrixEffect, RgbOverlayRippleSettings,
+    RgbSaturation, TapDanceAction, TapHoldSettings, UncoloredKeyBehavior, VisualLayoutMapping,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -116,6 +116,7 @@ pub fn test_layout_basic(rows: usize, cols: usize) -> Layout {
         rgb_timeout_ms: 0,
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
         idle_effect_settings: IdleEffectSettings::default(),
+        rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
         tap_hold_settings: TapHoldSettings::default(),
         tap_dances: vec![],
     }
@@ -225,8 +226,8 @@ pub fn test_geometry_basic(rows: usize, cols: usize) -> KeyboardGeometry {
                 matrix_position: (row as u8, col as u8),
                 led_index: layout_idx as u8,
                 layout_index: layout_idx as u8,
-                visual_x: col as f32 * 2.0,
-                visual_y: row as f32 * 2.0,
+                visual_x: col as f32,
+                visual_y: row as f32,
                 width: 1.0,
                 height: 1.0,
                 rotation: 0.0,

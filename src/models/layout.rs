@@ -328,6 +328,164 @@ impl IdleEffectSettings {
 }
 
 // ============================================================================
+// RGB Overlay Ripple Settings
+// ============================================================================
+
+/// Color mode for ripple overlay effects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RippleColorMode {
+    /// Use a fixed color for all ripples
+    #[default]
+    #[serde(rename = "fixed")]
+    Fixed,
+    /// Use the key's base color (from layer colors)
+    #[serde(rename = "key_based")]
+    KeyBased,
+    /// Shift the hue by a fixed amount from the key's base color
+    #[serde(rename = "hue_shift")]
+    HueShift,
+}
+
+/// Configuration for RGB overlay ripple effects.
+///
+/// Ripples are triggered on keypress and rendered as an additive overlay
+/// on top of the base TUI layer colors using `rgb_matrix_indicators_advanced_user`.
+#[allow(clippy::struct_excessive_bools)] // Configuration flags are naturally bools
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RgbOverlayRippleSettings {
+    /// Whether ripple overlay is enabled
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Maximum number of concurrent ripples (1-8)
+    /// Default: 4
+    #[serde(default = "default_max_ripples")]
+    pub max_ripples: u8,
+
+    /// Duration of each ripple in milliseconds
+    /// Default: 500ms
+    #[serde(default = "default_ripple_duration_ms")]
+    pub duration_ms: u16,
+
+    /// Speed multiplier (0-255, higher = faster expansion)
+    /// Default: 128
+    #[serde(default = "default_ripple_speed")]
+    pub speed: u8,
+
+    /// Band width in LED units
+    /// Default: 3
+    #[serde(default = "default_ripple_band_width")]
+    pub band_width: u8,
+
+    /// Amplitude as percentage of base brightness (0-100)
+    /// Default: 50
+    #[serde(default = "default_ripple_amplitude_pct")]
+    pub amplitude_pct: u8,
+
+    /// Color mode for ripples
+    #[serde(default)]
+    pub color_mode: RippleColorMode,
+
+    /// Fixed color (used when color_mode = Fixed)
+    #[serde(default = "default_ripple_fixed_color")]
+    pub fixed_color: RgbColor,
+
+    /// Hue shift in degrees (used when color_mode = HueShift)
+    /// Default: 60 (complementary color)
+    #[serde(default = "default_ripple_hue_shift")]
+    pub hue_shift_deg: i16,
+
+    /// Trigger on key press
+    #[serde(default = "default_true")]
+    pub trigger_on_press: bool,
+
+    /// Trigger on key release
+    #[serde(default)]
+    pub trigger_on_release: bool,
+
+    /// Ignore transparent keys (KC_TRNS)
+    #[serde(default = "default_true")]
+    pub ignore_transparent: bool,
+
+    /// Ignore modifier keys
+    #[serde(default)]
+    pub ignore_modifiers: bool,
+
+    /// Ignore layer switch keys
+    #[serde(default)]
+    pub ignore_layer_switch: bool,
+}
+
+const fn default_max_ripples() -> u8 {
+    4
+}
+
+const fn default_ripple_duration_ms() -> u16 {
+    500
+}
+
+const fn default_ripple_speed() -> u8 {
+    128
+}
+
+const fn default_ripple_band_width() -> u8 {
+    3
+}
+
+const fn default_ripple_amplitude_pct() -> u8 {
+    50
+}
+
+fn default_ripple_fixed_color() -> RgbColor {
+    RgbColor::new(0, 255, 255) // Cyan
+}
+
+const fn default_ripple_hue_shift() -> i16 {
+    60
+}
+
+const fn default_true() -> bool {
+    true
+}
+
+impl Default for RgbOverlayRippleSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            max_ripples: 4,
+            duration_ms: 500,
+            speed: 128,
+            band_width: 3,
+            amplitude_pct: 50,
+            color_mode: RippleColorMode::Fixed,
+            fixed_color: RgbColor::new(0, 255, 255),
+            hue_shift_deg: 60,
+            trigger_on_press: true,
+            trigger_on_release: false,
+            ignore_transparent: true,
+            ignore_modifiers: false,
+            ignore_layer_switch: false,
+        }
+    }
+}
+
+impl RgbOverlayRippleSettings {
+    /// Validates the settings.
+    pub fn validate(&self) -> Result<()> {
+        if self.max_ripples == 0 || self.max_ripples > 8 {
+            anyhow::bail!("max_ripples must be between 1 and 8");
+        }
+        if self.amplitude_pct > 100 {
+            anyhow::bail!("amplitude_pct must be between 0 and 100");
+        }
+        if self.hue_shift_deg < -180 || self.hue_shift_deg > 180 {
+            anyhow::bail!("hue_shift_deg must be between -180 and 180");
+        }
+        Ok(())
+    }
+}
+
+// ============================================================================
 // Tap Dance Settings
 // ============================================================================
 
@@ -923,6 +1081,11 @@ pub struct Layout {
     #[serde(default)]
     pub idle_effect_settings: IdleEffectSettings,
 
+    // === RGB Overlay Ripple Settings ===
+    /// RGB overlay ripple configuration
+    #[serde(default)]
+    pub rgb_overlay_ripple: RgbOverlayRippleSettings,
+
     // === Tap-Hold Settings ===
     /// Tap-hold configuration (LT, MT, TT timing and behavior)
     #[serde(default)]
@@ -954,6 +1117,7 @@ impl Layout {
             rgb_timeout_ms: 0,
             uncolored_key_behavior: UncoloredKeyBehavior::default(),
             idle_effect_settings: IdleEffectSettings::default(),
+            rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
             tap_hold_settings: TapHoldSettings::default(),
             tap_dances: Vec::new(),
         })

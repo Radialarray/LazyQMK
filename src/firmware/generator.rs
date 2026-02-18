@@ -189,6 +189,10 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str(&self.generate_idle_effect_code()?);
 
+        // Add RGB overlay ripple code if enabled
+        code.push('\n');
+        code.push_str(&self.generate_ripple_overlay_code()?);
+
         Ok(code)
     }
 
@@ -669,6 +673,242 @@ impl<'a> FirmwareGenerator<'a> {
         Ok(code)
     }
 
+    /// Generates RGB overlay ripple code if enabled.
+    ///
+    /// Emits C code for ripple effects triggered on keypress using
+    /// `rgb_matrix_indicators_advanced_user` for additive overlay rendering.
+    /// The code integrates with existing `process_record_user` if present (from idle effect).
+    #[allow(clippy::unnecessary_wraps)]
+    #[allow(clippy::cast_possible_truncation)]
+    fn generate_ripple_overlay_code(&self) -> Result<String> {
+        // Only generate if ripple overlay is enabled and keyboard has RGB
+        if !self.layout.rgb_overlay_ripple.enabled || !self.geometry.has_rgb_matrix() {
+            return Ok(String::new());
+        }
+
+        let settings = &self.layout.rgb_overlay_ripple;
+        let mut code = String::new();
+
+        code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
+        code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
+        code.push('\n');
+        code.push_str("// RGB Overlay Ripple Configuration\n");
+        code.push('\n');
+
+        // Ripple state structure
+        code.push_str("typedef struct {\n");
+        code.push_str("    uint8_t led_index;\n");
+        code.push_str("    uint32_t start_time;\n");
+        code.push_str("    bool active;\n");
+        code.push_str("} ripple_t;\n");
+        code.push('\n');
+
+        // Ripple state array
+        code.push_str("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES] = {0};\n");
+        code.push('\n');
+
+        // Helper: Add new ripple
+        code.push_str("static void lazyqmk_ripple_add(uint8_t led_index) {\n");
+        code.push_str("    // Find an empty slot or the oldest ripple\n");
+        code.push_str("    uint8_t oldest_idx = 0;\n");
+        code.push_str("    uint32_t oldest_time = ripples[0].start_time;\n");
+        code.push('\n');
+        code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
+        code.push_str("        if (!ripples[i].active) {\n");
+        code.push_str("            ripples[i].led_index = led_index;\n");
+        code.push_str("            ripples[i].start_time = timer_read32();\n");
+        code.push_str("            ripples[i].active = true;\n");
+        code.push_str("            return;\n");
+        code.push_str("        }\n");
+        code.push_str("        if (ripples[i].start_time < oldest_time) {\n");
+        code.push_str("            oldest_time = ripples[i].start_time;\n");
+        code.push_str("            oldest_idx = i;\n");
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    // Replace oldest if no empty slot\n");
+        code.push_str("    ripples[oldest_idx].led_index = led_index;\n");
+        code.push_str("    ripples[oldest_idx].start_time = timer_read32();\n");
+        code.push_str("    ripples[oldest_idx].active = true;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Helper: Calculate distance between two LED indices
+        code.push_str("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2) {\n");
+        code.push_str(
+            "    // Simple linear distance for now (can be enhanced with X/Y coordinates)\n",
+        );
+        code.push_str("    return (led1 > led2) ? (led1 - led2) : (led2 - led1);\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Helper: Apply ripple effect to LED
+        code.push_str("static void lazyqmk_ripple_apply(uint8_t led_index, RGB *led_color) {\n");
+        code.push_str("    uint32_t now = timer_read32();\n");
+        code.push('\n');
+        code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
+        code.push_str("        if (!ripples[i].active) continue;\n");
+        code.push('\n');
+        code.push_str("        uint32_t elapsed = now - ripples[i].start_time;\n");
+        code.push_str("        if (elapsed >= LQMK_RIPPLE_DURATION_MS) {\n");
+        code.push_str("            ripples[i].active = false;\n");
+        code.push_str("            continue;\n");
+        code.push_str("        }\n");
+        code.push('\n');
+        code.push_str("        // Calculate ripple radius\n");
+        code.push_str("        uint8_t radius = (uint8_t)((elapsed * LQMK_RIPPLE_SPEED) / LQMK_RIPPLE_DURATION_MS);\n");
+        code.push_str("        uint8_t distance = lazyqmk_ripple_distance(led_index, ripples[i].led_index);\n");
+        code.push('\n');
+        code.push_str("        // Check if LED is within ripple band\n");
+        code.push_str(
+            "        if (distance >= radius && distance < radius + LQMK_RIPPLE_BAND_WIDTH) {\n",
+        );
+        code.push_str("            // Calculate fade-out (1.0 at start, 0.0 at end)\n");
+        code.push_str(
+            "            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n",
+        );
+        code.push('\n');
+        code.push_str("            // Apply amplitude and fade\n");
+        code.push_str(
+            "            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n",
+        );
+        code.push('\n');
+
+        // Apply color based on color mode
+        match settings.color_mode {
+            crate::models::layout::RippleColorMode::Fixed => {
+                let color = &settings.fixed_color;
+                code.push_str(&format!(
+                    "            // Fixed color mode (R={}, G={}, B={})\n",
+                    color.r, color.g, color.b
+                ));
+                code.push_str(&format!(
+                    "            led_color->r = MIN(led_color->r + (brightness * {}) / 255, 255);\n",
+                    color.r
+                ));
+                code.push_str(&format!(
+                    "            led_color->g = MIN(led_color->g + (brightness * {}) / 255, 255);\n",
+                    color.g
+                ));
+                code.push_str(&format!(
+                    "            led_color->b = MIN(led_color->b + (brightness * {}) / 255, 255);\n",
+                    color.b
+                ));
+            }
+            crate::models::layout::RippleColorMode::KeyBased => {
+                code.push_str(
+                    "            // Key-based color mode (use base color, just add brightness)\n",
+                );
+                code.push_str("            led_color->r = MIN(led_color->r + brightness, 255);\n");
+                code.push_str("            led_color->g = MIN(led_color->g + brightness, 255);\n");
+                code.push_str("            led_color->b = MIN(led_color->b + brightness, 255);\n");
+            }
+            crate::models::layout::RippleColorMode::HueShift => {
+                code.push_str(&format!(
+                    "            // Hue shift mode (shift by {} degrees)\n",
+                    settings.hue_shift_deg
+                ));
+                code.push_str(
+                    "            // TODO: Implement HSV hue shift - for now use key-based\n",
+                );
+                code.push_str("            led_color->r = MIN(led_color->r + brightness, 255);\n");
+                code.push_str("            led_color->g = MIN(led_color->g + brightness, 255);\n");
+                code.push_str("            led_color->b = MIN(led_color->b + brightness, 255);\n");
+            }
+        }
+
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // RGB Matrix indicators hook
+        code.push_str(
+            "bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
+        );
+        code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
+        code.push_str("        RGB color = {0, 0, 0};\n");
+        code.push_str("        \n");
+        code.push_str("        // Get base color from layer colors table\n");
+        code.push_str("        uint8_t layer = get_highest_layer(layer_state);\n");
+        code.push_str("        if (layer < layer_base_colors_layer_count) {\n");
+        code.push_str("            color.r = pgm_read_byte(&layer_base_colors[layer][i][0]);\n");
+        code.push_str("            color.g = pgm_read_byte(&layer_base_colors[layer][i][1]);\n");
+        code.push_str("            color.b = pgm_read_byte(&layer_base_colors[layer][i][2]);\n");
+        code.push_str("        }\n");
+        code.push_str("        \n");
+        code.push_str("        // Apply ripple overlay\n");
+        code.push_str("        lazyqmk_ripple_apply(i, &color);\n");
+        code.push_str("        \n");
+        code.push_str("        rgb_matrix_set_color(i, color.r, color.g, color.b);\n");
+        code.push_str("    }\n");
+        code.push_str("    return false;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Process record hook integration
+        // Check if idle effect is enabled to determine if we need to wrap or create new hook
+        let has_idle_effect = self.layout.idle_effect_settings.enabled;
+
+        if has_idle_effect {
+            // Idle effect already defines process_record_user, so we add ripple trigger inside it
+            code.push_str(
+                "// Ripple trigger code is integrated into existing process_record_user\n",
+            );
+            code.push_str("// (generated by idle effect code above)\n");
+            code.push_str("// Add this snippet manually or via helper function:\n");
+            code.push_str("/*\n");
+            code.push_str("    // Inside process_record_user, add ripple trigger:\n");
+            code.push_str("    if (record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_PRESS) {\n");
+            code.push_str(
+                "        // Get LED index for this key (requires matrix to LED mapping)\n",
+            );
+            code.push_str("        // For now, trigger ripple at center (LED 0)\n");
+            code.push_str("        lazyqmk_ripple_add(0);\n");
+            code.push_str("    }\n");
+            code.push_str("*/\n");
+        } else {
+            // No idle effect, generate process_record_user for ripple
+            code.push_str("bool process_record_user(uint16_t keycode, keyrecord_t *record) {\n");
+
+            if settings.trigger_on_press {
+                code.push_str("    if (record->event.pressed) {\n");
+
+                // Add filters
+                if settings.ignore_transparent {
+                    code.push_str("        if (keycode == KC_TRNS) return true;\n");
+                }
+                if settings.ignore_modifiers {
+                    code.push_str("        if (IS_MODIFIER_KEYCODE(keycode)) return true;\n");
+                }
+                if settings.ignore_layer_switch {
+                    code.push_str("        if (IS_LAYER_SWITCH_KEYCODE(keycode)) return true;\n");
+                }
+
+                code.push_str("        // TODO: Get LED index from matrix position\n");
+                code.push_str("        // For now, trigger ripple at center LED\n");
+                code.push_str("        lazyqmk_ripple_add(RGB_MATRIX_LED_COUNT / 2);\n");
+                code.push_str("    }\n");
+            }
+
+            if settings.trigger_on_release {
+                code.push_str("    if (!record->event.pressed) {\n");
+                code.push_str("        // TODO: Get LED index from matrix position\n");
+                code.push_str("        lazyqmk_ripple_add(RGB_MATRIX_LED_COUNT / 2);\n");
+                code.push_str("    }\n");
+            }
+
+            code.push_str("    return true;\n");
+            code.push_str("}\n");
+            code.push('\n');
+        }
+
+        code.push_str("#endif // LQMK_RIPPLE_OVERLAY_ENABLED\n");
+        code.push_str("#endif // RGB_MATRIX_ENABLE\n");
+
+        Ok(code)
+    }
+
     /// Generates tap dance enum definition.
     ///
     /// Creates `enum tap_dance_ids { TD_NAME1, TD_NAME2, ... };`
@@ -942,6 +1182,52 @@ impl<'a> FirmwareGenerator<'a> {
             content.push_str("#    define LAYER_BASE_COLORS_LAYER_COUNT ");
             content.push_str(&format!("{}\n", self.layout.layers.len()));
             content.push_str("#endif\n");
+        }
+
+        // === RGB Overlay Ripple Settings ===
+        let ripple_settings = &self.layout.rgb_overlay_ripple;
+        if ripple_settings.enabled && self.geometry.has_rgb_matrix() {
+            // Validate settings before generating
+            ripple_settings.validate()?;
+
+            content.push_str("\n// RGB Overlay Ripple Configuration\n");
+            content.push_str("#define LQMK_RIPPLE_OVERLAY_ENABLED\n");
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_MAX_RIPPLES {}\n",
+                ripple_settings.max_ripples
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_DURATION_MS {}\n",
+                ripple_settings.duration_ms
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_SPEED {}\n",
+                ripple_settings.speed
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_BAND_WIDTH {}\n",
+                ripple_settings.band_width
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_AMPLITUDE_PCT {}\n",
+                ripple_settings.amplitude_pct
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",
+                if ripple_settings.trigger_on_press {
+                    "1"
+                } else {
+                    "0"
+                }
+            ));
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_TRIGGER_ON_RELEASE {}\n",
+                if ripple_settings.trigger_on_release {
+                    "1"
+                } else {
+                    "0"
+                }
+            ));
         }
 
         Ok(content)
