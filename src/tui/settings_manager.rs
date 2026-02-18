@@ -39,6 +39,8 @@ pub enum SettingGroup {
     Rgb,
     /// Tap-hold timing and behavior settings
     TapHold,
+    /// Two-key hold combo settings
+    Combos,
 }
 
 impl SettingGroup {
@@ -52,6 +54,7 @@ impl SettingGroup {
             Self::General => "General [Layout]",
             Self::Rgb => "RGB Lighting [Layout]",
             Self::TapHold => "Tap-Hold [Layout]",
+            Self::Combos => "Combos [Layout]",
         }
     }
 
@@ -156,6 +159,28 @@ pub enum SettingItem {
     FlowTapTerm,
     /// Use opposite-hand rule for tap-hold decision
     ChordalHold,
+
+    // === Combo Settings (Per-Layout) ===
+    /// Master switch for combo feature
+    CombosEnabled,
+    /// Configure Combo 1: Disable Effects - First key position
+    Combo1Key1,
+    /// Configure Combo 1: Disable Effects - Second key position
+    Combo1Key2,
+    /// Configure Combo 1: Disable Effects - Hold duration in milliseconds
+    Combo1HoldDuration,
+    /// Configure Combo 2: Disable Lighting - First key position
+    Combo2Key1,
+    /// Configure Combo 2: Disable Lighting - Second key position
+    Combo2Key2,
+    /// Configure Combo 2: Disable Lighting - Hold duration in milliseconds
+    Combo2HoldDuration,
+    /// Configure Combo 3: Bootloader - First key position
+    Combo3Key1,
+    /// Configure Combo 3: Bootloader - Second key position
+    Combo3Key2,
+    /// Configure Combo 3: Bootloader - Hold duration in milliseconds
+    Combo3HoldDuration,
 }
 
 impl SettingItem {
@@ -209,6 +234,17 @@ impl SettingItem {
             Self::TappingToggle,
             Self::FlowTapTerm,
             Self::ChordalHold,
+            // Combos (Per-Layout)
+            Self::CombosEnabled,
+            Self::Combo1Key1,
+            Self::Combo1Key2,
+            Self::Combo1HoldDuration,
+            Self::Combo2Key1,
+            Self::Combo2Key2,
+            Self::Combo2HoldDuration,
+            Self::Combo3Key1,
+            Self::Combo3Key2,
+            Self::Combo3HoldDuration,
         ]
     }
 
@@ -255,6 +291,16 @@ impl SettingItem {
             | Self::TappingToggle
             | Self::FlowTapTerm
             | Self::ChordalHold => SettingGroup::TapHold,
+            Self::CombosEnabled
+            | Self::Combo1Key1
+            | Self::Combo1Key2
+            | Self::Combo1HoldDuration
+            | Self::Combo2Key1
+            | Self::Combo2Key2
+            | Self::Combo2HoldDuration
+            | Self::Combo3Key1
+            | Self::Combo3Key2
+            | Self::Combo3HoldDuration => SettingGroup::Combos,
         }
     }
 
@@ -303,6 +349,17 @@ impl SettingItem {
             Self::TappingToggle => "Tapping Toggle",
             Self::FlowTapTerm => "Flow Tap Term",
             Self::ChordalHold => "Chordal Hold",
+            // Combo Settings
+            Self::CombosEnabled => "Combos Enabled",
+            Self::Combo1Key1 => "Combo 1 Key 1 (Disable Effects)",
+            Self::Combo1Key2 => "Combo 1 Key 2 (Disable Effects)",
+            Self::Combo1HoldDuration => "Combo 1 Hold Duration",
+            Self::Combo2Key1 => "Combo 2 Key 1 (Disable Lighting)",
+            Self::Combo2Key2 => "Combo 2 Key 2 (Disable Lighting)",
+            Self::Combo2HoldDuration => "Combo 2 Hold Duration",
+            Self::Combo3Key1 => "Combo 3 Key 1 (Bootloader)",
+            Self::Combo3Key2 => "Combo 3 Key 2 (Bootloader)",
+            Self::Combo3HoldDuration => "Combo 3 Hold Duration",
         }
     }
 
@@ -365,6 +422,17 @@ impl SettingItem {
             Self::TappingToggle => "Number of taps to toggle layer with TT() keys (1-10)",
             Self::FlowTapTerm => "Rapid typing window to prevent accidental modifiers",
             Self::ChordalHold => "Use opposite-hand rule for tap-hold (great for HRM)",
+            // Combo Settings
+            Self::CombosEnabled => "Master switch for combo feature (two-key hold actions)",
+            Self::Combo1Key1 => "First key position for Combo 1 (Disable RGB Effects)",
+            Self::Combo1Key2 => "Second key position for Combo 1 (Disable RGB Effects)",
+            Self::Combo1HoldDuration => "Hold duration in milliseconds for Combo 1 (50-2000ms)",
+            Self::Combo2Key1 => "First key position for Combo 2 (Disable All Lighting)",
+            Self::Combo2Key2 => "Second key position for Combo 2 (Disable All Lighting)",
+            Self::Combo2HoldDuration => "Hold duration in milliseconds for Combo 2 (50-2000ms)",
+            Self::Combo3Key1 => "First key position for Combo 3 (Enter Bootloader)",
+            Self::Combo3Key2 => "Second key position for Combo 3 (Enter Bootloader)",
+            Self::Combo3HoldDuration => "Hold duration in milliseconds for Combo 3 (50-2000ms)",
         }
     }
 
@@ -441,6 +509,13 @@ pub enum ManagerMode {
     SelectingRippleColorMode {
         /// Currently highlighted option index
         selected_option: usize,
+    },
+    /// Selecting a key position (for combo configuration)
+    SelectingKeyPosition {
+        /// Which setting is being configured
+        setting: SettingItem,
+        /// Instruction message to show
+        instruction: String,
     },
 }
 
@@ -694,6 +769,14 @@ impl SettingsManagerState {
         self.mode = ManagerMode::SelectingRippleColorMode { selected_option };
     }
 
+    /// Start selecting a key position (for combo configuration)
+    pub fn start_selecting_key_position(&mut self, setting: SettingItem, instruction: String) {
+        self.mode = ManagerMode::SelectingKeyPosition {
+            setting,
+            instruction,
+        };
+    }
+
     /// Handle character input for string/path editing
     pub fn handle_string_char_input(&mut self, c: char) {
         match &mut self.mode {
@@ -839,6 +922,11 @@ impl SettingsManager {
             }
             ManagerMode::SelectingRippleColorMode { .. } => {
                 self.handle_ripple_color_mode_selection(key)
+            }
+            ManagerMode::SelectingKeyPosition { .. } => {
+                // Key position selection is handled by the parent (main app input handler)
+                // because it needs access to keyboard navigation state
+                None
             }
         }
     }
@@ -1230,6 +1318,12 @@ pub fn render_settings_manager(
         ManagerMode::SelectingRippleColorMode { selected_option } => {
             render_ripple_color_mode_selector(f, inner_area, *selected_option, theme);
         }
+        ManagerMode::SelectingKeyPosition {
+            setting,
+            instruction,
+        } => {
+            render_key_position_selector(f, inner_area, *setting, instruction, theme);
+        }
     }
 }
 
@@ -1545,6 +1639,73 @@ fn get_setting_value_display(
             None => "Disabled".to_string(),
         },
         SettingItem::ChordalHold => if tap_hold.chordal_hold { "On" } else { "Off" }.to_string(),
+        // Per-Layout: Combo Settings
+        SettingItem::CombosEnabled => {
+            if let Some(layout) = layout {
+                if layout.combo_settings.enabled {
+                    "On"
+                } else {
+                    "Off"
+                }
+                .to_string()
+            } else {
+                "Off".to_string()
+            }
+        }
+        SettingItem::Combo1Key1 => layout
+            .and_then(|l| l.combo_settings.combos.first())
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key1.row, c.key1.col),
+            ),
+        SettingItem::Combo1Key2 => layout
+            .and_then(|l| l.combo_settings.combos.first())
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key2.row, c.key2.col),
+            ),
+        SettingItem::Combo1HoldDuration => layout
+            .and_then(|l| l.combo_settings.combos.first())
+            .map_or_else(
+                || "500ms".to_string(),
+                |c| format!("{}ms", c.hold_duration_ms),
+            ),
+        SettingItem::Combo2Key1 => layout
+            .and_then(|l| l.combo_settings.combos.get(1))
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key1.row, c.key1.col),
+            ),
+        SettingItem::Combo2Key2 => layout
+            .and_then(|l| l.combo_settings.combos.get(1))
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key2.row, c.key2.col),
+            ),
+        SettingItem::Combo2HoldDuration => layout
+            .and_then(|l| l.combo_settings.combos.get(1))
+            .map_or_else(
+                || "500ms".to_string(),
+                |c| format!("{}ms", c.hold_duration_ms),
+            ),
+        SettingItem::Combo3Key1 => layout
+            .and_then(|l| l.combo_settings.combos.get(2))
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key1.row, c.key1.col),
+            ),
+        SettingItem::Combo3Key2 => layout
+            .and_then(|l| l.combo_settings.combos.get(2))
+            .map_or_else(
+                || "<not set>".to_string(),
+                |c| format!("({}, {})", c.key2.row, c.key2.col),
+            ),
+        SettingItem::Combo3HoldDuration => layout
+            .and_then(|l| l.combo_settings.combos.get(2))
+            .map_or_else(
+                || "500ms".to_string(),
+                |c| format!("{}ms", c.hold_duration_ms),
+            ),
     }
 }
 
@@ -2080,6 +2241,72 @@ fn render_ripple_color_mode_selector(f: &mut Frame, area: Rect, selected: usize,
         selected,
         theme,
     );
+}
+
+/// Render key position selector instruction
+fn render_key_position_selector(
+    f: &mut Frame,
+    area: Rect,
+    setting: SettingItem,
+    instruction: &str,
+    theme: &Theme,
+) {
+    let chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(3),    // Instructions
+            Constraint::Length(4), // Help
+        ])
+        .split(area);
+
+    // Title
+    let title = Paragraph::new(vec![Line::from(vec![
+        Span::styled("Select Key Position: ", Style::default().fg(theme.primary)),
+        Span::styled(setting.display_name(), Style::default().fg(theme.accent)),
+    ])])
+    .alignment(Alignment::Center);
+    f.render_widget(title, chunks[0]);
+
+    // Instructions
+    let instructions = Paragraph::new(vec![
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            instruction,
+            Style::default().fg(theme.text),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Use arrow keys to navigate the keyboard below",
+            Style::default().fg(theme.text_muted),
+        )]),
+    ])
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Instructions")
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(instructions, chunks[1]);
+
+    // Help
+    let help = Paragraph::new(vec![Line::from(vec![
+        Span::styled("Arrow Keys", Style::default().fg(theme.primary)),
+        Span::raw(": Navigate  "),
+        Span::styled("Enter", Style::default().fg(theme.primary)),
+        Span::raw(": Select Key  "),
+        Span::styled("Esc", Style::default().fg(theme.primary)),
+        Span::raw(": Cancel"),
+    ])])
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Controls")
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(help, chunks[2]);
 }
 
 /// Render boolean toggle

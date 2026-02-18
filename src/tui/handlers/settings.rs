@@ -14,6 +14,22 @@ use crate::tui::{ActiveComponent, AppState, PopupType};
 
 /// Handle input for settings manager using Component trait pattern
 pub fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    // Check if we're in key position selection mode
+    let is_selecting_key_position =
+        if let Some(ActiveComponent::SettingsManager(ref manager)) = state.active_component {
+            matches!(
+                manager.state().mode,
+                ManagerMode::SelectingKeyPosition { .. }
+            )
+        } else {
+            false
+        };
+
+    // Handle key position selection mode separately
+    if is_selecting_key_position {
+        return handle_key_position_selection(state, key);
+    }
+
     // Check if we're in browsing mode and handle Enter key specially
     let is_browsing =
         if let Some(ActiveComponent::SettingsManager(ref manager)) = state.active_component {
@@ -48,6 +64,66 @@ pub fn handle_settings_manager_input(state: &mut AppState, key: event::KeyEvent)
         }
     }
     Ok(false)
+}
+
+/// Handle key position selection mode
+fn handle_key_position_selection(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    match key.code {
+        event::KeyCode::Esc => {
+            // Cancel selection and return to browsing
+            if let Some(ActiveComponent::SettingsManager(ref mut manager)) = state.active_component
+            {
+                manager.state_mut().cancel();
+                state.set_status("Key position selection cancelled");
+            }
+            Ok(false)
+        }
+        event::KeyCode::Enter => {
+            // Apply the selected position
+            if let Some(ActiveComponent::SettingsManager(ref manager)) = state.active_component {
+                if let ManagerMode::SelectingKeyPosition { setting, .. } = &manager.state().mode {
+                    let setting = *setting;
+                    // Apply the key position
+                    apply_combo_key_position(state, setting);
+                }
+            }
+            // Return to browsing mode
+            if let Some(ActiveComponent::SettingsManager(ref mut manager)) = state.active_component
+            {
+                manager.state_mut().cancel();
+            }
+            Ok(false)
+        }
+        event::KeyCode::Up | event::KeyCode::Char('k') => {
+            // Navigate keyboard up
+            if let Some(new_pos) = state.mapping.find_position_up(state.selected_position) {
+                state.selected_position = new_pos;
+            }
+            Ok(false)
+        }
+        event::KeyCode::Down | event::KeyCode::Char('j') => {
+            // Navigate keyboard down
+            if let Some(new_pos) = state.mapping.find_position_down(state.selected_position) {
+                state.selected_position = new_pos;
+            }
+            Ok(false)
+        }
+        event::KeyCode::Left | event::KeyCode::Char('h') => {
+            // Navigate keyboard left
+            if let Some(new_pos) = state.mapping.find_position_left(state.selected_position) {
+                state.selected_position = new_pos;
+            }
+            Ok(false)
+        }
+        event::KeyCode::Right | event::KeyCode::Char('l') => {
+            // Navigate keyboard right
+            if let Some(new_pos) = state.mapping.find_position_right(state.selected_position) {
+                state.selected_position = new_pos;
+            }
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
 }
 
 /// Handle Enter key while browsing settings (triggers editing or opens pickers)
@@ -392,6 +468,65 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.ignore_transparent,
                     );
                 }
+                // Combo Settings
+                SettingItem::CombosEnabled => {
+                    manager
+                        .state_mut()
+                        .start_toggling_boolean(*setting, state.layout.combo_settings.enabled);
+                }
+                SettingItem::Combo1Key1
+                | SettingItem::Combo1Key2
+                | SettingItem::Combo2Key1
+                | SettingItem::Combo2Key2
+                | SettingItem::Combo3Key1
+                | SettingItem::Combo3Key2 => {
+                    // Signal to parent to enter key selection mode
+                    // The parent will handle the actual key navigation
+                    manager.state_mut().start_selecting_key_position(
+                        *setting,
+                        format!(
+                            "Navigate keyboard and press Enter to select {}",
+                            setting.display_name()
+                        ),
+                    );
+                    state.set_status("Navigate to key position and press Enter to select");
+                }
+                SettingItem::Combo1HoldDuration => {
+                    let current = state
+                        .layout
+                        .combo_settings
+                        .combos
+                        .first()
+                        .map(|c| c.hold_duration_ms)
+                        .unwrap_or(500);
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current, 50, 2000);
+                }
+                SettingItem::Combo2HoldDuration => {
+                    let current = state
+                        .layout
+                        .combo_settings
+                        .combos
+                        .get(1)
+                        .map(|c| c.hold_duration_ms)
+                        .unwrap_or(500);
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current, 50, 2000);
+                }
+                SettingItem::Combo3HoldDuration => {
+                    let current = state
+                        .layout
+                        .combo_settings
+                        .combos
+                        .get(2)
+                        .map(|c| c.hold_duration_ms)
+                        .unwrap_or(500);
+                    manager
+                        .state_mut()
+                        .start_editing_numeric(*setting, current, 50, 2000);
+                }
             }
             state.set_status("Select option with ↑↓, Enter to apply");
         }
@@ -537,6 +672,10 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                     }
                 }
             }
+            crate::tui::settings_manager::ManagerMode::SelectingKeyPosition { setting, .. } => {
+                // Key position was selected - apply it to the appropriate combo
+                apply_combo_key_position(state, *setting);
+            }
             crate::tui::settings_manager::ManagerMode::Browsing => {}
         }
     }
@@ -673,6 +812,16 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
             state.layout.rgb_overlay_ripple.hue_shift_deg = value as i16;
             state.set_status(format!("Overlay ripple hue shift set to: {value}°"));
         }
+        // Combo Settings - Hold Durations
+        SettingItem::Combo1HoldDuration => {
+            update_combo_hold_duration(state, 0, value);
+        }
+        SettingItem::Combo2HoldDuration => {
+            update_combo_hold_duration(state, 1, value);
+        }
+        SettingItem::Combo3HoldDuration => {
+            update_combo_hold_duration(state, 2, value);
+        }
         _ => {}
     }
 }
@@ -747,6 +896,12 @@ fn apply_boolean_setting(state: &mut AppState, setting: SettingItem, value: bool
                 "Overlay ripple ignore transparent set to: {display}"
             ));
         }
+        // Combo Settings
+        SettingItem::CombosEnabled => {
+            state.layout.combo_settings.enabled = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Combos enabled set to: {display}"));
+        }
         _ => {}
     }
 }
@@ -810,5 +965,86 @@ fn theme_mode_display(mode: crate::config::ThemeMode) -> &'static str {
         crate::config::ThemeMode::Auto => "Auto",
         crate::config::ThemeMode::Dark => "Dark",
         crate::config::ThemeMode::Light => "Light",
+    }
+}
+
+/// Apply a key position to a combo setting
+fn apply_combo_key_position(state: &mut AppState, setting: SettingItem) {
+    use crate::models::{ComboAction, ComboDefinition, Position};
+
+    let position = state.selected_position;
+
+    // Determine which combo and which key
+    let (combo_idx, is_key1) = match setting {
+        SettingItem::Combo1Key1 => (0, true),
+        SettingItem::Combo1Key2 => (0, false),
+        SettingItem::Combo2Key1 => (1, true),
+        SettingItem::Combo2Key2 => (1, false),
+        SettingItem::Combo3Key1 => (2, true),
+        SettingItem::Combo3Key2 => (2, false),
+        _ => return,
+    };
+
+    // Ensure combo exists, create if needed
+    while state.layout.combo_settings.combos.len() <= combo_idx {
+        let action = match combo_idx {
+            0 => ComboAction::DisableEffects,
+            1 => ComboAction::DisableLighting,
+            2 => ComboAction::Bootloader,
+            _ => ComboAction::DisableEffects,
+        };
+        // Create a new combo with placeholder position
+        let combo = ComboDefinition::new(
+            Position { row: 0, col: 0 },
+            Position { row: 0, col: 0 },
+            action,
+        );
+        state.layout.combo_settings.combos.push(combo);
+    }
+
+    // Update the specified key
+    if let Some(combo) = state.layout.combo_settings.combos.get_mut(combo_idx) {
+        if is_key1 {
+            combo.key1 = position;
+        } else {
+            combo.key2 = position;
+        }
+        state.mark_dirty();
+        state.set_status(format!(
+            "{} set to position ({}, {})",
+            setting.display_name(),
+            position.row,
+            position.col
+        ));
+    }
+}
+
+/// Update hold duration for a combo
+fn update_combo_hold_duration(state: &mut AppState, combo_idx: usize, duration_ms: u16) {
+    use crate::models::{ComboAction, ComboDefinition, Position};
+
+    // Ensure combo exists
+    while state.layout.combo_settings.combos.len() <= combo_idx {
+        let action = match combo_idx {
+            0 => ComboAction::DisableEffects,
+            1 => ComboAction::DisableLighting,
+            2 => ComboAction::Bootloader,
+            _ => ComboAction::DisableEffects,
+        };
+        let combo = ComboDefinition::new(
+            Position { row: 0, col: 0 },
+            Position { row: 0, col: 0 },
+            action,
+        );
+        state.layout.combo_settings.combos.push(combo);
+    }
+
+    if let Some(combo) = state.layout.combo_settings.combos.get_mut(combo_idx) {
+        combo.hold_duration_ms = duration_ms;
+        state.set_status(format!(
+            "Combo {} hold duration set to: {}ms",
+            combo_idx + 1,
+            duration_ms
+        ));
     }
 }
