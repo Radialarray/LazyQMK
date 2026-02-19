@@ -369,10 +369,61 @@ Before committing changes:
 - Use `cargo check` for faster iteration than `cargo build`
 - Use `cargo clippy -- -W clippy::pedantic` for strict linting
 
+### Docker Configuration
+
+#### Rust Version Pinning
+
+LazyQMK Docker images use **Rust 1.92** for consistent, reproducible builds across platforms:
+
+- **Dockerfile (production)**: `FROM rust:1.92-bookworm`
+- **Dockerfile.dev (development)**: `FROM rust:1.92-bookworm`
+- **Rationale**: Verified compatibility, stable baseline, meets 1.91.1+ requirement
+- **CI uses stable**: To catch future compatibility issues early
+
+**Why pin in Docker but use stable in CI?**
+- Docker: Reproducible production builds, stable deployment baseline
+- CI: Early detection of breaking changes in newer Rust versions
+- Local: Flexible (rust-toolchain.toml uses "stable")
+
+**When to update the pin:**
+1. Test locally with new version: `rustup override set 1.93.0 && cargo test --all-features`
+2. Test Docker build: `docker build -f Dockerfile -t test .`
+3. Test on all platforms (via CI or manually)
+4. Update both Dockerfile and Dockerfile.dev
+5. Document in [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md)
+
+#### Node.js Installation Security
+
+The Dockerfile installs Node.js using the official NodeSource setup script:
+
+```dockerfile
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh \
+    && bash /tmp/nodesource_setup.sh \
+    && apt-get install -y nodejs
+```
+
+**Why this approach:**
+- Official recommended method from NodeSource
+- Industry standard, widely used in production
+- HTTPS download with `-fsSL` flags for security
+- Script saved to file before execution (auditable)
+- Simpler than multi-stage Node build
+
+**Security considerations:**
+- Script is verified over HTTPS
+- Alternative approaches documented in [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md)
+- Open to improvement if security concerns arise
+
+**See also:**
+- [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md) - Complete Docker build documentation
+- [docs/DOCKER_QMK_SETUP.md](docs/DOCKER_QMK_SETUP.md) - QMK firmware integration
+
 ### Resources
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete technical architecture
 - [FEATURES.md](docs/FEATURES.md) - All implemented features
 - [QUICKSTART.md](QUICKSTART.md) - User guide
+- [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md) - Docker build configuration
+- [docs/DOCKER_QMK_SETUP.md](docs/DOCKER_QMK_SETUP.md) - Docker QMK setup
 - Historical work: Use `bd list --status=closed` to view completed specs and features
 
 <!-- MANUAL ADDITIONS END -->

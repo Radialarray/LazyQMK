@@ -1,7 +1,9 @@
 # LazyQMK Development Dockerfile
 # For local development with cargo-watch
 
-FROM rust:1.83-bookworm
+# Use same Rust version as production Dockerfile for consistency
+# Rust 1.92 is required for successful builds (see AGENTS.md)
+FROM rust:1.92-bookworm
 
 WORKDIR /app
 

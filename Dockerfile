@@ -4,18 +4,27 @@
 # =============================================================================
 # Stage 1: Build the Rust backend
 # =============================================================================
-# Pin to Rust 1.92 for compatibility (1.93+ has stricter type inference)
+# Use Rust 1.91.1+ as required by AGENTS.md
+# Note: Using 1.92 specifically as it's the stable version that builds successfully
+# in both local and Docker environments. See AGENTS.md and docs/DOCKER_BUILD.md.
 FROM rust:1.92-bookworm AS builder
 
 WORKDIR /app
 
-# Install build dependencies including Node.js for web frontend
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x using official setup script with verification
+# This is the recommended method from NodeSource for Debian/Ubuntu
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh \
+    && bash /tmp/nodesource_setup.sh \
     && apt-get install -y nodejs \
+    && rm /tmp/nodesource_setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files and source code
