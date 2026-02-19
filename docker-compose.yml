@@ -1,5 +1,23 @@
 # LazyQMK Docker Compose Configuration
 # Supports both development and production profiles
+#
+# Quick Start:
+#   1. Initialize QMK firmware submodule: git submodule update --init --recursive qmk_firmware
+#   2. Start services: docker compose up -d
+#   3. Access services:
+#      - Frontend: http://localhost:5173
+#      - Backend API: http://localhost:3001
+#      - QMK Editor: http://localhost:8080
+#
+# Configuration:
+#   - Copy .env.example to .env and customize as needed
+#   - See docs/DOCKER_QMK_SETUP.md for QMK firmware setup options
+#   - See web/SETUP.md for development setup
+#
+# Profiles:
+#   - Production: docker compose up (default)
+#   - Development: docker compose --profile dev up (with hot-reload)
+
 
 name: lazyqmk
 
@@ -20,10 +38,23 @@ services:
       - LAZYQMK_PORT=3001
     volumes:
       # Mount workspace for layout files (required)
+      # Default: ./examples (included example layouts)
+      # Override: Set LAZYQMK_WORKSPACE env var to your layouts directory
+      # Example: LAZYQMK_WORKSPACE=~/my-layouts docker compose up
       - ${LAZYQMK_WORKSPACE:-./examples}:/app/workspace:rw
-      # Mount QMK firmware (required for keyboard geometry)
+      
+      # Mount QMK firmware (required for keyboard geometry and compilation)
+      # Default: ./qmk_firmware (git submodule, run: git submodule update --init)
+      # Override: Set QMK_FIRMWARE_PATH to your QMK firmware directory
+      # Example: QMK_FIRMWARE_PATH=~/qmk_firmware docker compose up
+      # Size: ~1.1 GB (not included in Docker image to keep it small)
+      # See: docs/DOCKER_QMK_SETUP.md for setup options
       - ${QMK_FIRMWARE_PATH:-./qmk_firmware}:/app/qmk_firmware:ro
+      
       # Mount LazyQMK config directory (optional, for persisting settings)
+      # Default: Named Docker volume (managed by Docker)
+      # Override: Set LAZYQMK_CONFIG_DIR to a host path for direct access
+      # Example: LAZYQMK_CONFIG_DIR=~/.config/LazyQMK docker compose up
       - ${LAZYQMK_CONFIG_DIR:-lazyqmk-config}:/home/lazyqmk/.config/LazyQMK:rw
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -92,15 +123,18 @@ services:
       - LAZYQMK_HOST=0.0.0.0
       - LAZYQMK_PORT=3001
     volumes:
-      # Mount source for live reloading
+      # Mount source for live reloading (development only)
       - ./src:/app/src:ro
       - ./Cargo.toml:/app/Cargo.toml:ro
       - ./Cargo.lock:/app/Cargo.lock:ro
+      
       # Mount workspace for layout files
       - ${LAZYQMK_WORKSPACE:-./examples}:/app/workspace:rw
-      # Mount QMK firmware
+      
+      # Mount QMK firmware (see backend service comments for details)
       - ${QMK_FIRMWARE_PATH:-./qmk_firmware}:/app/qmk_firmware:ro
-      # Cargo cache for faster rebuilds
+      
+      # Cargo cache for faster rebuilds (development only)
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/app/target
     networks:

@@ -530,7 +530,21 @@ The web interface uses the same layout directory as the TUI:
 - **Windows**: `%APPDATA%\LazyQMK\layouts\`
 
 **Docker (Optional):**
-For containerized deployment, see [web/SETUP.md](web/SETUP.md) for Docker instructions.
+For containerized deployment:
+```bash
+# First-time setup: Initialize QMK firmware submodule
+git submodule update --init --recursive qmk_firmware
+
+# Start all services
+docker compose up -d
+
+# Access:
+# - LazyQMK Web UI: http://localhost:5173
+# - Backend API: http://localhost:3001
+# - QMK Editor: http://localhost:8080
+```
+
+For detailed Docker setup, volume configuration, and troubleshooting, see [`docs/DOCKER_QMK_SETUP.md`](docs/DOCKER_QMK_SETUP.md).
 
 ### QMK Editor Integration
 
@@ -569,6 +583,8 @@ See [docs/QMK_EDITOR.md](docs/QMK_EDITOR.md) for the complete guide.
 - [Example Layout](examples/corne_choc_pro_layout.md) - Reference Corne layout
 - [Architecture Guide](docs/ARCHITECTURE.md) - Technical architecture details
 - [Features Documentation](docs/FEATURES.md) - Complete feature list
+- [Docker QMK Setup](docs/DOCKER_QMK_SETUP.md) - Docker Compose and QMK firmware integration guide
+- [Web Deployment](docs/WEB_DEPLOYMENT.md) - Production deployment guide
 
 ## 📄 License
 

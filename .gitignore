@@ -21,6 +21,7 @@ release/
 .env
 .env.*
 !.env.example
+!web/.env.example
 
 # Build artifacts
 Cargo.lock
