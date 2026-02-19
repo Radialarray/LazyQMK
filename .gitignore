@@ -54,3 +54,4 @@ web/playwright/.cache/
 web/src-tauri/target/
 web/src-tauri/gen/
 web/src-tauri/Cargo.lock
+tmp/
