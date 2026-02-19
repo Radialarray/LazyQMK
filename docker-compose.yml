@@ -59,6 +59,22 @@ services:
     networks:
       - lazyqmk-network
 
+  # ==========================================================================
+  # QMK Configurator - Official QMK Web-Based Editor
+  # ==========================================================================
+  qmk-editor:
+    image: qmkfm/qmk_configurator:latest
+    container_name: lazyqmk-qmk-editor
+    ports:
+      - "8080:80"
+    environment:
+      # API endpoint for QMK Configurator backend (uses public API by default)
+      # Can be overridden to use a local qmk_api instance
+      - VITE_API_URL=https://api.qmk.fm
+    restart: unless-stopped
+    networks:
+      - lazyqmk-network
+
 # =============================================================================
 # Development Profile
 # =============================================================================
