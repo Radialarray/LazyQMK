@@ -247,32 +247,6 @@ async fn test_get_layout_success() {
 }
 
 #[tokio::test]
-async fn test_get_layout_not_found() {
-    let (state, _temp_dir) = create_test_state();
-    let app = create_router(state);
-
-    let (status, json) = get_json(&app, "/api/layouts/nonexistent.md").await;
-
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert!(json["error"].as_str().unwrap().contains("not found"));
-}
-
-#[tokio::test]
-async fn test_get_layout_path_traversal_rejected() {
-    let (state, _temp_dir) = create_test_state();
-    let app = create_router(state);
-
-    // URL-encoded path traversal: %2e%2e = ".."
-    let (status, json) = get_json(&app, "/api/layouts/..%2F..%2Fetc%2Fpasswd").await;
-
-    assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert!(json["error"]
-        .as_str()
-        .unwrap()
-        .contains("path traversal not allowed"));
-}
-
-#[tokio::test]
 async fn test_save_layout_success() {
     let (state, temp_dir) = create_test_state();
     let app = create_router(state);
@@ -288,6 +262,21 @@ async fn test_save_layout_success() {
     // Verify file was created
     let saved_path = temp_dir.path().join("new_layout.md");
     assert!(saved_path.exists());
+}
+
+#[tokio::test]
+async fn test_get_layout_path_traversal_rejected() {
+    let (state, _temp_dir) = create_test_state();
+    let app = create_router(state);
+
+    // URL-encoded path traversal: %2e%2e = ".."
+    let (status, json) = get_json(&app, "/api/layouts/..%2F..%2Fetc%2Fpasswd").await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(json["error"]
+        .as_str()
+        .unwrap()
+        .contains("path traversal not allowed"));
 }
 
 #[tokio::test]

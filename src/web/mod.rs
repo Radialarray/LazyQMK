@@ -740,7 +740,7 @@ impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
     }
 }
 
-/// Combo definition for API.
+/// Combo definition for API (legacy, unused).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComboDto {
     /// Unique combo identifier.
@@ -751,6 +751,76 @@ pub struct ComboDto {
     pub keys: Vec<String>,
     /// Output keycode.
     pub output: String,
+}
+
+/// Combo action for two-key hold combos.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ComboActionDto {
+    /// Disable RGB effects and revert to TUI layer colors.
+    DisableEffects,
+    /// Turn off all RGB lighting completely.
+    DisableLighting,
+    /// Enter bootloader mode for firmware flashing.
+    Bootloader,
+}
+
+impl From<&crate::models::ComboAction> for ComboActionDto {
+    fn from(action: &crate::models::ComboAction) -> Self {
+        match action {
+            crate::models::ComboAction::DisableEffects => Self::DisableEffects,
+            crate::models::ComboAction::DisableLighting => Self::DisableLighting,
+            crate::models::ComboAction::Bootloader => Self::Bootloader,
+        }
+    }
+}
+
+/// Two-key hold combo definition for API.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComboDefinitionDto {
+    /// First key position (row, col).
+    pub key1: crate::models::Position,
+    /// Second key position (row, col).
+    pub key2: crate::models::Position,
+    /// Action to perform when combo is held.
+    pub action: ComboActionDto,
+    /// Duration in milliseconds both keys must be held to activate.
+    pub hold_duration_ms: u16,
+}
+
+impl From<&crate::models::ComboDefinition> for ComboDefinitionDto {
+    fn from(combo: &crate::models::ComboDefinition) -> Self {
+        Self {
+            key1: combo.key1,
+            key2: combo.key2,
+            action: ComboActionDto::from(&combo.action),
+            hold_duration_ms: combo.hold_duration_ms,
+        }
+    }
+}
+
+/// Combo settings for API.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComboSettingsDto {
+    /// Whether combo feature is enabled.
+    #[serde(default)]
+    pub enabled: bool,
+    /// List of combo definitions (max 3).
+    #[serde(default)]
+    pub combos: Vec<ComboDefinitionDto>,
+}
+
+impl From<&ComboSettings> for ComboSettingsDto {
+    fn from(settings: &ComboSettings) -> Self {
+        Self {
+            enabled: settings.enabled,
+            combos: settings
+                .combos
+                .iter()
+                .map(ComboDefinitionDto::from)
+                .collect(),
+        }
+    }
 }
 
 /// RGB matrix effects list.
@@ -872,6 +942,8 @@ pub struct LayoutDto {
     pub tap_hold_settings: TapHoldSettingsDto,
     /// Tap dance definitions
     pub tap_dances: Vec<TapDanceDto>,
+    /// Combo settings
+    pub combo_settings: ComboSettingsDto,
 }
 
 /// Layout DTO for save requests (accepts optional fields from frontend).
@@ -918,6 +990,9 @@ pub struct LayoutSaveDto {
     /// Tap dance definitions
     #[serde(default)]
     pub tap_dances: Vec<TapDanceDto>,
+    /// Combo settings
+    #[serde(default)]
+    pub combo_settings: Option<ComboSettingsDto>,
 }
 
 fn default_rgb_enabled_true() -> bool {
@@ -1251,6 +1326,7 @@ async fn get_layout(
         rgb_overlay_ripple: RgbOverlayRippleSettingsDto::from(&layout.rgb_overlay_ripple),
         tap_hold_settings: TapHoldSettingsDto::from(&layout.tap_hold_settings),
         tap_dances: layout.tap_dances.iter().map(TapDanceDto::from).collect(),
+        combo_settings: ComboSettingsDto::from(&layout.combo_settings),
     };
 
     Ok(Json(layout_dto))
@@ -1414,6 +1490,36 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         })
         .collect();
 
+    // Convert combo settings
+    let combo_settings = if let Some(combo_dto) = dto.combo_settings {
+        use crate::models::{ComboAction, ComboDefinition};
+
+        let combos: Vec<ComboDefinition> = combo_dto
+            .combos
+            .into_iter()
+            .map(|c_dto| {
+                let action = match c_dto.action {
+                    ComboActionDto::DisableEffects => ComboAction::DisableEffects,
+                    ComboActionDto::DisableLighting => ComboAction::DisableLighting,
+                    ComboActionDto::Bootloader => ComboAction::Bootloader,
+                };
+                ComboDefinition::with_duration(
+                    c_dto.key1,
+                    c_dto.key2,
+                    action,
+                    c_dto.hold_duration_ms,
+                )
+            })
+            .collect();
+
+        ComboSettings {
+            enabled: combo_dto.enabled,
+            combos,
+        }
+    } else {
+        ComboSettings::default()
+    };
+
     Layout {
         metadata: dto.metadata,
         layers,
@@ -1427,7 +1533,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         idle_effect_settings,
         rgb_overlay_ripple,
         tap_hold_settings,
-        combo_settings: ComboSettings::default(), // TODO: Add combo DTO when UI is implemented
+        combo_settings,
         tap_dances,
     }
 }

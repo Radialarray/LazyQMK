@@ -1103,6 +1103,49 @@
 		isDirty = true;
 	}
 
+	// Combo settings
+	import type { ComboAction } from '$api/types';
+	
+	function updateComboSettings(field: string, value: boolean | number | string | { row: number; col: number }, comboIndex?: number) {
+		if (!layout) return;
+		if (!layout.combo_settings) {
+			layout.combo_settings = {
+				enabled: false,
+				combos: []
+			};
+		}
+		
+		if (field === 'enabled') {
+			layout.combo_settings.enabled = value as boolean;
+		} else if (field === 'add_combo') {
+			// Add a new combo with default values
+			if (layout.combo_settings.combos.length < 3) {
+				layout.combo_settings.combos.push({
+					key1: { row: 0, col: 0 },
+					key2: { row: 0, col: 1 },
+					action: 'disable_effects',
+					hold_duration_ms: 500
+				});
+			}
+		} else if (field === 'remove_combo' && comboIndex !== undefined) {
+			layout.combo_settings.combos.splice(comboIndex, 1);
+		} else if (comboIndex !== undefined && layout.combo_settings.combos[comboIndex]) {
+			const combo = layout.combo_settings.combos[comboIndex];
+			if (field === 'key1') {
+				combo.key1 = value as ComboPosition;
+			} else if (field === 'key2') {
+				combo.key2 = value as ComboPosition;
+			} else if (field === 'action') {
+				combo.action = value as ComboAction;
+			} else if (field === 'hold_duration_ms') {
+				combo.hold_duration_ms = value as number;
+			}
+		}
+		
+		layout = { ...layout };
+		isDirty = true;
+	}
+
 	// Layer management
 	function handleLayersChange(newLayers: typeof layout.layers) {
 		if (!layout) return;
@@ -2491,6 +2534,179 @@
 							<label for="ignore-layer-switch" class="text-sm">Ignore layer switch keys</label>
 						</div>
 					</div>
+				</div>
+			</Card>
+		{:else if activeTab === 'combos'}
+			<!-- Combos Tab -->
+			<Card class="p-6">
+				<h2 class="text-lg font-semibold mb-4">Two-Key Hold Combos</h2>
+				<p class="text-muted-foreground text-sm mb-6">
+					Configure two-key hold combos for special actions. Hold two keys together on the base layer to trigger an action. Maximum 3 combos.
+				</p>
+
+				<div class="space-y-6 max-w-3xl">
+					<!-- Enable Toggle -->
+					<div class="flex items-center gap-3">
+						<input
+							type="checkbox"
+							id="combo-enabled"
+							checked={layout.combo_settings?.enabled ?? false}
+							onchange={(e) => updateComboSettings('enabled', e.currentTarget.checked)}
+							class="w-4 h-4"
+						/>
+						<label for="combo-enabled" class="text-sm font-medium">Enable Combos</label>
+					</div>
+
+					{#if layout.combo_settings?.enabled}
+						<!-- Combo Entries -->
+						<div class="space-y-4">
+							{#each layout.combo_settings.combos || [] as combo, index}
+								<div class="border border-border rounded-lg p-4 space-y-4">
+									<div class="flex items-center justify-between">
+										<h3 class="text-sm font-semibold">Combo {index + 1}</h3>
+										<Button
+											size="sm"
+											variant="outline"
+											onclick={() => updateComboSettings('remove_combo', true, index)}
+										>
+											Remove
+										</Button>
+									</div>
+
+									<!-- Key 1 -->
+									<div class="grid grid-cols-2 gap-4">
+										<div>
+											<label class="block text-sm font-medium text-muted-foreground mb-1"
+												>Key 1 Row</label
+											>
+											<Input
+												type="number"
+												value={combo.key1.row}
+												oninput={(e) =>
+													updateComboSettings(
+														'key1',
+														{ row: parseInt(e.currentTarget.value), col: combo.key1.col },
+														index
+													)}
+												min="0"
+												max="10"
+											/>
+										</div>
+										<div>
+											<label class="block text-sm font-medium text-muted-foreground mb-1"
+												>Key 1 Col</label
+											>
+											<Input
+												type="number"
+												value={combo.key1.col}
+												oninput={(e) =>
+													updateComboSettings(
+														'key1',
+														{ row: combo.key1.row, col: parseInt(e.currentTarget.value) },
+														index
+													)}
+												min="0"
+												max="20"
+											/>
+										</div>
+									</div>
+
+									<!-- Key 2 -->
+									<div class="grid grid-cols-2 gap-4">
+										<div>
+											<label class="block text-sm font-medium text-muted-foreground mb-1"
+												>Key 2 Row</label
+											>
+											<Input
+												type="number"
+												value={combo.key2.row}
+												oninput={(e) =>
+													updateComboSettings(
+														'key2',
+														{ row: parseInt(e.currentTarget.value), col: combo.key2.col },
+														index
+													)}
+												min="0"
+												max="10"
+											/>
+										</div>
+										<div>
+											<label class="block text-sm font-medium text-muted-foreground mb-1"
+												>Key 2 Col</label
+											>
+											<Input
+												type="number"
+												value={combo.key2.col}
+												oninput={(e) =>
+													updateComboSettings(
+														'key2',
+														{ row: combo.key2.row, col: parseInt(e.currentTarget.value) },
+														index
+													)}
+												min="0"
+												max="20"
+											/>
+										</div>
+									</div>
+
+									<!-- Action -->
+									<div>
+										<label class="block text-sm font-medium text-muted-foreground mb-1"
+											>Action</label
+										>
+										<select
+											class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+											value={combo.action}
+											onchange={(e) => updateComboSettings('action', e.currentTarget.value, index)}
+										>
+											<option value="disable_effects">Disable Effects</option>
+											<option value="disable_lighting">Disable Lighting</option>
+											<option value="bootloader">Bootloader</option>
+										</select>
+										<p class="text-xs text-muted-foreground mt-1">
+											{#if combo.action === 'disable_effects'}
+												Disable RGB effects and revert to TUI layer colors
+											{:else if combo.action === 'disable_lighting'}
+												Turn off all RGB lighting completely
+											{:else if combo.action === 'bootloader'}
+												Enter bootloader mode for firmware flashing
+											{/if}
+										</p>
+									</div>
+
+									<!-- Hold Duration -->
+									<div>
+										<label class="block text-sm font-medium text-muted-foreground mb-1"
+											>Hold Duration (ms)</label
+										>
+										<Input
+											type="number"
+											value={combo.hold_duration_ms}
+											oninput={(e) =>
+												updateComboSettings('hold_duration_ms', parseInt(e.currentTarget.value), index)}
+											min="50"
+											max="2000"
+										/>
+										<p class="text-xs text-muted-foreground mt-1">
+											How long both keys must be held (50-2000ms)
+										</p>
+									</div>
+								</div>
+							{/each}
+
+							<!-- Add Combo Button -->
+							{#if (layout.combo_settings?.combos?.length || 0) < 3}
+								<Button
+									variant="outline"
+									onclick={() => updateComboSettings('add_combo', true)}
+								>
+									Add Combo
+								</Button>
+							{:else}
+								<p class="text-sm text-muted-foreground">Maximum of 3 combos reached.</p>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</Card>
 		{:else if activeTab === 'validate'}

@@ -34,6 +34,8 @@ export interface Layout {
 	rgb_overlay_ripple?: RgbOverlayRippleSettings;
 	// Tap-hold settings
 	tap_hold_settings?: TapHoldSettings;
+	// Combo settings
+	combo_settings?: ComboSettings;
 	// Categories
 	categories?: Category[];
 }
@@ -146,6 +148,20 @@ export interface Combo {
 	name: string;
 	keys: string[];
 	output: string;
+}
+
+export type ComboAction = 'disable_effects' | 'disable_lighting' | 'bootloader';
+
+export interface ComboDefinition {
+	key1: { row: number; col: number };
+	key2: { row: number; col: number };
+	action: ComboAction;
+	hold_duration_ms: number;
+}
+
+export interface ComboSettings {
+	enabled: boolean;
+	combos: ComboDefinition[];
 }
 
 export interface KeycodeInfo {
