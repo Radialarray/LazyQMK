@@ -1,0 +1,30 @@
+# Node.js
+web/node_modules
+web/.svelte-kit
+web/build
+web/.vite
+web/dist
+node_modules
+
+# Rust build artifacts
+target
+dist
+
+# Development files
+.git
+.github
+.vscode
+.idea
+*.log
+*.tmp
+
+# Test files
+web/e2e
+web/playwright-report
+web/test-results
+web/.playwright
+
+# Environment files
+.env
+.env.*
+!.env.example

@@ -4,7 +4,7 @@
 # =============================================================================
 # Stage 1: Build the Rust backend
 # =============================================================================
-FROM rust:1.83-bookworm AS builder
+FROM rust:latest AS builder
 
 WORKDIR /app
 
@@ -21,20 +21,19 @@ COPY rust-toolchain.toml ./
 # Create dummy src files to build dependencies
 RUN mkdir -p src/bin && \
     echo 'fn main() {}' > src/main.rs && \
-    echo 'fn main() {}' > src/bin/lazyqmk-web.rs && \
     echo 'pub fn lib() {}' > src/lib.rs
 
 # Build dependencies only (this layer is cached if dependencies don't change)
-RUN cargo build --release --features web --bin lazyqmk-web 2>/dev/null || true
+RUN cargo build --release --features web --bin lazyqmk 2>/dev/null || true
 
-# Remove dummy files
-RUN rm -rf src
+# Remove dummy files and compiled binary to force rebuild
+RUN rm -rf src target/release/lazyqmk target/release/deps/lazyqmk-*
 
 # Copy actual source code
 COPY src ./src
 
 # Build the actual binary
-RUN cargo build --release --features web --bin lazyqmk-web
+RUN cargo build --release --features web --bin lazyqmk
 
 # =============================================================================
 # Stage 2: Runtime image
@@ -53,7 +52,7 @@ RUN apt-get update && apt-get install -y \
 RUN useradd -r -s /bin/false lazyqmk
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/lazyqmk-web /usr/local/bin/lazyqmk-web
+COPY --from=builder /app/target/release/lazyqmk /usr/local/bin/lazyqmk
 
 # Create directories for volume mounts
 RUN mkdir -p /app/workspace /app/qmk_firmware && \
@@ -77,5 +76,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
 # Default command
-ENTRYPOINT ["lazyqmk-web"]
-CMD ["--host", "0.0.0.0", "--port", "3001", "--workspace", "/app/workspace"]
+ENTRYPOINT ["lazyqmk"]
+CMD ["--web", "--host", "0.0.0.0", "--port", "3001", "--workspace", "/app/workspace"]
