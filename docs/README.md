@@ -33,11 +33,6 @@ This directory contains comprehensive documentation for LazyQMK development and 
   - Tauri desktop application
 - **[WEB_FEATURES.md](WEB_FEATURES.md)** - Web interface feature documentation
 
-### Integration
-- **[QMK_EDITOR.md](QMK_EDITOR.md)** - QMK Configurator integration guide
-  - Using QMK Editor alongside LazyQMK
-  - Hybrid workflow strategies
-
 ### Reference
 - **[EXPORT_FORMAT.md](EXPORT_FORMAT.md)** - Layout export format specification
 - **[BRANDING.md](BRANDING.md)** - Project branding guidelines

@@ -541,40 +541,9 @@ docker compose up -d
 # Access:
 # - LazyQMK Web UI: http://localhost:5173
 # - Backend API: http://localhost:3001
-# - QMK Editor: http://localhost:8080
 ```
 
 For detailed Docker setup, volume configuration, and troubleshooting, see [`docs/DOCKER_QMK_SETUP.md`](docs/DOCKER_QMK_SETUP.md).
-
-### QMK Editor Integration
-
-LazyQMK's Docker Compose stack includes the official [QMK Configurator](https://config.qmk.fm), a web-based visual editor for creating QMK keymaps. This provides an alternative workflow for users who prefer a visual interface.
-
-**Quick Start:**
-```bash
-# Start all services (LazyQMK + QMK Editor)
-docker compose up -d
-
-# Access the services
-# - LazyQMK Web UI: http://localhost:5173
-# - QMK Configurator: http://localhost:8080
-# - LazyQMK API: http://localhost:3001
-```
-
-**Use Cases:**
-- **Visual editing**: Drag-and-drop keymap creation in QMK Configurator
-- **Advanced features**: Add Tap Dance, Combos, RGB effects in LazyQMK
-- **Cloud compilation**: QMK Configurator compiles firmware on QMK's servers
-- **Hybrid workflow**: Use both tools for different parts of your keymap
-
-**Learn More:**
-For detailed documentation on using QMK Editor with LazyQMK, including:
-- Port configuration
-- API setup
-- Workflow comparison
-- Troubleshooting
-
-See [docs/QMK_EDITOR.md](docs/QMK_EDITOR.md) for the complete guide.
 
 ## 📚 Additional Resources
 
