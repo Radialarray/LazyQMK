@@ -54,6 +54,32 @@ RUN apt-get update && apt-get install -y \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
+# Install QMK build toolchain: Python, ARM/AVR compilers, and build tools
+# These are required for `qmk compile` to work inside the container
+# Note: Flashing tools (avrdude, dfu-util, etc.) are not included because
+# LazyQMK only compiles firmware — it does not flash to keyboards.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    build-essential \
+    git \
+    unzip \
+    wget \
+    zip \
+    diffutils \
+    binutils-arm-none-eabi \
+    gcc-arm-none-eabi \
+    libnewlib-arm-none-eabi \
+    binutils-avr \
+    gcc-avr \
+    avr-libc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install QMK CLI tool and verify installation
+# Note: --break-system-packages is required on Debian bookworm (PEP 668)
+RUN pip3 install --break-system-packages qmk && \
+    qmk --version
+
 # Create non-root user with home directory so config volume mounts work correctly
 RUN useradd -r -m -d /home/lazyqmk -s /bin/false lazyqmk
 
