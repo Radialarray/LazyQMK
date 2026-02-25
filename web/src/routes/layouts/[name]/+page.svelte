@@ -991,6 +991,36 @@
 		}
 	}
 
+	async function resetLayout() {
+		if (!filename) return;
+		if (!window.confirm('Discard all unsaved changes?')) return;
+		try {
+			const savedLayout = await apiClient.getLayout(filename);
+			layout = { ...savedLayout, layers: [...savedLayout.layers] };
+			isDirty = false;
+			saveStatus = 'idle';
+			saveError = null;
+			// Clear selection and editor state
+			selectedKeyIndex = null;
+			selectedKeyIndices = new Set();
+			selectionMode = false;
+			keycodePickerOpen = false;
+			editingKeyVisualIndex = null;
+			swapMode = false;
+			swapFirstKey = null;
+			// Reload render metadata to restore rich labels
+			await loadRenderMetadata(filename);
+			// Reset clipboard undo history since we're reverting
+			clipboard.clearUndo();
+			clipboard.clearClipboard();
+			updateClipboardState();
+		} catch (e) {
+			console.error('Failed to reset layout:', e);
+			saveError = 'Failed to reset layout. Please try again.';
+			saveStatus = 'error';
+		}
+	}
+
 	// Tap Dance management
 	function addTapDance() {
 		if (!layout) return;
@@ -1518,6 +1548,11 @@
 				<span class="text-sm text-green-500">Saved!</span>
 			{:else if saveStatus === 'error'}
 				<span class="text-sm text-red-500">{saveError}</span>
+			{/if}
+			{#if isDirty}
+				<Button onclick={resetLayout} variant="outline" data-testid="reset-button">
+					Reset
+				</Button>
 			{/if}
 			<Button onclick={saveLayout} disabled={!isDirty || !canSave || saveStatus === 'saving'} data-testid="save-button">
 				{saveStatus === 'saving' ? 'Saving...' : 'Save'}
