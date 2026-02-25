@@ -6,7 +6,6 @@
 
 	// Secondary pages that go under More menu
 	const morePages = [
-		{ href: '/build', label: 'Build', description: 'Compile firmware' },
 		{ href: '/templates', label: 'Templates', description: 'Layout templates' },
 		{ href: '/keycodes', label: 'Keycodes', description: 'Browse keycodes' },
 		{ href: '/settings', label: 'Settings', description: 'Configure QMK path' }
