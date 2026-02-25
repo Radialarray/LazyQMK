@@ -844,6 +844,7 @@
 		layout.layers[selectedLayerIndex].keys = updatedKeys;
 		layout.layers = [...layout.layers];
 		isDirty = true;
+		loadRenderMetadata(filename);
 		updateClipboardState();
 		console.log(`Cut ${selectedKeyIndices.size} keys`);
 	}
@@ -858,6 +859,7 @@
 			layout.layers[selectedLayerIndex].keys = updatedKeys;
 			layout.layers = [...layout.layers];
 			isDirty = true;
+			loadRenderMetadata(filename);
 			updateClipboardState();
 			console.log(`Pasted to ${selection.size} keys`);
 		}
@@ -870,6 +872,7 @@
 			layout.layers[selectedLayerIndex].keys = undoKeys;
 			layout.layers = [...layout.layers];
 			isDirty = true;
+			loadRenderMetadata(filename);
 			updateClipboardState();
 			console.log('Undo successful');
 		}
@@ -893,6 +896,7 @@
 			layout.layers[selectedLayerIndex].keys[keyIndex].keycode = keycode;
 			layout.layers = [...layout.layers]; // Trigger reactivity
 			isDirty = true;
+			loadRenderMetadata(filename);
 		}
 		
 		keycodePickerOpen = false;
