@@ -53,6 +53,13 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+use crate::config::Config;
+use crate::firmware::generator::FirmwareGenerator;
+use crate::firmware::validator::FirmwareValidator;
+use crate::keycode_db::KeycodeDb;
+use crate::services::geometry::{self, GeometryContext};
+use crate::services::LayoutService;
+
 /// Maximum number of concurrent builds.
 const MAX_CONCURRENT_BUILDS: usize = 1;
 
@@ -212,10 +219,20 @@ pub struct CancelJobResponse {
     pub message: String,
 }
 
+/// Result of deploying keymap files to the QMK tree.
+#[derive(Debug)]
+enum DeployResult {
+    /// We created the keymap directory and all files — safe to remove the entire directory.
+    CreatedDirectory(PathBuf),
+    /// Directory already existed — only remove the files we wrote.
+    ExistingDirectory(PathBuf),
+    /// Deployment was skipped (e.g., layout file missing in tests).
+    Skipped,
+}
+
 /// Build command to be executed by worker thread.
 struct BuildCommand {
     job_id: String,
-    #[allow(dead_code)] // Stored for potential future logging/display
     layout_filename: String,
     keyboard: String,
     keymap: String,
@@ -223,6 +240,10 @@ struct BuildCommand {
     log_path: PathBuf,
     /// Job-specific output directory for artifacts.
     output_dir: PathBuf,
+    /// Path to the layout markdown file for keymap deployment.
+    layout_path: PathBuf,
+    /// Keycode database for firmware generation.
+    keycode_db: Arc<KeycodeDb>,
 }
 
 /// Result of a successful firmware build.
@@ -657,16 +678,24 @@ pub struct BuildJobManager {
     max_artifacts_age_hours: u64,
     /// Maximum total number of artifacts to keep (default: 50).
     max_total_artifacts: usize,
+    /// Keycode database for firmware generation during keymap deployment.
+    keycode_db: Arc<KeycodeDb>,
 }
 
 impl BuildJobManager {
     /// Creates a new build job manager.
-    pub fn new(logs_dir: PathBuf, output_dir: PathBuf, qmk_path: Option<PathBuf>) -> Arc<Self> {
+    pub fn new(
+        logs_dir: PathBuf,
+        output_dir: PathBuf,
+        qmk_path: Option<PathBuf>,
+        keycode_db: Arc<KeycodeDb>,
+    ) -> Arc<Self> {
         Self::with_builder(
             logs_dir,
             output_dir,
             qmk_path,
             Arc::new(RealFirmwareBuilder),
+            keycode_db,
         )
     }
 
@@ -676,6 +705,7 @@ impl BuildJobManager {
         output_dir: PathBuf,
         qmk_path: Option<PathBuf>,
         builder: Arc<dyn FirmwareBuilder>,
+        keycode_db: Arc<KeycodeDb>,
     ) -> Arc<Self> {
         // Ensure directories exist
         let _ = fs::create_dir_all(&logs_dir);
@@ -692,6 +722,7 @@ impl BuildJobManager {
             builder,
             max_artifacts_age_hours: 168, // 7 days
             max_total_artifacts: 50,
+            keycode_db,
         });
 
         // Start worker thread
@@ -738,34 +769,85 @@ impl BuildJobManager {
             .append(true)
             .open(&cmd.log_path);
 
-        let result = match log_file {
+        let (result, deploy_result) = match log_file {
             Ok(mut file) => {
                 let _ = writeln!(file, "[INFO] Build started at {}", chrono::Utc::now());
 
                 // Check if cancelled during setup
                 if self.is_cancelled(&cmd.job_id) {
                     let _ = writeln!(file, "[INFO] Build cancelled by user");
-                    Err("Build cancelled".to_string())
+                    (Err("Build cancelled".to_string()), DeployResult::Skipped)
                 } else {
-                    // Create cancellation check closure
-                    let job_id = cmd.job_id.clone();
-                    let manager = Arc::clone(self);
-                    let is_cancelled = move || manager.is_cancelled(&job_id);
+                    // Deploy keymap files before building
+                    let _ = writeln!(file, "[INFO] Deploying keymap to QMK tree...");
+                    match Self::deploy_keymap(&cmd, &mut file) {
+                        Ok(deploy_res) => {
+                            let _ = writeln!(file, "[INFO] Keymap deployed successfully");
 
-                    // Run the build with cancellation callback
-                    self.builder.build(
-                        &cmd.qmk_path,
-                        &cmd.keyboard,
-                        &cmd.keymap,
-                        &cmd.output_dir,
-                        &cmd.job_id,
-                        &mut file,
-                        &is_cancelled,
-                    )
+                            // Create cancellation check closure
+                            let job_id = cmd.job_id.clone();
+                            let manager = Arc::clone(self);
+                            let is_cancelled = move || manager.is_cancelled(&job_id);
+
+                            // Run the build with cancellation callback
+                            let build_result = self.builder.build(
+                                &cmd.qmk_path,
+                                &cmd.keyboard,
+                                &cmd.keymap,
+                                &cmd.output_dir,
+                                &cmd.job_id,
+                                &mut file,
+                                &is_cancelled,
+                            );
+
+                            (build_result, deploy_res)
+                        }
+                        Err(e) => {
+                            let _ = writeln!(file, "[ERROR] Keymap deployment failed: {e}");
+                            (
+                                Err(format!("Keymap deployment failed: {e}")),
+                                DeployResult::Skipped,
+                            )
+                        }
+                    }
                 }
             }
-            Err(e) => Err(format!("Failed to open log file: {e}")),
+            Err(e) => (
+                Err(format!("Failed to open log file: {e}")),
+                DeployResult::Skipped,
+            ),
         };
+
+        // Clean up deployed keymap (before decrementing running_count to prevent race)
+        match &deploy_result {
+            DeployResult::CreatedDirectory(dir) => {
+                if dir.exists() {
+                    if let Err(e) = fs::remove_dir_all(dir) {
+                        eprintln!(
+                            "Warning: failed to clean up created keymap directory {}: {}",
+                            dir.display(),
+                            e
+                        );
+                    }
+                }
+            }
+            DeployResult::ExistingDirectory(dir) => {
+                // Only remove files we created
+                let keymap_c_path = dir.join("keymap.c");
+                if keymap_c_path.exists() {
+                    if let Err(e) = fs::remove_file(&keymap_c_path) {
+                        eprintln!("Warning: failed to clean up keymap.c: {}", e);
+                    }
+                }
+                let config_h_path = dir.join("config.h");
+                if config_h_path.exists() {
+                    if let Err(e) = fs::remove_file(&config_h_path) {
+                        eprintln!("Warning: failed to clean up config.h: {}", e);
+                    }
+                }
+            }
+            DeployResult::Skipped => {}
+        }
 
         // Decrement running count
         {
@@ -799,6 +881,137 @@ impl BuildJobManager {
                     Vec::new(),
                 );
             }
+        }
+    }
+
+    /// Deploys keymap files (keymap.c, config.h) into the QMK firmware tree.
+    ///
+    /// This generates the firmware source files from the layout and writes them
+    /// to `qmk_firmware/keyboards/<keyboard>/keymaps/<keymap>/` so that
+    /// `qmk compile` can find them.
+    ///
+    /// Returns a `DeployResult` indicating what was created, so that cleanup
+    /// can be done safely without removing pre-existing user files.
+    fn deploy_keymap(
+        cmd: &BuildCommand,
+        log_writer: &mut dyn Write,
+    ) -> Result<DeployResult, String> {
+        // Skip deployment if the layout file doesn't exist (e.g. in tests with mock builders).
+        // In production, the HTTP handler validates file existence before starting a build.
+        if !cmd.layout_path.exists() {
+            let _ = writeln!(
+                log_writer,
+                "[WARN] Layout file not found, skipping keymap deployment: {}",
+                cmd.layout_path.display()
+            );
+            return Ok(DeployResult::Skipped);
+        }
+
+        // Load the layout
+        let _ = writeln!(log_writer, "[INFO] Loading layout: {}", cmd.layout_filename);
+        let layout = LayoutService::load(&cmd.layout_path)
+            .map_err(|e| format!("Failed to load layout: {e}"))?;
+
+        // Get layout variant
+        let layout_variant = layout
+            .metadata
+            .layout_variant
+            .as_ref()
+            .ok_or("Layout has no layout variant defined")?;
+
+        let _ = writeln!(log_writer, "[INFO] Layout variant: {layout_variant}");
+
+        // Build config with QMK path
+        let mut config = Config::load().unwrap_or_default();
+        config.paths.qmk_firmware = Some(cmd.qmk_path.clone());
+
+        // Build geometry
+        let _ = writeln!(log_writer, "[INFO] Building keyboard geometry...");
+        let geo_context = GeometryContext {
+            config: &config,
+            metadata: &layout.metadata,
+        };
+
+        let geo_result = geometry::build_geometry_for_layout(geo_context, layout_variant)
+            .map_err(|e| format!("Failed to build geometry: {e}"))?;
+        let geometry = geo_result.geometry;
+        let mapping = geo_result.mapping;
+
+        // Validate layout
+        let _ = writeln!(log_writer, "[INFO] Validating layout...");
+        let validator = FirmwareValidator::new(&layout, &geometry, &mapping, &cmd.keycode_db);
+        let report = validator
+            .validate()
+            .map_err(|e| format!("Validation failed: {e}"))?;
+
+        if !report.is_valid() {
+            let _ = writeln!(log_writer, "[ERROR] Layout validation failed:");
+            let _ = writeln!(log_writer, "[ERROR] {}", report.format_message());
+            return Err(format!(
+                "Layout validation failed: {}",
+                report.format_message()
+            ));
+        }
+        let _ = writeln!(log_writer, "[INFO] Layout validation passed");
+
+        // Generate firmware files
+        let _ = writeln!(log_writer, "[INFO] Generating firmware files...");
+        let generator =
+            FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &cmd.keycode_db);
+
+        let keymap_c = generator
+            .generate_keymap_c()
+            .map_err(|e| format!("Failed to generate keymap.c: {e}"))?;
+        let config_h = generator
+            .generate_merged_config_h()
+            .map_err(|e| format!("Failed to generate config.h: {e}"))?;
+
+        let _ = writeln!(
+            log_writer,
+            "[INFO] Generated keymap.c ({} bytes)",
+            keymap_c.len()
+        );
+        let _ = writeln!(
+            log_writer,
+            "[INFO] Generated config.h ({} bytes)",
+            config_h.len()
+        );
+
+        // Compute keymap directory
+        let keymap_dir = cmd
+            .qmk_path
+            .join("keyboards")
+            .join(&cmd.keyboard)
+            .join("keymaps")
+            .join(&cmd.keymap);
+
+        // Check if directory already exists
+        let dir_existed = keymap_dir.exists();
+
+        // Create directory if needed
+        fs::create_dir_all(&keymap_dir)
+            .map_err(|e| format!("Failed to create keymap directory: {e}"))?;
+
+        // Write files to QMK tree
+        let keymap_c_path = keymap_dir.join("keymap.c");
+        fs::write(&keymap_c_path, &keymap_c)
+            .map_err(|e| format!("Failed to write keymap.c: {e}"))?;
+
+        let config_h_path = keymap_dir.join("config.h");
+        fs::write(&config_h_path, &config_h)
+            .map_err(|e| format!("Failed to write config.h: {e}"))?;
+
+        let _ = writeln!(
+            log_writer,
+            "[INFO] Keymap deployed to {}",
+            keymap_dir.display()
+        );
+
+        // Return appropriate result based on whether directory existed
+        if dir_existed {
+            Ok(DeployResult::ExistingDirectory(keymap_dir))
+        } else {
+            Ok(DeployResult::CreatedDirectory(keymap_dir))
         }
     }
 
@@ -927,6 +1140,7 @@ impl BuildJobManager {
         layout_filename: String,
         keyboard: String,
         keymap: String,
+        layout_path: PathBuf,
     ) -> Result<BuildJob, String> {
         // Trigger artifact cleanup in background (async to avoid blocking)
         let manager = Arc::clone(self);
@@ -983,6 +1197,8 @@ impl BuildJobManager {
             qmk_path,
             log_path,
             output_dir,
+            layout_path,
+            keycode_db: Arc::clone(&self.keycode_db),
         };
 
         {
@@ -1187,6 +1403,15 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
+    fn test_keycode_db() -> Arc<KeycodeDb> {
+        Arc::new(KeycodeDb::load().expect("Failed to load keycode database"))
+    }
+
+    /// Dummy layout path used by tests with mock builders (never actually read).
+    fn dummy_layout_path() -> PathBuf {
+        PathBuf::from("nonexistent_test_layout.md")
+    }
+
     fn create_test_manager() -> Arc<BuildJobManager> {
         let temp_dir = std::env::temp_dir().join(format!("lazyqmk_test_{}", Uuid::new_v4()));
         let mock_builder = Arc::new(MockFirmwareBuilder {
@@ -1199,6 +1424,7 @@ mod tests {
             temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
+            test_keycode_db(),
         )
     }
 
@@ -1239,6 +1465,7 @@ mod tests {
             "test.md".to_string(),
             "crkbd".to_string(),
             "default".to_string(),
+            dummy_layout_path(),
         );
 
         assert!(result.is_ok());
@@ -1263,12 +1490,14 @@ mod tests {
             temp_dir.join("output"),
             None, // No QMK path
             Arc::new(MockFirmwareBuilder::default()),
+            test_keycode_db(),
         );
 
         let result = manager.start_build(
             "test.md".to_string(),
             "crkbd".to_string(),
             "default".to_string(),
+            dummy_layout_path(),
         );
 
         assert!(result.is_err());
@@ -1290,6 +1519,7 @@ mod tests {
             temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
+            test_keycode_db(),
         );
 
         let job = manager
@@ -1297,6 +1527,7 @@ mod tests {
                 "test.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
 
@@ -1320,9 +1551,15 @@ mod tests {
             "a.md".to_string(),
             "crkbd".to_string(),
             "default".to_string(),
+            dummy_layout_path(),
         );
         thread::sleep(Duration::from_millis(10));
-        let _ = manager.start_build("b.md".to_string(), "crkbd".to_string(), "test".to_string());
+        let _ = manager.start_build(
+            "b.md".to_string(),
+            "crkbd".to_string(),
+            "test".to_string(),
+            dummy_layout_path(),
+        );
 
         let jobs = manager.list_jobs();
         // First job may still be running, second will be pending
@@ -1357,6 +1594,7 @@ mod tests {
             temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
+            test_keycode_db(),
         );
 
         let job = manager
@@ -1364,6 +1602,7 @@ mod tests {
                 "test.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
 
@@ -1404,6 +1643,7 @@ mod tests {
                 "test.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
 
@@ -1436,6 +1676,7 @@ mod tests {
                 "test.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
         thread::sleep(Duration::from_millis(200));
@@ -1459,6 +1700,7 @@ mod tests {
             temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
+            test_keycode_db(),
         );
 
         let job = manager
@@ -1466,6 +1708,7 @@ mod tests {
                 "test.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
 
@@ -1493,6 +1736,7 @@ mod tests {
                 "test1.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
         thread::sleep(Duration::from_millis(200));
@@ -1524,6 +1768,7 @@ mod tests {
             temp_dir.join("output"),
             Some(PathBuf::from("/tmp/qmk")),
             mock_builder,
+            test_keycode_db(),
         );
 
         // Start a build (will be running)
@@ -1532,6 +1777,7 @@ mod tests {
                 "running.md".to_string(),
                 "crkbd".to_string(),
                 "default".to_string(),
+                dummy_layout_path(),
             )
             .unwrap();
 

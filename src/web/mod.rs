@@ -172,7 +172,12 @@ impl AppState {
         let logs_dir = workspace_root.join(".lazyqmk").join("build_logs");
         let output_dir = workspace_root.join(".lazyqmk").join("build_output");
         let qmk_path = config.paths.qmk_firmware.clone();
-        let build_manager = BuildJobManager::new(logs_dir, output_dir, qmk_path.clone());
+        let build_manager = BuildJobManager::new(
+            logs_dir,
+            output_dir,
+            qmk_path.clone(),
+            Arc::clone(&keycode_db),
+        );
 
         // Set up generate job manager
         let gen_logs_dir = workspace_root.join(".lazyqmk").join("generate_logs");
@@ -204,8 +209,13 @@ impl AppState {
         let output_dir = workspace_root.join(".lazyqmk").join("build_output");
         let qmk_path = config.paths.qmk_firmware.clone();
         let mock_builder = Arc::new(MockFirmwareBuilder::default());
-        let build_manager =
-            BuildJobManager::with_builder(logs_dir, output_dir, qmk_path.clone(), mock_builder);
+        let build_manager = BuildJobManager::with_builder(
+            logs_dir,
+            output_dir,
+            qmk_path.clone(),
+            mock_builder,
+            Arc::clone(&keycode_db),
+        );
 
         // Set up generate job manager with mock worker
         let gen_logs_dir = workspace_root.join(".lazyqmk").join("generate_logs");
@@ -2657,7 +2667,7 @@ async fn start_build(
     // Start the build job
     let job = state
         .build_manager
-        .start_build(filename, keyboard, keymap)
+        .start_build(filename, keyboard, keymap, path)
         .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, Json(ApiError::new(e))))?;
 
     Ok(Json(build_jobs::StartBuildResponse { job }))
