@@ -830,6 +830,32 @@
 		selectedKeyIndex = null;
 	}
 
+	// Clear render metadata for specific keys so the local keycodeMap fallback renders instead of stale backend data.
+	// Uses fully immutable reassignment to guarantee Svelte 5 $state reactivity.
+	function clearRenderMetadataForKeys(visualIndices: Iterable<number>) {
+		if (!renderMetadata?.layers) return;
+		const indicesToClear = new Set(visualIndices);
+		renderMetadata = {
+			...renderMetadata,
+			layers: renderMetadata.layers.map(l =>
+				l.number === selectedLayerIndex
+					? { ...l, keys: l.keys.filter(k => !indicesToClear.has(k.visual_index)) }
+					: l
+			)
+		};
+	}
+
+	// Clear all render metadata for a layer (used by undo, which may affect any keys)
+	function clearAllRenderMetadataForLayer(layerIndex: number) {
+		if (!renderMetadata?.layers) return;
+		renderMetadata = {
+			...renderMetadata,
+			layers: renderMetadata.layers.map(l =>
+				l.number === layerIndex ? { ...l, keys: [] } : l
+			)
+		};
+	}
+
 	// Clipboard operations
 	function handleCopy() {
 		if (!layout) return;
@@ -844,7 +870,7 @@
 		layout.layers[selectedLayerIndex].keys = updatedKeys;
 		layout.layers = [...layout.layers];
 		isDirty = true;
-		loadRenderMetadata(filename);
+		clearRenderMetadataForKeys(selectedKeyIndices);
 		updateClipboardState();
 		console.log(`Cut ${selectedKeyIndices.size} keys`);
 	}
@@ -859,7 +885,7 @@
 			layout.layers[selectedLayerIndex].keys = updatedKeys;
 			layout.layers = [...layout.layers];
 			isDirty = true;
-			loadRenderMetadata(filename);
+			clearRenderMetadataForKeys(selection);
 			updateClipboardState();
 			console.log(`Pasted to ${selection.size} keys`);
 		}
@@ -872,7 +898,8 @@
 			layout.layers[selectedLayerIndex].keys = undoKeys;
 			layout.layers = [...layout.layers];
 			isDirty = true;
-			loadRenderMetadata(filename);
+			// Undo may change any keys, so clear all render metadata for this layer
+			clearAllRenderMetadataForLayer(selectedLayerIndex);
 			updateClipboardState();
 			console.log('Undo successful');
 		}
@@ -896,7 +923,7 @@
 			layout.layers[selectedLayerIndex].keys[keyIndex].keycode = keycode;
 			layout.layers = [...layout.layers]; // Trigger reactivity
 			isDirty = true;
-			loadRenderMetadata(filename);
+			clearRenderMetadataForKeys([editingKeyVisualIndex]);
 		}
 		
 		keycodePickerOpen = false;
