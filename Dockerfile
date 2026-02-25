@@ -46,11 +46,12 @@ FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
-# Install runtime dependencies including curl for health checks
+# Install runtime dependencies including curl for health checks and gosu for privilege dropping
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     curl \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with home directory so config volume mounts work correctly
@@ -58,6 +59,10 @@ RUN useradd -r -m -d /home/lazyqmk -s /bin/false lazyqmk
 
 # Copy binary from builder
 COPY --from=builder /app/target/release/lazyqmk /usr/local/bin/lazyqmk
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Create directories for volume mounts and pre-create config dir with correct
 # ownership — Docker will preserve this ownership when mounting named volumes
@@ -70,7 +75,7 @@ RUN mkdir -p /app/workspace /app/qmk_firmware \
 COPY --from=builder /app/src/keycode_db /app/src/keycode_db
 COPY --from=builder /app/src/data /app/src/data
 
-USER lazyqmk
+# NOTE: No USER directive - container starts as root, entrypoint drops to lazyqmk via gosu
 
 # Expose the API port
 EXPOSE 3001
@@ -83,6 +88,6 @@ ENV LAZYQMK_PORT=3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
-# Default command - use subcommand 'web' with arguments
-ENTRYPOINT ["lazyqmk"]
+# Entrypoint handles permission fixing and privilege dropping
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["web", "--host", "0.0.0.0", "--port", "3001", "--workspace", "/app/workspace"]
