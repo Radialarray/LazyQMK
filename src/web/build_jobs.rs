@@ -650,7 +650,7 @@ pub struct BuildJobManager {
     /// Directory for storing build artifacts.
     output_dir: PathBuf,
     /// QMK firmware path from config.
-    qmk_path: Option<PathBuf>,
+    qmk_path: RwLock<Option<PathBuf>>,
     /// Firmware builder (real or mock).
     builder: Arc<dyn FirmwareBuilder>,
     /// Maximum age of artifacts in hours (default: 168 = 7 days).
@@ -688,7 +688,7 @@ impl BuildJobManager {
             command_tx: Mutex::new(None),
             logs_dir,
             output_dir,
-            qmk_path,
+            qmk_path: RwLock::new(qmk_path),
             builder,
             max_artifacts_age_hours: 168, // 7 days
             max_total_artifacts: 50,
@@ -937,6 +937,8 @@ impl BuildJobManager {
         // Check QMK path
         let qmk_path = self
             .qmk_path
+            .read()
+            .unwrap()
             .clone()
             .ok_or_else(|| "QMK firmware path not configured".to_string())?;
 
@@ -1098,6 +1100,11 @@ impl BuildJobManager {
         let mut list: Vec<_> = self.jobs.read().unwrap().values().cloned().collect();
         list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         list
+    }
+
+    /// Updates the QMK firmware path.
+    pub fn set_qmk_path(&self, path: Option<PathBuf>) {
+        *self.qmk_path.write().unwrap() = path;
     }
 
     /// Gets the artifacts for a completed job.

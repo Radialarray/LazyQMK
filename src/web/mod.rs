@@ -1822,6 +1822,11 @@ async fn update_config(
 
     *state.config.write().unwrap() = config;
 
+    // Propagate QMK path update to build and generate managers
+    let new_qmk_path = state.config.read().unwrap().paths.qmk_firmware.clone();
+    state.build_manager.set_qmk_path(new_qmk_path.clone());
+    state.generate_manager.set_qmk_path(new_qmk_path);
+
     Ok(StatusCode::NO_CONTENT)
 }
 

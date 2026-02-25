@@ -496,7 +496,7 @@ pub struct GenerateJobManager {
     /// Workspace root directory.
     workspace_root: PathBuf,
     /// QMK firmware path from config.
-    qmk_path: Option<PathBuf>,
+    qmk_path: RwLock<Option<PathBuf>>,
     /// Generate worker (real or mock).
     worker: Arc<dyn GenerateWorker>,
     /// Keycode database.
@@ -543,7 +543,7 @@ impl GenerateJobManager {
             logs_dir,
             output_dir,
             workspace_root,
-            qmk_path,
+            qmk_path: RwLock::new(qmk_path),
             worker,
             keycode_db,
         });
@@ -698,6 +698,8 @@ impl GenerateJobManager {
         // Check QMK path
         let qmk_path = self
             .qmk_path
+            .read()
+            .unwrap()
             .clone()
             .ok_or_else(|| "QMK firmware path not configured".to_string())?;
 
@@ -945,6 +947,11 @@ impl GenerateJobManager {
         let mut list: Vec<_> = self.jobs.read().unwrap().values().cloned().collect();
         list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         list
+    }
+
+    /// Updates the QMK firmware path.
+    pub fn set_qmk_path(&self, path: Option<PathBuf>) {
+        *self.qmk_path.write().unwrap() = path;
     }
 }
 
@@ -1260,7 +1267,7 @@ mod tests {
             logs_dir: temp_dir.join("logs"),
             output_dir: temp_dir.join("output"),
             workspace_root: temp_dir.clone(),
-            qmk_path: Some(PathBuf::from("/tmp/qmk")),
+            qmk_path: RwLock::new(Some(PathBuf::from("/tmp/qmk"))),
             worker: mock_worker,
             keycode_db,
         });
@@ -1342,7 +1349,7 @@ mod tests {
             logs_dir: temp_dir.join("logs"),
             output_dir: temp_dir.join("output"),
             workspace_root: temp_dir.clone(),
-            qmk_path: Some(PathBuf::from("/tmp/qmk")),
+            qmk_path: RwLock::new(Some(PathBuf::from("/tmp/qmk"))),
             worker: mock_worker,
             keycode_db,
         });
