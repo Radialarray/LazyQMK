@@ -53,15 +53,18 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
-RUN useradd -r -s /bin/false lazyqmk
+# Create non-root user with home directory so config volume mounts work correctly
+RUN useradd -r -m -d /home/lazyqmk -s /bin/false lazyqmk
 
 # Copy binary from builder
 COPY --from=builder /app/target/release/lazyqmk /usr/local/bin/lazyqmk
 
-# Create directories for volume mounts
-RUN mkdir -p /app/workspace /app/qmk_firmware && \
-    chown -R lazyqmk:lazyqmk /app
+# Create directories for volume mounts and pre-create config dir with correct
+# ownership — Docker will preserve this ownership when mounting named volumes
+RUN mkdir -p /app/workspace /app/qmk_firmware \
+        /home/lazyqmk/.config/LazyQMK \
+        /home/lazyqmk/.config/LazyQMK/templates && \
+    chown -R lazyqmk:lazyqmk /app /home/lazyqmk
 
 # Copy keycode database and other data files needed at runtime
 COPY --from=builder /app/src/keycode_db /app/src/keycode_db
