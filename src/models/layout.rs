@@ -604,9 +604,14 @@ impl ComboAction {
 /// and trigger a special action after a configurable hold duration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComboDefinition {
-    /// First key position (matrix coordinates)
+    /// First key trigger position in **visual** coordinates.
+    ///
+    /// Stored as a visual-grid `Position` (matching `KeyDefinition.position`).
+    /// Set from the currently selected key in the UI.
     pub key1: Position,
-    /// Second key position (matrix coordinates)
+    /// Second key trigger position in **visual** coordinates.
+    ///
+    /// See `key1` for coordinate-system details.
     pub key2: Position,
     /// Action to perform when combo is held
     pub action: ComboAction,
@@ -622,6 +627,8 @@ const fn default_combo_hold_duration() -> u16 {
 
 impl ComboDefinition {
     /// Creates a new combo with default hold duration.
+    ///
+    /// Both `key1` and `key2` are **visual** grid positions (see [`Position`]).
     #[must_use]
     pub fn new(key1: Position, key2: Position, action: ComboAction) -> Self {
         Self {
@@ -633,6 +640,8 @@ impl ComboDefinition {
     }
 
     /// Creates a new combo with custom hold duration.
+    ///
+    /// Both `key1` and `key2` are **visual** grid positions (see [`Position`]).
     #[must_use]
     pub fn with_duration(
         key1: Position,

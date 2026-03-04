@@ -967,7 +967,11 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("};\n");
         code.push('\n');
 
-        // Generate combo key arrays (must use matrix coordinates via keycodes)
+        // Generate combo key arrays.
+        // combo.key1 / combo.key2 are stored as **visual** positions (set from
+        // `state.selected_position` in the TUI and parsed directly from the
+        // markdown without any coordinate conversion). Pass them straight to
+        // `get_key()` which also operates on visual positions.
         for (idx, combo) in self.layout.combo_settings.combos.iter().enumerate() {
             // Get keycodes for the two positions from base layer (layer 0)
             let base_layer = self

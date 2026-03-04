@@ -114,7 +114,9 @@ impl ValidationError {
         self
     }
 
-    /// Sets the position context.
+    /// Sets the **visual** position context for this error.
+    ///
+    /// `row` and `col` are visual-grid coordinates (matching `KeyDefinition.position`).
     #[must_use]
     pub const fn with_position(mut self, row: u8, col: u8) -> Self {
         self.row = Some(row);
@@ -349,7 +351,10 @@ impl<'a> FirmwareValidator<'a> {
         }
     }
 
-    /// Validates a single keycode.
+    /// Validates a single keycode at a **visual** position.
+    ///
+    /// `row` and `col` are visual-grid coordinates used only for error reporting;
+    /// the validation itself is purely keycode-based.
     fn validate_keycode(
         &self,
         report: &mut ValidationReport,
@@ -384,7 +389,10 @@ impl<'a> FirmwareValidator<'a> {
         }
     }
 
-    /// Validates position mapping to matrix coordinates.
+    /// Validates that a **visual** position `(row, col)` maps to a valid matrix coordinate.
+    ///
+    /// `row` and `col` are visual-grid coordinates. Internally converts visual → matrix
+    /// via `VisualLayoutMapping` and checks matrix bounds against `KeyboardGeometry`.
     fn validate_position_mapping(
         &self,
         report: &mut ValidationReport,

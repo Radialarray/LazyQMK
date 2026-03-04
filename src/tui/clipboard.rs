@@ -210,7 +210,9 @@ impl KeyClipboard {
         &self.multi_cut_sources
     }
 
-    /// Check if a given position is a cut source (for visual feedback).
+    /// Returns `true` if `(layer_index, position)` is a pending cut source.
+    ///
+    /// `position` is a **visual**-grid [`Position`] (matching `KeyDefinition.position`).
     #[must_use]
     pub fn is_cut_source(&self, layer_index: usize, position: Position) -> bool {
         if self.cut_source == Some((layer_index, position)) {

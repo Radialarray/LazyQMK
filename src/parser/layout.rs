@@ -367,7 +367,10 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     Ok(line_num)
 }
 
-/// Parses a layer's key table.
+/// Parses a layer's Markdown key table and adds keys to `layer`.
+///
+/// Each table row maps to a **visual** row, and each cell maps to a **visual** column.
+/// The resulting `KeyDefinition` objects all carry visual-grid [`Position`] values.
 fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Result<usize> {
     let mut line_num = start_line;
     let mut row = 0;
@@ -405,7 +408,10 @@ fn parse_layer_table(lines: &[&str], start_line: usize, layer: &mut Layer) -> Re
     Ok(line_num)
 }
 
-/// Parses a single table row into key definitions.
+/// Parses a single Markdown table row into key definitions at **visual** row `row`.
+///
+/// `row` is a 0-based **visual** row index. Each non-empty cell becomes a
+/// `KeyDefinition` with `Position::new(row, col_index)` — visual coordinates.
 fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
     // Split by pipes and trim, keeping empty cells to preserve column indices
     // This is critical for split keyboards where gaps between halves are empty cells
@@ -435,7 +441,10 @@ fn parse_table_row(line: &str, row: u8, layer: &mut Layer) -> Result<()> {
     Ok(())
 }
 
-/// Parses keycode syntax with optional color and category.
+/// Parses keycode syntax (with optional color / category) into a [`KeyDefinition`].
+///
+/// `row` and `col` are **visual** grid coordinates; they are stored verbatim in
+/// the returned `KeyDefinition.position` — no coordinate conversion happens here.
 ///
 /// Formats:
 /// - `KC_X` - basic keycode
@@ -1052,19 +1061,20 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                     duration_ms,
                 );
 
-                // Add combo at the specified index (1-based in markdown, 0-based in vec)
+                // Place the combo at its 0-based index (combo_num 1→idx 0, etc.).
+                // Grow the vec only as far as needed — never push placeholder combos
+                // for gaps, which was the source of phantom COMBO_0 entries when
+                // only Combo 2 and Combo 3 were defined.
                 if combo_num > 0 && combo_num <= 3 {
                     let idx = combo_num - 1;
-                    // Ensure vec is large enough
-                    while layout.combo_settings.combos.len() < combo_num {
-                        layout
-                            .combo_settings
-                            .combos
-                            .push(crate::models::ComboDefinition::new(
+                    if layout.combo_settings.combos.len() <= idx {
+                        layout.combo_settings.combos.resize_with(idx + 1, || {
+                            crate::models::ComboDefinition::new(
                                 Position::new(0, 0),
-                                Position::new(0, 1),
+                                Position::new(0, 0),
                                 crate::models::ComboAction::DisableEffects,
-                            ));
+                            )
+                        });
                     }
                     layout.combo_settings.combos[idx] = combo;
                 }

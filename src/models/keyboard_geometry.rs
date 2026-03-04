@@ -203,13 +203,22 @@ impl KeyboardGeometry {
         self.keys.len()
     }
 
-    /// Gets a key by LED index.
+    /// Gets a key by **LED index** (physical wiring order from `rgb_matrix.layout`).
+    ///
+    /// LED indices are sequential physical wire numbers (0-based). They do not
+    /// correspond to matrix positions or visual positions.
+    /// Use [`VisualLayoutMapping::visual_to_led_index`] to convert from visual coordinates.
     #[must_use]
     pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.led_index == led_index)
     }
 
-    /// Gets a key by matrix position.
+    /// Gets a key by **matrix position** `(row, col)` (electrical wiring coordinates).
+    ///
+    /// Matrix coordinates come from QMK `info.json` and correspond to the physical
+    /// row/column wiring. They differ from visual positions on split keyboards where
+    /// the right half uses rows 4–7 while the visual grid is flat.
+    /// Use [`VisualLayoutMapping::visual_to_matrix_pos`] to convert from visual coordinates.
     #[must_use]
     pub fn get_key_by_matrix(&self, position: (u8, u8)) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.matrix_position == position)

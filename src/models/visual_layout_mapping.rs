@@ -123,33 +123,41 @@ impl VisualLayoutMapping {
         mapping
     }
 
-    /// Converts LED index to matrix position.
+    /// Converts **LED index** → **matrix position** `(row, col)`.
     ///
-    /// Used for firmware generation to map LED order to electrical matrix.
+    /// `led` is the 0-based physical wire index from `rgb_matrix.layout`.
+    /// Returns the electrical matrix coordinates `(row, col)`, or `None` if the
+    /// LED index is out of range.
     #[must_use]
     pub fn led_to_matrix_pos(&self, led: u8) -> Option<(u8, u8)> {
         self.led_to_matrix.get(led as usize).copied()
     }
 
-    /// Converts matrix position to visual position.
+    /// Converts **matrix position** `(row, col)` → **visual** [`Position`].
     ///
-    /// Used for parsing layouts from files where keys are stored by visual position.
+    /// `row` and `col` are electrical matrix coordinates from QMK `info.json`.
+    /// Returns the visual-grid position shown in Markdown tables and the UI,
+    /// or `None` if no key exists at that matrix position.
     #[must_use]
     pub fn matrix_to_visual_pos(&self, row: u8, col: u8) -> Option<Position> {
         self.matrix_to_visual.get(&(row, col)).copied()
     }
 
-    /// Converts visual position to matrix position.
+    /// Converts **visual** position `(row, col)` → **matrix** position `(row, col)`.
     ///
-    /// Used for saving layouts and when user selects a key in the UI.
+    /// `row` and `col` are visual-grid coordinates (0-based, as shown in the UI and
+    /// Markdown tables). Returns the electrical matrix coordinates, or `None` if
+    /// the visual position has no corresponding physical key.
     #[must_use]
     pub fn visual_to_matrix_pos(&self, row: u8, col: u8) -> Option<(u8, u8)> {
         self.visual_to_matrix.get(&Position::new(row, col)).copied()
     }
 
-    /// Converts visual position to LED index.
+    /// Converts **visual** position `(row, col)` → **LED index**.
     ///
-    /// Used for RGB configuration and LED-based features.
+    /// `row` and `col` are visual-grid coordinates. Returns the physical LED wire
+    /// index used for RGB matrix color arrays, or `None` if no key exists at
+    /// that visual position.
     #[must_use]
     pub fn visual_to_led_index(&self, row: u8, col: u8) -> Option<u8> {
         let visual_pos = Position::new(row, col);
@@ -157,9 +165,11 @@ impl VisualLayoutMapping {
         self.matrix_to_led.get(matrix_pos).copied()
     }
 
-    /// Converts visual position to layout index.
+    /// Converts **visual** position `(row, col)` → **layout index**.
     ///
-    /// Used for keymap generation - keys must be in info.json layout order.
+    /// `row` and `col` are visual-grid coordinates. Returns the 0-based index into
+    /// the `info.json` layout array, which is the order QMK's `LAYOUT` macro expects
+    /// keycodes in. Returns `None` if no key exists at that visual position.
     #[must_use]
     pub fn visual_to_layout_index(&self, row: u8, col: u8) -> Option<u8> {
         let visual_pos = Position::new(row, col);
@@ -174,24 +184,29 @@ impl VisualLayoutMapping {
         self.layout_to_matrix.len()
     }
 
-    /// Returns all valid visual positions in this mapping.
+    /// Returns all valid **visual** positions in this mapping.
     ///
-    /// Used when adjusting layouts to match a new geometry.
+    /// Each returned [`Position`] is a visual-grid coordinate with a corresponding
+    /// physical key. Used when adjusting layouts to match a new keyboard geometry.
     #[must_use]
     pub fn get_all_visual_positions(&self) -> Vec<Position> {
         self.visual_to_matrix.keys().copied().collect()
     }
 
-    /// Checks if a visual position is valid (has a physical key).
+    /// Returns `true` if `pos` is a **valid visual position** (i.e. a physical key exists there).
+    ///
+    /// `pos` must be a visual-grid [`Position`]. Matrix or LED coordinates must be
+    /// converted first before calling this method.
     #[must_use]
     pub fn is_valid_position(&self, pos: Position) -> bool {
         self.visual_to_matrix.contains_key(&pos)
     }
 
-    /// Finds the nearest valid position when moving up from the current position.
+    /// Finds the nearest valid **visual** position when moving up from `current`.
     ///
-    /// If current row - 1 has a key in same column, returns that.
-    /// Otherwise searches for nearest key in same row, preferring left.
+    /// Both `current` and the returned position are visual-grid coordinates.
+    /// Tries the same column in the row above first; if no key exists there,
+    /// finds the nearest key in that row by column distance.
     #[must_use]
     pub fn find_position_up(&self, current: Position) -> Option<Position> {
         if current.row == 0 {
@@ -209,7 +224,9 @@ impl VisualLayoutMapping {
         self.find_nearest_in_row(target_row, current.col)
     }
 
-    /// Finds the nearest valid position when moving down from the current position.
+    /// Finds the nearest valid **visual** position when moving down from `current`.
+    ///
+    /// Both `current` and the returned position are visual-grid coordinates.
     #[must_use]
     pub fn find_position_down(&self, current: Position) -> Option<Position> {
         let target_row = current.row + 1;
@@ -224,7 +241,10 @@ impl VisualLayoutMapping {
         self.find_nearest_in_row(target_row, current.col)
     }
 
-    /// Finds the nearest valid position when moving left from the current position.
+    /// Finds the nearest valid **visual** position when moving left from `current`.
+    ///
+    /// Both `current` and the returned position are visual-grid coordinates.
+    /// Returns `None` if `current` is already in column 0.
     #[must_use]
     pub fn find_position_left(&self, current: Position) -> Option<Position> {
         if current.col == 0 {
@@ -241,7 +261,10 @@ impl VisualLayoutMapping {
         None
     }
 
-    /// Finds the nearest valid position when moving right from the current position.
+    /// Finds the nearest valid **visual** position when moving right from `current`.
+    ///
+    /// Both `current` and the returned position are visual-grid coordinates.
+    /// Returns `None` if there is no valid key to the right.
     #[must_use]
     pub fn find_position_right(&self, current: Position) -> Option<Position> {
         // Search rightward for next valid position in same row
@@ -255,7 +278,9 @@ impl VisualLayoutMapping {
         None
     }
 
-    /// Finds the nearest valid position in a row, closest to target column.
+    /// Finds the nearest valid **visual** position in `row`, closest to `target_col`.
+    ///
+    /// Both `row` and `target_col` are visual-grid coordinates.
     fn find_nearest_in_row(&self, row: u8, target_col: u8) -> Option<Position> {
         let mut best: Option<Position> = None;
         let mut best_distance = u8::MAX;
@@ -274,7 +299,10 @@ impl VisualLayoutMapping {
         best
     }
 
-    /// Returns the bounds of valid positions (max row, max col).
+    /// Returns the bounds of valid **visual** positions as `(max_row, max_col)`.
+    ///
+    /// Both values are visual-grid coordinates (0-based). Useful for rendering
+    /// the keyboard grid in the TUI.
     #[must_use]
     pub fn get_bounds(&self) -> (u8, u8) {
         let mut max_row = 0u8;
@@ -288,9 +316,10 @@ impl VisualLayoutMapping {
         (max_row, max_col)
     }
 
-    /// Returns the first valid position (top-left most key).
+    /// Returns the top-left-most valid **visual** position (lowest row, then lowest col).
     ///
-    /// Used to initialize cursor position when loading a layout.
+    /// Used to initialize the cursor position when loading a layout. Returns `None`
+    /// if the mapping contains no keys.
     #[must_use]
     pub fn get_first_position(&self) -> Option<Position> {
         let mut first: Option<Position> = None;

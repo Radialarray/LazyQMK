@@ -167,10 +167,11 @@ fn build_outbound_references(
     outbound
 }
 
-/// Formats a key position as a human-readable string.
+/// Formats a **visual** key position as a human-readable string.
 ///
-/// For now, returns the position as "(row,col)" format. Future enhancement could
-/// map positions to actual key labels based on the keyboard layout.
+/// `position` is a visual-grid [`Position`] (row, col as displayed in the UI).
+/// Returns `"(row,col)"` format. A future enhancement could resolve this to
+/// an actual key label using the keyboard layout.
 fn format_key_position(position: crate::models::Position) -> String {
     format!("({},{})", position.row, position.col)
 }

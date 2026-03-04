@@ -73,7 +73,10 @@ pub struct Position {
 }
 
 impl Position {
-    /// Creates a new Position with the given row and column.
+    /// Creates a new `Position` in **visual** coordinates (user's view in Markdown tables and the UI).
+    ///
+    /// Both `row` and `col` are 0-based grid indices, not electrical matrix positions.
+    /// Use [`VisualLayoutMapping`] to convert to/from matrix or LED coordinates.
     #[must_use]
     pub const fn new(row: u8, col: u8) -> Self {
         Self { row, col }
@@ -110,7 +113,10 @@ pub struct KeyDefinition {
 
 #[allow(dead_code)]
 impl KeyDefinition {
-    /// Creates a new `KeyDefinition` with the given position and keycode.
+    /// Creates a new `KeyDefinition` at the given **visual** position with the given keycode.
+    ///
+    /// `position` must be a visual-grid coordinate (see [`Position`]). Do not pass a raw
+    /// matrix position here; use [`VisualLayoutMapping::matrix_to_visual_pos`] to convert first.
     pub fn new(position: Position, keycode: impl Into<String>) -> Self {
         Self {
             position,
@@ -262,13 +268,19 @@ impl Layer {
         self.keys.push(key);
     }
 
-    /// Gets a reference to the key at the given position.
+    /// Gets a reference to the key at the given **visual** position.
+    ///
+    /// `position` is a visual-grid coordinate. All keys in this layer are stored by their
+    /// visual position, so this performs a linear search by `key.position == position`.
+    /// To look up by matrix position, convert first via [`VisualLayoutMapping::matrix_to_visual_pos`].
     #[must_use]
     pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
         self.keys.iter().find(|k| k.position == position)
     }
 
-    /// Gets a mutable reference to the key at the given position.
+    /// Gets a mutable reference to the key at the given **visual** position.
+    ///
+    /// See [`Layer::get_key`] for coordinate-system details.
     pub fn get_key_mut(&mut self, position: Position) -> Option<&mut KeyDefinition> {
         self.keys.iter_mut().find(|k| k.position == position)
     }
