@@ -1242,7 +1242,7 @@ mod tests {
         layout.rgb_overlay_ripple.enabled = true;
         layout.rgb_overlay_ripple.max_ripples = 6;
         layout.rgb_overlay_ripple.duration_ms = 750;
-        layout.rgb_overlay_ripple.speed = 200;
+        layout.rgb_overlay_ripple.speed = 128; // non-default (default is 200)
         layout.rgb_overlay_ripple.band_width = 5;
         layout.rgb_overlay_ripple.amplitude_pct = 75;
 
@@ -1252,7 +1252,7 @@ mod tests {
         assert!(markdown.contains("**Ripple Overlay**: On"));
         assert!(markdown.contains("**Max Ripples**: 6"));
         assert!(markdown.contains("**Ripple Duration**: 750ms"));
-        assert!(markdown.contains("**Ripple Speed**: 200"));
+        assert!(markdown.contains("**Ripple Speed**: 128"));
         assert!(markdown.contains("**Ripple Band Width**: 5"));
         assert!(markdown.contains("**Ripple Amplitude**: 75%"));
 
@@ -1260,7 +1260,7 @@ mod tests {
         assert!(parsed.rgb_overlay_ripple.enabled);
         assert_eq!(parsed.rgb_overlay_ripple.max_ripples, 6);
         assert_eq!(parsed.rgb_overlay_ripple.duration_ms, 750);
-        assert_eq!(parsed.rgb_overlay_ripple.speed, 200);
+        assert_eq!(parsed.rgb_overlay_ripple.speed, 128);
         assert_eq!(parsed.rgb_overlay_ripple.band_width, 5);
         assert_eq!(parsed.rgb_overlay_ripple.amplitude_pct, 75);
     }

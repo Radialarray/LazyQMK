@@ -771,10 +771,22 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Helper: Calculate distance between two LED indices
         code.push_str("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2) {\n");
-        code.push_str(
-            "    // Simple linear distance for now (can be enhanced with X/Y coordinates)\n",
-        );
-        code.push_str("    return (led1 > led2) ? (led1 - led2) : (led2 - led1);\n");
+        code.push_str("    // 2D Euclidean distance using physical LED positions\n");
+        code.push_str("    int16_t dx = (int16_t)g_led_config.point[led1].x - (int16_t)g_led_config.point[led2].x;\n");
+        code.push_str("    int16_t dy = (int16_t)g_led_config.point[led1].y - (int16_t)g_led_config.point[led2].y;\n");
+        code.push_str("    // Use integer approximation of sqrt(dx*dx + dy*dy)\n");
+        code.push_str("    // QMK coordinates are 0-224 for X and 0-64 for Y\n");
+        code.push_str("    // Cast to int32_t before multiply to avoid signed overflow UB on AVR (16-bit int)\n");
+        code.push_str("    uint16_t dist_sq = (uint16_t)((int32_t)dx * dx + (int32_t)dy * dy);\n");
+        code.push_str("    // Fast integer square root approximation\n");
+        code.push_str("    if (dist_sq == 0) return 0;\n");
+        code.push_str("    uint16_t x = dist_sq;\n");
+        code.push_str("    uint16_t y = (x + 1) / 2;\n");
+        code.push_str("    while (y < x) {\n");
+        code.push_str("        x = y;\n");
+        code.push_str("        y = (x + dist_sq / x) / 2;\n");
+        code.push_str("    }\n");
+        code.push_str("    return (uint8_t)(x > 255 ? 255 : x);\n");
         code.push_str("}\n");
         code.push('\n');
 
@@ -1086,8 +1098,12 @@ impl<'a> FirmwareGenerator<'a> {
                 }
                 crate::models::ComboAction::DisableLighting => {
                     code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
-                    code.push_str("                        // Turn off RGB lighting completely\n");
-                    code.push_str("                        rgb_matrix_disable_noeeprom();\n");
+                    code.push_str("                        // Toggle RGB lighting on/off\n");
+                    code.push_str("                        if (rgb_matrix_is_enabled()) {\n");
+                    code.push_str("                            rgb_matrix_disable_noeeprom();\n");
+                    code.push_str("                        } else {\n");
+                    code.push_str("                            rgb_matrix_enable_noeeprom();\n");
+                    code.push_str("                        }\n");
                     code.push_str("#endif\n");
                 }
                 crate::models::ComboAction::Bootloader => {

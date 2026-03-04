@@ -389,17 +389,17 @@ pub struct RgbOverlayRippleSettings {
     pub max_ripples: u8,
 
     /// Duration of each ripple in milliseconds
-    /// Default: 500ms
+    /// Default: 1500ms
     #[serde(default = "default_ripple_duration_ms")]
     pub duration_ms: u16,
 
-    /// Speed multiplier (0-255, higher = faster expansion)
-    /// Default: 128
+    /// Speed multiplier (0-255, higher = faster expansion in 2D pixel space)
+    /// Default: 200
     #[serde(default = "default_ripple_speed")]
     pub speed: u8,
 
-    /// Band width in LED units
-    /// Default: 3
+    /// Band width in pixel distance units (2D coordinate space)
+    /// Default: 30
     #[serde(default = "default_ripple_band_width")]
     pub band_width: u8,
 
@@ -447,15 +447,15 @@ const fn default_max_ripples() -> u8 {
 }
 
 const fn default_ripple_duration_ms() -> u16 {
-    500
+    1500
 }
 
 const fn default_ripple_speed() -> u8 {
-    128
+    200
 }
 
 const fn default_ripple_band_width() -> u8 {
-    3
+    30
 }
 
 const fn default_ripple_amplitude_pct() -> u8 {
@@ -479,9 +479,9 @@ impl Default for RgbOverlayRippleSettings {
         Self {
             enabled: false,
             max_ripples: 4,
-            duration_ms: 500,
-            speed: 128,
-            band_width: 3,
+            duration_ms: 1500,
+            speed: 200,
+            band_width: 30,
             amplitude_pct: 50,
             color_mode: RippleColorMode::Fixed,
             fixed_color: RgbColor::new(0, 255, 255),
@@ -580,7 +580,7 @@ impl ComboAction {
     pub const fn description(&self) -> &'static str {
         match self {
             Self::DisableEffects => "Disable RGB effects and revert to TUI layer colors",
-            Self::DisableLighting => "Turn off all RGB lighting completely",
+            Self::DisableLighting => "Toggle all RGB lighting on/off",
             Self::Bootloader => "Enter bootloader mode for firmware flashing",
         }
     }

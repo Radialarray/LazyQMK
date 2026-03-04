@@ -940,8 +940,8 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .trim()
                 .to_lowercase();
             layout.rgb_overlay_ripple.color_mode = match value.as_str() {
-                "fixed" => crate::models::RippleColorMode::Fixed,
-                "key based" | "key-based" => crate::models::RippleColorMode::KeyBased,
+                "fixed" | "fixed color" => crate::models::RippleColorMode::Fixed,
+                "key based" | "key-based" | "key color" => crate::models::RippleColorMode::KeyBased,
                 "hue shift" | "hue-shift" => crate::models::RippleColorMode::HueShift,
                 _ => crate::models::RippleColorMode::Fixed,
             };
