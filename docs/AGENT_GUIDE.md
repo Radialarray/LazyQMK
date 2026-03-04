@@ -1,49 +1,106 @@
 # LazyQMK — Agent Interaction Guide
 
 > **Purpose**: This guide is written for AI agents helping users set up or enhance keyboard layouts in LazyQMK.  
-> It provides an interactive, conversational flow — ask the user questions, then act on their answers.  
-> Cover every step from first-run setup to advanced features like combos and RGB effects.
-
-> **Quick routing**: If the user already has an existing layout to enhance, jump directly to **Phase 8** first, then return to the relevant feature phases.
+> It defines an interactive, conversational flow with a clear division of labour between the agent and the user.
 
 ---
 
-## How to Use This Guide
+## Agent Behaviour Principles
 
-Work through the guide **top to bottom** with the user in an interactive chat.  
-At each decision point, **ask first — then proceed**. Never skip ahead.  
-Sections are ordered by dependency: complete each before moving to the next.
+**Act first, ask only when necessary.**
+
+The agent should do as much as possible autonomously — running commands, reading files, inspecting state, inferring context — and only pause to ask the user for things that genuinely require human input or decision.
+
+### When to act autonomously (no asking needed)
+- Checking if a tool is installed (`lazyqmk doctor`, `which qmk`, etc.)
+- Reading existing layout files to understand current state
+- Looking up keyboard/variant names from `info.json`
+- Detecting the OS, existing config files, installed paths
+- Verifying the environment is healthy before proceeding
+
+### When to ask the user
+- **Hardware facts the agent cannot know**: Which keyboard do you have? Does it have RGB LEDs?
+- **User preferences and intent**: Which keys should be combos? What color do you want? How many layers?
+- **Confirmation before irreversible actions**: About to flash firmware. Ready?
+- **Ambiguous situations**: Multiple keyboards found — which one?
+
+### Workflow pattern
+```
+1. Run checks / read files silently
+2. Report what was found (briefly)
+3. Ask only for what is missing or requires a human decision
+4. Act on the answer
+```
 
 ---
 
-## Phase 1 — Environment Check
+## Quick Routing
 
-Before anything else, verify the environment is ready.
+Before starting Phase 1, check silently:
 
-### Step 1.1 — Run the doctor
+```bash
+# Is lazyqmk installed?
+which lazyqmk
 
+# Does a config file already exist?
+ls ~/Library/Application\ Support/LazyQMK/config.toml   # macOS
+ls ~/.config/LazyQMK/config.toml                         # Linux
+ls $env:APPDATA\LazyQMK\config.toml                      # Windows
+
+# Are there existing layout files?
+find ~ -name "*.md" -path "*/LazyQMK/*" 2>/dev/null | head -10
 ```
-Ask: "Have you already installed LazyQMK and cloned the custom QMK firmware fork?
-      If not, I can walk you through that first."
+
+**Route based on findings:**
+- No `lazyqmk` installed → start at **Phase 1**
+- Installed, no config → start at **Phase 2** (first-run wizard)
+- Installed, config exists, user wants to enhance → start at **Phase 8**, then return to relevant feature phases
+- Installed, config exists, user wants a new layout → start at **Phase 2**, step 2.1
+
+---
+
+## Phase 1 — Installation
+
+> **When to run**: Only if `lazyqmk` is not found in PATH.
+
+### Step 1.1 — Install LazyQMK
+
+Detect the OS and install:
+
+**macOS / Linux (Homebrew — recommended):**
+```bash
+brew install Radialarray/lazyqmk/lazyqmk
 ```
 
-**If not installed**, guide through installation:
+**Other platforms:**  
+Download the appropriate binary from https://github.com/Radialarray/LazyQMK/releases/latest and place it in PATH.
 
-1. Install LazyQMK:
-   - macOS/Linux: `brew install Radialarray/lazyqmk/lazyqmk`
-   - Other: download from https://github.com/Radialarray/LazyQMK/releases/latest
-2. Clone the custom QMK fork (the official fork will not work — custom QMK features are required):
-   ```bash
-   git clone --recurse-submodules https://github.com/Radialarray/qmk_firmware.git ~/qmk_firmware
-   ```
+### Step 1.2 — Clone the custom QMK firmware fork
 
-**Once installed**, run the doctor:
+> **Important**: LazyQMK requires its own QMK fork. The official QMK repo is missing the custom features (ripple overlay, idle effect, etc.) and will produce incomplete firmware.
+
+Check if a QMK directory already exists before cloning:
+
+```bash
+ls ~/qmk_firmware 2>/dev/null && echo "exists" || echo "missing"
+```
+
+If missing, clone:
+```bash
+git clone --recurse-submodules https://github.com/Radialarray/qmk_firmware.git ~/qmk_firmware
+```
+
+---
+
+## Phase 2 — Environment Verification
+
+> **Run this silently every session** before doing anything else. Report results to the user only if something needs fixing.
 
 ```bash
 lazyqmk doctor
 ```
 
-Expected healthy output:
+**Healthy output** (all `✓`):
 ```
 ✓ QMK CLI           v1.1.5
 ✓ ARM GCC           arm-none-eabi-gcc (11.3.1)
@@ -52,215 +109,229 @@ Expected healthy output:
 ✓ Git Configuration Configured
 ```
 
-If anything shows `✗` or `?`, fix those issues before continuing. Use `lazyqmk doctor --verbose` for details.
+**If any item shows `✗` or `?`:**
+```bash
+lazyqmk doctor --verbose
+```
+Read the output and fix the reported issues before continuing. Common fixes:
+- QMK CLI missing: `python3 -m pip install --user qmk`
+- ARM GCC missing: install via your OS package manager or QMK MSYS (Windows)
+- QMK Firmware Path wrong: update path in `~/.config/LazyQMK/config.toml`
+
+Only proceed to the next phase once `lazyqmk doctor` is fully green.
 
 ---
 
-## Phase 2 — First Launch & Onboarding Wizard
+## Phase 3 — First Launch & Onboarding Wizard
 
-### Step 2.1 — Start LazyQMK
+> **When to run**: First time the user launches LazyQMK (no config file exists yet).
 
+### Step 3.1 — Identify the keyboard
+
+Before launching, look up available keyboards from the QMK fork to avoid guessing:
+
+```bash
+ls ~/qmk_firmware/keyboards/ | head -30
 ```
-Ask: "What keyboard are you setting up? (e.g. Corne crkbd, Ferris Sweep, Planck, etc.)"
+
+Then check the specific keyboard's layout variants:
+```bash
+cat ~/qmk_firmware/keyboards/<keyboard>/info.json | python3 -m json.tool | grep -A5 '"layouts"'
 ```
 
-Then launch:
+**Ask the user** (this cannot be inferred):
+```
+Ask: "Which keyboard are you setting up?
+      I found these in your QMK firmware folder: [list from above]"
+```
+
+Once they name the keyboard, read its `info.json` silently to extract available layout variants and present them — the user should not need to look this up themselves.
+
+### Step 3.2 — Launch and complete the wizard
 
 ```bash
 lazyqmk
 ```
 
-The **Onboarding Wizard** will ask for three things:
+The **Onboarding Wizard** asks for:
 
-| Prompt | What to enter | Example |
-|--------|--------------|---------|
-| QMK Firmware Path | Path to your cloned QMK fork | `/Users/user/qmk_firmware` |
-| Keyboard | QMK keyboard name | `crkbd/rev1` |
-| Layout Variant | Physical layout ID from QMK | `LAYOUT_split_3x6_3` |
+| Prompt | Source |
+|--------|--------|
+| QMK Firmware Path | Agent already knows from Phase 1 — provide it |
+| Keyboard | From user's answer in Step 3.1 |
+| Layout Variant | Agent read from `info.json` — present options, let user choose |
 
-> **Tip for agents**: If the user is unsure of the keyboard/variant names, they can be found in the `info.json` file inside the QMK firmware folder at `keyboards/<keyboard>/info.json`.
-
-**Alternatively, load an existing layout:**  
-If the user already has a `.md` layout file, the welcome screen offers "Load Existing Layout" — detect and select it from the list.
+**Alternatively — load an existing layout:**  
+If the user already has a `.md` layout file, the welcome screen offers **"Load Existing Layout"** — select it from the detected list.
 
 ---
 
-## Phase 3 — Basic Layout Editing
+## Phase 4 — Basic Layout Editing
 
-### Step 3.1 — Navigation
+### Navigation reference
 
-```
-Ask: "Would you like me to walk you through the basic editing flow, or do you already know your way around?"
-```
-
-If they need the basics:
+Share this table with the user when they start editing:
 
 | Action | Keyboard shortcut |
 |--------|-------------------|
-| Move cursor to a key | Arrow keys `↑↓←→` or VIM-style `h j k l` |
+| Move cursor | Arrow keys `↑↓←→` or VIM-style `h j k l` |
 | Open keycode picker | `Enter` |
 | Search for a keycode | Type to fuzzy-search (e.g. `ctrl`, `esc`, `layer`) |
-| Assign keycode | `Enter` in the picker |
-| Clear a key (set to transparent) | `x` or `Delete` |
-| Switch to another layer | `Tab` / `Shift+Tab` |
+| Assign keycode | `Enter` in picker |
+| Clear a key → KC_TRNS | `x` or `Delete` |
+| Switch layer | `Tab` / `Shift+Tab` |
 | Open layer manager | `Shift+L` |
 | Save layout | `Ctrl+S` |
 | Build firmware | `Ctrl+B` |
-| Show full help | `?` |
+| Full shortcut list | `?` |
 
-### Step 3.2 — Layer setup
+### Layer setup
 
+**Ask the user** (their intent cannot be inferred):
 ```
-Ask: "How many layers does your layout use? What are the layers for?
-      (e.g. base layer, symbol layer, navigation layer, gaming layer)"
+Ask: "How many layers do you need, and what is each layer for?
+      (e.g. layer 0 = base QWERTY, layer 1 = symbols, layer 2 = navigation)"
 ```
 
-Common layer setup pattern:
-- Layer 0: Base / QWERTY / Home
+Common pattern:
+- Layer 0: Base / QWERTY / Home row
 - Layer 1: Symbols / Numbers
 - Layer 2: Navigation / Media
-- Layer 3+: Application-specific or gaming
+- Layer 3+: App-specific / gaming
 
 Use `Shift+L` to rename layers for clarity.
 
-### Step 3.3 — Color organization (optional)
+### Color organization (optional)
 
-LazyQMK uses a **four-level color priority system**:
+LazyQMK uses a **four-level color priority system** (highest wins):
 
-| Priority | Level | How to set |
-|----------|-------|------------|
-| 1 (highest) | Individual key override | Select key → `c` (set individual key color) |
-| 2 | Key category color | Select key → `Ctrl+K` (assign category to key) |
-| 3 | Layer category color | `Ctrl+L` (assign category to current layer) |
-| 4 (lowest) | Layer default color | `Shift+C` (set layer default color) |
+| Priority | Level | TUI shortcut |
+|----------|-------|--------------|
+| 1 (highest) | Individual key override | Select key → `c` |
+| 2 | Key category color | Select key → `Ctrl+K` |
+| 3 | Layer category color | `Ctrl+L` |
+| 4 (lowest) | Layer default color | `Shift+C` |
 
-```
-Ask: "Do you want to set up color coding for your layout?
-      For example, you can color-code modifiers, navigation keys, symbols, etc."
-```
-
-To create and manage categories: `Shift+K` opens the Category Manager.
+Open Category Manager with `Shift+K` to create, rename, and assign colors to categories.
 
 ---
 
-## Phase 4 — Settings Manager Overview
+## Phase 5 — Settings Manager Overview
 
-Most advanced features (combos, RGB effects, idle screensaver) live in the **Settings Manager**.
+Most advanced features live in the **Settings Manager** (`Shift+S`).
 
-Open with: `Shift+S`
-
-The Settings Manager is organized into groups:
+Groups:
 - **Firmware [Global]** — QMK path, keyboard, layout variant
 - **RGB Lighting [Layout]** — RGB effects, speed, overlay ripple
-- **Idle Effect [Layout]** — Screensaver animation
+- **Idle Effect [Layout]** — Screensaver/idle animation
 - **Combos [Layout]** — Two-key hold combos
-- **Tap Dance [Layout]** — Tap dance actions (also accessible via `Shift+D`)
+- **Tap Dance [Layout]** — Multi-tap key actions (also `Shift+D`)
 
-Navigate with `↑↓` (or `j/k`), select an item with `Enter`, confirm edits with `Enter`, cancel with `Esc`.
+Navigate: `↑↓` or `j/k` · Select: `Enter` · Cancel: `Esc`
 
-> **Web UI alternative**: All settings are also accessible at `http://localhost:3001` after running `lazyqmk web`. The web editor uses a tabbed interface per layout.
-
----
-
-## Phase 5 — RGB Enhancements
-
-> **Prerequisites**: The keyboard must have RGB Matrix LEDs and `RGB_MATRIX_ENABLE = yes` in `rules.mk`. The QMK custom fork must be used. Without these, ripple code will compile but have no effect.
-
-```
-Ask: "Does your keyboard have RGB LEDs? Would you like to set up RGB effects?"
-```
-
-If yes, continue with steps 5.1 and 5.2.
+**Web UI alternative**: Run `lazyqmk web`, then open `http://localhost:3001`. All settings are available via tabs in the layout editor.
 
 ---
 
-### Step 5.1 — RGB Matrix Default Speed
+## Phase 6 — RGB Enhancements
 
-This controls the animation speed for all RGB effects.
+> **Prerequisite check** (run silently): Inspect the keyboard's `info.json` for `"rgb_matrix"` or `"underglow"` to detect whether RGB LEDs are present.
 
-**Range**: 0 (slowest) → 127 (default/mid) → 255 (fastest)
+```bash
+cat ~/qmk_firmware/keyboards/<keyboard>/info.json | python3 -m json.tool | grep -i rgb
+```
 
-#### TUI (Settings Manager)
-1. Open Settings Manager: `Shift+S`
-2. Navigate to **"RGB Lighting [Layout]"** group
-3. Select **"RGB Matrix Speed"**
-4. Type a number or use `↑↓` to adjust, then `Enter` to confirm
+**If no RGB is found in `info.json`**: Inform the user and skip this phase.  
+**If RGB is found**: Confirm with the user before configuring:
+```
+Inform: "Your keyboard supports RGB Matrix. Would you like to configure RGB effects?"
+```
+
+> **Runtime requirement**: `RGB_MATRIX_ENABLE = yes` must be in the keyboard's `rules.mk`. LazyQMK handles this when generating firmware, but the custom QMK fork must be used.
+
+---
+
+### Step 6.1 — RGB Matrix Default Speed
+
+Controls the animation speed for all RGB effects.
+
+**Range**: 0 (slowest) → 127 (default) → 255 (fastest)
+
+**Ask the user:**
+```
+Ask: "What animation speed would you like for RGB effects?
+      0 = very slow, 127 = default, 255 = very fast."
+```
+
+If they want the default, skip this step — the setting is only written when changed.
+
+#### TUI
+1. `Shift+S` → Settings Manager
+2. Navigate to **"RGB Lighting [Layout]"**
+3. Select **"RGB Matrix Speed"** → type value or `↑↓` → `Enter`
 
 #### Web UI
-1. Navigate to the layout editor for your layout
-2. Find the **RGB settings panel**
-3. Adjust the **RGB Matrix Speed** field
+Layout editor → RGB settings panel → **RGB Matrix Speed** field
 
-**What gets generated in `config.h`** (only if changed from default 127):
+**Generated `config.h`** (only emitted when ≠ 127):
 ```c
-// RGB Matrix Default Animation Speed
 #define RGB_MATRIX_DEFAULT_SPD 200
 ```
 
-**What gets written to the layout `.md` file**:
+**Written to `.md` file** (only when ≠ 127):
 ```markdown
 **RGB Matrix Speed**: 200
 ```
 
 ---
 
-### Step 5.2 — RGB Overlay Ripple Effect
+### Step 6.2 — RGB Overlay Ripple Effect
 
-A ripple effect overlaid on top of your base layer colors. When a key is pressed, a circular ripple expands outward from that key's LED position.
+An expanding ring of light radiates from each keypress, layered on top of base layer colors.
 
+**Ask the user:**
 ```
-Ask: "Would you like to enable the RGB overlay ripple effect?
-      It creates an expanding ring of light from each keypress, layered on top of your normal colors."
+Ask: "Would you like to enable the ripple effect — an expanding ring of light on each keypress?"
 ```
 
-#### TUI (Settings Manager)
-1. Open Settings Manager: `Shift+S`
-2. Navigate to **"RGB Lighting [Layout]"** group
-3. Select **"Overlay Ripple Enabled"** → `Enter` to toggle **On**
-4. Configure the settings below as desired
+If yes, collect preferences for the settings below. Use the defaults as suggestions — the user only needs to specify what they want to change.
 
-#### Web UI
-1. Navigate to the layout editor
-2. Click the **Overlay Ripple tab** (🌊 icon)
-3. Toggle **"Enable Overlay Ripple"**
-4. Configure settings in the panel
+#### Enable
 
-#### All ripple settings
+**TUI**: `Shift+S` → **"RGB Lighting [Layout]"** → **"Overlay Ripple Enabled"** → `Enter`  
+**Web UI**: Layout editor → 🌊 **Overlay Ripple** tab → toggle **"Enable Overlay Ripple"**
 
-```
-Ask each of these in turn, showing the default and range:
-```
+#### Ripple settings — ask only for values the user wants to change from defaults
 
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
-| **Max Concurrent Ripples** | 4 | 1–8 | How many ripples can be active at once |
-| **Ripple Duration** | 500ms | any ms | How long each ripple lasts before fading out |
-| **Ripple Speed** | 128 | 0–255 | How fast the ring expands outward |
-| **Band Width** | 3 | LED units | How wide the ring is |
-| **Amplitude** | 50% | 0–100% | Brightness boost of the ripple over base color |
-| **Color Mode** | Fixed | see below | How ripple color is determined |
-| **Fixed Color** | `#00FFFF` (cyan) | hex color | Color used when mode is Fixed Color |
-| **Trigger on Press** | On | On/Off | Fire ripple when key is pressed |
-| **Trigger on Release** | Off | On/Off | Fire ripple when key is released |
-| **Ignore Transparent Keys** | On | On/Off | Skip keys assigned KC_TRNS |
-| **Ignore Modifier Keys** | Off | On/Off | Skip Shift, Ctrl, Alt, GUI keys |
-| **Ignore Layer Switch Keys** | Off | On/Off | Skip MO/LT/TG keys |
+| Max Concurrent Ripples | 4 | 1–8 | How many ripples can run at once |
+| Ripple Duration | 500ms | any ms | How long each ripple lasts |
+| Ripple Speed | 128 | 0–255 | How fast the ring expands |
+| Band Width | 3 | LED units | How wide the ring is |
+| Amplitude | 50% | 0–100% | Brightness boost over base color |
+| Color Mode | Fixed Color | see below | How ripple color is chosen |
+| Fixed Color | `#00FFFF` (cyan) | hex | Color when mode is Fixed Color |
+| Trigger on Press | On | On/Off | Fire on keydown |
+| Trigger on Release | Off | On/Off | Fire on keyup |
+| Ignore Transparent Keys | On | On/Off | Skip KC_TRNS keys |
+| Ignore Modifier Keys | Off | On/Off | Skip Shift/Ctrl/Alt/GUI |
+| Ignore Layer Switch Keys | Off | On/Off | Skip MO/LT/TG keys |
 
 #### Color Mode options
 
-| Mode | Description | Extra setting |
-|------|-------------|---------------|
-| **Fixed Color** | All ripples use one fixed color | Set **Ripple Fixed Color** (hex, e.g. `#00FFFF`) |
-| **Key Color** | Ripple color matches the key's base layer color | — |
-| **Hue Shift** | Ripple shifts hue relative to the key's base color | Set **Hue Shift** (-180° to 180°) |
+| Mode | Description | Extra setting needed |
+|------|-------------|----------------------|
+| **Fixed Color** | All ripples use one fixed color | **Fixed Color** (hex, default `#00FFFF`) |
+| **Key Color** | Ripple matches the key's base layer color | — |
+| **Hue Shift** | Hue-shifted from the key's base color | **Hue Shift** degree (-180° to 180°) |
 
-> **Note**: Hue Shift mode currently falls back to Key Color behavior — this is a known limitation.
+> **Known limitation**: Hue Shift mode currently falls back to Key Color behavior.
 
-#### What gets generated
+#### Generated output
 
-**In `config.h`:**
+**`config.h`** (values shown are defaults):
 ```c
-// RGB Overlay Ripple Configuration
 #define LQMK_RIPPLE_OVERLAY_ENABLED
 #define LQMK_RIPPLE_MAX_RIPPLES 4
 #define LQMK_RIPPLE_DURATION_MS 500
@@ -271,129 +342,107 @@ Ask each of these in turn, showing the default and range:
 #define LQMK_RIPPLE_TRIGGER_ON_RELEASE 0
 ```
 
-**In `keymap.c`:**  
-A `ripple_t` array is declared, and `rgb_matrix_indicators_advanced_user()` is hooked to apply the ripple effect on top of the base layer colors each frame. The hook uses LED coordinates to calculate distance from the ripple origin and fades out over time.
+**`keymap.c`**: A `ripple_t` array is declared. `rgb_matrix_indicators_advanced_user()` is hooked to apply ripple colors each frame, calculating distance from the ripple origin and fading over time.
 
-**In the `.md` layout file** (only non-default values are written; this example shows Fixed Color mode):
+**`.md` file** (only non-default values written; example shows Fixed Color mode):
 ```markdown
 **Ripple Overlay**: On
+**Ripple Color Mode**: Fixed Color
+**Ripple Fixed Color**: #FF6600
 **Max Ripples**: 6
 **Ripple Duration**: 750ms
 **Ripple Speed**: 200
-**Ripple Band Width**: 5
-**Ripple Amplitude**: 75%
-**Ripple Color Mode**: Fixed Color
-**Ripple Fixed Color**: #FF00FF
-**Ripple Trigger on Press**: Off
-**Ripple Trigger on Release**: On
-**Ripple Ignore Transparent**: Off
-**Ripple Ignore Modifiers**: On
-**Ripple Ignore Layer Switch**: On
 ```
 
-> **Color mode values in `.md` file**: `Fixed Color`, `Key Color`, `Hue Shift`.  
-> The `Ripple Fixed Color` field is only relevant when mode is `Fixed Color`.  
-> The `Ripple Hue Shift` field is only relevant when mode is `Hue Shift`.
+> **Color mode values**: `Fixed Color`, `Key Color`, `Hue Shift`.  
+> `Ripple Fixed Color` is only relevant when mode is `Fixed Color`.  
+> `Ripple Hue Shift` is only relevant when mode is `Hue Shift`.
 
 ---
 
-## Phase 6 — Two-Key Hold Combos
+## Phase 7 — Two-Key Hold Combos
 
-A "two-key hold combo" fires a special action when two specific keys on the **base layer (layer 0)** are held simultaneously for a configurable duration. Up to **3 combos** can be defined per layout.
+A combo fires a special action when two physical keys on **layer 0** are held simultaneously for a set duration.
 
-Each combo slot has a fixed action:
+**Fixed action slots:**
 - **Combo 1** → Disable RGB Effects (revert to base layer colors)
 - **Combo 2** → Disable RGB Lighting entirely
-- **Combo 3** → Enter Bootloader (for flashing firmware)
+- **Combo 3** → Enter Bootloader (for flashing)
 
+> **Constraints**: Layer 0 only · Keys must differ · Max 3 combos · Hold duration: 50–2000ms · If no combos are defined, no combo code is generated even if combos are enabled.
+
+**Ask the user:**
 ```
 Ask: "Would you like to set up two-key hold combos?
-      These let you trigger actions (like disabling RGB or entering bootloader mode)
-      by holding two keys together for a moment — no extra keys needed."
+      For example: hold two keys together for 500ms to enter bootloader mode."
 ```
 
-> **Important constraints**:
-> - Combos only fire when you are on **layer 0** (base layer)
-> - Both keys must be different physical positions
-> - Max 3 combos total
-> - Hold duration: 50–2000ms
+If yes, ask which combos they want and which keys to use for each:
+```
+Ask: "Which combo actions do you want?
+        1 — Disable RGB Effects
+        2 — Disable RGB Lighting
+        3 — Bootloader (for flashing)
+      For each one, which two keys should trigger it?"
+```
+
+**Agent tip**: Before asking for key positions, look up the keyboard's matrix layout from `info.json` so you can describe keys by their visual labels (e.g. "the Q key" or "the spacebar") rather than raw coordinates.
 
 ---
 
-### Step 6.1 — Enable combos
+### Step 7.1 — Enable combos
 
-#### TUI (Settings Manager)
-1. Open Settings Manager: `Shift+S`
-2. Navigate to **"Combos [Layout]"** group
-3. Select **"Combos Enabled"** → `Enter` to toggle **On**
-
-#### Web UI
-1. Navigate to the layout editor
-2. Click the **Combos tab** (🔗 icon)
-3. Toggle **"Enable Combos"** checkbox
+**TUI**: `Shift+S` → **"Combos [Layout]"** → **"Combos Enabled"** → `Enter`  
+**Web UI**: Layout editor → 🔗 **Combos tab** → toggle **"Enable Combos"**
 
 ---
 
-### Step 6.2 — Configure each combo
+### Step 7.2 — Configure each combo
 
-For each combo you want to enable:
+#### TUI — key position picking
 
-```
-Ask: "For Combo [1/2/3] ([action name]):
-      - Which key should be Key 1? (navigate to it on the keyboard grid)
-      - Which key should be Key 2?
-      - How long should both keys be held before it fires? (default: 500ms)"
-```
+For each combo:
+1. Select **"Combo N Key 1 ([Action])"** → `Enter`  
+   → Key-selection mode activates. Navigate with arrow keys, press `Enter` to confirm.
+2. Select **"Combo N Key 2 ([Action])"** → same flow
+3. Select **"Combo N Hold Duration"** → type ms value, or `↑↓` adjusts by 10ms → `Enter`
 
-#### TUI flow — picking key positions
-
-Each combo has three settings: **Key 1**, **Key 2**, and **Hold Duration**.
-
-1. Select **"Combo N Key 1 ([Action])"** → `Enter`
-   - The editor enters key-selection mode
-   - Use arrow keys to navigate the keyboard grid to the desired physical key
-   - Press `Enter` to confirm the selection
-2. Repeat for **"Combo N Key 2 ([Action])"**
-3. Select **"Combo N Hold Duration"** → type a number (ms) or use `↑↓` to adjust by 10ms increments → `Enter`
-
-Setting display names in TUI:
+TUI setting names:
 - `Combo 1 Key 1 (Disable Effects)` / `Combo 1 Key 2 (Disable Effects)` / `Combo 1 Hold Duration`
 - `Combo 2 Key 1 (Disable Lighting)` / `Combo 2 Key 2 (Disable Lighting)` / `Combo 2 Hold Duration`
 - `Combo 3 Key 1 (Bootloader)` / `Combo 3 Key 2 (Bootloader)` / `Combo 3 Hold Duration`
 
-#### Web UI flow
+#### Web UI
 
-1. Click **"Add Combo"** button (max 3)
-2. For each combo row, fill in:
-   - **Key 1** row and column (matrix coordinates)
-   - **Key 2** row and column
+1. Click **"Add Combo"** (max 3)
+2. Fill in per combo row:
+   - **Key 1** `{row, col}` and **Key 2** `{row, col}` — matrix coordinates
    - **Action**: `DisableEffects` / `DisableLighting` / `Bootloader`
    - **Hold Duration** (ms)
-3. Remove unwanted combos with the delete button on each row
+3. Delete unwanted combos with the per-row delete button
 
-> **How to find matrix coordinates**: In the TUI, enable matrix position display in the status bar (see debug mode). Alternatively, check the keyboard's `info.json` at `keyboards/<keyboard>/info.json` for the `matrix` field under each key.
+> **Finding matrix coordinates**: Read `keyboards/<keyboard>/info.json` — each key entry has a `"matrix": [row, col]` field. Cross-reference with the key label to identify the right position.
 
 ---
 
-### Step 6.3 — What gets generated
+### Step 7.3 — Generated output
 
-**In `config.h`:**
+**`config.h`**:
 ```c
-// Combo Configuration
 #define COMBO_ENABLE
 #define COMBO_COUNT 2
 ```
 
-> **Important**: You must also add `COMBO_ENABLE = yes` to your `rules.mk` file for QMK to compile combo support. LazyQMK generates this alongside `config.h` when combos are enabled.
+**`rules.mk`** (also generated by LazyQMK when combos are enabled):
+```makefile
+COMBO_ENABLE = yes
+```
 
-**In `keymap.c`** (example with 2 combos):
+**`keymap.c`** (example with 2 combos):
 ```c
 #ifdef COMBO_ENABLE
 
-enum combo_events {
-    COMBO_0,
-    COMBO_1
-};
+enum combo_events { COMBO_0, COMBO_1 };
 
 const uint16_t PROGMEM combo_0_keys[] = {KC_A, KC_B, COMBO_END};
 const uint16_t PROGMEM combo_1_keys[] = {KC_C, KC_D, COMBO_END};
@@ -404,132 +453,127 @@ combo_t key_combos[] = {
 };
 
 void process_combo_event(uint16_t combo_index, bool pressed) {
-    // Only activate combos on base layer (layer 0)
-    if (get_highest_layer(layer_state) != 0) {
-        return;
-    }
+    if (get_highest_layer(layer_state) != 0) return;  // base layer only
     if (pressed) {
         combo_state[combo_index].timer = timer_read();
         combo_state[combo_index].active = true;
-    } else {
-        if (combo_state[combo_index].active) {
-            uint16_t elapsed = timer_elapsed(combo_state[combo_index].timer);
-            switch (combo_index) {
-                case COMBO_0:
-                    if (elapsed >= 500) {
-                        // Disable RGB effects — reverts to TUI layer colors (or solid color as fallback)
-                        // Actual emitted call depends on whether the layout has custom layer colors:
-                        //   rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS);  // if custom colors defined
-                        //   rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);       // otherwise
-                        rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-                    }
-                    break;
-                case COMBO_1:
-                    if (elapsed >= 800) {
-                        rgb_matrix_disable_noeeprom();
-                    }
-                    break;
-            }
-            combo_state[combo_index].active = false;
+    } else if (combo_state[combo_index].active) {
+        uint16_t elapsed = timer_elapsed(combo_state[combo_index].timer);
+        switch (combo_index) {
+            case COMBO_0:
+                if (elapsed >= 500) {
+                    // Reverts to TUI layer colors, or solid color if no custom colors:
+                    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+                }
+                break;
+            case COMBO_1:
+                if (elapsed >= 800) { rgb_matrix_disable_noeeprom(); }
+                break;
         }
+        combo_state[combo_index].active = false;
     }
 }
 
-#endif // COMBO_ENABLE
+#endif
 ```
 
-**In the `.md` layout file:**
+**`.md` file**:
 ```markdown
 **Combos**: On
-**Combo 1**: (0,0)+(0,1) → Disable Effects [500ms]
-**Combo 2**: (0,5)+(0,6) → Disable Lighting [800ms]
+**Combo 1**: (0,2)+(0,3) → Disable Effects [500ms]
 **Combo 3**: (1,0)+(1,11) → Bootloader [1000ms]
 ```
 
 ---
 
-## Phase 7 — Build & Flash
+## Phase 8 — Build & Flash
 
-Once all settings are configured:
+### Step 8.1 — Save
 
+Press `Ctrl+S` in the TUI. The title bar asterisk (`*`) disappears when the file is saved.
+
+### Step 8.2 — Build
+
+Press `Ctrl+B`. The build runs in the background.
+
+- `Shift+B` opens the build log viewer (scrollable)
+- `Ctrl+C` inside log viewer copies the log to clipboard
+- Build errors include doctor suggestions — run `lazyqmk doctor --verbose` if needed
+
+### Step 8.3 — Flash
+
+**Ask the user** (requires physical action):
 ```
-Ask: "Are you ready to build the firmware and flash it to your keyboard?"
+Inform: "Build complete. To flash:
+         1. Put your keyboard into bootloader mode
+            (use Bootloader combo if configured, or press the physical RESET button)
+         2. Then I'll run the flash command."
 ```
 
-### Step 7.1 — Save
-
-```
-Ctrl+S
-```
-
-The title bar asterisk (`*`) disappears when the layout is saved.
-
-### Step 7.2 — Build
-
-```
-Ctrl+B
-```
-
-- Build runs in the background (non-blocking)
-- Watch the progress in the status bar
-- Press `Shift+B` to open the build log viewer
-- Press `Ctrl+C` inside the log viewer to copy the log to clipboard
-
-If the build fails, the error message will suggest running `lazyqmk doctor --verbose` for diagnostics.
-
-### Step 7.3 — Flash
-
-Once the build succeeds, put your keyboard into bootloader mode:
-- Use **Combo 3** (Bootloader combo) if configured
-- Or use a physical RESET button / BOOT+USB shortcut (keyboard-specific)
-
-Then flash with QMK Toolbox or the QMK CLI:
+Once they confirm the keyboard is in bootloader mode:
 ```bash
 qmk flash
 ```
 
 ---
 
-## Phase 8 — Enhance an Existing Layout
+## Phase 9 — Enhance an Existing Layout
 
+> Start here if the user already has a layout. Run these steps silently, then report findings.
+
+### Step 9.1 — Discover existing layouts
+
+```bash
+# Check LazyQMK config for known layout paths
+cat ~/Library/Application\ Support/LazyQMK/config.toml   # macOS
+cat ~/.config/LazyQMK/config.toml                         # Linux
+
+# Find all layout files
+find ~ -name "*.md" -path "*LazyQMK*" 2>/dev/null
 ```
-Ask: "Do you have an existing layout file (.md) you want to enhance,
-      or are you starting from scratch?"
+
+### Step 9.2 — Read the current layout state
+
+Open the `.md` file and read:
+1. The YAML frontmatter (keyboard, variant, metadata)
+2. The `## Settings` section (which features are already enabled)
+3. The layer tables (current key assignments)
+
+Report a brief summary to the user:
+```
+Inform: "Found your layout: [name]
+         Keyboard: [keyboard/variant]
+         Layers: [count and names]
+         Current features enabled: [list any active settings]
+         What would you like to change or add?"
 ```
 
-For existing layouts, the quickest path is:
+### Step 9.3 — Apply enhancements
 
-1. **Launch with the existing file:**
-   ```bash
-   lazyqmk --layout /path/to/your/layout.md
-   ```
-   Or use the "Load Existing Layout" option on the welcome screen.
-
-2. **Review current settings:**
-   - Open Settings Manager (`Shift+S`) to see all current settings
-   - Check which features are enabled/configured
-
-3. **Apply enhancements** using the relevant phases above:
-   - Add combos → Phase 6
-   - Add ripple effects → Phase 5.2
-   - Tune RGB speed → Phase 5.1
-   - Add/modify layers → Phase 3.2
-
-4. **Save and rebuild** → Phase 7
+Based on what the user wants:
+- Add/modify combos → Phase 7
+- Enable/configure ripple → Phase 6.2
+- Tune RGB speed → Phase 6.1
+- Add/edit layers → Phase 4
+- Build and flash → Phase 8
 
 ---
 
 ## Quick Reference Card
 
-| Want to... | TUI shortcut | Web tab |
-|------------|-------------|---------|
-| Open Settings Manager | `Shift+S` | All settings visible in editor |
-| Configure combos | `Shift+S` → Combos group | 🔗 Combos tab |
-| Configure ripple effect | `Shift+S` → RGB Lighting group | 🌊 Overlay Ripple tab |
-| Set RGB speed | `Shift+S` → RGB Lighting group | RGB settings panel |
-| Set up tap dance | `Shift+D` or `Shift+S` → Tap Dance | Tap Dance tab |
-| Open keycode picker | `Enter` on a key | Click a key |
-| Manage categories | `Shift+K` | Category panel |
+| Goal | TUI | Web UI |
+|------|-----|--------|
+| Settings Manager | `Shift+S` | All settings in editor sidebar |
+| Combos | `Shift+S` → Combos group | 🔗 Combos tab |
+| Ripple effect | `Shift+S` → RGB Lighting group | 🌊 Overlay Ripple tab |
+| RGB speed | `Shift+S` → RGB Lighting group | RGB settings panel |
+| Tap dance | `Shift+D` | Tap Dance tab |
+| Keycode picker | `Enter` on a key | Click a key |
+| Category manager | `Shift+K` | Category panel |
+| Individual key color | `c` | Click key → color picker |
+| Assign category to key | `Ctrl+K` | Click key → category |
+| Assign category to layer | `Ctrl+L` | Layer settings |
+| Layer default color | `Shift+C` | Layer settings |
 | Export layout doc | `Ctrl+E` | Export button |
 | Full shortcut list | `?` | — |
 
@@ -538,58 +582,59 @@ For existing layouts, the quickest path is:
 ## Troubleshooting
 
 ### Combos not firing
-- Verify you are on **layer 0** when holding the keys
-- Check hold duration — increase it if accidental activations, decrease if it feels slow
-- Confirm `COMBO_ENABLE = yes` is in `rules.mk` and `#define COMBO_ENABLE` is in `config.h`
-- If combos are enabled but no combo definitions exist, no combo code is generated — at least one combo must be fully configured
+- Must be on **layer 0** when holding the keys
+- Increase hold duration if not triggering; decrease if triggering accidentally
+- Verify `COMBO_ENABLE = yes` is in `rules.mk` and `#define COMBO_ENABLE` in `config.h`
+- At least one combo must be fully configured — enabling combos with no definitions emits no code
 
 ### Ripple effect not visible
-- Ensure `RGB_MATRIX_ENABLE` is defined and the keyboard supports RGB Matrix
-- Check that **Trigger on Press** is enabled
-- Try increasing **Amplitude** (the brightness boost may be too low)
-- Verify the custom QMK fork is being used
+- `RGB_MATRIX_ENABLE = yes` must be in `rules.mk`
+- Check **Trigger on Press** is enabled
+- Try increasing **Amplitude** — the default 50% boost may not be visible on all keyboards
+- Verify the custom QMK fork is used, not the official QMK repo
 
-### RGB speed change not applied
-- The default (127) is not written to `config.h` — only non-default values emit the define. This is correct.
+### RGB speed change has no effect
+- Default value (127) is intentionally not written to `config.h` — this is correct behaviour
+- Only non-default values emit `#define RGB_MATRIX_DEFAULT_SPD`
 
-### Build errors
+### Build fails
 ```bash
 lazyqmk doctor --verbose
 ```
-Follow the suggestions printed alongside each error.
+Follow the suggestions printed alongside each error. Common causes: missing ARM GCC, wrong QMK path, old QMK fork.
 
 ---
 
 ## File Format Reference
 
-LazyQMK layouts are stored as `.md` files with YAML frontmatter. All feature settings live in a `## Settings` section.
+Layouts are stored as `.md` files. Settings live in a `## Settings` section below the layer tables.
 
-### Key syntax in layer tables
+### Key syntax
 
 | Format | Meaning |
 |--------|---------|
 | `KC_A` | Plain keycode |
-| `KC_A{#FF0000}` | Keycode with color override |
-| `KC_A@navigation` | Keycode with category |
-| `KC_A{#FF0000}@navigation` | Keycode with color and category |
+| `KC_A{#FF0000}` | With color override |
+| `KC_A@navigation` | With category |
+| `KC_A{#FF0000}@navigation` | With color and category |
 
-### Settings section example (all features)
+### Full settings example
 
 ```markdown
 ## Settings
 
 **RGB Matrix Speed**: 180
 **Ripple Overlay**: On
+**Ripple Color Mode**: Fixed Color
+**Ripple Fixed Color**: #00FFFF
 **Max Ripples**: 4
 **Ripple Duration**: 500ms
 **Ripple Speed**: 200
 **Ripple Band Width**: 3
 **Ripple Amplitude**: 60%
-**Ripple Color Mode**: Fixed Color
-**Ripple Fixed Color**: #00FFFF
 **Combos**: On
 **Combo 1**: (0,2)+(0,3) → Disable Effects [500ms]
-**Combo 3**: (0,0)+(2,5) → Bootloader [1000ms]
+**Combo 3**: (1,0)+(1,11) → Bootloader [1000ms]
 ```
 
-> Only non-default values are written. Missing settings use their built-in defaults.
+> Only non-default values are written. Absent settings use built-in defaults.
