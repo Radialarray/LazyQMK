@@ -43,12 +43,16 @@ Before starting Phase 1, check silently:
 which lazyqmk
 
 # Does a config file already exist?
-ls ~/Library/Application\ Support/LazyQMK/config.toml   # macOS
-ls ~/.config/LazyQMK/config.toml                         # Linux
-ls $env:APPDATA\LazyQMK\config.toml                      # Windows
+# macOS:  ~/Library/Application Support/LazyQMK/config.toml
+# Linux:  ~/.config/LazyQMK/config.toml
+# Windows: %APPDATA%\LazyQMK\config.toml
 
-# Are there existing layout files?
-find ~ -name "*.md" -path "*/LazyQMK/*" 2>/dev/null | head -10
+# Are there existing layout files? Layouts live next to config.toml:
+# macOS:  ~/Library/Application Support/LazyQMK/layouts/
+# Linux:  ~/.config/LazyQMK/layouts/
+# Windows: %APPDATA%\LazyQMK\layouts\
+ls ~/Library/Application\ Support/LazyQMK/layouts/ 2>/dev/null \
+  || ls ~/.config/LazyQMK/layouts/ 2>/dev/null
 ```
 
 **Route based on findings:**
@@ -524,12 +528,13 @@ qmk flash
 ### Step 9.1 — Discover existing layouts
 
 ```bash
-# Check LazyQMK config for known layout paths
+# Read config to confirm keyboard/variant and locate layouts directory
 cat ~/Library/Application\ Support/LazyQMK/config.toml   # macOS
 cat ~/.config/LazyQMK/config.toml                         # Linux
 
-# Find all layout files
-find ~ -name "*.md" -path "*LazyQMK*" 2>/dev/null
+# List layout files directly from the known layouts directory
+ls ~/Library/Application\ Support/LazyQMK/layouts/   # macOS
+ls ~/.config/LazyQMK/layouts/                         # Linux
 ```
 
 ### Step 9.2 — Read the current layout state
