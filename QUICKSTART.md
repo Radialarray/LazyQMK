@@ -128,6 +128,18 @@ Then open http://localhost:3001 in your browser.
 
 ---
 
+## Using an AI Agent?
+
+If you're setting up or configuring LazyQMK with an AI assistant (Claude, Copilot, etc.), point it at the agent guide:
+
+```
+docs/AGENT_GUIDE.md
+```
+
+The guide tells the agent how to check your environment, walk you through setup, and configure advanced features like RGB effects and combos — asking you only for the things it genuinely can't figure out itself.
+
+---
+
 ## Troubleshooting
 
 ### Setup Issues
@@ -165,6 +177,7 @@ python3 -m pip install --user qmk
 - **Create Custom Layouts** - Edit directly in LazyQMK or edit `.md` files manually
 - **Organize with Colors** - Assign colors to keys, categories, and layers
 - **Version Control** - Store layouts in git for easy sharing
-- **Advanced Features** - Explore tap dance, mod-tap, and other QMK features
+- **Advanced Features** - Explore tap dance, combos, RGB effects, and idle screensaver
 
-For complete documentation, see [README.md](README.md).
+For complete documentation, see [README.md](README.md).  
+For AI-assisted setup, see [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md).

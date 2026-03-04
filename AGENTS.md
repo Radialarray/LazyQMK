@@ -422,6 +422,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete technical architecture
 - [FEATURES.md](docs/FEATURES.md) - All implemented features
 - [QUICKSTART.md](QUICKSTART.md) - User guide
+- [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md) - **Agent interaction guide**: step-by-step conversational flow for setting up layouts, RGB effects, and combos. Start here when helping a user configure their keyboard.
 - [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md) - Docker build configuration
 - [docs/DOCKER_QMK_SETUP.md](docs/DOCKER_QMK_SETUP.md) - Docker QMK setup
 - Historical work: Use `bd list --status=closed` to view completed specs and features
