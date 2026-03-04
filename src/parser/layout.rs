@@ -1069,11 +1069,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                     let idx = combo_num - 1;
                     if layout.combo_settings.combos.len() <= idx {
                         layout.combo_settings.combos.resize_with(idx + 1, || {
-                            crate::models::ComboDefinition::new(
-                                Position::new(0, 0),
-                                Position::new(0, 0),
-                                crate::models::ComboAction::DisableEffects,
-                            )
+                            crate::models::ComboDefinition::new_placeholder()
                         });
                     }
                     layout.combo_settings.combos[idx] = combo;

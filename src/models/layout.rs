@@ -619,6 +619,11 @@ pub struct ComboDefinition {
     /// Default: 500ms
     #[serde(default = "default_combo_hold_duration")]
     pub hold_duration_ms: u16,
+    /// Whether this is a gap-filler placeholder created when non-contiguous
+    /// combo indices are parsed (e.g. only Combo 2 and Combo 3 are defined).
+    /// Placeholders are never emitted to generated C code.
+    #[serde(skip)]
+    pub placeholder: bool,
 }
 
 const fn default_combo_hold_duration() -> u16 {
@@ -636,6 +641,21 @@ impl ComboDefinition {
             key2,
             action,
             hold_duration_ms: default_combo_hold_duration(),
+            placeholder: false,
+        }
+    }
+
+    /// Creates a gap-filler placeholder used when non-contiguous combo indices
+    /// are parsed (e.g. only Combo 2 and Combo 3 defined, leaving index 0 empty).
+    /// Placeholders are **never** emitted to generated C code.
+    #[must_use]
+    pub fn new_placeholder() -> Self {
+        Self {
+            key1: Position::new(0, 0),
+            key2: Position::new(0, 0),
+            action: ComboAction::DisableEffects,
+            hold_duration_ms: default_combo_hold_duration(),
+            placeholder: true,
         }
     }
 
@@ -654,6 +674,7 @@ impl ComboDefinition {
             key2,
             action,
             hold_duration_ms,
+            placeholder: false,
         }
     }
 

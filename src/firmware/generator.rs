@@ -47,7 +47,7 @@ impl<'a> FirmwareGenerator<'a> {
         }
     }
 
-    /// Generates keymap.c and config.h files.
+    /// Generates keymap.c, config.h, and rules.mk files.
     ///
     /// Files are written to both:
     /// 1. Timestamped output directory (for archival)
@@ -66,6 +66,12 @@ impl<'a> FirmwareGenerator<'a> {
         // Generate keymap.c
         let keymap_c = self.generate_keymap_c()?;
         let keymap_path = self.write_file_to_both(&timestamp_dir, "keymap.c", &keymap_c)?;
+
+        // Generate rules.mk (only written if features need enabling)
+        let rules_mk = self.generate_rules_mk();
+        if !rules_mk.is_empty() {
+            self.write_file_to_both(&timestamp_dir, "rules.mk", &rules_mk)?;
+        }
 
         Ok((keymap_path, config_h_path))
     }
@@ -589,8 +595,11 @@ impl<'a> FirmwareGenerator<'a> {
             return Ok(String::new());
         }
 
-        // Check if ripple is also enabled (need to add ripple trigger)
-        let has_ripple = self.layout.rgb_overlay_ripple.enabled;
+        // Check if ripple is also enabled (need to add ripple trigger).
+        // Mirror the same guard used in generate_ripple_overlay_code so that
+        // has_ripple is only true when LQMK_RIPPLE_OVERLAY_ENABLED will actually
+        // be #defined (i.e., ripple enabled AND keyboard has RGB matrix).
+        let has_ripple = self.layout.rgb_overlay_ripple.enabled && self.geometry.has_rgb_matrix();
 
         let mut code = String::new();
 
@@ -637,6 +646,16 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    }\n");
         code.push_str("}\n");
         code.push('\n');
+
+        // Forward declaration for ripple trigger (defined below in LQMK_RIPPLE_OVERLAY_ENABLED block)
+        if has_ripple {
+            code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
+            code.push_str(
+                "static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record);\n",
+            );
+            code.push_str("#endif\n");
+            code.push('\n');
+        }
 
         // Process record hook to reset on activity
         code.push_str("bool process_record_user(uint16_t keycode, keyrecord_t *record) {\n");
@@ -942,8 +961,19 @@ impl<'a> FirmwareGenerator<'a> {
     /// Combos are base-layer only and require holding both keys for the configured duration.
     #[allow(clippy::unnecessary_wraps)]
     fn generate_combo_code(&self) -> Result<String> {
-        // Only generate if combos are enabled and at least one combo is defined
-        if !self.layout.combo_settings.enabled || self.layout.combo_settings.combos.is_empty() {
+        // Collect only real (non-placeholder) combos so that gaps created when
+        // non-contiguous combo indices are parsed (e.g. only Combo 2 and Combo 3
+        // defined) do not produce phantom COMBO_0 entries in the generated C.
+        let real_combos: Vec<_> = self
+            .layout
+            .combo_settings
+            .combos
+            .iter()
+            .filter(|c| !c.placeholder)
+            .collect();
+
+        // Only generate if combos are enabled and at least one real combo is defined
+        if !self.layout.combo_settings.enabled || real_combos.is_empty() {
             return Ok(String::new());
         }
 
@@ -956,9 +986,9 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Generate combo enum
         code.push_str("enum combo_events {\n");
-        for (idx, _combo) in self.layout.combo_settings.combos.iter().enumerate() {
+        for (idx, _combo) in real_combos.iter().enumerate() {
             code.push_str(&format!("    COMBO_{}", idx));
-            if idx < self.layout.combo_settings.combos.len() - 1 {
+            if idx < real_combos.len() - 1 {
                 code.push_str(",\n");
             } else {
                 code.push('\n');
@@ -972,7 +1002,7 @@ impl<'a> FirmwareGenerator<'a> {
         // `state.selected_position` in the TUI and parsed directly from the
         // markdown without any coordinate conversion). Pass them straight to
         // `get_key()` which also operates on visual positions.
-        for (idx, combo) in self.layout.combo_settings.combos.iter().enumerate() {
+        for (idx, combo) in real_combos.iter().enumerate() {
             // Get keycodes for the two positions from base layer (layer 0)
             let base_layer = self
                 .layout
@@ -997,7 +1027,7 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Generate combo array
         code.push_str("combo_t key_combos[] = {\n");
-        for (idx, _combo) in self.layout.combo_settings.combos.iter().enumerate() {
+        for (idx, _combo) in real_combos.iter().enumerate() {
             code.push_str(&format!(
                 "    [COMBO_{}] = COMBO_ACTION(combo_{}_keys),\n",
                 idx, idx
@@ -1011,10 +1041,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("static struct {\n");
         code.push_str("    uint16_t timer;\n");
         code.push_str("    bool active;\n");
-        code.push_str(&format!(
-            "}} combo_state[{}];\n",
-            self.layout.combo_settings.combos.len()
-        ));
+        code.push_str(&format!("}} combo_state[{}];\n", real_combos.len()));
         code.push('\n');
 
         // Generate process_combo_event handler
@@ -1038,7 +1065,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            switch (combo_index) {\n");
 
         // Generate cases for each combo
-        for (idx, combo) in self.layout.combo_settings.combos.iter().enumerate() {
+        for (idx, combo) in real_combos.iter().enumerate() {
             code.push_str(&format!("                case COMBO_{}:\n", idx));
             code.push_str(&format!(
                 "                    if (elapsed >= {}) {{\n",
@@ -1235,6 +1262,49 @@ impl<'a> FirmwareGenerator<'a> {
         keycode.to_string()
     }
 
+    /// Generates rules.mk for the keymap.
+    ///
+    /// QMK requires feature flags in `rules.mk` to include source files at build time.
+    /// Without these, `#define` flags in `config.h` alone cause linker errors like
+    /// `undefined reference to 'process_combo'`.
+    ///
+    /// Returns empty string if no features need enabling.
+    #[must_use]
+    pub fn generate_rules_mk(&self) -> String {
+        let mut features: Vec<&str> = Vec::new();
+
+        // Check for combos: enabled AND at least one non-placeholder combo
+        let real_combo_count = self
+            .layout
+            .combo_settings
+            .combos
+            .iter()
+            .filter(|c| !c.placeholder)
+            .count();
+        if self.layout.combo_settings.enabled && real_combo_count > 0 {
+            features.push("COMBO_ENABLE = yes");
+        }
+
+        // Check for tap dances
+        if !self.layout.tap_dances.is_empty() {
+            features.push("TAP_DANCE_ENABLE = yes");
+        }
+
+        if features.is_empty() {
+            return String::new();
+        }
+
+        let mut content = String::new();
+        content.push_str(&format!("# Generated by {}\n", APP_BINARY_NAME));
+        content.push('\n');
+        for feature in &features {
+            content.push_str(feature);
+            content.push('\n');
+        }
+
+        content
+    }
+
     /// Generates config.h for the keymap.
     ///
     /// This generates a minimal keymap-specific config.h.
@@ -1417,13 +1487,19 @@ impl<'a> FirmwareGenerator<'a> {
         }
 
         // === Combo Settings ===
-        if self.layout.combo_settings.enabled && !self.layout.combo_settings.combos.is_empty() {
+        let real_combo_count = self
+            .layout
+            .combo_settings
+            .combos
+            .iter()
+            .filter(|c| !c.placeholder)
+            .count();
+        if self.layout.combo_settings.enabled && real_combo_count > 0 {
             content.push_str("\n// Combo Configuration\n");
-            content.push_str("#define COMBO_ENABLE\n");
-            content.push_str(&format!(
-                "#define COMBO_COUNT {}\n",
-                self.layout.combo_settings.combos.len()
-            ));
+            // COMBO_ENABLE is set via rules.mk (COMBO_ENABLE = yes) which causes QMK's
+            // build system to pass -DCOMBO_ENABLE and include process_combo.c.
+            // Defining it again here would cause a "redefined" compiler error.
+            content.push_str(&format!("#define COMBO_COUNT {}\n", real_combo_count));
         }
 
         Ok(content)
@@ -2254,9 +2330,12 @@ mod tests {
         let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
         let config_h = generator.generate_merged_config_h().unwrap();
 
-        // Should contain combo defines
+        // Should contain combo defines (COMBO_ENABLE is in rules.mk, not config.h)
         assert!(config_h.contains("// Combo Configuration"));
-        assert!(config_h.contains("#define COMBO_ENABLE"));
+        assert!(
+            !config_h.contains("#define COMBO_ENABLE"),
+            "COMBO_ENABLE must not appear in config.h — it belongs in rules.mk"
+        );
         assert!(config_h.contains("#define COMBO_COUNT 1"));
     }
 
@@ -2281,5 +2360,209 @@ mod tests {
         // Should use the keycodes from base layer (KC_A and KC_B from create_test_setup)
         assert!(keymap_c.contains("combo_0_keys[] = {KC_A, KC_B, COMBO_END}"));
         assert!(keymap_c.contains("reset_keyboard()"));
+    }
+
+    #[test]
+    fn test_combo_placeholders_not_emitted() {
+        // Regression test: when non-contiguous combo indices are defined
+        // (e.g. only Combo 2 and Combo 3, skipping Combo 1), the parser uses
+        // resize_with to grow the vec and inserts placeholder entries for the
+        // gaps.  Those placeholders must never appear in the generated C output.
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        layout.combo_settings.enabled = true;
+
+        // Manually simulate what the parser does for non-contiguous indices:
+        // insert a placeholder at index 0, then two real combos at 1 and 2.
+        layout
+            .combo_settings
+            .combos
+            .push(crate::models::ComboDefinition::new_placeholder());
+        layout
+            .combo_settings
+            .combos
+            .push(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+            ));
+        layout
+            .combo_settings
+            .combos
+            .push(crate::models::ComboDefinition::new(
+                Position::new(1, 0),
+                Position::new(1, 1),
+                crate::models::ComboAction::Bootloader,
+            ));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let keymap_c = generator.generate_keymap_c().unwrap();
+        let config_h = generator.generate_merged_config_h().unwrap();
+
+        // Only two real combos should be emitted (re-indexed 0 and 1)
+        assert!(keymap_c.contains("COMBO_0"), "COMBO_0 should be present");
+        assert!(keymap_c.contains("COMBO_1"), "COMBO_1 should be present");
+        // No phantom COMBO_2 from a third slot
+        assert!(
+            !keymap_c.contains("COMBO_2"),
+            "phantom COMBO_2 must not appear"
+        );
+        // Keys array for the placeholder must not be generated
+        assert!(
+            !keymap_c.contains("combo_2_keys"),
+            "phantom combo_2_keys must not appear"
+        );
+        // COMBO_COUNT must reflect only the 2 real combos
+        assert!(
+            config_h.contains("#define COMBO_COUNT 2"),
+            "COMBO_COUNT must be 2, got: {}",
+            config_h
+        );
+    }
+
+    // === rules.mk Tests ===
+
+    #[test]
+    fn test_rules_mk_empty_when_no_features() {
+        let (layout, geometry, mapping, config, keycode_db) = create_test_setup();
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+
+        let rules_mk = generator.generate_rules_mk();
+        assert!(
+            rules_mk.is_empty(),
+            "rules.mk should be empty when no features are enabled, got: {rules_mk}"
+        );
+    }
+
+    #[test]
+    fn test_rules_mk_combo_enable() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos and add a real combo
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::Bootloader,
+            ))
+            .unwrap();
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let rules_mk = generator.generate_rules_mk();
+
+        assert!(
+            rules_mk.contains("COMBO_ENABLE = yes"),
+            "rules.mk should contain COMBO_ENABLE = yes, got: {rules_mk}"
+        );
+        assert!(
+            !rules_mk.contains("TAP_DANCE_ENABLE"),
+            "rules.mk should not contain TAP_DANCE_ENABLE when no tap dances, got: {rules_mk}"
+        );
+    }
+
+    #[test]
+    fn test_rules_mk_tap_dance_enable() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add a tap dance
+        layout
+            .tap_dances
+            .push(crate::models::TapDanceAction::new("TD_TEST", "KC_A"));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let rules_mk = generator.generate_rules_mk();
+
+        assert!(
+            rules_mk.contains("TAP_DANCE_ENABLE = yes"),
+            "rules.mk should contain TAP_DANCE_ENABLE = yes, got: {rules_mk}"
+        );
+        assert!(
+            !rules_mk.contains("COMBO_ENABLE"),
+            "rules.mk should not contain COMBO_ENABLE when no combos, got: {rules_mk}"
+        );
+    }
+
+    #[test]
+    fn test_rules_mk_both_features() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .add_combo(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::DisableEffects,
+            ))
+            .unwrap();
+
+        // Add a tap dance
+        layout
+            .tap_dances
+            .push(crate::models::TapDanceAction::new("TD_TEST", "KC_A"));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let rules_mk = generator.generate_rules_mk();
+
+        assert!(
+            rules_mk.contains("COMBO_ENABLE = yes"),
+            "rules.mk should contain COMBO_ENABLE = yes, got: {rules_mk}"
+        );
+        assert!(
+            rules_mk.contains("TAP_DANCE_ENABLE = yes"),
+            "rules.mk should contain TAP_DANCE_ENABLE = yes, got: {rules_mk}"
+        );
+        // Should have header
+        assert!(
+            rules_mk.contains("# Generated by"),
+            "rules.mk should have a generated-by header, got: {rules_mk}"
+        );
+    }
+
+    #[test]
+    fn test_rules_mk_combos_disabled_no_enable() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Add combos but keep enabled = false
+        layout.combo_settings.enabled = false;
+        layout
+            .combo_settings
+            .combos
+            .push(crate::models::ComboDefinition::new(
+                Position::new(0, 0),
+                Position::new(0, 1),
+                crate::models::ComboAction::Bootloader,
+            ));
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let rules_mk = generator.generate_rules_mk();
+
+        assert!(
+            rules_mk.is_empty(),
+            "rules.mk should be empty when combos are disabled, got: {rules_mk}"
+        );
+    }
+
+    #[test]
+    fn test_rules_mk_only_placeholder_combos_no_enable() {
+        let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+
+        // Enable combos but only add placeholder combos
+        layout.combo_settings.enabled = true;
+        layout
+            .combo_settings
+            .combos
+            .push(crate::models::ComboDefinition::new_placeholder());
+
+        let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+        let rules_mk = generator.generate_rules_mk();
+
+        assert!(
+            rules_mk.is_empty(),
+            "rules.mk should be empty when only placeholder combos exist, got: {rules_mk}"
+        );
     }
 }
