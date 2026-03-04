@@ -2516,7 +2516,7 @@
 							<label class="block text-sm font-medium text-muted-foreground mb-2">Fixed Color</label>
 							<ColorPicker
 								color={layout.rgb_overlay_ripple?.fixed_color ?? { r: 0, g: 255, b: 255 }}
-								onColorChange={(color) => updateOverlayRipple('fixed_color', color)}
+								onSelect={(color) => updateOverlayRipple('fixed_color', color)}
 							/>
 						</div>
 					{/if}
