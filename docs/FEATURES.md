@@ -390,8 +390,6 @@ src/
 ## Future Extensions
 
 *Potential areas for future development (not yet implemented):*
-- Combo key configuration UI
-- Tap-dance configuration UI
 - Macro recording and playback
 - Layout analysis and heatmaps
 - Multi-keyboard profile management
