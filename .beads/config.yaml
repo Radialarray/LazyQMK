@@ -60,3 +60,9 @@
 # - linear.api-key
 # - github.org
 # - github.repo
+
+dolt.host: 127.0.0.1
+
+dolt.port: 3307
+
+dolt.data-dir: "/Users/svenlochner/dev/dolt/data"

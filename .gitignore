@@ -55,3 +55,11 @@ web/src-tauri/target/
 web/src-tauri/gen/
 web/src-tauri/Cargo.lock
 tmp/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
+
+# Beads runtime files
+.beads/.beads-credential-key
+.beads/dolt/
