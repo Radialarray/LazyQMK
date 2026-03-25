@@ -1,9 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_server_host": "127.0.0.1",
-  "dolt_server_port": 3307,
-  "dolt_database": "LazyQMK",
-  "project_id": "83355769-bfa6-414c-847b-78f1a52cb642"
-}

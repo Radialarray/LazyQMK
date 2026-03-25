@@ -63,3 +63,5 @@ tmp/
 # Beads runtime files
 .beads/.beads-credential-key
 .beads/dolt/
+
+.beads/
