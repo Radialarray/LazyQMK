@@ -394,21 +394,27 @@ impl SettingItem {
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
             }
-            Self::OverlayRippleEnabled => "Enable ripple overlay on keypresses",
+            Self::OverlayRippleEnabled => {
+                "Enable additive ripple overlay on key press and/or release"
+            }
             Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
             Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
-            Self::OverlayRippleSpeed => "Expansion speed multiplier (0-255, higher = faster)",
-            Self::OverlayRippleBandWidth => "Width of ripple band in LED units",
+            Self::OverlayRippleSpeed => {
+                "Expansion speed in physical LED coordinate space (0-255, higher = faster)"
+            }
+            Self::OverlayRippleBandWidth => {
+                "Width of ripple band in physical distance units"
+            }
             Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)",
             Self::OverlayRippleColorMode => {
                 "How to determine ripple colors (Fixed, Key Color, Hue Shift)"
             }
-            Self::OverlayRippleFixedColor => "Color to use when color mode is Fixed",
+            Self::OverlayRippleFixedColor => "Color to use when color mode is Fixed Color",
             Self::OverlayRippleHueShift => {
                 "Hue shift in degrees when mode is Hue Shift (-180 to 180)"
             }
-            Self::OverlayRippleTriggerPress => "Trigger ripple effect on key press",
-            Self::OverlayRippleTriggerRelease => "Trigger ripple effect on key release",
+            Self::OverlayRippleTriggerPress => "Trigger ripple effect on key press events",
+            Self::OverlayRippleTriggerRelease => "Trigger ripple effect on key release events",
             Self::OverlayRippleIgnoreTransparent => {
                 "Don't trigger ripples on transparent keys (KC_TRNS)"
             }
@@ -468,6 +474,17 @@ pub enum ManagerMode {
         min: u16,
         /// Maximum allowed value
         max: u16,
+    },
+    /// Editing a signed numeric value
+    EditingSignedNumeric {
+        /// Which setting is being edited
+        setting: SettingItem,
+        /// Current value as string for editing
+        value: String,
+        /// Minimum allowed value
+        min: i16,
+        /// Maximum allowed value
+        max: i16,
     },
     /// Toggling a boolean value (`retro_tapping`, `chordal_hold`)
     TogglingBoolean {
@@ -593,6 +610,22 @@ impl SettingsManagerState {
         };
     }
 
+    /// Start editing a signed numeric value
+    pub fn start_editing_signed_numeric(
+        &mut self,
+        setting: SettingItem,
+        current: i16,
+        min: i16,
+        max: i16,
+    ) {
+        self.mode = ManagerMode::EditingSignedNumeric {
+            setting,
+            value: current.to_string(),
+            min,
+            max,
+        };
+    }
+
     /// Start toggling a boolean value
     pub fn start_toggling_boolean(&mut self, setting: SettingItem, current: bool) {
         self.mode = ManagerMode::TogglingBoolean {
@@ -674,10 +707,43 @@ impl SettingsManagerState {
         }
     }
 
+    /// Handle character input for signed numeric editing
+    pub fn handle_signed_char_input(&mut self, c: char) {
+        if let ManagerMode::EditingSignedNumeric {
+            value, min, max, ..
+        } = &mut self.mode
+        {
+            if c.is_ascii_digit() {
+                value.push(c);
+            } else if c == '-' && value.is_empty() && *min < 0 {
+                value.push(c);
+            } else {
+                return;
+            }
+
+            if value.len() > 5 {
+                value.pop();
+                return;
+            }
+
+            if let Ok(num) = value.parse::<i16>() {
+                if num > *max {
+                    *value = max.to_string();
+                } else if num < *min {
+                    *value = min.to_string();
+                }
+            }
+        }
+    }
+
     /// Handle backspace for numeric editing
     pub fn handle_backspace(&mut self) {
-        if let ManagerMode::EditingNumeric { value, .. } = &mut self.mode {
-            value.pop();
+        match &mut self.mode {
+            ManagerMode::EditingNumeric { value, .. }
+            | ManagerMode::EditingSignedNumeric { value, .. } => {
+                value.pop();
+            }
+            _ => {}
         }
     }
 
@@ -705,6 +771,36 @@ impl SettingsManagerState {
     #[must_use]
     pub fn get_numeric_value(&self) -> Option<u16> {
         if let ManagerMode::EditingNumeric { value, min, .. } = &self.mode {
+            value.parse().ok().or(Some(*min))
+        } else {
+            None
+        }
+    }
+
+    /// Increment signed numeric value
+    pub fn increment_signed_numeric(&mut self, step: i16) {
+        if let ManagerMode::EditingSignedNumeric { value, max, .. } = &mut self.mode {
+            if let Ok(mut num) = value.parse::<i16>() {
+                num = num.saturating_add(step).min(*max);
+                *value = num.to_string();
+            }
+        }
+    }
+
+    /// Decrement signed numeric value
+    pub fn decrement_signed_numeric(&mut self, step: i16) {
+        if let ManagerMode::EditingSignedNumeric { value, min, .. } = &mut self.mode {
+            if let Ok(mut num) = value.parse::<i16>() {
+                num = num.saturating_sub(step).max(*min);
+                *value = num.to_string();
+            }
+        }
+    }
+
+    /// Get current signed numeric value being edited
+    #[must_use]
+    pub fn get_signed_numeric_value(&self) -> Option<i16> {
+        if let ManagerMode::EditingSignedNumeric { value, min, .. } = &self.mode {
             value.parse().ok().or(Some(*min))
         } else {
             None
@@ -912,6 +1008,7 @@ impl SettingsManager {
             }
             ManagerMode::SelectingHoldMode { .. } => self.handle_hold_mode_selection(key, context),
             ManagerMode::EditingNumeric { .. } => self.handle_numeric_editing(key),
+            ManagerMode::EditingSignedNumeric { .. } => self.handle_signed_numeric_editing(key),
             ManagerMode::TogglingBoolean { .. } => self.handle_boolean_toggle(key),
             ManagerMode::EditingString { .. } => self.handle_string_editing(key),
             ManagerMode::SelectingOutputFormat { .. } => self.handle_output_format_selection(key),
@@ -1054,6 +1151,33 @@ impl SettingsManager {
             }
             KeyCode::Char(c) if c.is_ascii_digit() => {
                 self.state.handle_char_input(c);
+                None
+            }
+            KeyCode::Backspace => {
+                self.state.handle_backspace();
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
+
+    fn handle_signed_numeric_editing(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.increment_signed_numeric(10);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.decrement_signed_numeric(10);
+                None
+            }
+            KeyCode::Char(c) if c.is_ascii_digit() || c == '-' => {
+                self.state.handle_signed_char_input(c);
                 None
             }
             KeyCode::Backspace => {
@@ -1296,6 +1420,14 @@ pub fn render_settings_manager(
             max,
         } => {
             render_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
+        }
+        ManagerMode::EditingSignedNumeric {
+            setting,
+            value,
+            min,
+            max,
+        } => {
+            render_signed_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
         }
         ManagerMode::TogglingBoolean { setting, value } => {
             render_boolean_toggle(f, inner_area, *setting, *value, theme);
@@ -1886,6 +2018,84 @@ fn render_numeric_editor(
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": ±10  "),
+        ]),
+        Line::from(vec![
+            Span::styled("Enter", Style::default().fg(theme.primary)),
+            Span::raw(": Apply  "),
+            Span::styled("Esc", Style::default().fg(theme.primary)),
+            Span::raw(": Cancel  "),
+            Span::styled("Backspace", Style::default().fg(theme.primary)),
+            Span::raw(": Delete"),
+        ]),
+    ];
+
+    let help_widget = Paragraph::new(help)
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(theme.text_muted));
+
+    f.render_widget(help_widget, chunks[3]);
+}
+
+/// Render signed numeric editor
+fn render_signed_numeric_editor(
+    f: &mut Frame,
+    area: Rect,
+    setting: SettingItem,
+    value: &str,
+    min: i16,
+    max: i16,
+    theme: &Theme,
+) {
+    let chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(2),
+            Constraint::Length(3),
+            Constraint::Min(2),
+            Constraint::Length(4),
+        ])
+        .split(area);
+
+    let title_text = Paragraph::new(setting.display_name())
+        .alignment(Alignment::Center)
+        .style(
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        );
+    f.render_widget(title_text, chunks[0]);
+
+    let display_value = format!("{value}▌");
+    let input_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.primary))
+        .title("Value");
+    let input_text = Paragraph::new(display_value)
+        .style(Style::default().fg(theme.text))
+        .block(input_block);
+    f.render_widget(input_text, chunks[1]);
+
+    let desc = vec![
+        Line::from(setting.description()),
+        Line::from(""),
+        Line::from(Span::styled(
+            format!("Range: {min} to {max}"),
+            Style::default().fg(theme.text_muted),
+        )),
+    ];
+
+    let desc_text = Paragraph::new(desc)
+        .alignment(Alignment::Center)
+        .wrap(ratatui::widgets::Wrap { trim: true })
+        .style(Style::default().fg(theme.text_muted));
+    f.render_widget(desc_text, chunks[2]);
+
+    let help = vec![
+        Line::from(vec![
+            Span::styled("↑/↓", Style::default().fg(theme.primary)),
+            Span::raw(": ±10  "),
+            Span::styled("-", Style::default().fg(theme.primary)),
+            Span::raw(": Negative"),
         ]),
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.primary)),

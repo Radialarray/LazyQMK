@@ -18,10 +18,10 @@ Before testing, ensure:
 Ripple effects are animated overlays rendered on top of base layer colors. When you press a key, a ripple expands outward from that LED position, creating a visual wave effect.
 
 **How it works:**
-- Triggered on keypress (and/or key release, configurable)
+- Triggered on key press and/or key release, configurable
 - Rendered as additive overlay using `rgb_matrix_indicators_advanced_user`
 - Up to 8 concurrent ripples supported
-- Three color modes: Fixed Color, Key-Based Color, Hue Shift
+- Three color modes: Fixed Color, Key Color, Hue Shift
 
 ## Settings Validation
 
@@ -41,7 +41,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
    - [ ] Max Concurrent Ripples (1-8)
    - [ ] Ripple Duration (milliseconds)
    - [ ] Ripple Speed (0-255)
-   - [ ] Ripple Band Width (LED units)
+   - [ ] Ripple Band Width (physical LED distance units)
    - [ ] Ripple Amplitude (0-100%)
    - [ ] Ripple Color Mode (Fixed/Key Color/Hue Shift)
    - [ ] Ripple Fixed Color (hex color)
@@ -71,7 +71,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
 
 3. **Test Ripple Duration**
    - Select setting, press `Enter`
-   - [ ] Try values: 200, 500, 1000, 2000
+   - [ ] Try values: 200, 1500, 3000, 5000
    - [ ] Verify shorter durations = faster ripples
    - [ ] Confirm millisecond unit in description
 
@@ -83,8 +83,8 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
 
 5. **Test Ripple Band Width**
    - Select setting, press `Enter`
-   - [ ] Try values: 1, 3, 5, 10
-   - [ ] Confirm LED unit description
+   - [ ] Try values: 10, 30, 60, 120
+   - [ ] Confirm physical-distance description
 
 6. **Test Ripple Amplitude**
    - Select setting, press `Enter`
@@ -139,11 +139,11 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
 
 13. **Verify Markdown Format**
     - Open layout file in text editor
-    - [ ] Verify YAML frontmatter contains ripple settings
-    - [ ] Check for keys like `rgb_overlay_ripple:`, `enabled:`, `color_mode:`, etc.
-    - [ ] Verify hex color format (e.g., `fixed_color: "#FF00FF"`)
-    - [ ] Confirm integer values are unquoted
-    - [ ] Verify boolean values are `true`/`false`
+    - [ ] Verify `## Settings` section contains ripple settings
+    - [ ] Check for lines like `**Ripple Overlay**: On`, `**Ripple Color Mode**: Fixed Color`, etc.
+    - [ ] Verify hex color format (e.g., `**Ripple Fixed Color**: #FF00FF`)
+    - [ ] Confirm integer values are emitted as plain text settings
+    - [ ] Verify boolean values are `On`/`Off`
 
 ## Firmware Generation Validation
 
@@ -178,12 +178,12 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
     - [ ] Verify RGB values match: `r = 255, g = 0, b = 0`
     - [ ] Confirm comment indicates "Fixed color mode"
 
-17. **Key-Based Color Mode**
+17. **Key Color Mode**
     - Set color mode to "Key Color"
     - Ensure layout has per-key or layer colors defined
     - Generate firmware
     - Open `keymap.c`
-    - [ ] Search for "Key-based color mode" comment
+    - [ ] Search for "Key color mode" comment
     - [ ] Verify code preserves base LED color: `led_color->r`, `led_color->g`, `led_color->b`
     - [ ] Confirm brightness is added to base color: `MIN(led_color->r + brightness, 255)`
 
@@ -195,7 +195,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
     - [ ] Search for "Hue shift mode" comment
     - [ ] Verify hue shift value in code: `shift by 60 degrees`
     - [ ] Confirm HSV → RGB conversion code is present
-    - [ ] Check for modulo arithmetic: `new_hue = (old_hue + 60) % 360`
+    - [ ] Check for hue wrapping logic in 0-255 QMK HSV space
 
 ### Test Filter Generation
 
@@ -227,7 +227,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
     - Generate firmware
     - Open `keymap.c`
     - [ ] Find `process_record_user` or similar hook
-    - [ ] Verify check: `if (record->event.pressed) { /* trigger ripple */ }`
+    - [ ] Verify press trigger path exists without blocking release path globally
     - [ ] Confirm no trigger on `!record->event.pressed`
 
 23. **Release Only**
@@ -286,7 +286,7 @@ The idle effect and overlay ripple are separate features that should work togeth
 29. **Flash and Test Basic Ripple**
     - Flash generated firmware to keyboard
     - Press keys
-    - [ ] Verify ripple appears on keypress (if trigger on press enabled)
+    - [ ] Verify ripple appears on key press (if trigger on press enabled)
     - [ ] Verify ripple expands outward from pressed key
     - [ ] Confirm ripple fades after duration expires
 
@@ -295,7 +295,7 @@ The idle effect and overlay ripple are separate features that should work togeth
       - Set fixed color to bright red (#FF0000)
       - Flash firmware
       - [ ] Verify all ripples are red regardless of key pressed
-    - **Key-Based Color Mode:**
+    - **Key Color Mode:**
       - Configure different layer colors (e.g., blue layer, red layer)
       - Flash firmware
       - [ ] Verify ripples match the base color of each key
@@ -321,9 +321,9 @@ The idle effect and overlay ripple are separate features that should work togeth
       - [ ] Ripples expand rapidly
     - **Low Speed (50):**
       - [ ] Ripples expand slowly
-    - **Wide Band (10):**
+    - **Wide Band (60):**
       - [ ] Ripple band is thick/wide
-    - **Narrow Band (1):**
+    - **Narrow Band (10):**
       - [ ] Ripple band is thin/narrow
     - **High Amplitude (100%):**
       - [ ] Ripples are very bright
@@ -447,7 +447,7 @@ The idle effect and overlay ripple are separate features that should work togeth
 
 - [ ] Settings Manager displays all 14 ripple settings
 - [ ] Enable/disable toggle works
-- [ ] Settings persist to markdown YAML
+- [ ] Settings persist to markdown `## Settings` section
 - [ ] Firmware generates without errors
 - [ ] All three color modes generate correct code
 - [ ] Ripple logic is present in `rgb_matrix_indicators_advanced_user`

@@ -142,6 +142,12 @@ impl GenerateArgs {
                         .map_err(|e| CliError::io(format!("Failed to write rules.mk: {e}")))?;
                     println!("✓ Generated keymap.c, config.h, and rules.mk");
                 } else {
+                    let rules_mk_path = self.out_dir.join("rules.mk");
+                    if rules_mk_path.exists() {
+                        std::fs::remove_file(&rules_mk_path).map_err(|e| {
+                            CliError::io(format!("Failed to remove stale rules.mk: {e}"))
+                        })?;
+                    }
                     println!("✓ Generated keymap.c and config.h");
                 }
                 println!("  Output: {}", self.out_dir.display());

@@ -301,6 +301,7 @@ impl ColorPicker {
             ColorPickerContext::LayerDefault => "Layer Color Picker",
             ColorPickerContext::Category => "Category Color Picker",
             ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker",
+            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color Picker",
         }
     }
 
@@ -311,6 +312,7 @@ impl ColorPicker {
             ColorPickerContext::LayerDefault => "Layer Color Picker (Custom RGB)",
             ColorPickerContext::Category => "Category Color Picker (Custom RGB)",
             ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker (Custom RGB)",
+            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color Picker (Custom RGB)",
         }
     }
 }

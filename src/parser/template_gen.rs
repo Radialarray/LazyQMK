@@ -457,8 +457,8 @@ fn generate_settings(layout: &Layout) -> Option<String> {
         // Write color mode if not default
         if rip.color_mode != defaults.color_mode {
             let mode_name = match rip.color_mode {
-                RippleColorMode::Fixed => "Fixed",
-                RippleColorMode::KeyBased => "Key Based",
+                RippleColorMode::Fixed => "Fixed Color",
+                RippleColorMode::KeyBased => "Key Color",
                 RippleColorMode::HueShift => "Hue Shift",
             };
             output.push_str(&format!("**Ripple Color Mode**: {mode_name}\n"));
@@ -1287,7 +1287,7 @@ mod tests {
         // Test KeyBased mode
         layout.rgb_overlay_ripple.color_mode = RippleColorMode::KeyBased;
         let markdown = generate_markdown(&layout).unwrap();
-        assert!(markdown.contains("**Ripple Color Mode**: Key Based"));
+        assert!(markdown.contains("**Ripple Color Mode**: Key Color"));
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         assert_eq!(
             parsed.rgb_overlay_ripple.color_mode,

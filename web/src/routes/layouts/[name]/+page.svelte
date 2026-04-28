@@ -1117,9 +1117,9 @@
 			layout.rgb_overlay_ripple = {
 				enabled: false,
 				max_ripples: 4,
-				duration_ms: 500,
-				speed: 128,
-				band_width: 3,
+				duration_ms: 1500,
+				speed: 200,
+				band_width: 30,
 				amplitude_pct: 50,
 				color_mode: 'Fixed Color',
 				fixed_color: { r: 0, g: 255, b: 255 },
@@ -2421,14 +2421,14 @@
 							<label for="duration" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Duration (ms)</label
 							>
-							<Input
-								id="duration"
-								type="number"
-								value={layout.rgb_overlay_ripple?.duration_ms ?? 500}
-								oninput={(e) => updateOverlayRipple('duration_ms', parseInt(e.currentTarget.value))}
-								min="100"
-								max="2000"
-							/>
+				<Input
+					id="duration"
+					type="number"
+					value={layout.rgb_overlay_ripple?.duration_ms ?? 1500}
+					oninput={(e) => updateOverlayRipple('duration_ms', parseInt(e.currentTarget.value))}
+					min="100"
+					max="5000"
+				/>
 							<p class="text-xs text-muted-foreground mt-1">
 								How long each ripple lasts
 							</p>
@@ -2438,13 +2438,13 @@
 							<label for="speed" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Speed</label
 							>
-							<Input
-								id="speed"
-								type="number"
-								value={layout.rgb_overlay_ripple?.speed ?? 128}
-								oninput={(e) => updateOverlayRipple('speed', parseInt(e.currentTarget.value))}
-								min="0"
-								max="255"
+				<Input
+					id="speed"
+					type="number"
+					value={layout.rgb_overlay_ripple?.speed ?? 200}
+					oninput={(e) => updateOverlayRipple('speed', parseInt(e.currentTarget.value))}
+					min="0"
+					max="255"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
 								Expansion speed (0-255)
@@ -2455,18 +2455,18 @@
 							<label for="band-width" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Band Width</label
 							>
-							<Input
-								id="band-width"
-								type="number"
-								value={layout.rgb_overlay_ripple?.band_width ?? 3}
-								oninput={(e) => updateOverlayRipple('band_width', parseInt(e.currentTarget.value))}
-								min="1"
-								max="10"
-							/>
-							<p class="text-xs text-muted-foreground mt-1">
-								Width in LED units (1-10)
-							</p>
-						</div>
+				<Input
+					id="band-width"
+					type="number"
+					value={layout.rgb_overlay_ripple?.band_width ?? 30}
+					oninput={(e) => updateOverlayRipple('band_width', parseInt(e.currentTarget.value))}
+					min="1"
+					max="255"
+				/>
+				<p class="text-xs text-muted-foreground mt-1">
+					Width in physical LED distance units (1-255)
+				</p>
+			</div>
 
 						<div>
 							<label for="amplitude" class="block text-sm font-medium text-muted-foreground mb-1"

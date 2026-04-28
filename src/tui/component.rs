@@ -57,4 +57,6 @@ pub enum ColorPickerContext {
     Category,
     /// Coloring multiple selected keys
     MultiKeySelection,
+    /// Setting overlay ripple fixed color
+    OverlayRippleFixedColor,
 }

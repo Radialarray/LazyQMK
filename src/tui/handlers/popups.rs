@@ -555,10 +555,22 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                                 }
                             }
                         }
+                        crate::tui::component::ColorPickerContext::OverlayRippleFixedColor => {
+                            state.layout.rgb_overlay_ripple.fixed_color = color;
+                            state.mark_dirty();
+                            state.set_status(format!(
+                                "Set ripple fixed color to {}",
+                                color.to_hex()
+                            ));
+                        }
                     }
 
                     // Close the color picker
                     state.close_component();
+                    if state.return_to_settings_after_picker {
+                        state.return_to_settings_after_picker = false;
+                        state.open_settings_manager();
+                    }
                 }
                 ColorPickerEvent::ColorCleared => {
                     // Get context before closing component
@@ -605,13 +617,27 @@ fn handle_color_picker_event(state: &mut AppState, key: event::KeyEvent) -> Resu
                                 }
                             }
                         }
+                        crate::tui::component::ColorPickerContext::OverlayRippleFixedColor => {
+                            let default_color = crate::models::RgbColor::new(0, 255, 255);
+                            state.layout.rgb_overlay_ripple.fixed_color = default_color;
+                            state.mark_dirty();
+                            state.set_status("Reset ripple fixed color to default cyan");
+                        }
                     }
 
                     // Close the color picker
                     state.close_component();
+                    if state.return_to_settings_after_picker {
+                        state.return_to_settings_after_picker = false;
+                        state.open_settings_manager();
+                    }
                 }
                 ColorPickerEvent::Cancelled => {
                     state.close_component();
+                    if state.return_to_settings_after_picker {
+                        state.return_to_settings_after_picker = false;
+                        state.open_settings_manager();
+                    }
                     state.set_status("Cancelled");
                 }
             }

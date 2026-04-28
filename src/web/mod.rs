@@ -705,9 +705,9 @@ pub struct RgbOverlayRippleSettingsDto {
     pub max_ripples: u8,
     /// Duration of each ripple in milliseconds.
     pub duration_ms: u16,
-    /// Speed multiplier (0-255, higher = faster expansion).
+    /// Speed multiplier (0-255, higher = faster expansion in physical LED coordinate space).
     pub speed: u8,
-    /// Band width in LED units.
+    /// Band width in physical LED distance units.
     pub band_width: u8,
     /// Amplitude as percentage of base brightness (0-100).
     pub amplitude_pct: u8,
@@ -1346,8 +1346,8 @@ async fn get_layout(
 fn parse_ripple_color_mode(name: &str) -> crate::models::RippleColorMode {
     use crate::models::RippleColorMode;
     match name {
-        "Fixed Color" | "fixed" => RippleColorMode::Fixed,
-        "Key Color" | "key_based" => RippleColorMode::KeyBased,
+        "Fixed Color" | "Fixed" | "fixed" => RippleColorMode::Fixed,
+        "Key Color" | "Key Based" | "key_based" => RippleColorMode::KeyBased,
         "Hue Shift" | "hue_shift" => RippleColorMode::HueShift,
         _ => RippleColorMode::default(),
     }

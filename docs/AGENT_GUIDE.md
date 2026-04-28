@@ -310,9 +310,9 @@ If yes, collect preferences for the settings below. Use the defaults as suggesti
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
 | Max Concurrent Ripples | 4 | 1–8 | How many ripples can run at once |
-| Ripple Duration | 500ms | any ms | How long each ripple lasts |
-| Ripple Speed | 128 | 0–255 | How fast the ring expands |
-| Band Width | 3 | LED units | How wide the ring is |
+| Ripple Duration | 1500ms | 100–5000ms | How long each ripple lasts |
+| Ripple Speed | 200 | 0–255 | How fast ring expands in physical LED space |
+| Band Width | 30 | physical LED distance units | How wide ring is |
 | Amplitude | 50% | 0–100% | Brightness boost over base color |
 | Color Mode | Fixed Color | see below | How ripple color is chosen |
 | Fixed Color | `#00FFFF` (cyan) | hex | Color when mode is Fixed Color |
@@ -330,17 +330,15 @@ If yes, collect preferences for the settings below. Use the defaults as suggesti
 | **Key Color** | Ripple matches the key's base layer color | — |
 | **Hue Shift** | Hue-shifted from the key's base color | **Hue Shift** degree (-180° to 180°) |
 
-> **Known limitation**: Hue Shift mode currently falls back to Key Color behavior.
-
 #### Generated output
 
 **`config.h`** (values shown are defaults):
 ```c
 #define LQMK_RIPPLE_OVERLAY_ENABLED
 #define LQMK_RIPPLE_MAX_RIPPLES 4
-#define LQMK_RIPPLE_DURATION_MS 500
-#define LQMK_RIPPLE_SPEED 128
-#define LQMK_RIPPLE_BAND_WIDTH 3
+#define LQMK_RIPPLE_DURATION_MS 1500
+#define LQMK_RIPPLE_SPEED 200
+#define LQMK_RIPPLE_BAND_WIDTH 30
 #define LQMK_RIPPLE_AMPLITUDE_PCT 50
 #define LQMK_RIPPLE_TRIGGER_ON_PRESS 1
 #define LQMK_RIPPLE_TRIGGER_ON_RELEASE 0
@@ -633,9 +631,9 @@ Layouts are stored as `.md` files. Settings live in a `## Settings` section belo
 **Ripple Color Mode**: Fixed Color
 **Ripple Fixed Color**: #00FFFF
 **Max Ripples**: 4
-**Ripple Duration**: 500ms
+**Ripple Duration**: 1500ms
 **Ripple Speed**: 200
-**Ripple Band Width**: 3
+**Ripple Band Width**: 30
 **Ripple Amplitude**: 60%
 **Combos**: On
 **Combo 1**: (0,2)+(0,3) → Disable Effects [500ms]

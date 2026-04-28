@@ -659,19 +659,20 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Process record hook to reset on activity
         code.push_str("bool process_record_user(uint16_t keycode, keyrecord_t *record) {\n");
-        code.push_str("    if (record->event.pressed) {\n");
-        code.push_str("        // Reset activity timer\n");
-        code.push_str("        last_activity_time = timer_read32();\n");
-        code.push('\n');
 
         // Add ripple trigger integration if both features are enabled
         if has_ripple {
             code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
-            code.push_str("        // Trigger ripple effect on keypress\n");
-            code.push_str("        lazyqmk_ripple_trigger(keycode, record);\n");
+            code.push_str("    // Trigger ripple effect on matching key events\n");
+            code.push_str("    lazyqmk_ripple_trigger(keycode, record);\n");
             code.push_str("#endif\n");
             code.push('\n');
         }
+
+        code.push_str("    if (record->event.pressed) {\n");
+        code.push_str("        // Reset activity timer\n");
+        code.push_str("        last_activity_time = timer_read32();\n");
+        code.push('\n');
 
         code.push_str("        if (idle_state != IDLE_STATE_ACTIVE) {\n");
         code.push_str("            // Re-enable RGB if it was disabled\n");
@@ -803,9 +804,83 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        // Helper: Apply ripple effect to LED
-        code.push_str("static void lazyqmk_ripple_apply(uint8_t led_index, RGB *led_color) {\n");
+        code.push_str("static uint8_t lazyqmk_ripple_add_u8(uint8_t lhs, uint8_t rhs) {\n");
+        code.push_str("    uint16_t sum = (uint16_t)lhs + rhs;\n");
+        code.push_str("    return (uint8_t)(sum > 255 ? 255 : sum);\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        code.push_str("static uint8_t lazyqmk_ripple_scale_u8(uint8_t value, uint8_t scale) {\n");
+        code.push_str("    return (uint8_t)(((uint16_t)value * scale) / 255);\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
+        code.push_str("    RGB color = {0, 0, 0};\n");
+        code.push('\n');
+        code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
+        code.push_str("    uint8_t layer = get_highest_layer(layer_state);\n");
+        code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
+        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
+        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
+        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
+        code.push_str("        return color;\n");
+        code.push_str("    }\n");
+        code.push_str("#endif\n");
+        code.push('\n');
+        code.push_str("    // Fallback to current matrix HSV when no per-layer base colors exist\n");
+        code.push_str("    rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());\n");
+        code.push_str("    color.r = matrix_rgb.r;\n");
+        code.push_str("    color.g = matrix_rgb.g;\n");
+        code.push_str("    color.b = matrix_rgb.b;\n");
+        code.push('\n');
+        code.push_str("    return color;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        code.push_str("static hsv_t lazyqmk_ripple_rgb_to_hsv(RGB color) {\n");
+        code.push_str("    hsv_t hsv = {0, 0, 0};\n");
+        code.push_str("    uint8_t rgb_max = color.r;\n");
+        code.push_str("    uint8_t rgb_min = color.r;\n");
+        code.push('\n');
+        code.push_str("    if (color.g > rgb_max) rgb_max = color.g;\n");
+        code.push_str("    if (color.b > rgb_max) rgb_max = color.b;\n");
+        code.push_str("    if (color.g < rgb_min) rgb_min = color.g;\n");
+        code.push_str("    if (color.b < rgb_min) rgb_min = color.b;\n");
+        code.push('\n');
+        code.push_str("    hsv.v = rgb_max;\n");
+        code.push_str("    if (rgb_max == 0) {\n");
+        code.push_str("        return hsv;\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    uint8_t delta = rgb_max - rgb_min;\n");
+        code.push_str("    hsv.s = (uint8_t)(((uint16_t)delta * 255) / rgb_max);\n");
+        code.push_str("    if (delta == 0) {\n");
+        code.push_str("        return hsv;\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    int16_t hue;\n");
+        code.push_str("    if (rgb_max == color.r) {\n");
+        code.push_str("        hue = (int16_t)((43 * ((int16_t)color.g - (int16_t)color.b)) / delta);\n");
+        code.push_str("    } else if (rgb_max == color.g) {\n");
+        code.push_str("        hue = (int16_t)(85 + (43 * ((int16_t)color.b - (int16_t)color.r)) / delta);\n");
+        code.push_str("    } else {\n");
+        code.push_str("        hue = (int16_t)(171 + (43 * ((int16_t)color.r - (int16_t)color.g)) / delta);\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    while (hue < 0) hue += 255;\n");
+        code.push_str("    while (hue >= 255) hue -= 255;\n");
+        code.push_str("    hsv.h = (uint8_t)hue;\n");
+        code.push_str("    return hsv;\n");
+        code.push_str("}\n");
+        code.push('\n');
+
+        // Helper: Apply ripple effect to LED without repainting unaffected LEDs
+        code.push_str("static bool lazyqmk_ripple_apply(uint8_t led_index) {\n");
         code.push_str("    uint32_t now = timer_read32();\n");
+        code.push_str("    RGB color = lazyqmk_ripple_base_color(led_index);\n");
+        code.push_str("    RGB base_color = color;\n");
+        code.push_str("    bool led_changed = false;\n");
         code.push('\n');
         code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
         code.push_str("        if (!ripples[i].active) continue;\n");
@@ -816,7 +891,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            continue;\n");
         code.push_str("        }\n");
         code.push('\n');
-        code.push_str("        // Calculate ripple radius\n");
+        code.push_str("        // Calculate ripple radius in physical LED coordinate space\n");
         code.push_str("        uint8_t radius = (uint8_t)((elapsed * LQMK_RIPPLE_SPEED) / LQMK_RIPPLE_DURATION_MS);\n");
         code.push_str("        uint8_t distance = lazyqmk_ripple_distance(led_index, ripples[i].led_index);\n");
         code.push('\n');
@@ -824,16 +899,12 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str(
             "        if (distance >= radius && distance < radius + LQMK_RIPPLE_BAND_WIDTH) {\n",
         );
-        code.push_str("            // Calculate fade-out (1.0 at start, 0.0 at end)\n");
-        code.push_str(
-            "            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n",
-        );
+        code.push_str("            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n");
+        code.push_str("            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n");
+        code.push_str("            led_changed = true;\n");
         code.push('\n');
-        code.push_str("            // Apply amplitude and fade\n");
-        code.push_str(
-            "            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n",
-        );
-        code.push('\n');
+
+        let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 255) / 360;
 
         // Apply color based on color mode
         match settings.color_mode {
@@ -844,42 +915,54 @@ impl<'a> FirmwareGenerator<'a> {
                     color.r, color.g, color.b
                 ));
                 code.push_str(&format!(
-                    "            led_color->r = MIN(led_color->r + (brightness * {}) / 255, 255);\n",
+                    "            color.r = lazyqmk_ripple_add_u8(color.r, lazyqmk_ripple_scale_u8({}, brightness));\n",
                     color.r
                 ));
                 code.push_str(&format!(
-                    "            led_color->g = MIN(led_color->g + (brightness * {}) / 255, 255);\n",
+                    "            color.g = lazyqmk_ripple_add_u8(color.g, lazyqmk_ripple_scale_u8({}, brightness));\n",
                     color.g
                 ));
                 code.push_str(&format!(
-                    "            led_color->b = MIN(led_color->b + (brightness * {}) / 255, 255);\n",
+                    "            color.b = lazyqmk_ripple_add_u8(color.b, lazyqmk_ripple_scale_u8({}, brightness));\n",
                     color.b
                 ));
             }
             crate::models::layout::RippleColorMode::KeyBased => {
                 code.push_str(
-                    "            // Key-based color mode (use base color, just add brightness)\n",
+                    "            // Key color mode (boost key's resolved base color)\n",
                 );
-                code.push_str("            led_color->r = MIN(led_color->r + brightness, 255);\n");
-                code.push_str("            led_color->g = MIN(led_color->g + brightness, 255);\n");
-                code.push_str("            led_color->b = MIN(led_color->b + brightness, 255);\n");
+                code.push_str("            color.r = lazyqmk_ripple_add_u8(color.r, brightness);\n");
+                code.push_str("            color.g = lazyqmk_ripple_add_u8(color.g, brightness);\n");
+                code.push_str("            color.b = lazyqmk_ripple_add_u8(color.b, brightness);\n");
             }
             crate::models::layout::RippleColorMode::HueShift => {
                 code.push_str(&format!(
-                    "            // Hue shift mode (shift by {} degrees)\n",
-                    settings.hue_shift_deg
+                    "            // Hue shift mode (shift by {} degrees / {} hue steps)\n",
+                    settings.hue_shift_deg, hue_shift_steps
                 ));
-                code.push_str(
-                    "            // TODO: Implement HSV hue shift - for now use key-based\n",
-                );
-                code.push_str("            led_color->r = MIN(led_color->r + brightness, 255);\n");
-                code.push_str("            led_color->g = MIN(led_color->g + brightness, 255);\n");
-                code.push_str("            led_color->b = MIN(led_color->b + brightness, 255);\n");
+                code.push_str("            hsv_t shifted_hsv = lazyqmk_ripple_rgb_to_hsv(base_color);\n");
+                code.push_str(&format!(
+                    "            int16_t shifted_hue = (int16_t)shifted_hsv.h + {};\n",
+                    hue_shift_steps
+                ));
+                code.push_str("            while (shifted_hue < 0) shifted_hue += 255;\n");
+                code.push_str("            while (shifted_hue >= 255) shifted_hue -= 255;\n");
+                code.push_str("            shifted_hsv.h = (uint8_t)shifted_hue;\n");
+                code.push_str("            rgb_t shifted_rgb = hsv_to_rgb(shifted_hsv);\n");
+                code.push_str("            color.r = lazyqmk_ripple_add_u8(color.r, lazyqmk_ripple_scale_u8(shifted_rgb.r, brightness));\n");
+                code.push_str("            color.g = lazyqmk_ripple_add_u8(color.g, lazyqmk_ripple_scale_u8(shifted_rgb.g, brightness));\n");
+                code.push_str("            color.b = lazyqmk_ripple_add_u8(color.b, lazyqmk_ripple_scale_u8(shifted_rgb.b, brightness));\n");
             }
         }
 
         code.push_str("        }\n");
         code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    if (led_changed) {\n");
+        code.push_str("        rgb_matrix_set_color(led_index, color.r, color.g, color.b);\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    return led_changed;\n");
         code.push_str("}\n");
         code.push('\n');
 
@@ -926,22 +1009,8 @@ impl<'a> FirmwareGenerator<'a> {
             "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
-        code.push_str("        RGB color = {0, 0, 0};\n");
-        code.push_str("        \n");
-        code.push_str("        // Get base color from layer colors table if available\n");
-        code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
-        code.push_str("        uint8_t layer = get_highest_layer(layer_state);\n");
-        code.push_str("        if (layer < layer_base_colors_layer_count) {\n");
-        code.push_str("            color.r = pgm_read_byte(&layer_base_colors[layer][i][0]);\n");
-        code.push_str("            color.g = pgm_read_byte(&layer_base_colors[layer][i][1]);\n");
-        code.push_str("            color.b = pgm_read_byte(&layer_base_colors[layer][i][2]);\n");
-        code.push_str("        }\n");
-        code.push_str("#endif\n");
-        code.push_str("        \n");
-        code.push_str("        // Apply ripple overlay\n");
-        code.push_str("        lazyqmk_ripple_apply(i, &color);\n");
-        code.push_str("        \n");
-        code.push_str("        rgb_matrix_set_color(i, color.r, color.g, color.b);\n");
+        code.push_str("        // Apply ripple overlay only to affected LEDs so base frame stays intact\n");
+        code.push_str("        lazyqmk_ripple_apply(i);\n");
         code.push_str("    }\n");
         code.push_str("    return false;\n");
         code.push_str("}\n");

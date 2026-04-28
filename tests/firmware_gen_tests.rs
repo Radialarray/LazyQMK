@@ -14,7 +14,7 @@ use lazyqmk::firmware::{FirmwareGenerator, FirmwareValidator};
 use lazyqmk::keycode_db::KeycodeDb;
 use lazyqmk::models::{
     Category, KeyDefinition, KeyGeometry, KeyboardGeometry, Layer, Layout, LayoutMetadata,
-    Position, RgbColor, VisualLayoutMapping,
+    Position, RgbColor, RippleColorMode, VisualLayoutMapping,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -1182,9 +1182,9 @@ fn test_rgb_overlay_ripple_generation() {
     // Enable RGB overlay ripple
     layout.rgb_overlay_ripple.enabled = true;
     layout.rgb_overlay_ripple.max_ripples = 4;
-    layout.rgb_overlay_ripple.duration_ms = 500;
-    layout.rgb_overlay_ripple.speed = 128;
-    layout.rgb_overlay_ripple.band_width = 3;
+    layout.rgb_overlay_ripple.duration_ms = 1500;
+    layout.rgb_overlay_ripple.speed = 200;
+    layout.rgb_overlay_ripple.band_width = 30;
     layout.rgb_overlay_ripple.amplitude_pct = 50;
 
     let geometry = test_geometry_basic(2, 3);
@@ -1208,12 +1208,15 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c.contains("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES]"));
     assert!(keymap_c.contains("static void lazyqmk_ripple_add(uint8_t led_index)"));
     assert!(keymap_c.contains("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2)"));
-    assert!(
-        keymap_c.contains("static void lazyqmk_ripple_apply(uint8_t led_index, RGB *led_color)")
-    );
+    assert!(keymap_c.contains("static RGB lazyqmk_ripple_base_color(uint8_t led_index)"));
+    assert!(keymap_c.contains("static bool lazyqmk_ripple_apply(uint8_t led_index)"));
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
-    assert!(keymap_c.contains("lazyqmk_ripple_apply(i, &color)"));
+    assert!(keymap_c.contains("RGB color = lazyqmk_ripple_base_color(led_index);"));
+    assert!(keymap_c.contains("lazyqmk_ripple_apply(i);"));
+    assert!(keymap_c.contains("if (led_changed) {"));
+    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, color.r, color.g, color.b);"));
+    assert!(keymap_c.contains("rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());"));
 
     // Generate config.h
     let config_h = generator
@@ -1224,9 +1227,9 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(config_h.contains("RGB Overlay Ripple Configuration"));
     assert!(config_h.contains("#define LQMK_RIPPLE_OVERLAY_ENABLED"));
     assert!(config_h.contains("#define LQMK_RIPPLE_MAX_RIPPLES 4"));
-    assert!(config_h.contains("#define LQMK_RIPPLE_DURATION_MS 500"));
-    assert!(config_h.contains("#define LQMK_RIPPLE_SPEED 128"));
-    assert!(config_h.contains("#define LQMK_RIPPLE_BAND_WIDTH 3"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_DURATION_MS 1500"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_SPEED 200"));
+    assert!(config_h.contains("#define LQMK_RIPPLE_BAND_WIDTH 30"));
     assert!(config_h.contains("#define LQMK_RIPPLE_AMPLITUDE_PCT 50"));
     assert!(config_h.contains("#define LQMK_RIPPLE_TRIGGER_ON_PRESS 1"));
 }
@@ -1297,9 +1300,15 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
         .expect("Should generate keymap.c");
 
     // Fix 1: Ripple trigger must be integrated (not commented out) when idle effect enabled
+    let trigger_idx = keymap_c
+        .find("lazyqmk_ripple_trigger(keycode, record);")
+        .expect("Ripple trigger call should exist");
+    let press_gate_idx = keymap_c
+        .find("if (record->event.pressed)")
+        .expect("Idle-effect press gate should exist");
     assert!(
-        keymap_c.contains("lazyqmk_ripple_trigger(keycode, record)"),
-        "Ripple trigger should be integrated into idle effect's process_record_user"
+        trigger_idx < press_gate_idx,
+        "Ripple trigger should be integrated before idle-effect press gating"
     );
     assert!(
         !keymap_c.contains("/*")
@@ -1338,7 +1347,6 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
         keymap_c.contains("#ifdef LAYER_BASE_COLORS_LAYER_COUNT"),
         "layer_base_colors access must be guarded with ifdef"
     );
-
     // Verify the ripple trigger helper function exists with proper signature
     assert!(
         keymap_c
@@ -1350,5 +1358,44 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
     assert!(
         keymap_c.contains("const uint8_t PROGMEM layer_base_colors"),
         "layer_base_colors table must be generated when RGB enabled"
+    );
+}
+
+#[test]
+fn test_rgb_overlay_ripple_hue_shift_generation() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let mut layout = test_layout_basic(2, 3);
+    layout.rgb_overlay_ripple.enabled = true;
+    layout.rgb_overlay_ripple.color_mode = RippleColorMode::HueShift;
+    layout.rgb_overlay_ripple.hue_shift_deg = -120;
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    assert!(
+        keymap_c.contains("static hsv_t lazyqmk_ripple_rgb_to_hsv(RGB color)"),
+        "Hue shift mode should generate RGB->HSV helper"
+    );
+    assert!(
+        keymap_c.contains("rgb_t shifted_rgb = hsv_to_rgb(shifted_hsv);"),
+        "Hue shift mode must generate real HSV conversion"
+    );
+    assert!(
+        keymap_c.contains("int16_t shifted_hue = (int16_t)shifted_hsv.h + -85;"),
+        "Hue shift degrees should be converted to signed QMK hue steps"
+    );
+    assert!(
+        !keymap_c.contains("TODO: Implement HSV hue shift"),
+        "Hue shift implementation TODO should be removed"
     );
 }

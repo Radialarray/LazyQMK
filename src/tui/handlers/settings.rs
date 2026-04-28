@@ -394,7 +394,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                     manager.state_mut().start_editing_numeric(
                         *setting,
                         u16::from(state.layout.rgb_overlay_ripple.speed),
-                        1,
+                        0,
                         255,
                     );
                 }
@@ -403,7 +403,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         *setting,
                         u16::from(state.layout.rgb_overlay_ripple.band_width),
                         1,
-                        20,
+                        255,
                     );
                 }
                 SettingItem::OverlayRippleAmplitude => {
@@ -419,24 +419,24 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.color_mode,
                     );
                 }
-                // Note: OverlayRippleFixedColor is not editable via simple numeric input
-                // Would require a full color picker UI component
                 SettingItem::OverlayRippleFixedColor => {
-                    state.set_status(
-                        "Fixed color editing requires color picker (not yet implemented)",
+                    state.return_to_settings_after_picker = true;
+                    state.open_color_picker(
+                        crate::tui::component::ColorPickerContext::OverlayRippleFixedColor,
+                        state.layout.rgb_overlay_ripple.fixed_color,
                     );
+                    state.set_status("Adjust ripple fixed color - Enter to apply");
                     return Ok(false);
                 }
                 SettingItem::OverlayRippleHueShift => {
-                    // hue_shift_deg is i16, but we need to convert for u16 editor
-                    let current = if state.layout.rgb_overlay_ripple.hue_shift_deg < 0 {
-                        0
-                    } else {
-                        state.layout.rgb_overlay_ripple.hue_shift_deg as u16
-                    };
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 0, 359);
+                        .start_editing_signed_numeric(
+                            *setting,
+                            state.layout.rgb_overlay_ripple.hue_shift_deg,
+                            -180,
+                            180,
+                        );
                 }
                 SettingItem::OverlayRippleTriggerPress => {
                     manager.state_mut().start_toggling_boolean(
@@ -598,6 +598,12 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
             crate::tui::settings_manager::ManagerMode::EditingNumeric { setting, .. } => {
                 if let Some(value) = manager_state.get_numeric_value() {
                     apply_numeric_setting(state, *setting, value);
+                    state.mark_dirty();
+                }
+            }
+            crate::tui::settings_manager::ManagerMode::EditingSignedNumeric { setting, .. } => {
+                if let Some(value) = manager_state.get_signed_numeric_value() {
+                    apply_signed_numeric_setting(state, *setting, value);
                     state.mark_dirty();
                 }
             }
@@ -823,6 +829,14 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
             update_combo_hold_duration(state, 2, value);
         }
         _ => {}
+    }
+}
+
+/// Apply a signed numeric setting value
+fn apply_signed_numeric_setting(state: &mut AppState, setting: SettingItem, value: i16) {
+    if setting == SettingItem::OverlayRippleHueShift {
+        state.layout.rgb_overlay_ripple.hue_shift_deg = value;
+        state.set_status(format!("Overlay ripple hue shift set to: {value}°"));
     }
 }
 
