@@ -67,12 +67,10 @@ pub fn handle_view_build_log(state: &mut AppState) -> Result<bool> {
 /// Handle open keycode picker action
 pub fn handle_open_keycode_picker(state: &mut AppState) -> Result<bool> {
     match get_selected_key_info(state) {
-        Some((key, true)) => {
-            // Key is assigned - open key editor
+        Some((key, _)) => {
             open_key_editor(state, &key);
         }
-        Some((_, false)) | None => {
-            // Key is empty or no key selected - open keycode picker
+        None => {
             open_keycode_picker_for_empty_key(state);
         }
     }
@@ -92,7 +90,7 @@ fn open_key_editor(state: &mut AppState, key: &KeyDefinition) {
         .key_editor_state
         .init_for_key(key, state.current_layer);
     state.active_popup = Some(PopupType::KeyEditor);
-    state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
+    state.set_status("Key details - review current key, Enter to assign keycode");
 }
 
 /// Open keycode picker for an empty/unassigned key
@@ -127,6 +125,6 @@ pub fn handle_setup_wizard(state: &mut AppState) -> Result<bool> {
 /// Handle open tap dance editor action
 pub fn handle_open_tap_dance_editor(state: &mut AppState) -> Result<bool> {
     state.open_tap_dance_editor();
-    state.set_status("Tap Dance Editor - n: new, d: delete, Enter: select, Esc: cancel");
+    state.set_status("Tap Dance Editor - n: new, Shift+D: delete, Enter: apply, Esc: close");
     Ok(false)
 }

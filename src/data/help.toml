@@ -38,13 +38,13 @@ priority = 11
 
 [[contexts.main.bindings]]
 keys = ["Enter"]
-action = "Open keycode picker"
-hint = "Edit"
+action = "Open key details"
+hint = "Details"
 priority = 2
 
 [[contexts.main.bindings]]
-keys = ["x", "Delete"]
-action = "Clear key (KC_TRNS)"
+keys = ["Backspace", "Delete"]
+action = "Clear key"
 priority = 12
 
 [[contexts.main.bindings]]
@@ -96,7 +96,7 @@ action = "Copy key"
 priority = 19
 
 [[contexts.main.bindings]]
-keys = ["d", "Ctrl+X"]
+keys = ["Ctrl+X"]
 action = "Cut key"
 priority = 19
 
@@ -131,6 +131,7 @@ priority = 24
 [[contexts.main.bindings]]
 keys = ["Ctrl+S"]
 action = "Save layout"
+hint = "Save"
 priority = 25
 
 [[contexts.main.bindings]]
@@ -152,6 +153,7 @@ priority = 28
 [[contexts.main.bindings]]
 keys = ["Ctrl+B"]
 action = "Build firmware"
+hint = "Build"
 priority = 28
 
 [[contexts.main.bindings]]
@@ -494,7 +496,7 @@ hint = "Edit"
 priority = 3
 
 [[contexts.tap_dance_editor.bindings]]
-keys = ["d"]
+keys = ["Shift+D"]
 action = "Delete selected tap dance"
 hint = "Delete"
 priority = 4
@@ -755,7 +757,7 @@ hint = "Copy"
 priority = 6
 
 [[contexts.selection.bindings]]
-keys = ["d"]
+keys = ["Ctrl+X"]
 action = "Cut selected"
 hint = "Cut"
 priority = 7

@@ -567,7 +567,7 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
 
     // Main container with title
     let title = format!(
-        " Key Editor - Layer {} ({}, {}) ",
+        " Key Details - Layer {} ({}, {}) ",
         editor_state.layer_idx, editor_state.position.row, editor_state.position.col
     );
 
@@ -668,9 +668,9 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
     };
 
     let desc_title = if editor_state.is_editing() {
-        " Description (editing) "
+        " Key note (editing) "
     } else {
-        " Description "
+        " Key note "
     };
 
     let description_display = Paragraph::new(desc_content).style(desc_style).block(
@@ -726,14 +726,14 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                         .fg(theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "D",
                     Style::default()
                         .fg(theme.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "Esc",
                     Style::default()
@@ -764,14 +764,14 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                         .fg(theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "D",
                     Style::default()
                         .fg(theme.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Desc  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "Esc",
                     Style::default()
@@ -789,14 +789,14 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                     .fg(theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(": Reassign  ", Style::default().fg(theme.text_muted)),
+            Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
             Span::styled(
                 "D",
                 Style::default()
                     .fg(theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(": Description  ", Style::default().fg(theme.text_muted)),
+            Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
             Span::styled(
                 "C",
                 Style::default()
@@ -873,18 +873,18 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                 // Close the editor
                 state.active_popup = None;
                 state.key_editor_state.reset();
-                state.set_status("Key editor closed");
+                state.set_status("Closed key details");
             }
             KeyCode::Enter => {
                 // Open keycode picker to reassign entirely
                 state.key_editor_state.combo_edit = None; // Clear any combo edit state
                 state.open_keycode_picker();
-                state.set_status("Select new keycode");
+                state.set_status("Choose keycode for selected key");
             }
             KeyCode::Char('d' | 'D') => {
                 // Start editing description
                 state.key_editor_state.start_edit_description();
-                state.set_status("Editing description - Enter to save, Esc to cancel");
+                state.set_status("Editing key note - Enter to save, Esc to cancel");
             }
             KeyCode::Char('c' | 'C') => {
                 // Open color picker
