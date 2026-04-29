@@ -5,6 +5,17 @@ All notable changes to LazyQMK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Overlay ripple firmware behavior** - Reduced flicker by hardening generated ripple overlay semantics, improving idle wake behavior, and fixing release-trigger handling when idle effects are enabled
+- **Ripple effect math and validation** - Fixed wide-keyboard distance accumulation, corrected QMK hue wrap behavior, and reject invalid ripple settings such as zero duration or zero band width before code generation
+- **Ripple semantics across surfaces** - Aligned ripple defaults, ranges, labels, and documentation across firmware generation, web UI, TUI, and tests
+
+### Changed
+- **Ripple color modes** - Implemented real Hue Shift generation instead of falling back to key-based brightness behavior
+- **TUI ripple configuration** - Added support for fixed ripple color editing and signed hue-shift values in the settings UI
+
 ## [0.13.0] - 2026-01-09
 
 ### Added
