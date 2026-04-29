@@ -15,6 +15,8 @@
 	let editingLayerIndex = $state<number | null>(null);
 	let editingLayerName = $state('');
 	let colorPickerLayerIndex = $state<number | null>(null);
+	let deleteBlockedMessage = $state<string | null>(null);
+	let actionPanelLayerIndex = $state<number | null>(null);
 
 	function createNewLayer() {
 		if (!layers.length) return;
@@ -49,9 +51,11 @@
 
 	function deleteLayer(index: number) {
 		if (layers.length <= 1) {
-			alert('Cannot delete the last layer');
+			deleteBlockedMessage = 'Keep at least one layer in layout before deleting.';
 			return;
 		}
+
+		deleteBlockedMessage = null;
 
 		const newLayers = layers.filter((_, i) => i !== index);
 		// Update layer numbers
@@ -192,13 +196,26 @@
 		}
 		return undefined;
 	}
+
+	function toggleActionPanel(index: number) {
+		actionPanelLayerIndex = actionPanelLayerIndex === index ? null : index;
+	}
 </script>
 
 <Card class="p-6">
 	<div class="flex items-center justify-between mb-4">
-		<h2 class="text-lg font-semibold">Layer Manager</h2>
+		<div>
+			<h2 class="text-lg font-semibold">Layer Manager</h2>
+			<p class="mt-1 text-sm text-muted-foreground">Keep common tasks visible. Open more actions only for the layer you are changing.</p>
+		</div>
 		<Button onclick={createNewLayer} size="sm">New Layer</Button>
 	</div>
+
+	{#if deleteBlockedMessage}
+		<div class="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+			{deleteBlockedMessage}
+		</div>
+	{/if}
 
 	<div class="space-y-3">
 		{#each layers as layer, i}
@@ -250,8 +267,16 @@
 					</div>
 				</div>
 
-				<div class="flex flex-wrap gap-2">
-					<!-- Layer Default Color button -->
+				<div class="flex flex-wrap items-center gap-2">
+					<Button
+						onclick={() => toggleActionPanel(i)}
+						size="sm"
+						variant={actionPanelLayerIndex === i ? 'default' : 'outline'}
+						data-testid="layer-{i}-actions-toggle"
+					>
+						{actionPanelLayerIndex === i ? 'Hide actions' : 'More actions'}
+					</Button>
+
 					<Button
 						onclick={() => openColorPicker(i)}
 						size="sm"
@@ -270,7 +295,6 @@
 						{/if}
 					</Button>
 
-					<!-- Reorder buttons -->
 					<Button
 						onclick={() => moveLayerUp(i)}
 						size="sm"
@@ -290,92 +314,34 @@
 						↓
 					</Button>
 
-					<!-- Duplicate button -->
-					<Button onclick={() => duplicateLayer(i)} size="sm" variant="outline" title="Duplicate layer">
-						📋 Duplicate
-					</Button>
-
-					<!-- Copy keys buttons -->
-					{#if copySourceIndex === null}
-						<Button
-							onclick={() => (copySourceIndex = i)}
-							size="sm"
-							variant="outline"
-							title="Copy keys from this layer"
-						>
-							📑 Copy Keys
-						</Button>
-					{:else if copySourceIndex !== i}
-						<Button
-							onclick={() => {
-								if (copySourceIndex !== null) {
-									copyLayerKeysTo(copySourceIndex, i);
-									copySourceIndex = null;
-								}
-							}}
-							size="sm"
-							variant="secondary"
-							title="Paste keys to this layer"
-						>
-							📋 Paste Here
-						</Button>
-					{:else}
-						<Button
-							onclick={() => (copySourceIndex = null)}
-							size="sm"
-							variant="ghost"
-							title="Cancel copy"
-						>
-							❌ Cancel Copy
-						</Button>
-					{/if}
-
-					<!-- Swap buttons -->
-					{#if swapSourceIndex === null}
-						<Button
-							onclick={() => (swapSourceIndex = i)}
-							size="sm"
-							variant="outline"
-							title="Swap with another layer"
-						>
-							🔄 Swap
-						</Button>
-					{:else if swapSourceIndex !== i}
-						<Button
-							onclick={() => {
-								if (swapSourceIndex !== null) {
-									swapLayers(swapSourceIndex, i);
-									swapSourceIndex = null;
-								}
-							}}
-							size="sm"
-							variant="secondary"
-							title="Swap with this layer"
-						>
-							🔄 Swap Here
-						</Button>
-					{:else}
-						<Button
-							onclick={() => (swapSourceIndex = null)}
-							size="sm"
-							variant="ghost"
-							title="Cancel swap"
-						>
-							❌ Cancel Swap
-						</Button>
-					{/if}
-
-					<!-- Delete button -->
-					<Button
-						onclick={() => deleteLayer(i)}
-						size="sm"
-						variant="destructive"
-						disabled={layers.length <= 1}
-						title="Delete layer"
-					>
-						🗑️ Delete
-					</Button>
 				</div>
+
+				{#if actionPanelLayerIndex === i}
+					<div class="mt-3 rounded-lg border border-border bg-muted/20 p-3">
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">Layer actions</p>
+						<div class="flex flex-wrap gap-2">
+							<Button onclick={() => duplicateLayer(i)} size="sm" variant="outline" title="Duplicate layer">📋 Duplicate</Button>
+
+							{#if copySourceIndex === null}
+								<Button onclick={() => (copySourceIndex = i)} size="sm" variant="outline" title="Copy keys from this layer">📑 Copy Keys</Button>
+							{:else if copySourceIndex !== i}
+								<Button onclick={() => { if (copySourceIndex !== null) { copyLayerKeysTo(copySourceIndex, i); copySourceIndex = null; } }} size="sm" variant="secondary" title="Paste keys to this layer">📋 Paste Here</Button>
+							{:else}
+								<Button onclick={() => (copySourceIndex = null)} size="sm" variant="ghost" title="Cancel copy">❌ Cancel Copy</Button>
+							{/if}
+
+							{#if swapSourceIndex === null}
+								<Button onclick={() => (swapSourceIndex = i)} size="sm" variant="outline" title="Swap with another layer">🔄 Swap</Button>
+							{:else if swapSourceIndex !== i}
+								<Button onclick={() => { if (swapSourceIndex !== null) { swapLayers(swapSourceIndex, i); swapSourceIndex = null; } }} size="sm" variant="secondary" title="Swap with this layer">🔄 Swap Here</Button>
+							{:else}
+								<Button onclick={() => (swapSourceIndex = null)} size="sm" variant="ghost" title="Cancel swap">❌ Cancel Swap</Button>
+							{/if}
+
+							<Button onclick={() => deleteLayer(i)} size="sm" variant="destructive" disabled={layers.length <= 1} title="Delete layer">🗑️ Delete</Button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/each}
 	</div>

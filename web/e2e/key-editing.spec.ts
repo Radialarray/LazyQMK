@@ -110,19 +110,19 @@ test.describe('Key Editing', () => {
 		});
 	});
 
-	test('clicking a key opens the keycode picker', async ({ page }) => {
+	test('clicking a key focuses selected key panel before editing', async ({ page }) => {
 		await page.goto('/layouts/test-layout');
 
 		// Wait for keyboard preview to load
 		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 
-		// Click on the first key - should immediately open picker
+		// Click on the first key - should focus selected key panel first
 		await page.locator('[data-testid="key-0"]').click();
 
-		// Verify keycode picker modal is visible immediately
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await expect(page.getByText('Select Keycode')).toBeVisible();
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
+		await expect(page.getByTestId('edit-keycode-button')).toBeVisible();
+		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 	});
 
 	test('keycode picker displays keycodes', async ({ page }) => {
@@ -132,7 +132,9 @@ test.describe('Key Editing', () => {
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
 
-		// Wait for picker to open (opens immediately on click)
+		// Open picker from selected key panel
+		await page.getByTestId('edit-keycode-button').click();
+
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
 		// Verify keycodes are displayed
@@ -148,7 +150,9 @@ test.describe('Key Editing', () => {
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
 
-		// Wait for picker (opens immediately) and select a keycode
+		await page.getByTestId('edit-keycode-button').click();
+
+		// Wait for picker and select a keycode
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByTestId('keycode-option-KC_A').click();
 
@@ -156,7 +160,7 @@ test.describe('Key Editing', () => {
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
 		// Verify "Unsaved changes" indicator appears
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('clear key button sets keycode to KC_TRNS', async ({ page }) => {
@@ -166,7 +170,9 @@ test.describe('Key Editing', () => {
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
 
-		// Wait for picker (opens immediately) and click clear button
+		await page.getByTestId('edit-keycode-button').click();
+
+		// Wait for picker and click clear button
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByTestId('clear-key-button').click();
 
@@ -174,7 +180,7 @@ test.describe('Key Editing', () => {
 		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
 		// Verify "Unsaved changes" indicator appears
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('search filters keycodes', async ({ page }) => {
@@ -183,7 +189,8 @@ test.describe('Key Editing', () => {
 		// Click a key to select it and open picker
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
-		
+		await page.getByTestId('edit-keycode-button').click();
+
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
 		// Type in search box
@@ -204,7 +211,8 @@ test.describe('Key Editing', () => {
 		// Click a key to select it and open picker
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
-		
+		await page.getByTestId('edit-keycode-button').click();
+
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
 		// Set up response listener before clicking category
@@ -214,7 +222,7 @@ test.describe('Key Editing', () => {
 		);
 
 		// Click on a category button
-		await page.getByTestId('category-modifier').click();
+		await page.getByTestId('category-modifier').first().click();
 
 		// Verify keycodes API was called with category param
 		await responsePromise;
@@ -226,7 +234,8 @@ test.describe('Key Editing', () => {
 		// Click a key to select it and open picker
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
-		
+		await page.getByTestId('edit-keycode-button').click();
+
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
 		// Close picker by clicking Cancel button
@@ -245,13 +254,14 @@ test.describe('Key Editing', () => {
 		// Click a key to select it and open picker
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 
 		// Select a keycode
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByTestId('keycode-option-KC_A').click();
 
 		// Verify unsaved changes
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 
 		// Set up request listener before clicking save
 		const requestPromise = page.waitForRequest((request) => 
@@ -273,9 +283,10 @@ test.describe('Key Editing', () => {
 	test('keycode picker highlights current keycode', async ({ page }) => {
 		await page.goto('/layouts/test-layout');
 
-		// Click the first key (which has KC_Q) to select it and open picker
+		// Click the first key and open picker from selected key panel
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 
 		// Wait for picker
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
@@ -291,16 +302,18 @@ test.describe('Key Editing', () => {
 		// Edit first key
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByTestId('keycode-option-KC_A').click();
 
 		// Edit second key
 		await page.locator('[data-testid="key-1"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 		await page.getByTestId('keycode-option-KC_B').click();
 
 		// Verify unsaved changes
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('clicking overlay closes keycode picker', async ({ page }) => {
@@ -309,6 +322,7 @@ test.describe('Key Editing', () => {
 		// Click a key to select it and open picker
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 		
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
@@ -327,7 +341,7 @@ test.describe('Key Editing', () => {
 
 		// Verify selection mode is active
 		await expect(page.locator('[data-testid="selection-mode-button"]')).toContainText(
-			'✓ Selection Mode'
+			'✓ Multi-Select On'
 		);
 
 		// Click a key
@@ -344,9 +358,10 @@ test.describe('Key Editing', () => {
 	test('shift-click multi-selection prevents picker from opening', async ({ page }) => {
 		await page.goto('/layouts/test-layout');
 
-		// Single click first key - should open picker
+		// Single click first key, then open picker explicitly
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 		await page.locator('[data-testid="key-0"]').click();
+		await page.getByTestId('edit-keycode-button').click();
 		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
 
 		// Close the picker

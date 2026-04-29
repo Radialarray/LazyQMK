@@ -116,4 +116,13 @@ describe('KeycodePicker API Integration', () => {
 		expect(result.keycodes).toHaveLength(1);
 		expect(result.keycodes[0].name).toContain('Control');
 	});
+
+	it('includes quick-filter categories used by picker UI', async () => {
+		const result = await apiClient.listCategories();
+		const ids = result.categories.map((category) => category.id);
+
+		expect(ids).toContain('basic');
+		expect(ids).toContain('modifier');
+		expect(ids).toContain('layer');
+	});
 });

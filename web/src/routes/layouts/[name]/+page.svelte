@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		AccessibleDialog,
 		Button,
 		Card,
 		KeyboardPreview,
@@ -10,6 +11,7 @@
 		CategoryManager,
 		ColorPicker
 	} from '$components';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { apiClient } from '$api';
 	import type { PageData } from './$types';
 	import type {
@@ -32,6 +34,7 @@
 		BuildArtifact
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
+	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
 	import {
 		shouldCycleLayer,
@@ -53,31 +56,33 @@
 	let isDirty = $state(false);
 	let saveStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
 	let saveError = $state<string | null>(null);
+	let leaveDialogOpen = $state(false);
+	let pendingNavigationTarget = $state<string | null>(null);
+	let bypassNavigationGuard = $state(false);
 
 	// Tab navigation
-	// Primary tabs - always visible in horizontal bar
+	// Primary tabs - core editing workflow
 	const primaryTabs = [
-		{ id: 'preview', label: 'Editor', icon: '⌨️' },
-		{ id: 'generate', label: 'Generate', icon: '⚙️' },
-		{ id: 'build', label: 'Build', icon: '🔨' }
+		{ id: 'preview', label: 'Editor', icon: 'ED' },
+		{ id: 'layers', label: 'Layers', icon: 'LY' },
+		{ id: 'metadata', label: 'Metadata', icon: 'DT' },
+		{ id: 'firmware', label: 'Firmware', icon: 'FW' }
 	];
 	
-	// Secondary tabs - accessible via "More..." dropdown
+	// Secondary tabs - advanced or supporting tasks
 	const secondaryTabs = [
-		{ id: 'metadata', label: 'Metadata', icon: '📝' },
-		{ id: 'layers', label: 'Layers', icon: '📚' },
-		{ id: 'categories', label: 'Categories', icon: '🎨' },
-		{ id: 'tap-dance', label: 'Tap Dance', icon: '💃' },
-		{ id: 'combos', label: 'Combos', icon: '🔗' },
-		{ id: 'idle-effect', label: 'Idle Effect', icon: '💤' },
-		{ id: 'overlay-ripple', label: 'Overlay Ripple', icon: '🌊' },
-		{ id: 'validate', label: 'Validate', icon: '✓' },
-		{ id: 'inspect', label: 'Inspect', icon: '🔍' },
-		{ id: 'export', label: 'Export', icon: '📄' }
+		{ id: 'categories', label: 'Categories', icon: 'CT' },
+		{ id: 'tap-dance', label: 'Tap Dance Actions', icon: 'TD' },
+		{ id: 'combos', label: 'Two-Key Holds', icon: 'CB' },
+		{ id: 'idle-effect', label: 'Idle Lighting', icon: 'ID' },
+		{ id: 'overlay-ripple', label: 'Ripple Lighting', icon: 'OR' },
+		{ id: 'review', label: 'Review Layout', icon: 'RV' }
 	];
 	
 	let activeTab = $state('preview');
 	let dropdownOpen = $state(false);
+	let firmwareStep = $state<'generate' | 'build'>('generate');
+	let reviewState = $state<'idle' | 'running' | 'done'>('idle');
 	
 	// Check if active tab is in secondary tabs
 	const isActiveTabSecondary = $derived(secondaryTabs.some(tab => tab.id === activeTab));
@@ -131,6 +136,7 @@
 	// State for keycode picker
 	let keycodePickerOpen = $state(false);
 	let editingKeyVisualIndex = $state<number | null>(null);
+	let inspectMode = $state<'idle' | 'selected'>('idle');
 
 	// State for color/category editing
 	let showKeyColorPicker = $state(false);
@@ -146,6 +152,10 @@
 	let exportLoading = $state(false);
 	let generateResult = $state<GenerateResponse | null>(null);
 	let generateLoading = $state(false);
+	let tapDancePickerIndex = $state<number | null>(null);
+	let tapDancePickerField = $state<'single_tap' | 'double_tap' | 'hold' | null>(null);
+	let comboPickerIndex = $state<number | null>(null);
+	let comboPickerField = $state<'output' | null>(null);
 
 	// Generate job polling state
 	let generateJob = $state<GenerateJob | null>(null);
@@ -162,6 +172,34 @@
 	onDestroy(() => {
 		stopPolling();
 		stopBuildPolling();
+	});
+
+	$effect(() => {
+		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!isDirty) return;
+			event.preventDefault();
+			event.returnValue = '';
+		};
+
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	});
+
+	beforeNavigate((navigation) => {
+		if (
+			!shouldBlockNavigation(
+				isDirty,
+				bypassNavigationGuard,
+				navigation.from?.url,
+				navigation.to?.url
+			)
+		) {
+			return;
+		}
+
+		navigation.cancel();
+		pendingNavigationTarget = getNavigationTarget(navigation.to?.url);
+		leaveDialogOpen = true;
 	});
 
 	function stopPolling() {
@@ -259,6 +297,7 @@
 
 	// State for switch layout variant
 	let showVariantSwitchDialog = $state(false);
+	let resetDialogOpen = $state(false);
 	let availableVariants = $state<LayoutVariantInfo[]>([]);
 	let variantsLoading = $state(false);
 	let variantsError = $state<string | null>(null);
@@ -472,18 +511,32 @@
 	function getBuildStatusBadge(status: string): { class: string; icon: string; text: string } {
 		switch (status) {
 			case 'pending':
-				return { class: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', icon: '⏳', text: 'Pending' };
+				return { class: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200', icon: 'PD', text: 'Pending' };
 			case 'running':
-				return { class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: '🔄', text: 'Running' };
+				return { class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200', icon: 'RN', text: 'Running' };
 			case 'completed':
-				return { class: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: '✅', text: 'Completed' };
+				return { class: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200', icon: 'OK', text: 'Completed' };
 			case 'failed':
-				return { class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: '❌', text: 'Failed' };
+				return { class: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200', icon: 'ER', text: 'Failed' };
 			case 'cancelled':
-				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: '🚫', text: 'Cancelled' };
+				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: 'CN', text: 'Cancelled' };
 			default:
-				return { class: 'bg-gray-100 text-gray-800', icon: '❓', text: status };
+				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: '??', text: status };
 		}
+	}
+
+	function selectPrimaryTab(tabId: string) {
+		activeTab = tabId;
+		dropdownOpen = false;
+		if (tabId === 'firmware') {
+			firmwareStep = 'generate';
+		}
+	}
+
+	function openFirmwareStep(step: 'generate' | 'build') {
+		activeTab = 'firmware';
+		firmwareStep = step;
+		dropdownOpen = false;
 	}
 
 	// Load geometry when layout is available
@@ -504,7 +557,7 @@
 
 	// Load build history when switching to Build tab
 	$effect(() => {
-		if (activeTab === 'build' && filename) {
+		if (activeTab === 'firmware' && filename) {
 			loadBuildHistory();
 		}
 	});
@@ -612,6 +665,8 @@
 		shiftKey: boolean,
 		isVirtualClick: boolean = false
 	) {
+		hoveredKeyIndex = null;
+
 		// Handle swap mode first
 		if (swapMode) {
 			// Ensure the click doesn't bubble into keyboard navigation or other handlers
@@ -637,12 +692,12 @@
 			selectedKeyIndices = newSelection;
 			// Keep single selection for key details panel
 			selectedKeyIndex = visualIndex;
+			inspectMode = 'selected';
 		} else if (!isVirtualClick) {
 			// Single selection mode (default behavior)
 			selectedKeyIndex = visualIndex;
 			selectedKeyIndices = new Set();
-			// Immediately open keycode picker for TUI-like UX
-			openKeycodePicker();
+			inspectMode = 'selected';
 		}
 	}
 	
@@ -652,6 +707,7 @@
 	function handleKeyboardNavigation(newKeyIndex: number | null, newSelectedIndices: Set<number>) {
 		selectedKeyIndex = newKeyIndex;
 		selectedKeyIndices = newSelectedIndices;
+		inspectMode = newKeyIndex === null ? 'idle' : 'selected';
 	}
 
 	/**
@@ -828,6 +884,7 @@
 	function clearSelection() {
 		selectedKeyIndices = new Set();
 		selectedKeyIndex = null;
+		inspectMode = 'idle';
 	}
 
 	// Clear render metadata for specific keys so the local keycodeMap fallback renders instead of stale backend data.
@@ -912,7 +969,21 @@
 	}
 
 	function handleKeycodeSelect(keycode: string) {
-		if (!layout || editingKeyVisualIndex === null) return;
+		if (!layout) return;
+
+		if (tapDancePickerIndex !== null && tapDancePickerField) {
+			updateTapDance(tapDancePickerIndex, tapDancePickerField, keycode);
+			handleKeycodePickerClose();
+			return;
+		}
+
+		if (comboPickerIndex !== null && comboPickerField === 'output') {
+			updateCombo(comboPickerIndex, 'output', keycode);
+			handleKeycodePickerClose();
+			return;
+		}
+
+		if (editingKeyVisualIndex === null) return;
 		
 		// Find the key in the current layer and update its keycode
 		const keyIndex = layout.layers[selectedLayerIndex].keys.findIndex(
@@ -933,6 +1004,61 @@
 	function handleKeycodePickerClose() {
 		keycodePickerOpen = false;
 		editingKeyVisualIndex = null;
+		tapDancePickerIndex = null;
+		tapDancePickerField = null;
+		comboPickerIndex = null;
+		comboPickerField = null;
+	}
+
+	function openTapDancePicker(index: number, field: 'single_tap' | 'double_tap' | 'hold') {
+		tapDancePickerIndex = index;
+		tapDancePickerField = field;
+		keycodePickerOpen = true;
+	}
+
+	function openComboPicker(index: number) {
+		comboPickerIndex = index;
+		comboPickerField = 'output';
+		keycodePickerOpen = true;
+	}
+
+	function attemptNavigate(target: string) {
+		if (isDirty) {
+			pendingNavigationTarget = target;
+			leaveDialogOpen = true;
+			return;
+		}
+
+		goto(target);
+	}
+
+	function closeLeaveDialog() {
+		leaveDialogOpen = false;
+		pendingNavigationTarget = null;
+	}
+
+	async function navigateWithBypass(target: string) {
+		bypassNavigationGuard = true;
+		try {
+			await goto(target);
+		} finally {
+			bypassNavigationGuard = false;
+		}
+	}
+
+	async function confirmLeaveWithoutSaving() {
+		const target = pendingNavigationTarget;
+		leaveDialogOpen = false;
+		pendingNavigationTarget = null;
+		if (target) {
+			await navigateWithBypass(target);
+		} else if (window.history.length > 1) {
+			bypassNavigationGuard = true;
+			setTimeout(() => {
+				bypassNavigationGuard = false;
+			}, 0);
+			window.history.back();
+		}
 	}
 
 	function handleLayerChange(index: number) {
@@ -982,6 +1108,13 @@
 			await apiClient.saveLayout(filename, layout);
 			saveStatus = 'saved';
 			isDirty = false;
+			if (leaveDialogOpen && pendingNavigationTarget) {
+				const target = pendingNavigationTarget;
+				leaveDialogOpen = false;
+				pendingNavigationTarget = null;
+				await navigateWithBypass(target);
+				return;
+			}
 			setTimeout(() => {
 				if (saveStatus === 'saved') saveStatus = 'idle';
 			}, 2000);
@@ -993,7 +1126,6 @@
 
 	async function resetLayout() {
 		if (!filename) return;
-		if (!window.confirm('Discard all unsaved changes?')) return;
 		try {
 			const savedLayout = await apiClient.getLayout(filename);
 			layout = { ...savedLayout, layers: [...savedLayout.layers] };
@@ -1003,6 +1135,7 @@
 			// Clear selection and editor state
 			selectedKeyIndex = null;
 			selectedKeyIndices = new Set();
+			inspectMode = 'idle';
 			selectionMode = false;
 			keycodePickerOpen = false;
 			editingKeyVisualIndex = null;
@@ -1019,6 +1152,19 @@
 			saveError = 'Failed to reset layout. Please try again.';
 			saveStatus = 'error';
 		}
+	}
+
+	function requestResetLayout() {
+		resetDialogOpen = true;
+	}
+
+	function closeResetDialog() {
+		resetDialogOpen = false;
+	}
+
+	async function confirmResetLayout() {
+		resetDialogOpen = false;
+		await resetLayout();
 	}
 
 	// Tap Dance management
@@ -1165,6 +1311,7 @@
 	}
 
 	// Combo settings
+	type ComboPosition = { row: number; col: number };
 	import type { ComboAction } from '$api/types';
 	
 	function updateComboSettings(field: string, value: boolean | number | string | { row: number; col: number }, comboIndex?: number) {
@@ -1376,6 +1523,13 @@
 		}
 	}
 
+	async function runReviewWorkflow() {
+		if (!filename) return;
+		reviewState = 'running';
+		await Promise.all([runValidation(), runInspect(), runExport()]);
+		reviewState = 'done';
+	}
+
 	function downloadExport() {
 		if (!exportResult) return;
 		const blob = new Blob([exportResult.markdown], { type: 'text/markdown' });
@@ -1523,68 +1677,89 @@
 
 	// Check if save should be blocked due to metadata validation errors
 	const canSave = $derived(!metadataErrors.some(e => e.field === 'name' || e.field === 'tags'));
+	const currentReviewStatus = $derived.by(() => {
+		if (validationLoading || inspectLoading || exportLoading || reviewState === 'running') return 'Refreshing review…';
+		if (!validationResult && !inspectResult && !exportResult) return 'Review not generated yet';
+		if (validationResult?.valid === false) return 'Problems found in validation';
+		if (validationResult?.warnings?.length) return 'Validation passed with warnings';
+		return 'Review ready';
+	});
+	const reviewReadyForBuild = $derived(Boolean(validationResult?.valid));
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="container mx-auto p-6">
 	<!-- Header -->
-	<div class="mb-6 flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold mb-1">
-				{layout?.metadata.name || 'Loading...'}
-			</h1>
-			<p class="text-muted-foreground text-sm">
-				{layout?.metadata.description || ''}
-			</p>
-		</div>
-		<div class="flex items-center gap-3">
-			{#if isDirty}
-				<span class="text-sm text-yellow-500">Unsaved changes</span>
-			{/if}
-			{#if swapMessage}
-				<span class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</span>
-			{:else if saveStatus === 'saved'}
-				<span class="text-sm text-green-500">Saved!</span>
-			{:else if saveStatus === 'error'}
-				<span class="text-sm text-red-500">{saveError}</span>
-			{/if}
-			{#if isDirty}
-				<Button onclick={resetLayout} variant="outline" data-testid="reset-button">
-					Reset
-				</Button>
-			{/if}
-			<Button onclick={saveLayout} disabled={!isDirty || !canSave || saveStatus === 'saving'} data-testid="save-button">
-				{saveStatus === 'saving' ? 'Saving...' : 'Save'}
-			</Button>
-			<Button onclick={openSaveTemplateDialog} variant="outline" data-testid="save-template-button">Save as Template</Button>
-			<a href="/layouts">
-				<Button>Back</Button>
-			</a>
+	<div class="mb-6 space-y-4">
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+			<div class="space-y-2">
+				<div class="flex flex-wrap items-center gap-2">
+					<h1 class="text-3xl font-bold">{layout?.metadata.name || 'Loading...'}</h1>
+					{#if isDirty}
+						<span class="rounded-full bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-300">
+							Unsaved changes
+						</span>
+					{/if}
+				</div>
+				<p class="text-muted-foreground text-sm">{layout?.metadata.description || 'Shape how this keyboard feels in daily use, then save when ready.'}</p>
+				{#if swapMessage}
+					<p class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</p>
+				{:else if saveStatus === 'saved'}
+					<p class="text-sm text-green-500">Saved!</p>
+				{:else if saveStatus === 'error'}
+					<p class="text-sm text-red-500">{saveError}</p>
+				{/if}
+			</div>
+
+			<div class="flex flex-col items-stretch gap-3 lg:min-w-[420px]">
+				<div class="flex flex-wrap items-center justify-end gap-2">
+					<Button
+						onclick={saveLayout}
+						disabled={!isDirty || !canSave || saveStatus === 'saving'}
+						data-testid="save-button"
+					>
+						{saveStatus === 'saving' ? 'Saving...' : isDirty ? 'Save Changes' : 'All Changes Saved'}
+					</Button>
+					<Button onclick={openSaveTemplateDialog} variant="outline" data-testid="save-template-button">
+						Save as Template
+					</Button>
+				</div>
+				<div class="flex flex-wrap items-center justify-end gap-2">
+					{#if isDirty}
+						<Button onclick={requestResetLayout} variant="outline" data-testid="reset-button">
+							Discard Unsaved Changes
+						</Button>
+					{/if}
+					<Button variant="ghost" onclick={() => attemptNavigate('/layouts')} data-testid="back-button">
+						← Back to Layouts
+					</Button>
+				</div>
+			</div>
 		</div>
 	</div>
 
 	<!-- Tab Navigation with Dropdown -->
-	<div class="tabs-container mb-6" data-testid="tab-navigation">
-		<div class="flex border-b border-border relative">
-			<!-- Primary Tabs -->
-			{#each primaryTabs as tab}
-				<button
-					onclick={() => { activeTab = tab.id; dropdownOpen = false; }}
-					class="tab-button px-4 py-2 text-sm font-medium transition-colors
-						{activeTab === tab.id
-						? 'border-b-2 border-primary text-primary'
+		<div class="tabs-container mb-6" data-testid="tab-navigation">
+			<div class="flex border-b border-border relative">
+				<!-- Primary Tabs -->
+				{#each primaryTabs as tab}
+					<button
+						onclick={() => selectPrimaryTab(tab.id)}
+						class="tab-button px-4 py-2 text-sm font-medium transition-colors
+							{activeTab === tab.id
+							? 'border-b-2 border-primary text-primary'
 						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
 					aria-selected={activeTab === tab.id}
 					role="tab"
 					data-testid="tab-{tab.id}"
 				>
 					{#if tab.icon}
-						<span class="mr-2">{tab.icon}</span>
+					<span class="mr-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-current/80">{tab.icon}</span>
 					{/if}
 					{tab.label}
-				</button>
-			{/each}
+					</button>
+				{/each}
 			
 			<!-- More... Dropdown Button -->
 			<div class="relative">
@@ -1596,10 +1771,11 @@
 						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
 					aria-haspopup="true"
 					aria-expanded={dropdownOpen}
+					aria-controls="advanced-tools-menu"
 					data-testid="tab-more-dropdown"
 				>
 					<span class="mr-1">⋯</span>
-					More...
+					More
 					<svg class="w-4 h-4 ml-1 transition-transform {dropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 					</svg>
@@ -1607,19 +1783,13 @@
 				
 				<!-- Dropdown Menu -->
 				{#if dropdownOpen}
-					<!-- Click-outside handler -->
-					<button
-						class="fixed inset-0 z-10"
-						onclick={() => dropdownOpen = false}
-						onkeydown={(e) => e.key === 'Escape' && (dropdownOpen = false)}
-						tabindex="-1"
-						aria-label="Close dropdown"
-					></button>
-					
 					<!-- Dropdown content -->
 					<div
 						class="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-20 py-1"
 						role="menu"
+						id="advanced-tools-menu"
+						tabindex="-1"
+						onkeydown={(e) => e.key === 'Escape' && (dropdownOpen = false)}
 						data-testid="tab-dropdown-menu"
 					>
 						{#each secondaryTabs as tab}
@@ -1633,7 +1803,7 @@
 								data-testid="dropdown-tab-{tab.id}"
 							>
 								{#if tab.icon}
-									<span>{tab.icon}</span>
+									<span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/80">{tab.icon}</span>
 								{/if}
 								{tab.label}
 								{#if activeTab === tab.id}
@@ -1647,6 +1817,36 @@
 		</div>
 	</div>
 
+	{#if activeTab === 'firmware'}
+		<Card class="p-4 mb-6 bg-muted/20 border-dashed" data-testid="firmware-workflow-summary">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div>
+					<h2 class="text-base font-semibold">Firmware workflow</h2>
+					<p class="text-sm text-muted-foreground mt-1">
+						Run source generation first, then compile flashable firmware artifacts.
+					</p>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<button
+						class="rounded-md border px-3 py-2 text-sm transition-colors {firmwareStep === 'generate' ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-muted'}"
+						onclick={() => (firmwareStep = 'generate')}
+						data-testid="firmware-step-generate"
+					>
+						1. Generate sources
+					</button>
+					<span class="text-muted-foreground">→</span>
+					<button
+						class="rounded-md border px-3 py-2 text-sm transition-colors {firmwareStep === 'build' ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-muted'}"
+						onclick={() => (firmwareStep = 'build')}
+						data-testid="firmware-step-build"
+					>
+						2. Build firmware
+					</button>
+				</div>
+			</div>
+		</Card>
+	{/if}
+
 	<!-- Tab Content -->
 	{#if layout}
 		{#if activeTab === 'metadata'}
@@ -1654,7 +1854,7 @@
 			<Card class="p-6 max-w-3xl">
 				<h2 class="text-lg font-semibold mb-4">Layout Metadata</h2>
 				<p class="text-sm text-muted-foreground mb-6">
-					Edit the basic information about this layout. Changes are saved when you click the Save button.
+					Edit naming and sharing details here. Keyboard summary stays in Editor so metadata is not duplicated in two places.
 				</p>
 
 				<div class="space-y-6">
@@ -1756,6 +1956,9 @@
 					<!-- Read-only Metadata -->
 					<div class="border-t border-border pt-4">
 						<h3 class="text-sm font-semibold mb-3">System Information</h3>
+						<p class="text-xs text-muted-foreground mb-3">
+							Reference setup details for this layout. Use editor summary for quick context while editing keys.
+						</p>
 						<dl class="grid grid-cols-2 gap-4 text-sm">
 							<div>
 								<dt class="font-medium text-muted-foreground">Keyboard</dt>
@@ -1797,7 +2000,13 @@
 			<div class="space-y-6">
 				<!-- Metadata Card -->
 				<Card class="p-6">
-					<h2 class="text-lg font-semibold mb-3">Metadata</h2>
+					<div class="flex items-start justify-between gap-4 mb-3">
+						<div>
+							<h2 class="text-lg font-semibold">Editor Summary</h2>
+							<p class="mt-1 text-sm text-muted-foreground">Core context for editing lives here. Open Layout Info only when you need to rename, retag, or review system metadata.</p>
+						</div>
+						<Button size="sm" variant="outline" onclick={() => (activeTab = 'metadata')}>Open Layout Info</Button>
+					</div>
 					<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 						<div>
 							<dt class="font-medium text-muted-foreground">Keyboard</dt>
@@ -1812,32 +2021,10 @@
 							<dd>{layout.metadata.author || 'N/A'}</dd>
 						</div>
 						<div>
-							<dt class="font-medium text-muted-foreground">Modified</dt>
-							<dd>{new Date(layout.metadata.modified).toLocaleDateString()}</dd>
+							<dt class="font-medium text-muted-foreground">Layers</dt>
+							<dd>{layout.layers.length}</dd>
 						</div>
 					</dl>
-				</Card>
-
-				<!-- Layer Selector -->
-				<Card class="p-6">
-					<h2 class="text-lg font-semibold mb-3">Layers</h2>
-					<div class="flex gap-2 flex-wrap">
-						{#each layout.layers as layer, i}
-							<button
-								onclick={() => handleLayerChange(i)}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors text-sm
-									{selectedLayerIndex === i
-									? 'bg-primary text-primary-foreground border-primary'
-									: 'bg-background hover:bg-accent border-border'}"
-							>
-								<span
-									class="w-2.5 h-2.5 rounded-full"
-									style="background-color: {layer.color || '#888'}"
-								></span>
-								<span class="font-medium">{layer.name}</span>
-							</button>
-						{/each}
-					</div>
 				</Card>
 
 				<!-- Keyboard Preview -->
@@ -1858,6 +2045,49 @@
 						</div>
 					</div>
 
+					<div class="mb-4 rounded-lg border border-border bg-background/70 p-4">
+						<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+							<div>
+								<p class="text-sm font-medium">Working layer</p>
+								<p class="mt-1 text-xs text-muted-foreground">Switch layers beside preview so key context stays in view.</p>
+							</div>
+							<div class="flex gap-2 flex-wrap">
+								{#each layout.layers as layer, i}
+									<button
+										onclick={() => handleLayerChange(i)}
+										class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors text-sm
+											{selectedLayerIndex === i
+											? 'bg-primary text-primary-foreground border-primary'
+											: 'bg-background hover:bg-accent border-border'}"
+										data-testid="preview-layer-{i}"
+									>
+										<span class="w-2.5 h-2.5 rounded-full" style="background-color: {layer.color || '#888'}"></span>
+										<span class="font-medium">{layer.name}</span>
+									</button>
+								{/each}
+							</div>
+						</div>
+					</div>
+
+					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-4 text-sm">
+						<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+							<div>
+								<p class="font-medium text-foreground">Editing modes</p>
+								<p class="mt-1 text-muted-foreground">
+									Browse to inspect. Turn on selection to edit many keys. Turn on swap to trade positions.
+								</p>
+							</div>
+							<div class="grid gap-1 text-muted-foreground sm:grid-cols-2 xl:grid-cols-3 xl:gap-x-4">
+								<span><strong class="text-foreground">Current</strong>: {swapMode ? 'swap' : selectionMode ? 'multi-select' : inspectMode === 'selected' ? 'inspect selected key' : 'browse preview'}</span>
+								<span><strong class="text-foreground">Click</strong>: inspect one key</span>
+								<span><strong class="text-foreground">Edit Keycode</strong>: change assignment</span>
+								<span><strong class="text-foreground">Shift+click</strong>: add more keys</span>
+								<span><strong class="text-foreground">Multi-Select</strong>: keep group editing on</span>
+								<span><strong class="text-foreground">Shift+W</strong>: start swap mode</span>
+							</div>
+						</div>
+					</div>
+
 					<!-- Selection and Clipboard Controls -->
 					<div class="mb-4 flex items-center gap-2 flex-wrap">
 						<Button
@@ -1866,7 +2096,7 @@
 							variant={selectionMode ? 'default' : 'outline'}
 							data-testid="selection-mode-button"
 						>
-							{selectionMode ? '✓ Selection Mode' : 'Selection Mode'}
+							{selectionMode ? '✓ Multi-Select On' : 'Multi-Select'}
 						</Button>
 						<Button
 							onclick={toggleSwapMode}
@@ -1875,7 +2105,7 @@
 							data-testid="swap-mode-button"
 							title="Swap mode (Shift+W) - Click two keys to swap their properties"
 						>
-							{swapMode ? '✓ Swap Mode' : 'Swap Mode'}
+							{swapMode ? '✓ Swap On' : 'Swap Keys'}
 						</Button>
 						{#if selectionMode || selectedKeyIndices.size > 0}
 							<Button
@@ -1963,19 +2193,19 @@
 					{/if}
 				</Card>
 
-			<!-- Key Details Card - Fixed height to prevent scrollbar jumping -->
+			<!-- Selected Key Card - Fixed height to prevent scrollbar jumping -->
 			<Card class="p-6" style="min-height: 400px;" data-testid="key-details-card">
 				<!-- Heading is always visible (LazyQMK-mpm: no flicker) -->
 				<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
-					Key Metadata
+					Selected Key
 				</h2>
 				
 				{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
 					<!-- Multi-selection summary -->
 					<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="multi-selection-summary">
-						<p class="font-medium text-sm">Multiple Keys Selected ({selectedKeyIndices.size} keys)</p>
+						<p class="font-medium text-sm">{selectedKeyIndices.size} keys ready for batch edits</p>
 						<p class="text-xs text-muted-foreground mt-1">
-							Use Copy, Cut, or Paste operations to modify the selection
+							Use copy, cut, or paste to update all selected keys together.
 						</p>
 					</div>
 				{:else if hoveredKeyIndex !== null && hoveredKey === null}
@@ -1989,6 +2219,12 @@
 						</p>
 					</div>
 				{:else if activeKey}
+					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-4">
+						<p class="text-sm font-medium">What you are editing</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							Review this key first, then change keycode, color, category, or note when needed.
+						</p>
+					</div>
 					<!-- Key Legend Display (LazyQMK-t47: show primary/secondary/tertiary) -->
 					{#if activeKeyRenderMetadata?.display}
 						<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="key-legend-display">
@@ -2043,7 +2279,7 @@
 					{#if activeKeyRenderMetadata && activeKeyRenderMetadata.details.length > 0}
 						<!-- Rich key action breakdown (LazyQMK-t47: full keycode DB descriptions) -->
 						<div class="border-t border-border pt-4 mb-4">
-							<h3 class="font-medium text-sm mb-3">Key Actions</h3>
+							<h3 class="font-medium text-sm mb-3">What this key does</h3>
 							<div class="space-y-2">
 								{#each activeKeyRenderMetadata.details as action}
 									<div class="flex items-start gap-3 text-sm">
@@ -2063,12 +2299,25 @@
 					{#if hoveredKeyIndex === null && selectedKey}
 						<!-- Customization controls (only shown when not hovering, works in selection mode - LazyQMK-yij) -->
 						<div class="border-t border-border pt-4 space-y-4">
-							<h3 class="font-medium text-sm">Key Customization</h3>
+							<h3 class="font-medium text-sm">Change this key</h3>
+							<div class="rounded-lg border border-border bg-muted/20 p-3" data-testid="inspect-first-callout">
+								<p class="text-sm font-medium">Inspect first, then edit</p>
+								<p class="mt-1 text-xs text-muted-foreground">
+									Single click keeps focus here so you can confirm behavior before making changes.
+								</p>
+							</div>
 
 							<!-- Edit Keycode Button -->
 							<div>
 								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
-								<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
+								<div class="flex flex-wrap items-center gap-2">
+									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
+									Choose New Keycode
+								</Button>
+								<Button onclick={() => (activeTab = 'review')} size="sm" variant="outline" data-testid="inspect-layout-button">
+									Open Review
+								</Button>
+								</div>
 							</div>
 
 							<!-- Key Color Override -->
@@ -2119,7 +2368,7 @@
 									{/if}
 								</select>
 								<p class="text-xs text-muted-foreground mt-1">
-									Assign this key to a category for automatic coloring
+									Group this key so related keys share color and meaning.
 								</p>
 							</div>
 
@@ -2136,7 +2385,7 @@
 									data-testid="key-description-input"
 								></textarea>
 								<p class="text-xs text-muted-foreground mt-1">
-									Optional note or reminder for this key binding
+									Optional reminder for what this key is for in daily use.
 								</p>
 							</div>
 						</div>
@@ -2144,7 +2393,8 @@
 				{:else}
 					<!-- Empty state when no key is selected or hovered -->
 					<div class="p-4 text-center text-muted-foreground" data-testid="key-details-empty">
-						<p class="text-sm">Select or hover over a key to view details</p>
+						<p class="text-sm">Select or hover over a key to review what it does</p>
+						<p class="mt-1 text-xs">Editing starts here after you choose a key.</p>
 					</div>
 				{/if}
 			</Card>
@@ -2166,6 +2416,15 @@
 		{:else if activeTab === 'tap-dance'}
 			<!-- Tap Dance Tab -->
 			<Card class="p-6">
+				<p class="text-muted-foreground text-sm mb-4">
+					Give one key different results for tap, double-tap, or hold without crowding main editor.
+				</p>
+				<details class="mb-4 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">When to use tap dance</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Use this when one physical key should handle a few intentional actions, like tap for Escape and hold for Control.
+					</p>
+				</details>
 				<div class="flex items-center justify-between mb-4">
 					<h2 class="text-lg font-semibold">Tap Dance Actions</h2>
 					<Button onclick={addTapDance} size="sm">Add Tap Dance</Button>
@@ -2207,6 +2466,7 @@
 											placeholder="KC_A"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'single_tap')}>Pick</Button>
 									</div>
 									<div>
 										<label for="td-double-{i}" class="block text-xs font-medium text-muted-foreground mb-1"
@@ -2219,6 +2479,7 @@
 											placeholder="KC_B"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'double_tap')}>Pick</Button>
 									</div>
 									<div>
 										<label for="td-hold-{i}" class="block text-xs font-medium text-muted-foreground mb-1">Hold</label>
@@ -2229,6 +2490,7 @@
 											placeholder="KC_LCTL"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'hold')}>Pick</Button>
 									</div>
 								</div>
 							</div>
@@ -2243,6 +2505,9 @@
 					<h2 class="text-lg font-semibold">Combos</h2>
 					<Button onclick={addCombo} size="sm">Add Combo</Button>
 				</div>
+				<p class="text-sm text-muted-foreground mb-4">
+					Use picker for output keycodes so combo results follow same validation path as single-key editing.
+				</p>
 
 				{#if !layout.combos?.length}
 					<p class="text-muted-foreground text-sm">
@@ -2291,6 +2556,7 @@
 											placeholder="KC_ESC"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openComboPicker(i)}>Pick</Button>
 									</div>
 								</div>
 							</div>
@@ -2301,10 +2567,16 @@
 		{:else if activeTab === 'idle-effect'}
 			<!-- Idle Effect Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Idle Effect Settings</h2>
+				<h2 class="text-lg font-semibold mb-4">Idle Lighting</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure the RGB effect that plays when the keyboard is idle.
+					Choose what people see after your keyboard sits untouched for a while.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">Show timing guidance</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Short timeouts feel lively on desk displays. Longer timeouts avoid distractions during active work.
+					</p>
+				</details>
 
 				<div class="space-y-4 max-w-md">
 					<div class="flex items-center gap-3">
@@ -2315,7 +2587,7 @@
 							onchange={(e) => updateIdleEffect('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="idle-enabled" class="text-sm font-medium">Enable Idle Effect</label>
+						<label for="idle-enabled" class="text-sm font-medium">Turn on idle lighting</label>
 					</div>
 
 					<div>
@@ -2332,7 +2604,7 @@
 							max="600"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							Time before idle effect starts (10-600 seconds)
+							Wait time after last key press before idle lighting begins (10-600 seconds).
 						</p>
 					</div>
 
@@ -2352,7 +2624,7 @@
 							max="3600"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							How long the effect runs before RGB turns off (30-3600 seconds)
+							How long idle effect keeps running before lights turn off again (30-3600 seconds).
 						</p>
 					</div>
 
@@ -2374,16 +2646,23 @@
 							<option value="Rainbow Pinwheels">Rainbow Pinwheels</option>
 							<option value="Jellybean Raindrops">Jellybean Raindrops</option>
 						</select>
+						<p class="text-xs text-muted-foreground mt-1">Visual pattern shown during idle period.</p>
 					</div>
 				</div>
 			</Card>
 		{:else if activeTab === 'overlay-ripple'}
 			<!-- Overlay Ripple Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Overlay Ripple Settings</h2>
+				<h2 class="text-lg font-semibold mb-4">Ripple Lighting</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure RGB ripple effects that overlay on top of base layer colors when keys are pressed.
+					Add motion on key press while keeping your normal layer colors underneath.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">How to tune ripple lighting</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Turn ripple lighting on first. Open advanced settings only when you want to fine-tune motion, triggers, or ignore rules.
+					</p>
+				</details>
 
 				<div class="space-y-6 max-w-2xl">
 					<!-- Enable Toggle -->
@@ -2395,11 +2674,12 @@
 							onchange={(e) => updateOverlayRipple('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="ripple-enabled" class="text-sm font-medium">Enable Overlay Ripple</label>
+						<label for="ripple-enabled" class="text-sm font-medium">Turn on ripple lighting</label>
 					</div>
 
-					<!-- Ripple Parameters -->
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<details class="rounded-lg border border-border p-4" open={layout.rgb_overlay_ripple?.enabled ?? false}>
+						<summary class="cursor-pointer font-medium">Advanced ripple settings</summary>
+						<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label for="max-ripples" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Max Ripples</label
@@ -2413,7 +2693,7 @@
 								max="8"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Maximum concurrent ripples (1-8)
+								Maximum number of ripple animations visible at same time (1-8).
 							</p>
 						</div>
 
@@ -2430,7 +2710,7 @@
 					max="5000"
 				/>
 							<p class="text-xs text-muted-foreground mt-1">
-								How long each ripple lasts
+								Length of one ripple animation in milliseconds.
 							</p>
 						</div>
 
@@ -2447,7 +2727,7 @@
 					max="255"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Expansion speed (0-255)
+								How quickly ripple expands outward. Higher number = faster motion.
 							</p>
 						</div>
 
@@ -2464,7 +2744,7 @@
 					max="255"
 				/>
 				<p class="text-xs text-muted-foreground mt-1">
-					Width in physical LED distance units (1-255)
+					Thickness of bright ripple band. Higher number = wider ring.
 				</p>
 			</div>
 
@@ -2481,13 +2761,13 @@
 								max="100"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Brightness boost percentage
+								Extra brightness added by ripple compared with base layer color.
 							</p>
 						</div>
-					</div>
+						</div>
 
 					<!-- Color Mode -->
-					<div>
+						<div>
 						<label for="color-mode" class="block text-sm font-medium text-muted-foreground mb-1">Color Mode</label>
 						<select
 							id="color-mode"
@@ -2508,10 +2788,10 @@
 								Shift hue from key's base color by fixed degrees
 							{/if}
 						</p>
-					</div>
+						</div>
 
 					<!-- Fixed Color Picker (shown when color_mode is Fixed) -->
-					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
+						{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
 						<div>
 							<label class="block text-sm font-medium text-muted-foreground mb-2">Fixed Color</label>
 							<ColorPicker
@@ -2519,10 +2799,10 @@
 								onSelect={(color) => updateOverlayRipple('fixed_color', color)}
 							/>
 						</div>
-					{/if}
+						{/if}
 
 					<!-- Hue Shift (shown when color_mode is Hue Shift) -->
-					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Hue Shift'}
+						{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Hue Shift'}
 						<div>
 							<label for="hue-shift" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Hue Shift (degrees)</label
@@ -2536,13 +2816,13 @@
 								max="180"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Degrees to shift hue (-180 to 180)
+								Color shift amount from base key color. Positive and negative move in opposite directions.
 							</p>
 						</div>
-					{/if}
+						{/if}
 
 					<!-- Trigger Options -->
-					<div class="space-y-3">
+						<div class="space-y-3">
 						<h3 class="text-sm font-semibold">Trigger Options</h3>
 						<div class="flex items-center gap-3">
 							<input
@@ -2564,10 +2844,10 @@
 							/>
 							<label for="trigger-release" class="text-sm">Trigger on key release</label>
 						</div>
-					</div>
+						</div>
 
 					<!-- Ignore Options -->
-					<div class="space-y-3">
+						<div class="space-y-3">
 						<h3 class="text-sm font-semibold">Ignore Options</h3>
 						<div class="flex items-center gap-3">
 							<input
@@ -2577,7 +2857,7 @@
 								onchange={(e) => updateOverlayRipple('ignore_transparent', e.currentTarget.checked)}
 								class="w-4 h-4"
 							/>
-							<label for="ignore-transparent" class="text-sm">Ignore transparent keys (KC_TRNS)</label>
+							<label for="ignore-transparent" class="text-sm">Ignore lower-layer passthrough keys <span class="kbd-token ml-1">KC_TRNS</span></label>
 						</div>
 						<div class="flex items-center gap-3">
 							<input
@@ -2599,16 +2879,23 @@
 							/>
 							<label for="ignore-layer-switch" class="text-sm">Ignore layer switch keys</label>
 						</div>
-					</div>
+						</div>
+					</details>
 				</div>
 			</Card>
 		{:else if activeTab === 'combos'}
 			<!-- Combos Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Two-Key Hold Combos</h2>
+				<h2 class="text-lg font-semibold mb-4">Two-Key Holds</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure two-key hold combos for special actions. Hold two keys together on the base layer to trigger an action. Maximum 3 combos.
+					Trigger a bigger action when you hold two keys together. Keep this for rare actions you do not want on everyday keys.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">Show combo setup tips</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Pick pairs that are easy to hold intentionally but hard to trigger by accident. Great for bootloader or lighting shortcuts.
+					</p>
+				</details>
 
 				<div class="space-y-6 max-w-3xl">
 					<!-- Enable Toggle -->
@@ -2620,7 +2907,7 @@
 							onchange={(e) => updateComboSettings('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="combo-enabled" class="text-sm font-medium">Enable Combos</label>
+						<label for="combo-enabled" class="text-sm font-medium">Turn on two-key holds</label>
 					</div>
 
 					{#if layout.combo_settings?.enabled}
@@ -2753,9 +3040,9 @@
 											min="50"
 											max="2000"
 										/>
-										<p class="text-xs text-muted-foreground mt-1">
-											How long both keys must be held (50-2000ms)
-										</p>
+						<p class="text-xs text-muted-foreground mt-1">
+							Time both keys must stay held before combo action fires (50-2000 ms).
+						</p>
 									</div>
 								</div>
 							{/each}
@@ -2775,65 +3062,58 @@
 					{/if}
 				</div>
 			</Card>
-		{:else if activeTab === 'validate'}
-			<!-- Validate Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Validate Layout</h2>
-					<Button onclick={runValidation} disabled={validationLoading}>
-						{validationLoading ? 'Validating...' : 'Run Validation'}
-					</Button>
+		{:else if activeTab === 'review'}
+			<Card class="p-6" data-testid="review-workflow-tab">
+				<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-6">
+					<div>
+						<h2 class="text-lg font-semibold">Review Layout</h2>
+						<p class="text-sm text-muted-foreground mt-1">Validation, report, and export now live in one review pass before firmware work.</p>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<Button onclick={runReviewWorkflow} disabled={reviewState === 'running' || validationLoading || inspectLoading || exportLoading} data-testid="run-review-workflow-button">
+							{reviewState === 'running' || validationLoading || inspectLoading || exportLoading ? 'Refreshing review…' : 'Run Review'}
+						</Button>
+						{#if exportResult}
+							<Button onclick={downloadExport} variant="outline">Download Export</Button>
+						{/if}
+						<Button onclick={() => openFirmwareStep('generate')} variant="ghost" disabled={!reviewReadyForBuild}>Continue to firmware</Button>
+					</div>
 				</div>
 
-				{#if validationResult}
-					<div
-						class="p-4 rounded-lg {validationResult.valid
-							? 'bg-green-500/10 border border-green-500/30'
-							: 'bg-red-500/10 border border-red-500/30'}"
-					>
-						<div class="flex items-center gap-2 mb-2">
-							<span class="text-lg">{validationResult.valid ? '✓' : '✗'}</span>
-							<span class="font-medium">
-								{validationResult.valid ? 'Layout is valid' : 'Layout has errors'}
-							</span>
+				<div class="mb-6 rounded-lg border bg-muted/20 p-4 text-sm">
+					<p class="font-medium">Review status</p>
+					<p class="mt-1 text-muted-foreground">{currentReviewStatus}</p>
+				</div>
+
+				<div class="space-y-6">
+					<div class="rounded-lg border p-4 {validationResult?.valid ? 'border-green-500/30 bg-green-500/10' : validationResult ? 'border-red-500/30 bg-red-500/10' : 'border-border bg-background'}">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">1. Validation</h3>
+							<Button size="sm" variant="outline" onclick={runValidation} disabled={validationLoading}>{validationLoading ? 'Checking...' : 'Refresh validation'}</Button>
 						</div>
-
-						{#if validationResult.error}
-							<p class="text-red-500 text-sm">{validationResult.error}</p>
-						{/if}
-
-						{#if validationResult.warnings.length > 0}
-							<div class="mt-3">
-								<p class="text-sm font-medium text-yellow-500 mb-1">Warnings:</p>
-								<ul class="list-disc list-inside text-sm text-muted-foreground">
-									{#each validationResult.warnings as warning}
-										<li>{warning}</li>
-									{/each}
+						{#if validationResult}
+							<p class="text-sm font-medium">{validationResult.valid ? 'Layout is valid' : 'Layout has errors'}</p>
+							{#if validationResult.error}<p class="mt-2 text-sm text-red-500">{validationResult.error}</p>{/if}
+							{#if validationResult.warnings.length > 0}
+								<ul class="mt-3 list-disc list-inside text-sm text-muted-foreground">
+									{#each validationResult.warnings as warning}<li>{warning}</li>{/each}
 								</ul>
-							</div>
+							{/if}
+						{:else}
+							<p class="text-sm text-muted-foreground">Run review to check for errors and warnings before build/export.</p>
 						{/if}
 					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Click "Run Validation" to check your layout for errors.
-					</p>
-				{/if}
-			</Card>
-		{:else if activeTab === 'inspect'}
-			<!-- Inspect Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Inspect Layout</h2>
-					<Button onclick={runInspect} disabled={inspectLoading}>
-						{inspectLoading ? 'Loading...' : 'Refresh'}
-					</Button>
-				</div>
 
-				{#if inspectResult}
-					<div class="space-y-6">
-						<!-- Metadata -->
-						<div>
-							<h3 class="font-medium mb-2">Metadata</h3>
+					<div class="rounded-lg border border-border p-4 bg-background">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">2. Layout report</h3>
+							<Button size="sm" variant="outline" onclick={runInspect} disabled={inspectLoading}>{inspectLoading ? 'Loading...' : 'Refresh report'}</Button>
+						</div>
+						{#if inspectResult}
+							<div class="space-y-6">
+								<!-- Metadata -->
+								<div>
+									<h3 class="font-medium mb-2">Metadata</h3>
 							<dl class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
 								<div>
 									<dt class="text-muted-foreground">Layers</dt>
@@ -2922,51 +3202,41 @@
 								</div>
 							</dl>
 						</div>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Open summary of layers, counts, and settings for review or troubleshooting.</p>
+						{/if}
 					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Click "Refresh" to load detailed layout information.
-					</p>
-				{/if}
-			</Card>
-		{:else if activeTab === 'export'}
-			<!-- Export Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Export to Markdown</h2>
-					<div class="flex gap-2">
-						<Button onclick={runExport} disabled={exportLoading}>
-							{exportLoading ? 'Exporting...' : 'Generate Export'}
-						</Button>
+
+					<div class="rounded-lg border border-border p-4 bg-background">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">3. Export preview</h3>
+							<div class="flex gap-2">
+								<Button size="sm" variant="outline" onclick={runExport} disabled={exportLoading}>{exportLoading ? 'Exporting...' : 'Refresh export'}</Button>
+								{#if exportResult}<Button size="sm" onclick={downloadExport}>Download</Button>{/if}
+							</div>
+						</div>
 						{#if exportResult}
-							<Button onclick={downloadExport}>Download</Button>
+							<p class="text-sm text-muted-foreground mb-3">Suggested filename: <code class="bg-muted px-2 py-0.5 rounded">{exportResult.suggested_filename}</code></p>
+							<div class="border border-border rounded-lg overflow-hidden">
+								<pre class="p-4 text-sm overflow-x-auto max-h-96 bg-muted/30">{exportResult.markdown}</pre>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Create markdown file you can save, share, or review outside LazyQMK.</p>
 						{/if}
 					</div>
 				</div>
-
-				{#if exportResult}
-					<div class="space-y-4">
-						<p class="text-sm text-muted-foreground">
-							Suggested filename: <code class="bg-muted px-2 py-0.5 rounded"
-								>{exportResult.suggested_filename}</code
-							>
-						</p>
-						<div class="border border-border rounded-lg overflow-hidden">
-							<pre
-								class="p-4 text-sm overflow-x-auto max-h-96 bg-muted/30">{exportResult.markdown}</pre>
-						</div>
-					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Generate a markdown export with keyboard diagrams and configuration summary.
-					</p>
-				{/if}
 			</Card>
-		{:else if activeTab === 'generate'}
-			<!-- Generate Tab -->
+		{:else if activeTab === 'firmware' && firmwareStep === 'generate'}
+			<!-- Firmware Workflow: Generate Step -->
 			<Card class="p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Generate Firmware</h2>
+					<div>
+						<h2 class="text-lg font-semibold">Step 1: Generate firmware sources</h2>
+						<p class="text-sm text-muted-foreground">
+							Create QMK source files and review generation output before building.
+						</p>
+					</div>
 					<div class="flex gap-2">
 						{#if generateJob && (generateJob.status === 'pending' || generateJob.status === 'running')}
 							<Button 
@@ -2984,6 +3254,22 @@
 							data-testid="generate-button"
 						>
 							{generateLoading || generatePollingActive ? 'Generating...' : 'Generate Firmware'}
+						</Button>
+					</div>
+				</div>
+
+				<div class="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
+					<p class="font-medium mb-1">Why this step comes first</p>
+					<p class="text-muted-foreground">
+						Generate validates layout-specific firmware sources. When complete, continue to build flashable firmware artifacts.
+					</p>
+					<div class="mt-3">
+						<Button
+							variant="outline"
+							onclick={() => openFirmwareStep('build')}
+							data-testid="continue-to-build-button"
+						>
+							Go to build step
 						</Button>
 					</div>
 				</div>
@@ -3124,16 +3410,16 @@
 	}
 </style>
 			</Card>
-		{:else if activeTab === 'build'}
-			<!-- Build Tab - Firmware Compilation -->
+		{:else if activeTab === 'firmware' && firmwareStep === 'build'}
+			<!-- Firmware Workflow: Build Step -->
 			<div class="space-y-6">
 				<!-- Build Controls Card -->
 				<Card class="p-6">
 					<div class="flex items-center justify-between mb-4">
 						<div>
-							<h2 class="text-lg font-semibold">Build Firmware</h2>
+							<h2 class="text-lg font-semibold">Step 2: Build firmware</h2>
 							<p class="text-sm text-muted-foreground">
-								Compile QMK firmware (.uf2/.hex/.bin) for this layout
+								Compile flashable QMK firmware (.uf2/.hex/.bin) after generation.
 							</p>
 						</div>
 						<div class="flex gap-2">
@@ -3153,6 +3439,22 @@
 								data-testid="start-build-button"
 							>
 								{buildLoading || buildPollingActive ? 'Building...' : 'Start Build'}
+							</Button>
+						</div>
+					</div>
+
+					<div class="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
+						<p class="font-medium mb-1">Before building</p>
+						<p class="text-muted-foreground">
+							Save layout changes, generate sources if needed, then compile firmware for flashing.
+						</p>
+						<div class="mt-3">
+							<Button
+								variant="outline"
+								onclick={() => openFirmwareStep('generate')}
+								data-testid="back-to-generate-button"
+							>
+								Back to generate step
 							</Button>
 						</div>
 					</div>
@@ -3373,149 +3675,96 @@
 		: undefined}
 />
 
+<AccessibleDialog
+	open={leaveDialogOpen}
+	title="Leave editor with unsaved changes?"
+	description="Your changes are not saved yet. Save before leaving, or discard them and continue."
+	onClose={closeLeaveDialog}
+	titleId="leave-editor-title"
+>
+	<svelte:fragment slot="footer">
+		<Button variant="ghost" onclick={closeLeaveDialog}>Stay Here</Button>
+		<Button onclick={saveLayout} disabled={!canSave || saveStatus === 'saving'}>
+			{saveStatus === 'saving' ? 'Saving...' : 'Save First'}
+		</Button>
+		<Button variant="destructive" onclick={confirmLeaveWithoutSaving} data-testid="confirm-leave-without-saving">
+			Leave Without Saving
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>
+
+<AccessibleDialog
+	open={resetDialogOpen}
+	title="Discard unsaved changes?"
+	description="This reverts editor back to last saved layout state and clears current unsaved edits."
+	onClose={closeResetDialog}
+	titleId="reset-layout-title"
+>
+	<svelte:fragment slot="footer">
+		<Button variant="ghost" onclick={closeResetDialog}>Keep Editing</Button>
+		<Button variant="destructive" onclick={confirmResetLayout}>Discard Changes</Button>
+	</svelte:fragment>
+</AccessibleDialog>
+
 <!-- Save as Template Dialog -->
-{#if showSaveTemplateDialog}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-		onclick={closeSaveTemplateDialog}
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6 max-w-md w-full">
-				<h2 class="text-2xl font-bold mb-4">Save as Template</h2>
-				<p class="text-sm text-muted-foreground mb-4">
-					Save this layout as a reusable template for future projects.
-				</p>
-
-				<div class="space-y-4 mb-4">
-					<div>
-						<label for="template-name" class="block text-sm font-medium mb-2">
-							Template Name
-						</label>
-						<Input
-							id="template-name"
-							type="text"
-							placeholder="My Awesome Template"
-							bind:value={templateName}
-							class="w-full"
-						/>
-					</div>
-
-					<div>
-						<label for="template-tags" class="block text-sm font-medium mb-2">
-							Tags (comma-separated)
-						</label>
-						<Input
-							id="template-tags"
-							type="text"
-							placeholder="corne, 42-key, minimal"
-							bind:value={templateTags}
-							class="w-full"
-						/>
-						<p class="text-xs text-muted-foreground mt-1">
-							Tags help organize and find templates later
-						</p>
-					</div>
-				</div>
-
-				{#if saveTemplateError}
-					<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
-						{saveTemplateError}
-					</div>
-				{/if}
-
-				<div class="flex gap-2">
-					<Button
-						onclick={saveAsTemplate}
-						disabled={saveTemplateLoading || !templateName.trim()}
-						class="flex-1"
-					>
-						{saveTemplateLoading ? 'Saving...' : 'Save Template'}
-					</Button>
-					<Button
-						onclick={closeSaveTemplateDialog}
-						disabled={saveTemplateLoading}
-						class="flex-1"
-						variant="ghost"
-					>
-						Cancel
-					</Button>
-				</div>
-			</Card>
+<AccessibleDialog
+	open={showSaveTemplateDialog}
+	title="Save as template"
+	description="Save this layout as reusable template for future projects."
+	onClose={closeSaveTemplateDialog}
+	titleId="save-template-title"
+>
+	<div class="space-y-4 mb-4">
+		<div>
+			<label for="template-name" class="block text-sm font-medium mb-2">Template Name</label>
+			<Input id="template-name" type="text" placeholder="My Awesome Template" bind:value={templateName} class="w-full" />
+		</div>
+		<div>
+			<label for="template-tags" class="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+			<Input id="template-tags" type="text" placeholder="corne, 42-key, minimal" bind:value={templateTags} class="w-full" />
+			<p class="text-xs text-muted-foreground mt-1">Tags help organize and find templates later</p>
 		</div>
 	</div>
-{/if}
+	{#if saveTemplateError}
+		<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">{saveTemplateError}</div>
+	{/if}
+	<svelte:fragment slot="footer">
+		<Button onclick={closeSaveTemplateDialog} disabled={saveTemplateLoading} variant="ghost">Cancel</Button>
+		<Button onclick={saveAsTemplate} disabled={saveTemplateLoading || !templateName.trim()}>
+			{saveTemplateLoading ? 'Saving...' : 'Save Template'}
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>
 
 <!-- Variant Switch Dialog -->
-{#if showVariantSwitchDialog}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-		onclick={() => (showVariantSwitchDialog = false)}
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6 max-w-lg w-full">
-				<h2 class="text-2xl font-bold mb-4">Switch Layout Variant</h2>
-				<p class="text-sm text-muted-foreground mb-4">
-					Change the physical layout variant for this keyboard. This will adjust the key count.
-				</p>
-
-				{#if variantsLoading}
-					<p class="text-muted-foreground">Loading variants...</p>
-				{:else if variantsError}
-					<div class="p-3 bg-destructive/10 text-destructive text-sm rounded mb-4">
-						{variantsError}
-					</div>
-				{:else}
-					<div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
-						{#each availableVariants as variant}
-							{@const isCurrent = variant.name === layout.metadata.layout_variant}
-							<button
-								class="w-full p-3 text-left border rounded hover:bg-muted flex justify-between items-center
-								{isCurrent ? 'bg-primary/10 border-primary' : ''}"
-								onclick={() => !isCurrent && switchToVariant(variant.name)}
-								disabled={switchingVariant || isCurrent}
-							>
-								<span class="font-mono text-sm">{variant.name}</span>
-								<span class="text-xs text-muted-foreground">
-									{variant.key_count} keys
-									{#if isCurrent}
-										<span class="ml-2 text-primary">(current)</span>
-									{/if}
-								</span>
-							</button>
-						{/each}
-					</div>
-				{/if}
-
-				{#if switchVariantError}
-					<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
-						{switchVariantError}
-					</div>
-				{/if}
-
-				{#if switchVariantWarning}
-					<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm rounded">
-						{switchVariantWarning}
-					</div>
-				{/if}
-
-				<div class="flex justify-end">
-					<Button
-						onclick={() => (showVariantSwitchDialog = false)}
-						disabled={switchingVariant}
-						variant="outline"
-					>
-						{switchingVariant ? 'Switching...' : 'Close'}
-					</Button>
-				</div>
-			</Card>
+<AccessibleDialog
+	open={showVariantSwitchDialog}
+	title="Switch layout variant"
+	description="Change physical layout variant for this keyboard. This may adjust key count."
+	onClose={() => (showVariantSwitchDialog = false)}
+	titleId="switch-layout-variant-title"
+	panelClass="max-w-lg"
+>
+	{#if variantsLoading}
+		<p class="text-muted-foreground">Loading variants...</p>
+	{:else if variantsError}
+		<div class="p-3 bg-destructive/10 text-destructive text-sm rounded mb-4">{variantsError}</div>
+	{:else}
+		<div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+			{#each availableVariants as variant}
+				{@const isCurrent = variant.name === layout.metadata.layout_variant}
+				<button class="w-full p-3 text-left border rounded hover:bg-muted flex justify-between items-center {isCurrent ? 'bg-primary/10 border-primary' : ''}" onclick={() => !isCurrent && switchToVariant(variant.name)} disabled={switchingVariant || isCurrent}>
+					<span class="font-mono text-sm">{variant.name}</span>
+					<span class="text-xs text-muted-foreground">{variant.key_count} keys {#if isCurrent}<span class="ml-2 text-primary">(current)</span>{/if}</span>
+				</button>
+			{/each}
 		</div>
-	</div>
-{/if}
+	{/if}
+	{#if switchVariantError}<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">{switchVariantError}</div>{/if}
+	{#if switchVariantWarning}<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm rounded">{switchVariantWarning}</div>{/if}
+	<svelte:fragment slot="footer">
+		<Button onclick={() => (showVariantSwitchDialog = false)} disabled={switchingVariant} variant="outline">
+			{switchingVariant ? 'Switching...' : 'Close'}
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>

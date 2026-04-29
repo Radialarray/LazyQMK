@@ -33,6 +33,7 @@
 	let templates = $state<TemplateInfo[]>([]);
 	let templatesLoading = $state(false);
 	let templatesError = $state<string | null>(null);
+	let templateChoiceMessage = $state<string | null>(null);
 	let selectedTemplate = $state<TemplateInfo | null>(null);
 	let newLayoutName = $state('');
 	let applyLoading = $state(false);
@@ -56,6 +57,7 @@
 	let layoutFilename = $state('');
 	let createLoading = $state(false);
 	let createError = $state<string | null>(null);
+	let keyboardBrowseMode = $state<'recognition' | 'search'>('recognition');
 
 	// Derived state
 	let filteredKeyboards = $derived(
@@ -69,6 +71,25 @@
 	let qmkConfigured = $derived(preflight?.qmk_configured ?? false);
 	let hasTemplates = $derived(templates.length > 0);
 	let hasExistingLayouts = $derived(existingLayouts.length > 0);
+	let currentStepNumber = $derived(currentStep === 'config' ? 1 : 2);
+	let currentStepTitle = $derived(
+		currentStep === 'config' ? 'Connect QMK' :
+		currentStep === 'choose' ? 'Choose how to start' :
+		currentStep === 'template' ? 'Create from template' :
+		'Create from scratch'
+	);
+
+	const startOptions = {
+		existing: { icon: 'OPEN', eyebrow: 'Resume work' },
+		template: { icon: 'KIT', eyebrow: 'Starting point' },
+		create: { icon: 'NEW', eyebrow: 'Blank layout' }
+	};
+
+	const featuredKeyboardGroups = $derived([
+		{ title: 'Split and ergonomic', items: keyboards.filter((k) => /corne|crkbd|sofle|lily58|ergodox|split/i.test(k.path)).slice(0, 8) },
+		{ title: 'Compact boards', items: keyboards.filter((k) => /40|42|min|planck|vial|ortho/i.test(k.path)).slice(0, 8) },
+		{ title: 'Starter picks', items: keyboards.slice(0, 8) }
+	].filter((group) => group.items.length > 0));
 
 	onMount(async () => {
 		await loadPreflight();
@@ -117,11 +138,18 @@
 	async function loadTemplates() {
 		templatesLoading = true;
 		templatesError = null;
+		templateChoiceMessage = null;
 		try {
 			const response = await apiClient.listTemplates();
 			templates = response.templates;
+			if (response.templates.length === 0) {
+				templateChoiceMessage =
+					'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
+			}
 		} catch (e) {
 			templatesError = e instanceof Error ? e.message : 'Failed to load templates';
+			templateChoiceMessage =
+				'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
 		} finally {
 			templatesLoading = false;
 		}
@@ -174,6 +202,7 @@
 		selectedTemplate = template;
 		newLayoutName = '';
 		applyError = null;
+		templateChoiceMessage = null;
 		currentStep = 'template';
 	}
 
@@ -205,8 +234,21 @@
 	}
 
 	function startCreateFromScratch() {
+		templateChoiceMessage = null;
 		currentStep = 'create';
 		loadKeyboards();
+	}
+
+	function handleTemplateEntry() {
+		if (templatesLoading) return;
+		if (hasTemplates) {
+			templateChoiceMessage = null;
+			document.getElementById('available-templates')?.scrollIntoView({ behavior: 'smooth' });
+			return;
+		}
+
+		templateChoiceMessage =
+			'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
 	}
 
 	function selectKeyboard(path: string) {
@@ -214,6 +256,14 @@
 		selectedVariant = null;
 		variants = [];
 		loadVariants();
+	}
+
+	function useRecognitionMode() {
+		keyboardBrowseMode = 'recognition';
+	}
+
+	function useSearchMode() {
+		keyboardBrowseMode = 'search';
 	}
 
 	async function createLayout() {
@@ -253,17 +303,48 @@
 	});
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center justify-center p-6">
-	<div class="w-full max-w-4xl">
-		<!-- Header -->
-		<div class="text-center mb-12">
-			<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-				Welcome to LazyQMK
-			</h1>
-			<p class="text-xl text-muted-foreground">
-				Your keyboard layout editor for QMK firmware
-			</p>
-		</div>
+
+<div class="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-6">
+		<div class="w-full max-w-4xl">
+			<!-- Header -->
+			<div class="text-center mb-12 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/10 px-6 py-10 shadow-sm">
+				<div class="brand-badge mb-4">LazyQMK · Layout studio</div>
+				<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+					Welcome to LazyQMK
+				</h1>
+				<p class="text-lg font-medium mb-2">Welcome to clearer keyboard setup</p>
+				<p class="text-xl text-muted-foreground">
+					Connect QMK once, pick how to start, then move straight into editing.
+				</p>
+			</div>
+
+			{#if !preflightLoading && !preflightError}
+				<Card class="surface-elevated p-5 mb-6">
+					<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+						<div>
+							<p class="text-sm font-medium text-primary">Canonical setup flow</p>
+							<h2 class="text-lg font-semibold mt-1">Step {currentStepNumber} of 2 — {currentStepTitle}</h2>
+							<p class="text-sm text-muted-foreground mt-1">
+								Small orientation up front, faster handoff into real layout work.
+							</p>
+						</div>
+						<div class="grid grid-cols-3 gap-2 text-xs md:text-sm">
+							<div class="rounded-lg border px-3 py-2 {qmkConfigured ? 'border-primary/40 bg-primary/5 text-foreground' : 'text-muted-foreground'}">
+								<p class="font-medium">1. Setup</p>
+								<p>QMK path</p>
+							</div>
+							<div class="rounded-lg border px-3 py-2 {currentStep !== 'config' ? 'border-primary/40 bg-primary/5 text-foreground' : 'text-muted-foreground'}">
+								<p class="font-medium">2. Start</p>
+								<p>Template, scratch, open</p>
+							</div>
+							<div class="rounded-lg border px-3 py-2 text-muted-foreground">
+								<p class="font-medium">3. Edit</p>
+								<p>Inside layout workspace</p>
+							</div>
+						</div>
+					</div>
+				</Card>
+			{/if}
 
 		{#if preflightLoading}
 			<!-- Loading State -->
@@ -283,21 +364,21 @@
 			</Card>
 		{:else if currentStep === 'config'}
 			<!-- Step 1: QMK Configuration -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
 						1
 					</div>
-					<div>
-						<h2 class="text-2xl font-semibold">Configure QMK Firmware</h2>
-						<p class="text-muted-foreground">Set the path to your QMK firmware directory</p>
-					</div>
+						<div>
+							<h2 class="text-2xl font-semibold">Configure QMK Firmware</h2>
+							<p class="text-muted-foreground">Set path to your local QMK firmware folder</p>
+						</div>
 				</div>
 
 				<div class="space-y-4">
 					<div>
 						<label for="qmk-path" class="block text-sm font-medium mb-2">
-							QMK Firmware Path
+							QMK firmware path
 						</label>
 						<Input
 							id="qmk-path"
@@ -306,7 +387,7 @@
 							class="font-mono"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							This is the directory containing your QMK firmware clone
+							Point to folder that contains your QMK firmware clone.
 						</p>
 					</div>
 
@@ -326,15 +407,22 @@
 		{:else if currentStep === 'choose'}
 			<!-- Step 2: Choose Path -->
 			<div class="space-y-6">
-				<Card class="p-8">
+				<Card class="surface-elevated p-8">
 					<div class="flex items-center gap-4 mb-6">
 						<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
 							2
 						</div>
 						<div>
-							<h2 class="text-2xl font-semibold">Get Started</h2>
-							<p class="text-muted-foreground">Choose how to create your first layout</p>
+							<h2 class="text-2xl font-semibold">Choose your starting point</h2>
+							<p class="text-muted-foreground">One place for opening existing work or creating a new layout.</p>
 						</div>
+					</div>
+
+					<div class="surface-subtle rounded-lg p-4 mb-6 text-sm">
+						<p class="font-medium mb-1">What happens next</p>
+						<p class="text-muted-foreground">
+							After layout opens, core editing stays in workspace tabs. Firmware tasks follow one steady Generate → Build flow.
+						</p>
 					</div>
 
 					<div class="grid md:grid-cols-3 gap-6">
@@ -347,9 +435,10 @@
 								}}
 								disabled={existingLoading}
 							>
-								<div class="text-4xl mb-4">📁</div>
+								<div class="icon-chip mb-4">{startOptions.existing.icon}</div>
+								<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.existing.eyebrow}</p>
 								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-									Load Existing Layout
+									Open Existing Layout
 								</h3>
 								<p class="text-sm text-muted-foreground">
 									Continue working on your saved layouts
@@ -364,21 +453,16 @@
 							</button>
 						{/if}
 
-						<!-- From Template -->
-						<button
-							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
-							onclick={() => {
-								if (hasTemplates) {
-									document.getElementById('available-templates')?.scrollIntoView({ behavior: 'smooth' });
-								} else {
-									startCreateFromScratch();
-								}
-							}}
-							disabled={templatesLoading}
-						>
-							<div class="text-4xl mb-4">📦</div>
-							<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-								From Template
+					<!-- From Template -->
+					<button
+						class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
+						onclick={handleTemplateEntry}
+						disabled={templatesLoading}
+					>
+							<div class="icon-chip mb-4">{startOptions.template.icon}</div>
+							<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.template.eyebrow}</p>
+								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
+									Start from Template
 							</h3>
 							<p class="text-sm text-muted-foreground">
 								Start with a pre-configured layout template and customize it
@@ -386,7 +470,9 @@
 							{#if templatesLoading}
 								<p class="text-xs text-muted-foreground mt-2">Loading templates...</p>
 							{:else if !hasTemplates}
-								<p class="text-xs text-muted-foreground mt-2">No templates available yet</p>
+								<p class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+									No templates available yet — no automatic fallback
+								</p>
 							{/if}
 						</button>
 
@@ -395,20 +481,28 @@
 							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
 							onclick={startCreateFromScratch}
 						>
-							<div class="text-4xl mb-4">✨</div>
-							<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-								From Scratch
+							<div class="icon-chip mb-4">{startOptions.create.icon}</div>
+							<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.create.eyebrow}</p>
+								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
+									Start from Scratch
 							</h3>
 							<p class="text-sm text-muted-foreground">
 								Create a new layout by selecting your keyboard model
 							</p>
 						</button>
 					</div>
+
+					{#if templateChoiceMessage}
+						<div class="mt-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+							<p class="font-medium">Template start unavailable</p>
+							<p class="mt-1">{templateChoiceMessage}</p>
+						</div>
+					{/if}
 				</Card>
 
 				<!-- Templates Grid (if available) -->
 				{#if hasTemplates}
-					<Card class="p-6">
+					<Card class="surface-elevated p-6">
 						<h3 id="available-templates" class="text-lg font-semibold mb-4">Available Templates</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each templates as template}
@@ -432,7 +526,7 @@
 
 				<!-- Existing Layouts Grid (if available) -->
 				{#if hasExistingLayouts}
-					<Card class="p-6">
+					<Card class="surface-elevated p-6">
 						<h3 id="your-layouts" class="text-lg font-semibold mb-4">Your Layouts</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each existingLayouts as layout}
@@ -459,7 +553,7 @@
 			</div>
 		{:else if currentStep === 'template'}
 			<!-- Apply Template Step -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<button
 						class="w-10 h-10 rounded-full border hover:bg-muted flex items-center justify-center"
@@ -478,7 +572,7 @@
 
 				<div class="space-y-4">
 					{#if selectedTemplate}
-						<div class="p-4 bg-muted/50 rounded-lg">
+						<div class="surface-subtle p-4 rounded-lg">
 							<h4 class="font-medium mb-1">{selectedTemplate.name}</h4>
 							<p class="text-sm text-muted-foreground">{selectedTemplate.description}</p>
 							<div class="flex gap-4 mt-2 text-xs text-muted-foreground">
@@ -517,10 +611,11 @@
 						</Button>
 					</div>
 				</div>
+
 			</Card>
 		{:else if currentStep === 'create'}
 			<!-- Create from Scratch -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<button
 						class="w-10 h-10 rounded-full border hover:bg-muted flex items-center justify-center"
@@ -538,7 +633,13 @@
 				<div class="space-y-6">
 					<!-- Keyboard Selection -->
 					<div>
-						<label for="keyboard-search" class="block text-sm font-medium mb-2">Keyboard</label>
+						<div class="flex items-center justify-between gap-4 mb-2">
+							<label for="keyboard-search" class="block text-sm font-medium">Keyboard</label>
+							<div class="flex gap-2 text-xs">
+								<button class="rounded-full border px-3 py-1 {keyboardBrowseMode === 'recognition' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}" onclick={useRecognitionMode}>Recognize by board family</button>
+								<button class="rounded-full border px-3 py-1 {keyboardBrowseMode === 'search' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}" onclick={useSearchMode}>Search exact names</button>
+							</div>
+						</div>
 						{#if keyboardsLoading}
 							<p class="text-muted-foreground">Loading keyboards...</p>
 						{:else if keyboardsError}
@@ -547,32 +648,49 @@
 							</div>
 							<Button onclick={loadKeyboards} size="sm">Retry</Button>
 						{:else}
-							<Input
-								id="keyboard-search"
-								bind:value={keyboardSearch}
-								placeholder="Search keyboards..."
-								class="mb-2"
-							/>
-							<div class="max-h-48 overflow-y-auto border rounded">
-								{#if filteredKeyboards.length === 0}
-									<p class="p-4 text-muted-foreground text-center text-sm">No keyboards found</p>
-								{:else}
-									{#each filteredKeyboards.slice(0, 50) as keyboard}
-										<button
-											class="w-full p-2 text-left hover:bg-muted border-b last:border-b-0 text-sm
-											{selectedKeyboard === keyboard.path ? 'bg-primary/10 border-l-4 border-l-primary' : ''}"
-											onclick={() => selectKeyboard(keyboard.path)}
-										>
-											<span class="font-mono">{keyboard.path}</span>
-										</button>
+							<Input id="keyboard-search" bind:value={keyboardSearch} placeholder="Search keyboards by exact name..." class="mb-2 {keyboardBrowseMode === 'recognition' ? 'sr-only' : ''}" />
+							{#if keyboardBrowseMode === 'recognition'}
+								<div class="space-y-4">
+									<p class="text-sm text-muted-foreground">
+										Start with board families you recognize. Switch to exact search only if needed.
+									</p>
+									{#each featuredKeyboardGroups as group}
+										<div>
+											<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2">{group.title}</p>
+											<div class="grid gap-2 md:grid-cols-2">
+												{#each group.items as keyboard}
+													<button
+														class="rounded-lg border p-3 text-left hover:bg-muted {selectedKeyboard === keyboard.path ? 'border-primary bg-primary/10' : ''}"
+														onclick={() => selectKeyboard(keyboard.path)}
+													>
+														<p class="font-medium">{keyboard.path.split('/').at(-1)}</p>
+														<p class="mt-1 text-xs text-muted-foreground font-mono">{keyboard.path}</p>
+														<p class="mt-2 text-xs text-muted-foreground">{keyboard.layout_count} layout {keyboard.layout_count === 1 ? 'variant' : 'variants'} available</p>
+													</button>
+												{/each}
+											</div>
+										</div>
 									{/each}
-									{#if filteredKeyboards.length > 50}
-										<p class="p-2 text-xs text-muted-foreground text-center">
-											Showing first 50 of {filteredKeyboards.length} results
-										</p>
+								</div>
+							{:else}
+								<div class="max-h-48 overflow-y-auto border rounded">
+									{#if filteredKeyboards.length === 0}
+										<p class="p-4 text-muted-foreground text-center text-sm">No keyboards found</p>
+									{:else}
+										{#each filteredKeyboards.slice(0, 50) as keyboard}
+											<button
+												class="w-full p-2 text-left hover:bg-muted border-b last:border-b-0 text-sm {selectedKeyboard === keyboard.path ? 'bg-primary/10 border-l-4 border-l-primary' : ''}"
+												onclick={() => selectKeyboard(keyboard.path)}
+											>
+												<span class="font-mono">{keyboard.path}</span>
+											</button>
+										{/each}
+										{#if filteredKeyboards.length > 50}
+											<p class="p-2 text-xs text-muted-foreground text-center">Showing first 50 of {filteredKeyboards.length} results</p>
+										{/if}
 									{/if}
-								{/if}
-							</div>
+								</div>
+							{/if}
 						{/if}
 					</div>
 
@@ -654,11 +772,10 @@
 			</Card>
 		{/if}
 
-		<!-- Skip to Home Link -->
-		<div class="text-center mt-8">
-			<a href="/" class="text-sm text-muted-foreground hover:text-foreground">
-				Go to Home
-			</a>
-		</div>
+		{#if currentStep === 'config' || currentStep === 'choose'}
+			<div class="text-center mt-8">
+				<a href="/" class="text-sm text-muted-foreground hover:text-foreground">Go to Home</a>
+			</div>
+		{/if}
 	</div>
 </div>

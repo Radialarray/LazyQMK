@@ -19,6 +19,7 @@
 	let newCategoryName = $state('');
 	let newCategoryColor = $state<RgbColor>({ r: 0, g: 128, b: 255 });
 	let validationError = $state('');
+	let pendingDeleteCategoryId = $state<string | null>(null);
 
 	function validateCategoryId(id: string): boolean {
 		if (!id) {
@@ -76,7 +77,6 @@
 		);
 		
 		// First exit edit mode
-		const savedId = editingCategoryId;
 		cancelEdit();
 		
 		// Then notify parent of changes
@@ -87,9 +87,17 @@
 	}
 
 	function deleteCategory(id: string) {
-		if (!confirm('Delete this category? Keys using it will lose their category assignment.')) {
-			return;
-		}
+		pendingDeleteCategoryId = id;
+	}
+
+	function cancelDeleteCategory() {
+		pendingDeleteCategoryId = null;
+	}
+
+	function confirmDeleteCategory() {
+		if (!pendingDeleteCategoryId) return;
+		const id = pendingDeleteCategoryId;
+		pendingDeleteCategoryId = null;
 		const updated = categories.filter((c) => c.id !== id);
 		onChange(updated);
 	}
@@ -129,6 +137,20 @@
 		<h2 class="text-lg font-semibold">Category Manager</h2>
 		<Button onclick={startAdd} size="sm" disabled={addingNew}>Add Category</Button>
 	</div>
+
+	{#if pendingDeleteCategoryId}
+		{@const categoryToDelete = categories.find((category) => category.id === pendingDeleteCategoryId)}
+		<div class="mb-4 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
+			<p class="font-medium text-destructive">Delete category?</p>
+			<p class="mt-1 text-sm text-muted-foreground">
+				{categoryToDelete?.name || 'This category'} will be removed. Keys using it will lose category assignment.
+			</p>
+			<div class="mt-4 flex gap-2">
+				<Button size="sm" variant="destructive" onclick={confirmDeleteCategory}>Delete Category</Button>
+				<Button size="sm" variant="outline" onclick={cancelDeleteCategory}>Cancel</Button>
+			</div>
+		</div>
+	{/if}
 
 	{#if !categories.length && !addingNew}
 		<p class="text-muted-foreground text-sm">

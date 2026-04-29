@@ -29,22 +29,22 @@
 	.dark {
 		--background: 222.2 84% 4.9%;
 		--foreground: 210 40% 98%;
-		--card: 222.2 84% 4.9%;
+		--card: 222 47% 10.5%;
 		--card-foreground: 210 40% 98%;
-		--popover: 222.2 84% 4.9%;
+		--popover: 222 45% 12.5%;
 		--popover-foreground: 210 40% 98%;
 		--primary: 217.2 91.2% 59.8%;
 		--primary-foreground: 222.2 47.4% 11.2%;
-		--secondary: 217.2 32.6% 17.5%;
+		--secondary: 219 30% 18.5%;
 		--secondary-foreground: 210 40% 98%;
-		--muted: 217.2 32.6% 17.5%;
+		--muted: 220 24% 15.5%;
 		--muted-foreground: 215 20.2% 65.1%;
-		--accent: 217.2 32.6% 17.5%;
+		--accent: 221 24% 20%;
 		--accent-foreground: 210 40% 98%;
 		--destructive: 0 62.8% 30.6%;
 		--destructive-foreground: 210 40% 98%;
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
+		--border: 219 22% 24%;
+		--input: 219 22% 24%;
 		--ring: 224.3 76.3% 48%;
 	}
 }
@@ -55,5 +55,55 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+	}
+
+	::selection {
+		@apply bg-primary/30 text-foreground;
+	}
+}
+
+@layer components {
+	.surface-subtle {
+		@apply border border-border/80 bg-muted/30 shadow-sm;
+	}
+
+	.surface-elevated {
+		@apply border border-border/90 bg-card/95 shadow-sm backdrop-blur;
+	}
+
+	.brand-badge {
+		@apply inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
+	}
+
+	.icon-chip {
+		@apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-muted/60 text-sm font-semibold text-foreground;
+	}
+
+	.option-card {
+		@apply rounded-xl border-2 border-border/80 bg-card/90 transition-all hover:border-primary/50 hover:bg-primary/5;
+	}
+
+	.kbd-token {
+		@apply rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px];
+	}
+
+	.state-panel {
+		@apply rounded-2xl border border-border/80 bg-card/95 p-8 shadow-sm;
+	}
+
+	.state-panel-loading {
+		@apply state-panel border-dashed bg-muted/20 text-center;
+	}
+
+	.state-panel-error {
+		@apply state-panel border-destructive/40 bg-destructive/5;
+	}
+
+	.state-panel-empty {
+		@apply state-panel text-center;
+	}
+
+	.state-eyebrow {
+		@apply text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
 	}
 }

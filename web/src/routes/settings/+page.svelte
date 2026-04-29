@@ -50,8 +50,9 @@
 	<div class="mb-8 flex items-center justify-between">
 		<div>
 			<h1 class="text-4xl font-bold mb-2">Settings</h1>
+			<p class="text-lg font-medium mb-1">Workspace Setup</p>
 			<p class="text-muted-foreground">
-				Configure LazyQMK workspace and paths
+				Connect LazyQMK to your QMK folder and confirm where layouts live.
 			</p>
 		</div>
 		<Button onclick={() => (window.location.href = '/')}>
@@ -62,14 +63,29 @@
 	{#if loading}
 		<p class="text-muted-foreground">Loading settings...</p>
 	{:else if error && !config}
-		<Card class="p-6">
-			<div class="text-destructive">
-				<p class="font-medium">Error loading settings</p>
-				<p class="text-sm">{error}</p>
+		<Card class="state-panel-error">
+			<p class="state-eyebrow mb-3">Setup unavailable</p>
+			<h2 class="text-2xl font-semibold text-destructive">Could not load settings</h2>
+			<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+			<div class="mt-6">
+				<Button onclick={() => window.location.reload()}>Retry Loading Settings</Button>
 			</div>
 		</Card>
 	{:else}
 		<div class="max-w-2xl space-y-6">
+			<Card class="surface-subtle p-4">
+				<div class="grid gap-4 md:grid-cols-2 text-sm">
+					<div>
+						<p class="font-medium">Basic</p>
+						<p class="text-muted-foreground mt-1">Set required QMK path so keyboard discovery and builds work.</p>
+					</div>
+					<div>
+						<p class="font-medium">Advanced</p>
+						<p class="text-muted-foreground mt-1">Workspace root is informational here. Change it only when starting backend with a different workspace.</p>
+					</div>
+				</div>
+			</Card>
+
 			<!-- Success Message -->
 			{#if successMessage}
 				<Card class="p-4 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
@@ -86,25 +102,34 @@
 
 			<!-- QMK Firmware Path -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">QMK Firmware Path</h2>
+				<div class="mb-4 flex items-center justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Basic</p>
+						<h2 class="text-xl font-semibold mt-1">QMK firmware folder</h2>
+					</div>
+					<span class="rounded-full border px-3 py-1 text-xs text-muted-foreground">Required</span>
+				</div>
 				<p class="text-sm text-muted-foreground mb-4">
-					Path to your QMK firmware directory (for keyboard metadata and compilation)
+					Point LazyQMK at your local <code class="bg-muted px-1 rounded">qmk_firmware</code> folder so keyboard data and firmware builds work.
 				</p>
 				<Input
 					bind:value={qmkPath}
 					placeholder="/path/to/qmk_firmware"
 					class="mb-4"
 				/>
-				<p class="text-xs text-muted-foreground">
-					Current: {config?.qmk_firmware_path || 'Not configured'}
-				</p>
 			</Card>
 
 			<!-- Workspace Root -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">Workspace Root</h2>
+				<div class="mb-4 flex items-center justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Advanced</p>
+						<h2 class="text-xl font-semibold mt-1">Layout workspace</h2>
+					</div>
+					<span class="rounded-full border px-3 py-1 text-xs text-muted-foreground">Read-only</span>
+				</div>
 				<p class="text-sm text-muted-foreground mb-4">
-					Directory containing your layout files. Use <code class="bg-muted px-1 rounded">--workspace</code> when starting the backend to change this.
+					This is where LazyQMK looks for your layout files. Start backend with <code class="bg-muted px-1 rounded">--workspace</code> if you want a different folder.
 				</p>
 				<p class="text-sm">
 					<code class="bg-muted px-2 py-1 rounded">{config?.workspace_root || 'Unknown'}</code>

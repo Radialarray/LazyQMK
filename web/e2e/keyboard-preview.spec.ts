@@ -128,7 +128,7 @@ test.describe('Keyboard Preview', () => {
 		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
 
 		// Check that keys are rendered (should have 6 keys) - use more specific selector
-		const keys = page.locator('.keyboard-preview [data-testid^="key-"]');
+		const keys = page.locator('.keyboard-preview g[data-testid^="key-"]').filter({ has: page.locator('rect') });
 		await expect(keys).toHaveCount(6);
 	});
 
@@ -157,15 +157,8 @@ test.describe('Keyboard Preview', () => {
 		const firstKey = page.locator('[data-testid="key-0"]');
 		await expect(firstKey).toBeVisible();
 
-		// Click on the first key - this will open the picker
+		// Click on the first key
 		await firstKey.click();
-
-		// Verify picker is open
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-
-		// Close the picker
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
 		// Move mouse away to clear hover state
 		await page.mouse.move(0, 0);
@@ -175,7 +168,7 @@ test.describe('Keyboard Preview', () => {
 
 		// Verify key details card appears - use data-testid for stability
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		await expect(page.getByText('Visual Index')).toBeVisible();
 	});
 
@@ -186,35 +179,25 @@ test.describe('Keyboard Preview', () => {
 		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 
-		// Click on first key to select it - opens picker
+		// Click on first key to select it
 		await page.locator('[data-testid="key-0"]').click();
-		
-		// Close the picker
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away to clear hover state
 		await page.mouse.move(0, 0);
 		
 		// Verify key details card is visible for first key
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
-		// Click on second key to change selection - opens picker again
+		// Click on second key to change selection
 		await page.locator('[data-testid="key-1"]').click();
-
-		// Close the picker
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
 		// Move mouse away to clear hover state
 		await page.mouse.move(0, 0);
 
 		// Verify key details card is still visible (for second key)
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 	});
 
 	test('switching layers updates displayed layer', async ({ page }) => {
@@ -242,27 +225,22 @@ test.describe('Keyboard Preview', () => {
 		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
 		await expect(page.locator('[data-testid="key-0"]')).toBeVisible();
 
-		// Select a key - this will open the keycode picker
+		// Select a key
 		await page.locator('[data-testid="key-0"]').click();
-		
-		// Close the keycode picker
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away to clear hover state
 		await page.mouse.move(0, 0);
 		
 		// Verify key details card is visible
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Switch to a different layer
 		await page.getByRole('button', { name: 'Lower' }).first().click();
 		
 		// Key details should still be visible (selection persists across layer changes - correct behavior)
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 	});
 
 	test('shows error message when geometry fails to load', async ({ page }) => {
@@ -293,31 +271,28 @@ test.describe('Keyboard Preview', () => {
 
 		// First, select a key to ensure the card stays visible
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away to clear initial hover
 		await page.mouse.move(0, 0);
 		
 		// Verify we're in customization mode (not hovering)
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
 		// Now hover over the selected key
 		await page.locator('[data-testid="key-0"]').hover();
 
 		// Key details panel should still show "Key Metadata" (consistent heading)
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
 		// Should show key action details
-		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('What this key does')).toBeVisible();
 		await expect(page.getByText('SIMPLE')).toBeVisible();
 		await expect(page.getByText('Letter Q')).toBeVisible();
 
 		// Move mouse away
 
 		// Should still show Key Metadata
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 	});
 
 	test('shows multi-selection summary when multiple keys selected', async ({ page }) => {
@@ -339,8 +314,8 @@ test.describe('Keyboard Preview', () => {
 
 		// Should show multi-selection summary
 		await expect(page.getByTestId('multi-selection-summary')).toBeVisible();
-		await expect(page.getByText('Multiple Keys Selected (2 keys)')).toBeVisible();
-		await expect(page.getByText('Use Copy, Cut, or Paste operations')).toBeVisible();
+		await expect(page.getByText('2 keys ready for batch edits')).toBeVisible();
+		await expect(page.getByText('Use copy, cut, or paste to update all selected keys together.')).toBeVisible();
 	});
 
 	test('displays multi-action key with secondary label', async ({ page }) => {
@@ -372,9 +347,6 @@ test.describe('Keyboard Preview', () => {
 
 		// First select a simple key to ensure the card stays visible
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away to clear initial hover
 		await page.mouse.move(0, 0);
@@ -383,11 +355,11 @@ test.describe('Keyboard Preview', () => {
 		await page.locator('[data-testid="key-3"]').hover();
 
 		// Key details panel should still show "Key Metadata"
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
 		// Should show key action details with both tap and hold
 		const keyActionsSection = page.locator('.border-t.border-border.pt-4.mb-4');
-		await expect(keyActionsSection.getByRole('heading', { name: 'Key Actions' })).toBeVisible();
+		await expect(keyActionsSection.getByRole('heading', { name: 'What this key does' })).toBeVisible();
 		
 		// Check for action badges and descriptions (more specific selectors)
 		const actionBadges = keyActionsSection.locator('span.uppercase');
@@ -491,9 +463,6 @@ test.describe('Keyboard Preview', () => {
 
 		// First select a key that exists to have the panel visible
 		await page.locator('[data-testid="key-1"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away initially
 		await page.mouse.move(0, 0);
@@ -506,7 +475,7 @@ test.describe('Keyboard Preview', () => {
 
 		// The hover panel should still be visible (even with fallback)
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Should show the fallback message for missing key data
 		await expect(page.getByTestId('key-hover-fallback')).toBeVisible();
@@ -526,13 +495,10 @@ test.describe('Keyboard Preview', () => {
 
 		// Select a key to show content in the details panel
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 		
 		// Move mouse away to clear hover state and show customization mode
 		await page.mouse.move(0, 0);
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Get card height in customization mode
 		const cardLocator = page.getByTestId('key-details-card');
@@ -542,7 +508,7 @@ test.describe('Keyboard Preview', () => {
 
 		// Hover over the same key to switch to preview mode
 		await page.locator('[data-testid="key-0"]').hover();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Get card height in preview mode
 		const previewCardBox = await cardLocator.boundingBox();
@@ -551,7 +517,7 @@ test.describe('Keyboard Preview', () => {
 
 		// Move mouse to a different key (still in preview mode)
 		await page.locator('[data-testid="key-1"]').hover();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Get card height with different key
 		const differentKeyPreviewBox = await cardLocator.boundingBox();
@@ -585,9 +551,6 @@ test.describe('Keyboard Preview', () => {
 
 		// Select a key to ensure the details card is visible
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
-		await expect(page.getByTestId('keycode-picker-overlay')).not.toBeVisible();
 
 		// Move mouse away first to clear hover
 		await page.mouse.move(0, 0);
@@ -595,11 +558,11 @@ test.describe('Keyboard Preview', () => {
 
 		// Hover over key 0 - should show key details, NOT "Key data not available"
 		await page.locator('[data-testid="key-0"]').hover();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
 		// The key should have proper details - check for "Key Actions" section
 		// If visual_index mapping is broken, we'd see "Key data not available" instead
-		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('What this key does')).toBeVisible();
 		await expect(page.getByText('Letter Q')).toBeVisible();
 
 		// The fallback message should NOT be visible
@@ -607,10 +570,10 @@ test.describe('Keyboard Preview', () => {
 
 		// Verify multiple keys work correctly (not just the first one)
 		await page.locator('[data-testid="key-3"]').hover();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 
 		// Key 3 is LT(1, KC_ESC) - should show both tap and hold actions
-		await expect(page.getByText('Key Actions')).toBeVisible();
+		await expect(page.getByText('What this key does')).toBeVisible();
 		await expect(page.getByText('Tap: Escape')).toBeVisible();
 		await expect(page.getByText('Hold: Activate layer 1')).toBeVisible();
 
@@ -626,11 +589,11 @@ test.describe('Keyboard Preview', () => {
 
 		// Key details card should be visible with heading even without selection
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Empty state message should be shown
 		await expect(page.getByTestId('key-details-empty')).toBeVisible();
-		await expect(page.getByText('Select or hover over a key to view details')).toBeVisible();
+		await expect(page.getByText('Select or hover over a key to review what it does')).toBeVisible();
 	});
 
 	test('key legend displays primary/secondary/tertiary labels (LazyQMK-t47)', async ({ page }) => {
@@ -642,8 +605,6 @@ test.describe('Keyboard Preview', () => {
 
 		// First, select a key to keep the details panel visible
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
 		
 		// Move mouse away first
 		await page.mouse.move(0, 0);
@@ -672,8 +633,6 @@ test.describe('Keyboard Preview', () => {
 
 		// Select a simple key to see its legend
 		await page.locator('[data-testid="key-0"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
 		
 		// Move mouse away to show customization mode
 		await page.mouse.move(0, 0);
@@ -710,7 +669,7 @@ test.describe('Keyboard Preview', () => {
 
 		// Key details card should show customization section with description field
 		await expect(page.getByTestId('key-details-card')).toBeVisible();
-		await expect(page.getByTestId('key-details-heading')).toHaveText('Key Metadata');
+		await expect(page.getByTestId('key-details-heading')).toHaveText('Selected Key');
 		
 		// Description input should be visible and editable
 		const descriptionInput = page.getByTestId('key-description-input');
@@ -735,8 +694,6 @@ test.describe('Keyboard Preview', () => {
 
 		// Select a key (not in selection mode - normal click opens picker)
 		await page.locator('[data-testid="key-1"]').click();
-		await expect(page.getByTestId('keycode-picker-overlay')).toBeVisible();
-		await page.getByRole('button', { name: 'Cancel' }).click();
 		
 		// Move mouse away to show customization controls
 		await page.mouse.move(0, 0);
@@ -757,7 +714,6 @@ test.describe('Keyboard Preview', () => {
 		await expect(descriptionInput).toHaveValue('New description');
 		
 		// Unsaved changes indicator should appear
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 });
-

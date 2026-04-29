@@ -1,27 +1,43 @@
 import { test, expect } from '@playwright/test';
 
-// Mock data for tests
-const mockLayouts = {
-	layouts: [
+const mockLayout = {
+	metadata: {
+		name: 'Test Layout',
+		description: 'A test keyboard layout',
+		author: 'Test User',
+		keyboard: 'crkbd',
+		layout: 'LAYOUT_split_3x6_3',
+		created: '2024-01-01T00:00:00Z',
+		modified: '2024-01-01T00:00:00Z',
+		tags: ['corne', '42-key'],
+		version: '1.0',
+		is_template: false
+	},
+	layers: [
 		{
-			filename: 'test-layout.md',
-			name: 'Test Layout',
-			description: 'A test keyboard layout',
-			modified: '2024-01-01T12:00:00Z'
-		},
-		{
-			filename: 'another-layout.md',
-			name: 'Another Layout',
-			description: 'Another test layout',
-			modified: '2024-01-02T12:00:00Z'
+			name: 'Base',
+			color: '#4a9eff',
+			keys: [{ keycode: 'KC_Q', matrix_position: [0, 0], visual_index: 0, led_index: 0 }]
 		}
 	]
+};
+
+const mockGeometry = {
+	keyboard: 'crkbd',
+	layout: 'LAYOUT_split_3x6_3',
+	keys: [
+		{ matrix_row: 0, matrix_col: 0, x: 0, y: 0, width: 1, height: 1, rotation: 0, led_index: 0, visual_index: 0 }
+	],
+	matrix_rows: 1,
+	matrix_cols: 1,
+	encoder_count: 0,
+	position_to_visual_index: { '0,0': 0 }
 };
 
 const mockBuildJob = {
 	id: 'job-123',
 	status: 'pending',
-	layout_filename: 'test-layout.md',
+	layout_filename: 'test-layout',
 	keyboard: 'crkbd',
 	keymap: 'default',
 	created_at: '2024-01-01T12:00:00Z',
@@ -54,124 +70,94 @@ const mockLogs = {
 	has_more: false
 };
 
-test.describe('Build page', () => {
+const mockArtifacts = {
+	job_id: 'job-123',
+	artifacts: [
+		{ id: 'firmware.uf2', filename: 'firmware.uf2', artifact_type: 'uf2', size: 1024, sha256: 'abcdef1234567890' }
+	]
+};
+
+async function mockEditor(page: Parameters<typeof test.beforeEach>[0]['page']) {
+	await page.route('**/api/layouts/test-layout*', async (route) => {
+		if (route.request().method() === 'PUT') {
+			await route.fulfill({ status: 204 });
+			return;
+		}
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(mockLayout)
+		});
+	});
+
+	await page.route('**/api/keyboards/crkbd/geometry/LAYOUT_split_3x6_3', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(mockGeometry)
+		});
+	});
+
+	await page.route('**/api/build/jobs', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify([])
+		});
+	});
+}
+
+async function openBuildStep(page: Parameters<typeof test.beforeEach>[0]['page']) {
+	await page.goto('/layouts/test-layout');
+	await page.getByTestId('tab-firmware').click();
+	await page.getByTestId('firmware-step-build').click();
+}
+
+test.describe('Firmware workflow build step', () => {
 	test.beforeEach(async ({ page }) => {
-		// Mock API endpoints
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
-			});
-		});
-
-		await page.route('**/api/build/jobs', async (route) => {
-			if (route.request().method() === 'GET') {
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([])
-				});
-			}
-		});
+		await mockEditor(page);
 	});
 
-	test('loads the build page', async ({ page }) => {
-		await page.goto('/build');
+	test('shows guided firmware workflow in editor', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
 
-		// Check heading
-		await expect(page.getByRole('heading', { name: 'Build Firmware', level: 1 })).toBeVisible();
-
-		// Check start build section
-		await expect(page.getByRole('heading', { name: 'Start New Build' })).toBeVisible();
+		await page.getByTestId('tab-firmware').click();
+		await expect(page.getByTestId('firmware-workflow-summary')).toBeVisible();
+		await expect(page.getByTestId('firmware-step-generate')).toContainText('Generate sources');
+		await expect(page.getByTestId('firmware-step-build')).toContainText('Build firmware');
+		await expect(page.getByText(/Run source generation first, then compile flashable firmware artifacts/i)).toBeVisible();
 	});
 
-	test('displays layout selector with mocked layouts', async ({ page }) => {
-		await page.goto('/build');
+	test('shows build step controls inside layout workspace', async ({ page }) => {
+		await openBuildStep(page);
 
-		// Check layout selector exists
-		const layoutSelect = page.locator('[data-testid="layout-select"]');
-		await expect(layoutSelect).toBeVisible();
-
-		// Check options are populated
-		await expect(layoutSelect.locator('option')).toHaveCount(2);
+		await expect(page.getByRole('heading', { name: 'Step 2: Build firmware' })).toBeVisible();
+		await expect(page.getByTestId('start-build-button')).toBeVisible();
+		await expect(page.getByTestId('build-empty-state')).toBeVisible();
+		await expect(page.getByTestId('build-history-card')).toBeVisible();
 	});
 
-	test('start build button has correct test id', async ({ page }) => {
-		await page.goto('/build');
+	test('returns to generate step from build step', async ({ page }) => {
+		await openBuildStep(page);
 
-		const startButton = page.locator('[data-testid="start-build"]');
-		await expect(startButton).toBeVisible();
-		await expect(startButton).toHaveText('Start Build');
-	});
-
-	test('job status list has correct test id', async ({ page }) => {
-		await page.goto('/build');
-
-		const jobStatus = page.locator('[data-testid="job-status"]');
-		await expect(jobStatus).toBeVisible();
-	});
-
-	test('shows empty state when no jobs exist', async ({ page }) => {
-		await page.goto('/build');
-
-		await expect(page.getByText('No build jobs yet')).toBeVisible();
-	});
-
-	test('can navigate to home via header', async ({ page }) => {
-		await page.goto('/build');
-
-		// Mock preflight and layouts for home navigation
-		await page.route('**/api/preflight', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					qmk_configured: true,
-					has_layouts: true,
-					first_run: false,
-					qmk_firmware_path: '/path/to/qmk_firmware'
-				})
-			});
-		});
-
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ layouts: [] })
-			});
-		});
-
-		// Click the LazyQMK logo/link in header
-		await page.locator('header a').filter({ hasText: 'LazyQMK' }).click();
-		await expect(page).toHaveURL('/');
+		await page.getByTestId('back-to-generate-button').click();
+		await expect(page.getByRole('heading', { name: 'Step 1: Generate firmware sources' })).toBeVisible();
 	});
 });
 
-test.describe('Build page with active jobs', () => {
+test.describe('Build history and logs', () => {
 	test.beforeEach(async ({ page }) => {
-		// Mock layouts
-		await page.route('**/api/layouts', async (route) => {
+		await mockEditor(page);
+
+		await page.route('**/api/build/jobs', async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
+				body: JSON.stringify([mockRunningJob])
 			});
 		});
 
-		// Mock jobs list with one running job
-		await page.route('**/api/build/jobs', async (route) => {
-			if (route.request().method() === 'GET') {
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([mockRunningJob])
-				});
-			}
-		});
-
-		// Mock logs
 		await page.route('**/api/build/jobs/job-123/logs**', async (route) => {
 			await route.fulfill({
 				status: 200,
@@ -181,106 +167,27 @@ test.describe('Build page with active jobs', () => {
 		});
 	});
 
-	test('displays job in the job list', async ({ page }) => {
-		await page.goto('/build');
+	test('shows previous build in history', async ({ page }) => {
+		await openBuildStep(page);
 
-		// Check job appears in list
-		await expect(page.getByText('test-layout.md')).toBeVisible();
+		await expect(page.getByTestId('history-row')).toBeVisible();
+		await expect(page.getByText('crkbd')).toBeVisible();
+	});
+
+	test('can inspect build logs from history row', async ({ page }) => {
+		await openBuildStep(page);
+
+		await page.getByTestId('view-job-button').click();
+		await expect(page.getByTestId('build-logs-card')).toBeVisible();
+		await expect(page.getByTestId('build-logs')).toContainText('Build started');
+		await expect(page.getByTestId('cancel-build-button')).toBeVisible();
 	});
 });
 
-test.describe('Build job selection and logs', () => {
+test.describe('Start and complete builds from workflow', () => {
 	test.beforeEach(async ({ page }) => {
-		// Mock layouts
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
-			});
-		});
+		await mockEditor(page);
 
-		// Mock jobs list
-		await page.route('**/api/build/jobs', async (route) => {
-			if (route.request().method() === 'GET') {
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([mockRunningJob])
-				});
-			}
-		});
-
-		// Mock logs endpoint
-		await page.route('**/api/build/jobs/job-123/logs**', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLogs)
-			});
-		});
-	});
-
-	test('shows logs panel when job is selected', async ({ page }) => {
-		await page.goto('/build');
-
-		// Click on the job to select it
-		await page.getByText('test-layout.md').click();
-
-		// Check logs panel is visible
-		const logsPanel = page.locator('[data-testid="logs"]');
-		await expect(logsPanel).toBeVisible();
-
-		// Check log content appears
-		await expect(logsPanel.getByText('Build started')).toBeVisible();
-	});
-
-	test('logs panel has correct test id', async ({ page }) => {
-		await page.goto('/build');
-
-		// Select job
-		await page.getByText('test-layout.md').click();
-
-		// Verify logs testid
-		await expect(page.locator('[data-testid="logs"]')).toBeVisible();
-	});
-
-	test('shows cancel button for running job', async ({ page }) => {
-		await page.goto('/build');
-
-		// Select job
-		await page.getByText('test-layout.md').click();
-
-		// Check cancel button
-		const cancelButton = page.locator('[data-testid="cancel"]');
-		await expect(cancelButton).toBeVisible();
-		await expect(cancelButton).toHaveText('Cancel Build');
-	});
-});
-
-test.describe('Start build flow', () => {
-	test.beforeEach(async ({ page }) => {
-		// Mock layouts
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
-			});
-		});
-
-		// Mock empty jobs initially
-		await page.route('**/api/build/jobs', async (route) => {
-			if (route.request().method() === 'GET') {
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([])
-				});
-			}
-		});
-
-		// Mock start build endpoint
 		await page.route('**/api/build/start', async (route) => {
 			await route.fulfill({
 				status: 200,
@@ -289,51 +196,6 @@ test.describe('Start build flow', () => {
 			});
 		});
 
-		// Mock logs for the new job
-		await page.route('**/api/build/jobs/job-123/logs**', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ job_id: 'job-123', logs: [], has_more: false })
-			});
-		});
-	});
-
-	test('can start a build', async ({ page }) => {
-		await page.goto('/build');
-
-		// Click start build
-		const startButton = page.locator('[data-testid="start-build"]');
-		await startButton.click();
-
-		// Wait for job to appear (the job card should show up)
-		await expect(page.getByText('test-layout.md').first()).toBeVisible();
-	});
-});
-
-test.describe('Cancel build flow', () => {
-	test.beforeEach(async ({ page }) => {
-		// Mock layouts
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
-			});
-		});
-
-		// Mock jobs with running job
-		await page.route('**/api/build/jobs', async (route) => {
-			if (route.request().method() === 'GET') {
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([mockRunningJob])
-				});
-			}
-		});
-
-		// Mock logs
 		await page.route('**/api/build/jobs/job-123/logs**', async (route) => {
 			await route.fulfill({
 				status: 200,
@@ -341,123 +203,30 @@ test.describe('Cancel build flow', () => {
 				body: JSON.stringify(mockLogs)
 			});
 		});
-
-		// Mock cancel endpoint
-		await page.route('**/api/build/jobs/job-123/cancel', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ success: true, message: 'Build cancelled' })
-			});
-		});
 	});
 
-	test('cancel button calls cancel endpoint', async ({ page }) => {
-		await page.goto('/build');
+	test('can start build from build step', async ({ page }) => {
+		await openBuildStep(page);
 
-		// Select job
-		await page.getByText('test-layout.md').click();
-
-		// Click cancel
-		const cancelButton = page.locator('[data-testid="cancel"]');
-		await cancelButton.click();
-
-		// Button should show cancelling state briefly
-		// The request should have been made (we can't easily verify without network interception,
-		// but the test passing without error indicates the route was hit)
-		await expect(cancelButton).toBeVisible();
-	});
-});
-
-test.describe('Build page navigation', () => {
-	test.beforeEach(async ({ page }) => {
-		// Mock layouts
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ layouts: [] })
-			});
-		});
-
-		await page.route('**/api/build/jobs', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify([])
-			});
-		});
-
-		await page.route('**/api/preflight', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					qmk_configured: true,
-					has_layouts: true,
-					first_run: false,
-					qmk_firmware_path: '/path/to/qmk_firmware'
-				})
-			});
-		});
+		await page.getByTestId('start-build-button').click();
+		await expect(page.getByTestId('build-status')).toBeVisible();
+		await expect(page.getByTestId('build-logs-card')).toBeVisible();
 	});
 
-	test('build page is accessible via More menu', async ({ page }) => {
-		await page.goto('/');
-
-		// Click the "More" dropdown
-		await page.getByRole('button', { name: 'More' }).click();
-
-		// Click Build in dropdown
-		await page.getByRole('link', { name: 'Build Compile firmware' }).click();
-
-		// Should navigate to build page
-		await expect(page).toHaveURL('/build');
-		await expect(page.getByRole('heading', { name: 'Build Firmware', level: 1 })).toBeVisible();
-	});
-});
-
-test.describe('Build page error handling', () => {
-	test('shows error when API fails', async ({ page }) => {
-		// Mock layouts endpoint to fail
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 500,
-				contentType: 'application/json',
-				body: JSON.stringify({ error: 'Internal server error' })
-			});
-		});
-
-		await page.route('**/api/build/jobs', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify([])
-			});
-		});
-
-		await page.goto('/build');
-
-		// Should show error message
-		await expect(page.getByText(/Internal server error/i)).toBeVisible();
-	});
-});
-
-test.describe('Completed job display', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.route('**/api/layouts', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(mockLayouts)
-			});
-		});
-
+	test('shows artifacts for completed build', async ({ page }) => {
 		await page.route('**/api/build/jobs', async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
 				body: JSON.stringify([mockCompletedJob])
+			});
+		});
+
+		await page.route('**/api/build/jobs/job-123/artifacts', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(mockArtifacts)
 			});
 		});
 
@@ -467,32 +236,49 @@ test.describe('Completed job display', () => {
 				contentType: 'application/json',
 				body: JSON.stringify({
 					job_id: 'job-123',
-					logs: [
-						{ timestamp: '2024-01-01T12:01:00Z', level: 'INFO', message: 'Firmware generated: /tmp/crkbd_default.uf2' }
-					],
+					logs: [{ timestamp: '2024-01-01T12:01:00Z', level: 'INFO', message: 'Firmware built: /tmp/crkbd_default.uf2' }],
 					has_more: false
 				})
 			});
 		});
+
+		await openBuildStep(page);
+		await page.getByTestId('view-job-button').click();
+
+		await expect(page.getByTestId('build-artifacts-card')).toBeVisible();
+		await expect(page.getByTestId('artifact-row')).toContainText('firmware.uf2');
+		await expect(page.getByTestId('cancel-build-button')).toHaveCount(0);
+	});
+});
+
+test.describe('Build navigation acceptance', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.route('**/api/preflight', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					qmk_configured: true,
+					has_layouts: true,
+					first_run: false,
+					qmk_firmware_path: '/path/to/qmk_firmware'
+				})
+			});
+		});
+
+		await page.route('**/api/layouts', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ layouts: [] })
+			});
+		});
 	});
 
-	test('shows firmware path for completed job', async ({ page }) => {
-		await page.goto('/build');
+	test('home page keeps global build out of nav', async ({ page }) => {
+		await page.goto('/');
 
-		// Select completed job
-		await page.getByText('test-layout.md').click();
-
-		// Should show firmware path in the success banner
-		await expect(page.getByText('Firmware built:')).toBeVisible();
-	});
-
-	test('does not show cancel button for completed job', async ({ page }) => {
-		await page.goto('/build');
-
-		// Select completed job
-		await page.getByText('test-layout.md').click();
-
-		// Cancel button should not be visible
-		await expect(page.locator('[data-testid="cancel"]')).not.toBeVisible();
+		await expect(page.getByRole('button', { name: 'More' })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: 'Build' })).toHaveCount(0);
 	});
 });

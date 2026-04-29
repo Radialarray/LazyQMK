@@ -9,6 +9,7 @@
 	let error = $state<string | null>(null);
 	let searchTerm = $state('');
 	let selectedCategory = $state<string | null>(null);
+	const learningPrompts = ['home row mods', 'navigation', 'media', 'lighting', 'layers'];
 
 	onMount(async () => {
 		try {
@@ -43,14 +44,20 @@
 		selectedCategory = categoryId;
 		handleSearch();
 	}
+
+	function runPrompt(prompt: string) {
+		searchTerm = prompt;
+		void handleSearch();
+	}
 </script>
 
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
 			<h1 class="text-4xl font-bold mb-2">Keycodes Browser</h1>
+			<p class="text-lg font-medium mb-1">Keycode Reference</p>
 			<p class="text-muted-foreground">
-				Browse and search QMK keycodes
+				Learn what keycodes mean before you assign them to your layout.
 			</p>
 		</div>
 		<Button onclick={() => (window.location.href = '/')}>
@@ -61,8 +68,21 @@
 	<div class="grid gap-6 lg:grid-cols-4">
 		<!-- Category Sidebar -->
 		<div class="lg:col-span-1">
+			<Card class="p-4 mb-4 surface-subtle">
+				<h2 class="text-lg font-semibold mb-3">Learn faster</h2>
+				<div class="space-y-2 text-sm">
+					<p class="text-muted-foreground">Use plain words, not exact QMK codes. Search for intent first, then inspect matching codes.</p>
+					<div class="flex flex-wrap gap-2 pt-1">
+						{#each learningPrompts as prompt}
+							<button class="rounded-full border px-3 py-1 text-xs hover:bg-accent" onclick={() => runPrompt(prompt)}>
+								{prompt}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</Card>
 			<Card class="p-4">
-				<h2 class="text-lg font-semibold mb-4">Categories</h2>
+				<h2 class="text-lg font-semibold mb-4">Browse by category</h2>
 				<div class="space-y-2">
 					<button
 						class="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors {selectedCategory ===
@@ -71,7 +91,7 @@
 							: ''}"
 						onclick={() => selectCategory(null)}
 					>
-						All Categories
+						All keycodes
 					</button>
 					{#each categories as category}
 						<button
@@ -95,27 +115,42 @@
 				<div class="flex gap-2">
 					<Input
 						bind:value={searchTerm}
-						placeholder="Search keycodes..."
+						placeholder="Search by code, name, or plain-language behavior..."
 						class="flex-1"
 						oninput={() => handleSearch()}
 					/>
 				</div>
+				<p class="mt-3 text-xs text-muted-foreground">
+					Examples: “caps word”, “layer toggle”, “mute”, “rgb off”, “control”.
+				</p>
 			</Card>
 
 			{#if loading}
-				<p class="text-muted-foreground">Loading keycodes...</p>
+				<Card class="state-panel-loading">
+					<p class="state-eyebrow mb-3">Keycode library</p>
+					<h2 class="text-2xl font-semibold">Loading keycodes</h2>
+					<p class="mt-2 text-muted-foreground">Pulling searchable keycode data for this workspace.</p>
+				</Card>
 			{:else if error}
-				<Card class="p-6">
-					<div class="text-destructive">
-						<p class="font-medium">Error loading keycodes</p>
-						<p class="text-sm">{error}</p>
+				<Card class="state-panel-error">
+					<p class="state-eyebrow mb-3">Keycode library unavailable</p>
+					<h2 class="text-2xl font-semibold text-destructive">Could not load keycodes</h2>
+					<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+					<div class="mt-6">
+						<Button onclick={handleSearch}>Retry Search</Button>
 					</div>
 				</Card>
 			{:else if keycodes.length === 0}
-				<Card class="p-6">
-					<p class="text-muted-foreground">
-						No keycodes found matching your search.
+				<Card class="state-panel-empty">
+					<p class="state-eyebrow mb-3">No matches</p>
+					<h2 class="text-2xl font-semibold">Adjust search and try again</h2>
+					<p class="mt-2 text-muted-foreground">
+						Search by code, readable name, or switch category to widen results.
 					</p>
+					<div class="mt-6 flex justify-center gap-2">
+						<Button variant="outline" onclick={() => { searchTerm = ''; void handleSearch(); }}>Clear Search</Button>
+						<Button variant="outline" onclick={() => selectCategory(null)}>Show All Categories</Button>
+					</div>
 				</Card>
 			{:else}
 				<div class="space-y-2">
@@ -134,6 +169,9 @@
 											{keycode.description}
 										</p>
 									{/if}
+									<p class="text-xs text-muted-foreground mt-2">
+										Good when you want: <span class="text-foreground">{keycode.name.toLowerCase()}</span>
+									</p>
 								</div>
 								<span class="text-xs text-muted-foreground">
 									{keycode.category}

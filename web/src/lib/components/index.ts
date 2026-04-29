@@ -1,5 +1,6 @@
 export { default as Button } from './Button.svelte';
 export { default as Card } from './Card.svelte';
+export { default as AccessibleDialog } from './AccessibleDialog.svelte';
 export { default as CategoryManager } from './CategoryManager.svelte';
 export { default as ColorPicker } from './ColorPicker.svelte';
 export { default as Input } from './Input.svelte';

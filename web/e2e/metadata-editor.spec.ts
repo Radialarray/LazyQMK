@@ -93,6 +93,28 @@ test.describe('Metadata Editor', () => {
 		await expect(page.locator('.font-mono', { hasText: '42-key' }).first()).toBeVisible();
 	});
 
+	test('editor IA keeps core destinations visible and firmware workflow guided', async ({ page }) => {
+		await page.goto('/layouts/test-layout');
+
+		await expect(page.getByTestId('tab-preview')).toBeVisible();
+		await expect(page.getByTestId('tab-layers')).toBeVisible();
+		await expect(page.getByTestId('tab-metadata')).toBeVisible();
+		await expect(page.getByTestId('tab-firmware')).toBeVisible();
+
+		await page.getByRole('button', { name: /More/i }).click();
+		await expect(page.getByTestId('dropdown-tab-review')).toBeVisible();
+		await page.getByTestId('dropdown-tab-review').click();
+		await expect(page.getByTestId('review-workflow-tab')).toBeVisible();
+		await expect(page.getByText(/Validation, report, and export now live in one review pass before firmware work\./i)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Run Review' })).toBeVisible();
+
+		await page.getByTestId('tab-firmware').click();
+		await expect(page.getByTestId('firmware-workflow-summary')).toBeVisible();
+		await expect(page.getByTestId('firmware-step-generate')).toContainText('Generate sources');
+		await expect(page.getByTestId('firmware-step-build')).toContainText('Build firmware');
+		await expect(page.getByText(/Run source generation first, then compile flashable firmware artifacts/i)).toBeVisible();
+	});
+
 	test('can edit name field', async ({ page }) => {
 		await page.goto('/layouts/test-layout');
 		await page.getByRole('tab', { name: /metadata/i }).click();
@@ -102,7 +124,7 @@ test.describe('Metadata Editor', () => {
 		await nameInput.fill('Updated Layout Name');
 
 		// Verify unsaved changes indicator appears
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('validates name cannot be empty', async ({ page }) => {
@@ -147,7 +169,7 @@ test.describe('Metadata Editor', () => {
 		await descInput.fill('Updated description text');
 
 		// Verify unsaved changes indicator
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('can edit author field', async ({ page }) => {
@@ -159,7 +181,7 @@ test.describe('Metadata Editor', () => {
 		await authorInput.fill('New Author Name');
 
 		// Verify unsaved changes indicator
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('can edit tags field with valid tags', async ({ page }) => {
@@ -174,7 +196,7 @@ test.describe('Metadata Editor', () => {
 		await expect(page.getByTestId('metadata-tags-error')).not.toBeVisible();
 
 		// Verify unsaved changes indicator
-		await expect(page.getByText('Unsaved changes')).toBeVisible();
+		await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 	});
 
 	test('validates tags must be lowercase', async ({ page }) => {
