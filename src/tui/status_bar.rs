@@ -37,7 +37,10 @@ impl StatusBar {
                     Span::raw("")
                 },
                 if !build_state.last_message.is_empty() {
-                    Span::styled(build_state.last_message.clone(), Style::default().fg(theme.text_muted))
+                    Span::styled(
+                        build_state.last_message.clone(),
+                        Style::default().fg(theme.text_muted),
+                    )
                 } else {
                     Span::raw("")
                 },
@@ -185,7 +188,7 @@ impl StatusBar {
         }
 
         Line::from(vec![Span::styled(
-            "Enter opens details. Backspace/Delete clears key. Ctrl+X queues move. Shift+Y switches layout variant.",
+            "Enter opens key actions. Backspace/Delete clears key. Ctrl+X queues move. Shift+Y switches layout variant.",
             Style::default().fg(theme.text_muted),
         )])
     }

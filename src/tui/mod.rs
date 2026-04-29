@@ -1182,18 +1182,20 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
     let error_text = Paragraph::new(vec![
         Line::from(vec![Span::styled(
             "Error: ",
-            Style::default().fg(theme.error).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(Modifier::BOLD),
         )]),
         Line::from(error.to_string()),
     ])
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Details ")
-                .style(Style::default().bg(theme.background)),
-        )
-        .wrap(Wrap { trim: true });
+    .style(Style::default().fg(theme.text))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Details ")
+            .style(Style::default().bg(theme.background)),
+    )
+    .wrap(Wrap { trim: true });
     f.render_widget(error_text, chunks[1]);
 
     // Help text

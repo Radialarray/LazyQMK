@@ -7,35 +7,35 @@ use anyhow::Result;
 /// Handle open layer manager action
 pub fn handle_open_layer_manager(state: &mut AppState) -> Result<bool> {
     state.open_layer_manager();
-    state.set_status("Layer Manager - n: new, d: delete, r: rename");
+    state.set_status("Layers: add, rename, reorder, copy, or delete layers");
     Ok(false)
 }
 
 /// Handle open category manager action
 pub fn handle_open_category_manager(state: &mut AppState) -> Result<bool> {
     state.open_category_manager();
-    state.set_status("Category Manager - n: new, r: rename, c: color, d: delete");
+    state.set_status("Key categories: add, rename, recolor, or delete categories");
     Ok(false)
 }
 
 /// Handle open settings action
 pub fn handle_open_settings(state: &mut AppState) -> Result<bool> {
     state.open_settings_manager();
-    state.set_status("Settings Manager - Enter: edit, Esc: close");
+    state.set_status("Settings: choose task, Enter edits, Esc closes");
     Ok(false)
 }
 
 /// Handle edit metadata action
 pub fn handle_edit_metadata(state: &mut AppState) -> Result<bool> {
     state.open_metadata_editor();
-    state.set_status("Edit Metadata - Tab: next field, Enter: save");
+    state.set_status("Metadata: Tab moves between fields, Enter saves");
     Ok(false)
 }
 
 /// Handle browse templates action
 pub fn handle_browse_templates(state: &mut AppState) -> Result<bool> {
     state.open_template_browser();
-    state.set_status("Template Browser - Enter: load, /: search");
+    state.set_status("Templates: Enter loads, / searches");
     Ok(false)
 }
 

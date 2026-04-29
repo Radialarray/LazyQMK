@@ -414,7 +414,10 @@ mod tests {
 
         // Test safer layout variant shortcut
         let event = KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::SHIFT);
-        assert_eq!(registry.lookup("main", event), Some(Action::SwitchLayoutVariant));
+        assert_eq!(
+            registry.lookup("main", event),
+            Some(Action::SwitchLayoutVariant)
+        );
 
         // Test new metadata editor shortcut
         let event = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::SHIFT);

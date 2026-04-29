@@ -315,8 +315,12 @@ impl KeyboardWidget {
             },
         );
 
-        let actions = "Actions: Enter details  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
-        let legend = format!("Legend: {}  • red outer border = inbound hold target", Self::color_indicator_legend());
+        let actions =
+            "Actions: Enter key actions  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
+        let legend = format!(
+            "Legend: {}  • red outer border = inbound hold target",
+            Self::color_indicator_legend()
+        );
 
         let footer = Paragraph::new(vec![
             Line::from(Span::styled(

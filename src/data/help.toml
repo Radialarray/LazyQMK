@@ -171,6 +171,7 @@ priority = 5
 [[contexts.main.bindings]]
 keys = ["Shift+S"]
 action = "Open settings by task"
+hint = "Settings"
 priority = 31
 
 [[contexts.main.bindings]]
@@ -361,8 +362,8 @@ priority = 7
 # =============================================================================
 
 [contexts.layer_manager]
-name = "Layer Manager"
-description = "Manage layout layers"
+name = "Layers"
+description = "Add, rename, reorder, copy, and delete layout layers"
 
 [[contexts.layer_manager.bindings]]
 keys = ["↑", "↓"]
@@ -372,13 +373,13 @@ priority = 1
 
 [[contexts.layer_manager.bindings]]
 keys = ["n"]
-action = "New layer"
+action = "Add layer"
 hint = "New"
 priority = 2
 
 [[contexts.layer_manager.bindings]]
 keys = ["D"]
-action = "Duplicate layer"
+action = "Copy layer"
 hint = "Duplicate"
 priority = 3
 
@@ -390,17 +391,17 @@ priority = 4
 
 [[contexts.layer_manager.bindings]]
 keys = ["c"]
-action = "Copy to layer"
+action = "Copy keys to another layer"
 priority = 10
 
 [[contexts.layer_manager.bindings]]
 keys = ["s"]
-action = "Swap with layer"
+action = "Swap keys with another layer"
 priority = 11
 
 [[contexts.layer_manager.bindings]]
 keys = ["v"]
-action = "Toggle colors"
+action = "Toggle layer colors"
 priority = 12
 
 [[contexts.layer_manager.bindings]]
@@ -416,7 +417,7 @@ priority = 13
 
 [[contexts.layer_manager.bindings]]
 keys = ["Enter"]
-action = "Go to layer"
+action = "Switch to selected layer"
 hint = "Select"
 priority = 6
 
@@ -431,8 +432,8 @@ priority = 7
 # =============================================================================
 
 [contexts.category_manager]
-name = "Category Manager"
-description = "Manage key categories"
+name = "Key Categories"
+description = "Name, recolor, and delete categories used in this layout"
 
 [[contexts.category_manager.bindings]]
 keys = ["↑", "↓"]
@@ -448,19 +449,19 @@ priority = 2
 
 [[contexts.category_manager.bindings]]
 keys = ["r"]
-action = "Rename"
+action = "Rename category"
 hint = "Rename"
 priority = 3
 
 [[contexts.category_manager.bindings]]
 keys = ["c"]
-action = "Change color"
+action = "Change category color"
 hint = "Color"
 priority = 4
 
 [[contexts.category_manager.bindings]]
 keys = ["d"]
-action = "Delete"
+action = "Delete category"
 hint = "Delete"
 priority = 5
 
@@ -689,7 +690,7 @@ priority = 3
 
 [contexts.help]
 name = "Help"
-description = "Help overlay"
+description = "Task-oriented help overlay"
 
 [[contexts.help.bindings]]
 keys = ["↑", "↓"]
@@ -896,7 +897,7 @@ priority = 3
 
 [contexts.layout_picker]
 name = "Layout Picker"
-description = "Select keyboard layout variant"
+description = "Choose saved layout to open or start fresh"
 
 [[contexts.layout_picker.bindings]]
 keys = ["↑", "↓"]
@@ -906,7 +907,7 @@ priority = 1
 
 [[contexts.layout_picker.bindings]]
 keys = ["Enter"]
-action = "Select"
+action = "Open selected layout"
 hint = "Select"
 priority = 2
 

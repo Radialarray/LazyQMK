@@ -567,7 +567,7 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
 
     // Main container with title
     let title = format!(
-        " Key Details - Layer {} ({}, {}) ",
+        " Key Actions - Layer {} ({}, {}) ",
         editor_state.layer_idx, editor_state.position.row, editor_state.position.col
     );
 
@@ -662,7 +662,7 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
         let after_cursor = &editor_state.description_buffer[editor_state.cursor_position..];
         format!("{before_cursor}█{after_cursor}")
     } else if editor_state.description_buffer.is_empty() {
-        "(No description - press D to add)".to_string()
+        "(No note yet - press D to add one)".to_string()
     } else {
         editor_state.description_buffer.clone()
     };
@@ -719,21 +719,27 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                         .fg(theme.success)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    ": Change tap action  ",
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(
                     "Enter",
                     Style::default()
                         .fg(theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    ": Replace whole keycode  ",
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(
                     "D",
                     Style::default()
                         .fg(theme.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Edit note  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "Esc",
                     Style::default()
@@ -750,28 +756,37 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                         .fg(theme.success)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Hold  ", Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    ": Change hold action  ",
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(
                     "T",
                     Style::default()
                         .fg(theme.success)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Tap  ", Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    ": Change tap action  ",
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(
                     "Enter",
                     Style::default()
                         .fg(theme.accent)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
+                Span::styled(
+                    ": Replace whole keycode  ",
+                    Style::default().fg(theme.text_muted),
+                ),
                 Span::styled(
                     "D",
                     Style::default()
                         .fg(theme.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
+                Span::styled(": Edit note  ", Style::default().fg(theme.text_muted)),
                 Span::styled(
                     "Esc",
                     Style::default()
@@ -789,21 +804,21 @@ pub fn render_key_editor(f: &mut Frame, state: &AppState) {
                     .fg(theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(": Assign keycode  ", Style::default().fg(theme.text_muted)),
+            Span::styled(": Replace keycode  ", Style::default().fg(theme.text_muted)),
             Span::styled(
                 "D",
                 Style::default()
                     .fg(theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(": Note  ", Style::default().fg(theme.text_muted)),
+            Span::styled(": Edit note  ", Style::default().fg(theme.text_muted)),
             Span::styled(
                 "C",
                 Style::default()
                     .fg(theme.primary)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(": Color  ", Style::default().fg(theme.text_muted)),
+            Span::styled(": Change color  ", Style::default().fg(theme.text_muted)),
             Span::styled(
                 "Esc",
                 Style::default()
@@ -831,7 +846,7 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
         match key.code {
             KeyCode::Esc => {
                 state.key_editor_state.cancel_edit_description();
-                state.set_status("Description edit cancelled");
+                state.set_status("Cancelled key note edit");
             }
             KeyCode::Enter => {
                 state.key_editor_state.confirm_edit_description();
@@ -840,7 +855,7 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                 if let Some(key) = state.get_selected_key_mut() {
                     key.description = description;
                     state.mark_dirty();
-                    state.set_status("Description saved");
+                    state.set_status("Saved key note");
                 }
             }
             KeyCode::Backspace => {
@@ -873,18 +888,18 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                 // Close the editor
                 state.active_popup = None;
                 state.key_editor_state.reset();
-                state.set_status("Closed key details");
+                state.set_status("Closed key actions");
             }
             KeyCode::Enter => {
                 // Open keycode picker to reassign entirely
                 state.key_editor_state.combo_edit = None; // Clear any combo edit state
                 state.open_keycode_picker();
-                state.set_status("Choose keycode for selected key");
+                state.set_status("Choose replacement keycode");
             }
             KeyCode::Char('d' | 'D') => {
                 // Start editing description
                 state.key_editor_state.start_edit_description();
-                state.set_status("Editing key note - Enter to save, Esc to cancel");
+                state.set_status("Editing key note. Enter saves. Esc cancels.");
             }
             KeyCode::Char('c' | 'C') => {
                 // Open color picker
@@ -894,7 +909,7 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                         crate::tui::component::ColorPickerContext::IndividualKey,
                         current_color,
                     );
-                    state.set_status("Select color for key");
+                    state.set_status("Choose color for this key");
                 }
             }
             KeyCode::Char('h' | 'H') => {
@@ -910,25 +925,25 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                                 state.key_editor_state.combo_edit =
                                     Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.open_layer_picker("");
-                                state.set_status("Select layer for hold action");
+                                state.set_status("Choose layer used while key is held");
                             }
                             ComboKeycodeType::ModTapNamed { .. }
                             | ComboKeycodeType::ModTapCustom { .. } => {
                                 state.key_editor_state.combo_edit =
                                     Some((ComboEditPart::Hold, combo_type.clone()));
                                 state.open_modifier_picker();
-                                state.set_status("Select modifier for hold action");
+                                state.set_status("Choose modifier used while key is held");
                             }
                             ComboKeycodeType::ModCombo { .. } => {
                                 // ModCombo prefixes (MEH, HYPR, LCG, etc.) are fixed combos
                                 // Can't edit them individually - use T to change the key, or reassign
                                 state.set_status(
-                                    "Use T to change the key, or reassign for different modifier",
+                                    "Change tap key with T, or replace whole keycode for new modifier",
                                 );
                             }
                         }
                     } else {
-                        state.set_status("This keycode doesn't have a hold action to edit");
+                        state.set_status("This keycode has no separate hold action to change");
                     }
                 }
             }
@@ -944,13 +959,13 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
                         // Open keycode picker for tap action (or modifier picker for LM)
                         if let ComboKeycodeType::LayerMod { .. } = &combo_type {
                             state.open_modifier_picker();
-                            state.set_status("Select modifier for layer-mod");
+                            state.set_status("Choose modifier paired with this layer action");
                         } else {
                             state.open_keycode_picker();
-                            state.set_status("Select tap keycode");
+                            state.set_status("Choose key sent on tap");
                         }
                     } else {
-                        state.set_status("This keycode doesn't have a tap action to edit");
+                        state.set_status("This keycode has no separate tap action to change");
                     }
                 }
             }

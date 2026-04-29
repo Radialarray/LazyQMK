@@ -1,7 +1,7 @@
 //! Category manager for CRUD operations on categories.
 //!
 //! Provides a UI for creating, renaming, recoloring, and deleting categories.
-//! Accessible via Shift+K shortcut (mnemonic: K = Kategorties/Categories).
+//! Accessible via Shift+K shortcut.
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -399,7 +399,7 @@ pub fn render_category_manager(
     // Background block
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Category Manager (Shift+K) ")
+        .title(" Key Categories (Shift+K) ")
         .style(Style::default().bg(theme.background));
 
     f.render_widget(block, dialog_area);
@@ -496,7 +496,11 @@ fn render_category_list(
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Categories"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Categories in this layout"),
+        )
         .highlight_style(Style::default().bg(theme.surface));
 
     f.render_widget(list, chunks[0]);
@@ -506,26 +510,28 @@ fn render_category_list(
         Line::from(""),
         Line::from(vec![
             Span::styled("n", Style::default().fg(theme.primary)),
-            Span::raw(": New  "),
+            Span::raw(": Add  "),
             Span::styled("r", Style::default().fg(theme.primary)),
             Span::raw(": Rename  "),
             Span::styled("c", Style::default().fg(theme.primary)),
-            Span::raw(": Change Color  "),
+            Span::raw(": Change color  "),
             Span::styled("d", Style::default().fg(theme.primary)),
             Span::raw(": Delete"),
         ]),
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
-            Span::raw(": Navigate  "),
-            Span::styled("Shift+L", Style::default().fg(theme.primary)),
-            Span::raw(": Assign to Layer  "),
+            Span::raw(": Move selection  "),
             Span::styled("Esc", Style::default().fg(theme.primary)),
             Span::raw(": Close"),
         ]),
     ];
 
     let help = Paragraph::new(help_text)
-        .block(Block::default().borders(Borders::ALL).title("Help"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("What you can do"),
+        )
         .alignment(Alignment::Left);
 
     f.render_widget(help, chunks[1]);
@@ -640,7 +646,7 @@ fn render_color_picker_prompt(f: &mut Frame, area: Rect, name: &str, theme: &The
     let text = vec![
         Line::from(""),
         Line::from(vec![
-            Span::raw("Creating category: "),
+            Span::raw("New category: "),
             Span::styled(
                 name,
                 Style::default()
@@ -649,10 +655,10 @@ fn render_color_picker_prompt(f: &mut Frame, area: Rect, name: &str, theme: &The
             ),
         ]),
         Line::from(""),
-        Line::from("Choose a color for this category..."),
+        Line::from("Choose color for this category."),
         Line::from(""),
         Line::from(vec![Span::styled(
-            "(Color picker will open)",
+            "Color picker opens next.",
             Style::default().fg(theme.text_muted),
         )]),
     ];
