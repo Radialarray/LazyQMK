@@ -125,6 +125,6 @@ pub fn handle_setup_wizard(state: &mut AppState) -> Result<bool> {
 /// Handle open tap dance editor action
 pub fn handle_open_tap_dance_editor(state: &mut AppState) -> Result<bool> {
     state.open_tap_dance_editor();
-    state.set_status("Tap Dance Editor - n: new, Shift+D: delete, Enter: apply, Esc: close");
+    state.set_status("Tap Dance Editor - visible actions shown in status bar and help");
     Ok(false)
 }

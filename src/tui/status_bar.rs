@@ -210,6 +210,7 @@ impl StatusBar {
             Some(PopupType::MetadataEditor) => help_registry::contexts::METADATA_EDITOR,
             Some(PopupType::SettingsManager) => help_registry::contexts::SETTINGS_MANAGER,
             Some(PopupType::ModifierPicker) => help_registry::contexts::MODIFIER_PICKER,
+            Some(PopupType::TapDanceEditor) => help_registry::contexts::TAP_DANCE_EDITOR,
             Some(PopupType::TemplateBrowser) => help_registry::contexts::TEMPLATE_BROWSER,
             Some(PopupType::TemplateSaveDialog) => help_registry::contexts::TEMPLATE_SAVE,
             Some(PopupType::SetupWizard) => help_registry::contexts::SETUP_WIZARD,

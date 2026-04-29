@@ -163,9 +163,9 @@ priority = 29
 
 [[contexts.main.bindings]]
 keys = ["Shift+D"]
-action = "Tap dance editor"
-hint = "TapDance"
-priority = 30
+action = "Open tap dance editor"
+hint = "Tap Dance"
+priority = 5
 
 [[contexts.main.bindings]]
 keys = ["Shift+S"]
@@ -196,7 +196,7 @@ priority = 35
 keys = ["?"]
 action = "Toggle help"
 hint = "Help"
-priority = 5
+priority = 6
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+Q"]
