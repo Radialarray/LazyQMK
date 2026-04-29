@@ -896,7 +896,7 @@ fn render(f: &mut Frame, state: &AppState) {
     let chunks = RatatuiLayout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Title bar
+            Constraint::Length(4), // Title bar (border + 2 content lines)
             Constraint::Min(10),   // Main content
             Constraint::Length(6), // Status bar (increased for description + clipboard + build + help)
         ])
