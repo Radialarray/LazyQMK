@@ -102,7 +102,7 @@ impl Component for TapDanceEditor {
                     return Some(TapDanceEditorEvent::Edit(index));
                 }
             }
-            KeyCode::Char('d') => {
+            KeyCode::Char('D') => {
                 if let Some(name) = self.selected_name() {
                     return Some(TapDanceEditorEvent::Delete(name));
                 }
@@ -200,7 +200,7 @@ impl TapDanceEditor {
             ),
             Span::raw(" Edit  "),
             Span::styled(
-                "d",
+                "D",
                 Style::default()
                     .fg(theme.accent)
                     .add_modifier(Modifier::BOLD),

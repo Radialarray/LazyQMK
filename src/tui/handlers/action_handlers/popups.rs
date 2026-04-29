@@ -7,35 +7,35 @@ use anyhow::Result;
 /// Handle open layer manager action
 pub fn handle_open_layer_manager(state: &mut AppState) -> Result<bool> {
     state.open_layer_manager();
-    state.set_status("Layer Manager - n: new, d: delete, r: rename");
+    state.set_status("Layers: add, rename, reorder, copy, or delete layers");
     Ok(false)
 }
 
 /// Handle open category manager action
 pub fn handle_open_category_manager(state: &mut AppState) -> Result<bool> {
     state.open_category_manager();
-    state.set_status("Category Manager - n: new, r: rename, c: color, d: delete");
+    state.set_status("Key categories: add, rename, recolor, or delete categories");
     Ok(false)
 }
 
 /// Handle open settings action
 pub fn handle_open_settings(state: &mut AppState) -> Result<bool> {
     state.open_settings_manager();
-    state.set_status("Settings Manager - Enter: edit, Esc: close");
+    state.set_status("Settings: choose task, Enter edits, Esc closes");
     Ok(false)
 }
 
 /// Handle edit metadata action
 pub fn handle_edit_metadata(state: &mut AppState) -> Result<bool> {
     state.open_metadata_editor();
-    state.set_status("Edit Metadata - Tab: next field, Enter: save");
+    state.set_status("Metadata: Tab moves between fields, Enter saves");
     Ok(false)
 }
 
 /// Handle browse templates action
 pub fn handle_browse_templates(state: &mut AppState) -> Result<bool> {
     state.open_template_browser();
-    state.set_status("Template Browser - Enter: load, /: search");
+    state.set_status("Templates: Enter loads, / searches");
     Ok(false)
 }
 
@@ -67,12 +67,10 @@ pub fn handle_view_build_log(state: &mut AppState) -> Result<bool> {
 /// Handle open keycode picker action
 pub fn handle_open_keycode_picker(state: &mut AppState) -> Result<bool> {
     match get_selected_key_info(state) {
-        Some((key, true)) => {
-            // Key is assigned - open key editor
+        Some((key, _)) => {
             open_key_editor(state, &key);
         }
-        Some((_, false)) | None => {
-            // Key is empty or no key selected - open keycode picker
+        None => {
             open_keycode_picker_for_empty_key(state);
         }
     }
@@ -92,7 +90,7 @@ fn open_key_editor(state: &mut AppState, key: &KeyDefinition) {
         .key_editor_state
         .init_for_key(key, state.current_layer);
     state.active_popup = Some(PopupType::KeyEditor);
-    state.set_status("Key editor - Enter: Reassign, D: Description, C: Color");
+    state.set_status("Key details - review current key, Enter to assign keycode");
 }
 
 /// Open keycode picker for an empty/unassigned key
@@ -127,6 +125,6 @@ pub fn handle_setup_wizard(state: &mut AppState) -> Result<bool> {
 /// Handle open tap dance editor action
 pub fn handle_open_tap_dance_editor(state: &mut AppState) -> Result<bool> {
     state.open_tap_dance_editor();
-    state.set_status("Tap Dance Editor - n: new, d: delete, Enter: select, Esc: cancel");
+    state.set_status("Tap Dance Editor - visible actions shown in status bar and help");
     Ok(false)
 }

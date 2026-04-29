@@ -24,6 +24,8 @@ use crate::keycode_db::TapHoldType;
 /// Keyboard widget renders the visual keyboard layout
 pub struct KeyboardWidget;
 
+const KEYBOARD_FOOTER_HEIGHT: u16 = 3;
+
 /// Parsed representation of a tap-hold keycode
 #[derive(Debug, Clone)]
 pub struct TapHoldKeycode {
@@ -92,6 +94,18 @@ impl KeyboardWidget {
             height: area.height.saturating_sub(2),
         };
 
+        let footer_height = if inner_area.height > KEYBOARD_FOOTER_HEIGHT + 4 {
+            KEYBOARD_FOOTER_HEIGHT
+        } else {
+            0
+        };
+        let keys_area = Rect {
+            x: inner_area.x,
+            y: inner_area.y,
+            width: inner_area.width,
+            height: inner_area.height.saturating_sub(footer_height),
+        };
+
         // Calculate key dimensions from scaled values
         // Base: 1u width = scale_x chars, 1u height = scale_y lines
         // Add 2 for borders, enforce minimums for content visibility
@@ -124,23 +138,21 @@ impl KeyboardWidget {
             // Calculate key position based on visual grid
             // Note: For proper physical layout rendering, we'd use terminal_x/y,
             // but the current navigation system expects a grid-based layout
-            let key_x = inner_area.x + (col * default_key_width) as u16;
-            let key_y = inner_area.y + (row * default_key_height) as u16;
+            let key_x = keys_area.x + (col * default_key_width) as u16;
+            let key_y = keys_area.y + (row * default_key_height) as u16;
 
             // Skip if key is outside visible area
-            if key_x >= inner_area.x + inner_area.width || key_y >= inner_area.y + inner_area.height
-            {
+            if key_x >= keys_area.x + keys_area.width || key_y >= keys_area.y + keys_area.height {
                 continue;
             }
 
             let key_area = Rect {
                 x: key_x,
                 y: key_y,
-                width: key_width
-                    .min((inner_area.x + inner_area.width).saturating_sub(key_x) as usize)
+                width: key_width.min((keys_area.x + keys_area.width).saturating_sub(key_x) as usize)
                     as u16,
                 height: key_height
-                    .min((inner_area.y + inner_area.height).saturating_sub(key_y) as usize)
+                    .min((keys_area.y + keys_area.height).saturating_sub(key_y) as usize)
                     as u16,
             };
 
@@ -257,10 +269,27 @@ impl KeyboardWidget {
                 })
                 .unwrap_or(false);
 
+            let state_marker = if is_flashing {
+                '*'
+            } else if is_selected {
+                '@'
+            } else if is_swap_first {
+                's'
+            } else if is_in_selection {
+                '+'
+            } else if is_cut_source {
+                'x'
+            } else if has_hold_like_inbound {
+                '!'
+            } else {
+                ' '
+            };
+
             Self::render_key_with_indicator(
                 f,
                 key_area,
                 &content,
+                state_marker,
                 color_indicator,
                 key_color,
                 is_selected,
@@ -272,6 +301,59 @@ impl KeyboardWidget {
                 theme,
             );
         }
+
+        if footer_height > 0 {
+            Self::render_footer(
+                f,
+                Rect {
+                    x: inner_area.x,
+                    y: inner_area.y + inner_area.height.saturating_sub(footer_height),
+                    width: inner_area.width,
+                    height: footer_height,
+                },
+                state,
+            );
+        }
+    }
+
+    fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
+        let theme = &state.theme;
+        let selected_key = state.get_selected_key();
+        let selection_text = selected_key.map_or_else(
+            || "Selected: none".to_string(),
+            |key| {
+                format!(
+                    "Selected: L{} ({}, {}) {}",
+                    state.current_layer,
+                    state.selected_position.row,
+                    state.selected_position.col,
+                    Self::format_simple_keycode(&key.keycode)
+                )
+            },
+        );
+
+        let actions =
+            "Actions: Enter key actions  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
+        let legend = format!(
+            "Legend: @ selected  + multi  x cut  s swap  ! inbound hold  * flash  • {}  • red outer border = inbound hold target",
+            Self::color_indicator_legend()
+        );
+
+        let footer = Paragraph::new(vec![
+            Line::from(Span::styled(
+                selection_text,
+                Style::default().fg(theme.text),
+            )),
+            Line::from(Span::styled(actions, Style::default().fg(theme.text_muted))),
+            Line::from(Span::styled(legend, Style::default().fg(theme.text_muted))),
+        ])
+        .style(Style::default().bg(theme.background));
+
+        f.render_widget(footer, area);
+    }
+
+    fn color_indicator_legend() -> &'static str {
+        "i key override  c key category  L layer category  d layer default  - colors off"
     }
 
     /// Render a key with the color indicator embedded in the top border
@@ -280,6 +362,7 @@ impl KeyboardWidget {
         f: &mut Frame,
         area: Rect,
         content: &[Line],
+        state_marker: char,
         indicator: &str,
         border_color: Color,
         is_selected: bool,
@@ -377,7 +460,7 @@ impl KeyboardWidget {
             }
         }
 
-        // Top border with indicator in right corner: ┌──────i┐
+        // Top border with state marker left and indicator right: ┌@─────i┐
         let top_y = area.y;
         let left_x = area.x;
         let right_x = area.x + area.width.saturating_sub(1);
@@ -400,7 +483,11 @@ impl KeyboardWidget {
 
             for i in 0..top_width {
                 let x = left_x + 1 + i as u16;
-                if i == indicator_pos {
+                if i == 0 && state_marker != ' ' {
+                    buf[(x, top_y)]
+                        .set_char(state_marker)
+                        .set_style(border_style.add_modifier(Modifier::BOLD));
+                } else if i == indicator_pos {
                     // Draw the indicator character with the border color
                     let indicator_style = if is_selected {
                         Style::default()
@@ -633,5 +720,13 @@ mod tests {
         assert_eq!(KeyboardWidget::truncate("ABC", 5), "ABC");
         assert_eq!(KeyboardWidget::truncate("ABCDEF", 5), "ABCDE");
         assert_eq!(KeyboardWidget::truncate("", 5), "");
+    }
+
+    #[test]
+    fn test_color_indicator_legend() {
+        assert_eq!(
+            KeyboardWidget::color_indicator_legend(),
+            "i key override  c key category  L layer category  d layer default  - colors off"
+        );
     }
 }

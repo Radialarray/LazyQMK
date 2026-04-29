@@ -23,6 +23,7 @@ use crate::config::Config;
 use crate::parser::keyboard_json::{
     extract_layout_names, parse_keyboard_info_json, scan_keyboards,
 };
+use crate::tui::help_registry::HelpRegistry;
 use crate::tui::layout_picker::LayoutPickerState;
 
 /// Onboarding wizard steps
@@ -77,13 +78,13 @@ impl WizardStep {
     #[must_use]
     pub const fn title(&self) -> &'static str {
         match self {
-            Self::Welcome => "Welcome to Keyboard TUI",
-            Self::QmkPath => "QMK Firmware Path",
-            Self::KeyboardSelection => "Select Keyboard",
-            Self::LayoutSelection => "Select Layout",
-            Self::LayoutName => "Layout File Name",
-            Self::OutputPath => "Firmware Output Path",
-            Self::Confirmation => "Confirm Configuration",
+            Self::Welcome => "Welcome to LazyQMK",
+            Self::QmkPath => "Connect QMK Firmware",
+            Self::KeyboardSelection => "Choose Keyboard",
+            Self::LayoutSelection => "Choose Layout Variant",
+            Self::LayoutName => "Name Layout File",
+            Self::OutputPath => "Choose Build Output Folder",
+            Self::Confirmation => "Review Setup",
         }
     }
 
@@ -648,18 +649,23 @@ fn render_welcome(
     area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
+    let app_name = HelpRegistry::default().app_name().to_string();
     let mut text = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "Welcome to Keyboard TUI!",
+            format!("Welcome to {app_name}"),
             Style::default()
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "Choose how to get started:",
+            "You can start safely with defaults and change everything later.",
             Style::default().fg(theme.text),
+        )),
+        Line::from(Span::styled(
+            "Pick quickest path to first working layout:",
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(""),
     ];
@@ -675,11 +681,16 @@ fn render_welcome(
         };
         text.push(Line::from(Span::styled(
             format!(
-                "  [1] Load Existing Layout ({} found)",
+                "  [1] Open existing layout ({} found)",
                 state.existing_layouts.len()
             ),
             load_existing_style,
         )));
+        text.push(Line::from(Span::styled(
+            format!("      Fastest option if you already saved layout with {app_name}."),
+            Style::default().fg(theme.text_muted),
+        )));
+        text.push(Line::from(""));
     }
 
     let from_scratch_index = usize::from(!state.existing_layouts.is_empty());
@@ -691,9 +702,14 @@ fn render_welcome(
         Style::default().fg(theme.text)
     };
     text.push(Line::from(Span::styled(
-        "  [2] Create From Scratch",
+        "  [2] Start with guided setup",
         from_scratch_style,
     )));
+    text.push(Line::from(Span::styled(
+        "      Recommended for first run. We help with keyboard, layout, and build output.",
+        Style::default().fg(theme.text_muted),
+    )));
+    text.push(Line::from(""));
 
     let from_template_index = if state.existing_layouts.is_empty() {
         1
@@ -708,13 +724,17 @@ fn render_welcome(
         Style::default().fg(theme.text)
     };
     text.push(Line::from(Span::styled(
-        "  [3] Create From Template",
+        "  [3] Start from template",
         from_template_style,
+    )));
+    text.push(Line::from(Span::styled(
+        "      Good when you want a strong starting point instead of empty layout.",
+        Style::default().fg(theme.text_muted),
     )));
 
     text.push(Line::from(""));
     text.push(Line::from(Span::styled(
-        "Use ↑↓ to navigate, Enter to select...",
+        "Use ↑↓ to move, Enter to continue. Esc exits setup.",
         Style::default().fg(theme.text_muted),
     )));
 
@@ -735,15 +755,20 @@ fn render_qmk_path_input(
     area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
+    let app_name = HelpRegistry::default().app_name().to_string();
     let text = vec![
         Line::from(""),
-        Line::from("Enter the path to your QMK firmware directory:"),
+        Line::from(format!(
+            "{app_name} needs your local QMK firmware folder for keyboard info and builds."
+        )),
+        Line::from("If you already use QMK, paste that folder path here."),
         Line::from(""),
         Line::from(Span::styled(
             format!("> {}_", state.input_buffer),
             Style::default().fg(theme.accent),
         )),
         Line::from(""),
+        Line::from("Common folder names: qmk_firmware or qmk."),
         Line::from("Example: /home/user/qmk_firmware"),
         Line::from("         C:\\Users\\user\\qmk_firmware"),
     ];
@@ -754,7 +779,7 @@ fn render_qmk_path_input(
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("QMK Path")
+                .title(" QMK firmware folder ")
                 .style(Style::default().fg(theme.primary).bg(theme.background)),
         );
     f.render_widget(paragraph, area);
@@ -859,9 +884,9 @@ fn render_keyboard_selection(
 
     // Help text
     let help_text = if filter_focused {
-        "Tab: Switch to list | Enter: Select (if 1 result) | Esc: Clear filter or back"
+        "Tab: Next focus | Shift+Tab: Stay here | Enter: Select (if 1 result) | Esc: Clear filter or back"
     } else {
-        "↑↓/jk: Navigate | Enter: Select | Tab: Back to filter | Esc: Back to filter"
+        "↑↓/jk: Navigate | Tab/Shift+Tab: Filter | Enter: Select | Esc: Back to filter"
     };
     let help = Paragraph::new(help_text)
         .style(Style::default().fg(theme.text_muted))
@@ -1040,12 +1065,12 @@ fn render_instructions(
     );
 
     let instructions = match state.current_step {
-        WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
+        WizardStep::Welcome => "↑↓: Choose path  |  Enter: Continue  |  Esc: Exit",
         WizardStep::QmkPath | WizardStep::LayoutName | WizardStep::OutputPath => {
             "Enter: Continue  |  Backspace: Delete  |  Esc: Back"
         }
         WizardStep::KeyboardSelection => {
-            "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back"
+            "Tab/Shift+Tab: Move focus  |  Type: Filter  |  ↑↓: Navigate  |  Enter: Select"
         }
         WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
@@ -1116,10 +1141,18 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
         },
         WizardStep::KeyboardSelection => match state.keyboard_selection_focus {
             KeyboardSelectionFocus::FilterInput => match key.code {
-                KeyCode::Tab => {
+                KeyCode::Tab
+                    if !key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
                     // Switch focus to list
                     state.keyboard_selection_focus = KeyboardSelectionFocus::List;
                 }
+                KeyCode::BackTab | KeyCode::Tab
+                    if key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) => {}
                 KeyCode::Enter => {
                     // Enter from filter: if only one result, select it; otherwise switch to list
                     let filtered = state.get_filtered_keyboards();
@@ -1156,7 +1189,18 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
                 _ => {}
             },
             KeyboardSelectionFocus::List => match key.code {
-                KeyCode::Tab => {
+                KeyCode::Tab
+                    if !key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
+                    state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
+                }
+                KeyCode::BackTab | KeyCode::Tab
+                    if key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
                     // Switch focus back to filter
                     state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
                 }

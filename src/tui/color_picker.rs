@@ -297,22 +297,22 @@ impl ColorPicker {
     /// Get the context-aware title text
     fn title_text(&self) -> &'static str {
         match self.context {
-            ColorPickerContext::IndividualKey => "Individual Key Color Picker",
-            ColorPickerContext::LayerDefault => "Layer Color Picker",
-            ColorPickerContext::Category => "Category Color Picker",
-            ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker",
-            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color Picker",
+            ColorPickerContext::IndividualKey => "Individual Key Color · Palette",
+            ColorPickerContext::LayerDefault => "Layer Color · Palette",
+            ColorPickerContext::Category => "Category Color · Palette",
+            ColorPickerContext::MultiKeySelection => "Multiple Keys Color · Palette",
+            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color · Palette",
         }
     }
 
     /// Get the context-aware title text for RGB mode
     fn title_text_rgb(&self) -> &'static str {
         match self.context {
-            ColorPickerContext::IndividualKey => "Individual Key Color Picker (Custom RGB)",
-            ColorPickerContext::LayerDefault => "Layer Color Picker (Custom RGB)",
-            ColorPickerContext::Category => "Category Color Picker (Custom RGB)",
-            ColorPickerContext::MultiKeySelection => "Multiple Keys Color Picker (Custom RGB)",
-            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color Picker (Custom RGB)",
+            ColorPickerContext::IndividualKey => "Individual Key Color · Custom RGB",
+            ColorPickerContext::LayerDefault => "Layer Color · Custom RGB",
+            ColorPickerContext::Category => "Category Color · Custom RGB",
+            ColorPickerContext::MultiKeySelection => "Multiple Keys Color · Custom RGB",
+            ColorPickerContext::OverlayRippleFixedColor => "Ripple Fixed Color · Custom RGB",
         }
     }
 }
@@ -504,7 +504,7 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
     } else {
         Style::default().fg(theme.text_muted)
     };
-    let step1 = Paragraph::new("Step 1: Choose Base Color").style(step1_style);
+    let step1 = Paragraph::new("Palette mode · Step 1: choose base color").style(step1_style);
     f.render_widget(step1, chunks[1]);
 
     // Color grid (4 columns x 3 rows)
@@ -518,7 +518,7 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
     } else {
         Style::default().fg(theme.text_muted)
     };
-    let step2 = Paragraph::new("Step 2: Choose Shade").style(step2_style);
+    let step2 = Paragraph::new("Palette mode · Step 2: choose shade").style(step2_style);
     f.render_widget(step2, chunks[4]);
 
     // Shade bar
@@ -534,7 +534,7 @@ fn render_palette_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Th
         Span::styled("Tab", Style::default().fg(theme.accent)),
         Span::raw(" Switch Step  "),
         Span::styled("c", Style::default().fg(theme.accent)),
-        Span::raw(" Custom RGB  "),
+        Span::raw(" Switch to Custom RGB  "),
         Span::styled("x", Style::default().fg(theme.accent)),
         Span::raw(" Clear  "),
         Span::styled("Enter", Style::default().fg(theme.accent)),
@@ -768,6 +768,10 @@ fn render_rgb_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme)
     );
     f.render_widget(title, chunks[0]);
 
+    let mode_label = Paragraph::new("Custom RGB mode · Tab/Shift+Tab changes channel")
+        .style(Style::default().fg(theme.text_muted));
+    f.render_widget(mode_label, chunks[0]);
+
     // Red channel slider
     render_channel_slider(
         f,
@@ -825,7 +829,7 @@ fn render_rgb_mode_component(f: &mut Frame, picker: &ColorPicker, theme: &Theme)
         Span::styled("Tab", Style::default().fg(theme.accent)),
         Span::raw(" Channel  "),
         Span::styled("p", Style::default().fg(theme.accent)),
-        Span::raw(" Palette  "),
+        Span::raw(" Switch to Palette  "),
         Span::styled("x", Style::default().fg(theme.accent)),
         Span::raw(" Clear  "),
         Span::styled("Enter", Style::default().fg(theme.accent)),

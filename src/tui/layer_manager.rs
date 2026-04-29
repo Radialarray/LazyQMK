@@ -1,7 +1,7 @@
 //! Layer manager for CRUD operations on layers.
 //!
 //! Provides a UI for creating, renaming, reordering, toggling colors, and deleting layers.
-//! Accessible via Shift+Y shortcut.
+//! Accessible via Shift+L shortcut.
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
@@ -762,7 +762,7 @@ pub fn render_layer_manager(
     // Background block
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Layer Manager (Shift+Y) ")
+        .title(" Layers (Shift+L) ")
         .style(Style::default().bg(theme.background));
 
     f.render_widget(block, dialog_area);
@@ -909,7 +909,11 @@ fn render_layer_list(
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Layers"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Layers in this layout"),
+        )
         .highlight_style(Style::default().bg(theme.surface));
 
     f.render_widget(list, chunks[0]);
@@ -919,9 +923,9 @@ fn render_layer_list(
         Line::from(""),
         Line::from(vec![
             Span::styled("n", Style::default().fg(theme.primary)),
-            Span::raw(": New  "),
+            Span::raw(": Add  "),
             Span::styled("D", Style::default().fg(theme.primary)),
-            Span::raw(": Duplicate  "),
+            Span::raw(": Copy layer  "),
             Span::styled("r", Style::default().fg(theme.primary)),
             Span::raw(": Rename  "),
             Span::styled("d", Style::default().fg(theme.primary)),
@@ -929,19 +933,19 @@ fn render_layer_list(
         ]),
         Line::from(vec![
             Span::styled("c", Style::default().fg(theme.primary)),
-            Span::raw(": Copy to  "),
+            Span::raw(": Copy keys to  "),
             Span::styled("s", Style::default().fg(theme.primary)),
-            Span::raw(": Swap with  "),
+            Span::raw(": Swap keys with  "),
             Span::styled("v", Style::default().fg(theme.primary)),
-            Span::raw(": Toggle Colors"),
+            Span::raw(": Layer colors on/off"),
         ]),
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
-            Span::raw(": Navigate  "),
+            Span::raw(": Move selection  "),
             Span::styled("Shift+↑/↓", Style::default().fg(theme.primary)),
-            Span::raw(": Reorder  "),
+            Span::raw(": Reorder layers  "),
             Span::styled("Enter", Style::default().fg(theme.primary)),
-            Span::raw(": Go to"),
+            Span::raw(": Switch to layer"),
         ]),
         Line::from(vec![
             Span::styled("Esc", Style::default().fg(theme.primary)),
@@ -950,7 +954,11 @@ fn render_layer_list(
     ];
 
     let help = Paragraph::new(help_text)
-        .block(Block::default().borders(Borders::ALL).title("Help"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("What you can do"),
+        )
         .alignment(Alignment::Left);
 
     f.render_widget(help, chunks[1]);

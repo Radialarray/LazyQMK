@@ -79,6 +79,10 @@ pub fn handle_template_save_dialog_input(
                 .pop();
             Ok(false)
         }
+        KeyCode::BackTab => {
+            state.template_save_dialog_state.previous_field();
+            Ok(false)
+        }
         KeyCode::Tab => {
             // Move to next field
             if key.modifiers.contains(KeyModifiers::SHIFT) {

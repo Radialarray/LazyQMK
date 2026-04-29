@@ -277,13 +277,12 @@ impl ShortcutRegistry {
 
         // === KEY EDITING ===
         self.register(ctx, K::Enter, M::NONE, Action::OpenKeycodePicker);
-        self.register(ctx, K::Char('x'), M::NONE, Action::ClearKey);
+        self.register(ctx, K::Backspace, M::NONE, Action::ClearKey);
         self.register(ctx, K::Delete, M::NONE, Action::ClearKey);
 
         // === CLIPBOARD ===
         self.register(ctx, K::Char('y'), M::NONE, Action::CopyKey);
         self.register(ctx, K::Char('c'), M::CONTROL, Action::CopyKey);
-        self.register(ctx, K::Char('d'), M::NONE, Action::CutKey);
         self.register(ctx, K::Char('x'), M::CONTROL, Action::CutKey);
         self.register(ctx, K::Char('p'), M::NONE, Action::PasteKey);
         self.register(ctx, K::Char('v'), M::CONTROL, Action::PasteKey);
@@ -328,7 +327,7 @@ impl ShortcutRegistry {
 
         // === CONFIGURATION ===
         self.register(ctx, K::Char('w'), M::CONTROL, Action::SetupWizard);
-        self.register(ctx, K::Char('y'), M::CONTROL, Action::SwitchLayoutVariant);
+        self.register(ctx, K::Char('Y'), M::SHIFT, Action::SwitchLayoutVariant);
 
         // === HELP ===
         self.register(ctx, K::Char('?'), M::NONE, Action::ToggleHelp);
@@ -413,6 +412,13 @@ mod tests {
         let event = KeyEvent::new(KeyCode::Char('B'), KeyModifiers::SHIFT);
         assert_eq!(registry.lookup("main", event), Some(Action::ViewBuildLog));
 
+        // Test safer layout variant shortcut
+        let event = KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::SHIFT);
+        assert_eq!(
+            registry.lookup("main", event),
+            Some(Action::SwitchLayoutVariant)
+        );
+
         // Test new metadata editor shortcut
         let event = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::SHIFT);
         assert_eq!(registry.lookup("main", event), Some(Action::EditMetadata));
@@ -428,6 +434,44 @@ mod tests {
         assert_eq!(
             registry.lookup("main", event),
             Some(Action::AssignCategoryToLayer)
+        );
+    }
+
+    #[test]
+    fn test_destructive_shortcuts_require_deliberate_keys() {
+        let registry = ShortcutRegistry::new();
+
+        assert_eq!(
+            registry.lookup(
+                "main",
+                KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE)
+            ),
+            None,
+            "plain x should not clear or cut keys"
+        );
+        assert_eq!(
+            registry.lookup(
+                "main",
+                KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE)
+            ),
+            None,
+            "plain d should not cut keys"
+        );
+        assert_eq!(
+            registry.lookup(
+                "main",
+                KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)
+            ),
+            Some(Action::ClearKey),
+            "backspace should clear key"
+        );
+        assert_eq!(
+            registry.lookup(
+                "main",
+                KeyEvent::new(KeyCode::Char('x'), KeyModifiers::CONTROL)
+            ),
+            Some(Action::CutKey),
+            "cut should remain on Ctrl+X"
         );
     }
 

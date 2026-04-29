@@ -185,7 +185,7 @@ pub fn dispatch_action(state: &mut AppState, action: Action) -> Result<bool> {
                 state.set_status("Selection cancelled");
             } else if state.clipboard.is_cut() {
                 state.clipboard.cancel_cut();
-                state.set_status("Cut cancelled");
+                state.set_status("Queued cut cancelled - source keys kept");
             } else if state.clipboard.has_content() {
                 // Clear clipboard if there's content but no active cut
                 state.clipboard.clear();

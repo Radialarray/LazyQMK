@@ -20,11 +20,13 @@ pub fn handle_clear_key(state: &mut AppState) -> Result<bool> {
         state.selected_keys.clear();
         state.selection_mode = None;
         state.mark_dirty();
-        state.set_status(format!("Cleared {count} keys"));
+        state.set_status(format!(
+            "Cleared {count} keys to KC_TRNS (clipboard unchanged)"
+        ));
     } else if let Some(key) = state.get_selected_key_mut() {
         key.keycode = "KC_TRNS".to_string();
         state.mark_dirty();
-        state.set_status("Key cleared (KC_TRNS)");
+        state.set_status("Key cleared to KC_TRNS (clipboard unchanged)");
     }
     Ok(false)
 }
@@ -55,7 +57,7 @@ pub fn handle_copy_key(state: &mut AppState) -> Result<bool> {
         let msg = state.clipboard.copy_multi(keys, anchor);
         state.selection_mode = None;
         state.selected_keys.clear();
-        state.set_status(msg);
+        state.set_status(format!("{msg} - original stays until paste"));
     } else if let Some(key) = state.get_selected_key() {
         // Clone key data to avoid borrow conflict with clipboard
         let keycode = key.keycode.clone();
@@ -64,7 +66,7 @@ pub fn handle_copy_key(state: &mut AppState) -> Result<bool> {
         let msg = state
             .clipboard
             .copy(&keycode, color_override, category_id.as_deref());
-        state.set_status(msg);
+        state.set_status(format!("{msg} - original stays until paste"));
     } else {
         state.set_error("No key to copy");
     }

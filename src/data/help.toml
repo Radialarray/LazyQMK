@@ -4,7 +4,7 @@
 
 [meta]
 version = "1.0"
-app_name = "Keyboard Layout Editor"
+app_name = "LazyQMK"
 
 # =============================================================================
 # MAIN VIEW - Default keyboard editing context
@@ -38,13 +38,14 @@ priority = 11
 
 [[contexts.main.bindings]]
 keys = ["Enter"]
-action = "Open keycode picker"
-hint = "Edit"
+action = "Open key details"
+hint = "Details"
 priority = 2
 
 [[contexts.main.bindings]]
-keys = ["x", "Delete"]
-action = "Clear key (KC_TRNS)"
+keys = ["Backspace", "Delete"]
+action = "Clear key"
+hint = "Clear"
 priority = 12
 
 [[contexts.main.bindings]]
@@ -96,8 +97,8 @@ action = "Copy key"
 priority = 19
 
 [[contexts.main.bindings]]
-keys = ["d", "Ctrl+X"]
-action = "Cut key"
+keys = ["Ctrl+X"]
+action = "Cut key for next paste"
 priority = 19
 
 [[contexts.main.bindings]]
@@ -131,6 +132,7 @@ priority = 24
 [[contexts.main.bindings]]
 keys = ["Ctrl+S"]
 action = "Save layout"
+hint = "Save"
 priority = 25
 
 [[contexts.main.bindings]]
@@ -152,6 +154,7 @@ priority = 28
 [[contexts.main.bindings]]
 keys = ["Ctrl+B"]
 action = "Build firmware"
+hint = "Build"
 priority = 28
 
 [[contexts.main.bindings]]
@@ -161,13 +164,14 @@ priority = 29
 
 [[contexts.main.bindings]]
 keys = ["Shift+D"]
-action = "Tap dance editor"
-hint = "TapDance"
-priority = 30
+action = "Open tap dance editor"
+hint = "Tap Dance"
+priority = 5
 
 [[contexts.main.bindings]]
 keys = ["Shift+S"]
-action = "Settings"
+action = "Open settings by task"
+hint = "Settings"
 priority = 31
 
 [[contexts.main.bindings]]
@@ -186,7 +190,7 @@ action = "Setup wizard"
 priority = 34
 
 [[contexts.main.bindings]]
-keys = ["Ctrl+Y"]
+keys = ["Shift+Y"]
 action = "Switch layout variant"
 priority = 35
 
@@ -194,7 +198,7 @@ priority = 35
 keys = ["?"]
 action = "Toggle help"
 hint = "Help"
-priority = 5
+priority = 6
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+Q"]
@@ -358,8 +362,8 @@ priority = 7
 # =============================================================================
 
 [contexts.layer_manager]
-name = "Layer Manager"
-description = "Manage layout layers"
+name = "Layers"
+description = "Add, rename, reorder, copy, and delete layout layers"
 
 [[contexts.layer_manager.bindings]]
 keys = ["↑", "↓"]
@@ -369,13 +373,13 @@ priority = 1
 
 [[contexts.layer_manager.bindings]]
 keys = ["n"]
-action = "New layer"
+action = "Add layer"
 hint = "New"
 priority = 2
 
 [[contexts.layer_manager.bindings]]
 keys = ["D"]
-action = "Duplicate layer"
+action = "Copy layer"
 hint = "Duplicate"
 priority = 3
 
@@ -387,17 +391,17 @@ priority = 4
 
 [[contexts.layer_manager.bindings]]
 keys = ["c"]
-action = "Copy to layer"
+action = "Copy keys to another layer"
 priority = 10
 
 [[contexts.layer_manager.bindings]]
 keys = ["s"]
-action = "Swap with layer"
+action = "Swap keys with another layer"
 priority = 11
 
 [[contexts.layer_manager.bindings]]
 keys = ["v"]
-action = "Toggle colors"
+action = "Toggle layer colors"
 priority = 12
 
 [[contexts.layer_manager.bindings]]
@@ -413,7 +417,7 @@ priority = 13
 
 [[contexts.layer_manager.bindings]]
 keys = ["Enter"]
-action = "Go to layer"
+action = "Switch to selected layer"
 hint = "Select"
 priority = 6
 
@@ -428,8 +432,8 @@ priority = 7
 # =============================================================================
 
 [contexts.category_manager]
-name = "Category Manager"
-description = "Manage key categories"
+name = "Key Categories"
+description = "Name, recolor, and delete categories used in this layout"
 
 [[contexts.category_manager.bindings]]
 keys = ["↑", "↓"]
@@ -445,19 +449,19 @@ priority = 2
 
 [[contexts.category_manager.bindings]]
 keys = ["r"]
-action = "Rename"
+action = "Rename category"
 hint = "Rename"
 priority = 3
 
 [[contexts.category_manager.bindings]]
 keys = ["c"]
-action = "Change color"
+action = "Change category color"
 hint = "Color"
 priority = 4
 
 [[contexts.category_manager.bindings]]
 keys = ["d"]
-action = "Delete"
+action = "Delete category"
 hint = "Delete"
 priority = 5
 
@@ -494,7 +498,7 @@ hint = "Edit"
 priority = 3
 
 [[contexts.tap_dance_editor.bindings]]
-keys = ["d"]
+keys = ["Shift+D"]
 action = "Delete selected tap dance"
 hint = "Delete"
 priority = 4
@@ -686,7 +690,7 @@ priority = 3
 
 [contexts.help]
 name = "Help"
-description = "Help overlay"
+description = "Task-oriented help overlay"
 
 [[contexts.help.bindings]]
 keys = ["↑", "↓"]
@@ -716,7 +720,7 @@ priority = 2
 
 [contexts.selection]
 name = "Selection Mode"
-description = "Multi-key selection for copy/cut/color/category"
+description = "Multi-key selection for copy, move, clear, color, and category edits"
 
 [[contexts.selection.bindings]]
 keys = ["↑", "↓", "←", "→"]
@@ -750,14 +754,20 @@ priority = 5
 
 [[contexts.selection.bindings]]
 keys = ["y"]
-action = "Copy selected"
+action = "Copy selected keys"
 hint = "Copy"
 priority = 6
 
 [[contexts.selection.bindings]]
-keys = ["d"]
-action = "Cut selected"
+keys = ["Ctrl+X"]
+action = "Cut selected keys for next paste"
 hint = "Cut"
+priority = 7
+
+[[contexts.selection.bindings]]
+keys = ["Backspace", "Delete"]
+action = "Clear selected keys"
+hint = "Clear"
 priority = 7
 
 [[contexts.selection.bindings]]
@@ -813,16 +823,22 @@ hint = "Next"
 priority = 1
 
 [[contexts.template_save.bindings]]
+keys = ["Shift+Tab"]
+action = "Previous field"
+hint = "Prev"
+priority = 2
+
+[[contexts.template_save.bindings]]
 keys = ["Enter"]
 action = "Save"
 hint = "Save"
-priority = 2
+priority = 3
 
 [[contexts.template_save.bindings]]
 keys = ["Esc"]
 action = "Cancel"
 hint = "Cancel"
-priority = 3
+priority = 4
 
 # =============================================================================
 # EXPORT FILENAME DIALOG
@@ -887,7 +903,7 @@ priority = 3
 
 [contexts.layout_picker]
 name = "Layout Picker"
-description = "Select keyboard layout variant"
+description = "Choose saved layout to open or start fresh"
 
 [[contexts.layout_picker.bindings]]
 keys = ["↑", "↓"]
@@ -897,7 +913,7 @@ priority = 1
 
 [[contexts.layout_picker.bindings]]
 keys = ["Enter"]
-action = "Select"
+action = "Open selected layout"
 hint = "Select"
 priority = 2
 
@@ -960,16 +976,22 @@ hint = "Navigate"
 priority = 1
 
 [[contexts.setup_wizard.bindings]]
+keys = ["Tab", "Shift+Tab"]
+action = "Move focus between fields"
+hint = "Focus"
+priority = 2
+
+[[contexts.setup_wizard.bindings]]
 keys = ["Enter"]
 action = "Next/Confirm"
 hint = "Next"
-priority = 2
+priority = 3
 
 [[contexts.setup_wizard.bindings]]
 keys = ["Esc"]
 action = "Back/Cancel"
 hint = "Back"
-priority = 3
+priority = 4
 
 # =============================================================================
 # UNSAVED CHANGES PROMPT
@@ -980,13 +1002,13 @@ name = "Unsaved Changes"
 description = "Prompt when quitting with unsaved changes"
 
 [[contexts.unsaved_prompt.bindings]]
-keys = ["y"]
+keys = ["Ctrl+S", "s"]
 action = "Save and quit"
 hint = "Save"
 priority = 1
 
 [[contexts.unsaved_prompt.bindings]]
-keys = ["n"]
+keys = ["Ctrl+Q", "q"]
 action = "Discard and quit"
 hint = "Discard"
 priority = 2

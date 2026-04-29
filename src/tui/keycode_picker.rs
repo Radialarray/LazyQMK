@@ -11,7 +11,7 @@ use ratatui::{
     Frame,
 };
 
-use super::component::ContextualComponent;
+use super::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
 use crate::keycode_db::KeycodeDb;
 
 /// Events emitted by the KeycodePicker component
@@ -123,6 +123,15 @@ impl KeycodePickerState {
 pub struct KeycodePicker {
     /// Internal state of the keycode picker
     state: KeycodePickerState,
+    /// Optional flow context shown above picker content
+    flow_context: Option<KeycodeFlowContext>,
+}
+
+/// Context banner for picker flows launched from another editor.
+#[derive(Debug, Clone)]
+struct KeycodeFlowContext {
+    title: String,
+    subtitle: String,
 }
 
 impl KeycodePicker {
@@ -131,6 +140,7 @@ impl KeycodePicker {
     pub fn new() -> Self {
         Self {
             state: KeycodePickerState::new(),
+            flow_context: None,
         }
     }
 
@@ -142,7 +152,16 @@ impl KeycodePicker {
     pub fn with_language(last_language: Option<String>, keycode_db: &KeycodeDb) -> Self {
         Self {
             state: KeycodePickerState::with_language(last_language, keycode_db),
+            flow_context: None,
         }
+    }
+
+    /// Attach contextual banner for nested picker flows.
+    pub fn set_flow_context(&mut self, title: impl Into<String>, subtitle: impl Into<String>) {
+        self.flow_context = Some(KeycodeFlowContext {
+            title: title.into(),
+            subtitle: subtitle.into(),
+        });
     }
 
     /// Get the current state (for rendering with parent context)
@@ -444,7 +463,7 @@ fn render_keycode_picker_component(
     context: &KeycodeDb,
     theme: &super::Theme,
 ) {
-    render_keycode_picker_internal(f, picker.state(), context, theme);
+    render_keycode_picker_internal(f, picker.state(), context, theme, picker.flow_context.as_ref());
 }
 
 /// Internal shared rendering function for keycode picker
@@ -454,6 +473,7 @@ fn render_keycode_picker_internal(
     picker_state: &KeycodePickerState,
     context: &KeycodeDb,
     theme: &super::Theme,
+    flow_context: Option<&KeycodeFlowContext>,
 ) {
     let area = centered_rect(80, 85, f.area());
 
@@ -464,6 +484,48 @@ fn render_keycode_picker_internal(
     let background = Block::default().style(Style::default().bg(theme.background));
     f.render_widget(background, area);
 
+    let popup_type = PopupType::KeycodePicker;
+    let frame_block = Block::default()
+        .title(popup_title(&popup_type, "Keycodes"))
+        .borders(Borders::ALL)
+        .border_style(popup_border_style(&popup_type, theme))
+        .style(Style::default().bg(theme.background));
+    let inner = frame_block.inner(area);
+    f.render_widget(frame_block, area);
+
+    let outer_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(if flow_context.is_some() {
+            [Constraint::Length(4), Constraint::Min(10)]
+        } else {
+            [Constraint::Length(0), Constraint::Min(10)]
+        })
+        .split(inner);
+
+    if let Some(flow_context) = flow_context {
+        let banner = Paragraph::new(vec![
+            Line::from(vec![
+                Span::styled(" Flow: ", Style::default().fg(theme.primary)),
+                Span::styled(
+                    &flow_context.title,
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(Span::styled(
+                &flow_context.subtitle,
+                Style::default().fg(theme.text_muted),
+            )),
+        ])
+        .block(
+            Block::default()
+                .title(" Return path ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(theme.accent))
+                .style(Style::default().bg(theme.background)),
+        );
+        f.render_widget(banner, outer_chunks[0]);
+    }
+
     // Main horizontal split: sidebar (20%) | content (80%)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -471,7 +533,7 @@ fn render_keycode_picker_internal(
             Constraint::Length(22), // Fixed width sidebar for category names
             Constraint::Min(40),    // Keycode list takes remaining space
         ])
-        .split(area);
+        .split(outer_chunks[1]);
 
     let sidebar_area = main_chunks[0];
     let content_area = main_chunks[1];

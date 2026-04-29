@@ -15,6 +15,33 @@ use crate::tui::{
     PopupType,
 };
 
+fn tap_dance_flow_label(target: crate::tui::tap_dance_form::FormRow) -> &'static str {
+    match target {
+        crate::tui::tap_dance_form::FormRow::Name => "Name",
+        crate::tui::tap_dance_form::FormRow::Single => "Single tap",
+        crate::tui::tap_dance_form::FormRow::Double => "Double tap",
+        crate::tui::tap_dance_form::FormRow::Hold => "Hold",
+    }
+}
+
+fn open_tap_dance_picker_with_context(
+    state: &mut AppState,
+    target: crate::tui::tap_dance_form::FormRow,
+    status: &str,
+) {
+    let mut picker = keycode_picker::KeycodePicker::with_language(
+        state.config.ui.last_language.clone(),
+        &state.keycode_db,
+    );
+    picker.set_flow_context(
+        format!("Tap dance → {}", tap_dance_flow_label(target)),
+        "Esc returns to tap dance form without losing draft. Enter applies chosen keycode.",
+    );
+    state.active_component = Some(ActiveComponent::KeycodePicker(picker));
+    state.active_popup = Some(PopupType::KeycodePicker);
+    state.set_status(status);
+}
+
 /// Extracts the tap dance name from a TD(name) keycode.
 /// Returns None if the keycode is not a valid TD() pattern.
 fn extract_td_name(keycode: &str) -> Option<String> {
@@ -1223,33 +1250,37 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
             TapDanceFormEvent::PickSingle => {
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
-                state.tap_dance_form_pick_target =
-                    Some(crate::tui::tap_dance_form::FormRow::Single);
-
-                // Open keycode picker
-                state.open_keycode_picker();
-                state.set_status("Select single tap keycode (required)");
+                let target = crate::tui::tap_dance_form::FormRow::Single;
+                state.tap_dance_form_pick_target = Some(target);
+                open_tap_dance_picker_with_context(
+                    state,
+                    target,
+                    "Select single tap keycode (required)",
+                );
                 return Ok(false);
             }
             TapDanceFormEvent::PickDouble => {
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
-                state.tap_dance_form_pick_target =
-                    Some(crate::tui::tap_dance_form::FormRow::Double);
-
-                // Open keycode picker
-                state.open_keycode_picker();
-                state.set_status("Select double tap keycode (required)");
+                let target = crate::tui::tap_dance_form::FormRow::Double;
+                state.tap_dance_form_pick_target = Some(target);
+                open_tap_dance_picker_with_context(
+                    state,
+                    target,
+                    "Select double tap keycode (required)",
+                );
                 return Ok(false);
             }
             TapDanceFormEvent::PickHold => {
                 // Cache the form and set pick target
                 state.tap_dance_form_cache = Some(component);
-                state.tap_dance_form_pick_target = Some(crate::tui::tap_dance_form::FormRow::Hold);
-
-                // Open keycode picker
-                state.open_keycode_picker();
-                state.set_status("Select hold keycode (optional, Esc to skip)");
+                let target = crate::tui::tap_dance_form::FormRow::Hold;
+                state.tap_dance_form_pick_target = Some(target);
+                open_tap_dance_picker_with_context(
+                    state,
+                    target,
+                    "Select hold keycode (optional, Esc to skip)",
+                );
                 return Ok(false);
             }
             TapDanceFormEvent::Save(tap_dance, editing_index) => {
@@ -1335,7 +1366,16 @@ pub fn handle_tap_dance_form_input(state: &mut AppState, key: event::KeyEvent) -
                         state.set_status("Tap dance form cancelled");
                     }
                     crate::tui::TapDanceFormContext::FromKeycodePicker => {
-                        state.open_keycode_picker();
+                        let mut picker = keycode_picker::KeycodePicker::with_language(
+                            state.config.ui.last_language.clone(),
+                            &state.keycode_db,
+                        );
+                        picker.set_flow_context(
+                            "Tap dance setup".to_string(),
+                            "Esc closes picker. Choose TD() again to reopen tap dance form.",
+                        );
+                        state.active_component = Some(ActiveComponent::KeycodePicker(picker));
+                        state.active_popup = Some(PopupType::TapKeycodePicker);
                         state.set_status("Tap dance form cancelled");
                     }
                 }
@@ -1412,7 +1452,9 @@ pub fn handle_export_filename_dialog_input(
 /// Handle input for unsaved changes prompt
 pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
-        KeyCode::Char('s' | 'S') => {
+        KeyCode::Char('s' | 'S')
+            if key.modifiers.is_empty() || key.modifiers == KeyModifiers::CONTROL =>
+        {
             // Save and quit
             if let Some(path) = &state.source_path.clone() {
                 LayoutService::save(&state.layout, path)?;
@@ -1422,7 +1464,9 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
             state.should_quit = true;
             Ok(true)
         }
-        KeyCode::Char('q' | 'Q') => {
+        KeyCode::Char('q' | 'Q')
+            if key.modifiers.is_empty() || key.modifiers == KeyModifiers::CONTROL =>
+        {
             // Quit without saving
             state.should_quit = true;
             Ok(true)

@@ -131,18 +131,17 @@ impl HelpOverlayState {
     fn add_section_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
-            format!("═══ {title} ═══"),
+            title.to_string(),
             Style::default()
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         )]));
-        lines.push(Line::from(""));
     }
 
     /// Add a subsection header (for "In X:" labels)
     fn add_subsection_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
         lines.push(Line::from(vec![Span::styled(
-            format!("  {title}:"),
+            format!("  {title}"),
             Style::default().fg(theme.text_muted),
         )]));
     }
@@ -160,7 +159,7 @@ impl HelpOverlayState {
             .get_context(context_name)
             .map_or(fallback_title, |ctx| ctx.name.as_str());
         lines.push(Line::from(vec![Span::styled(
-            format!("  In {title}:"),
+            format!("  In {title}"),
             Style::default().fg(theme.text_muted),
         )]));
     }
@@ -197,12 +196,12 @@ impl HelpOverlayState {
 
         // Use app_name from registry metadata for dynamic header
         let app_name = registry.app_name();
-        let header_text = format!("{app_name} - Help");
+        let header_text = format!("{app_name} task guide");
         let padded_header = format!("{header_text:^65}");
 
         // Header
         lines.push(Line::from(vec![Span::styled(
-            "═══════════════════════════════════════════════════════════════",
+            "───────────────────────────────────────────────────────────────",
             Style::default().fg(theme.primary),
         )]));
         lines.push(Line::from(vec![Span::styled(
@@ -212,14 +211,14 @@ impl HelpOverlayState {
                 .add_modifier(Modifier::BOLD),
         )]));
         lines.push(Line::from(vec![Span::styled(
-            "═══════════════════════════════════════════════════════════════",
+            "───────────────────────────────────────────────────────────────",
             Style::default().fg(theme.primary),
         )]));
 
         // =====================================================================
         // NAVIGATION - subset of main bindings
         // =====================================================================
-        Self::add_section_header(&mut lines, "NAVIGATION", theme);
+        Self::add_section_header(&mut lines, "MOVE AROUND", theme);
 
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
@@ -239,7 +238,7 @@ impl HelpOverlayState {
         // =====================================================================
         // LAYERS
         // =====================================================================
-        Self::add_section_header(&mut lines, "LAYERS", theme);
+        Self::add_section_header(&mut lines, "WORK WITH LAYERS", theme);
 
         // Main layer shortcuts
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
@@ -275,7 +274,7 @@ impl HelpOverlayState {
         // =====================================================================
         // KEY EDITOR
         // =====================================================================
-        Self::add_section_header(&mut lines, "KEY EDITOR", theme);
+        Self::add_section_header(&mut lines, "EDIT KEYS", theme);
 
         // Main key editing shortcuts
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
@@ -358,7 +357,7 @@ impl HelpOverlayState {
         // =====================================================================
         // CLIPBOARD
         // =====================================================================
-        Self::add_section_header(&mut lines, "CLIPBOARD", theme);
+        Self::add_section_header(&mut lines, "COPY, PASTE, AND SELECT", theme);
 
         lines.push(Line::from(vec![Span::styled(
             "  Single key operations:",
@@ -389,7 +388,7 @@ impl HelpOverlayState {
         }
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "Multi-key selection", theme);
+        Self::add_subsection_header(&mut lines, "Task: edit many keys at once", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::SELECTION, theme, key_style);
 
         lines.push(Line::from(""));
@@ -405,7 +404,7 @@ impl HelpOverlayState {
         // =====================================================================
         // COLOR SYSTEM
         // =====================================================================
-        Self::add_section_header(&mut lines, "COLOR SYSTEM", theme);
+        Self::add_section_header(&mut lines, "CHANGE COLORS", theme);
 
         // Main color shortcuts
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
@@ -428,7 +427,7 @@ impl HelpOverlayState {
             Style::default().fg(theme.text_muted),
         )]));
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In color picker (Palette mode)", theme);
+        Self::add_subsection_header(&mut lines, "Task: pick from saved palette", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -438,7 +437,7 @@ impl HelpOverlayState {
         );
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In color picker (Custom RGB mode)", theme);
+        Self::add_subsection_header(&mut lines, "Task: dial in custom RGB", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -448,7 +447,7 @@ impl HelpOverlayState {
         );
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "Color priority (highest to lowest)", theme);
+        Self::add_subsection_header(&mut lines, "How color wins when rules overlap", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -460,7 +459,7 @@ impl HelpOverlayState {
         // =====================================================================
         // CATEGORY SYSTEM
         // =====================================================================
-        Self::add_section_header(&mut lines, "CATEGORY SYSTEM", theme);
+        Self::add_section_header(&mut lines, "ORGANIZE WITH CATEGORIES", theme);
 
         // Main category shortcuts
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
@@ -482,7 +481,7 @@ impl HelpOverlayState {
             "  Note: When selection mode is active, category is applied to all selected keys.",
             Style::default().fg(theme.text_muted),
         )]));
-        Self::add_subsection_header(&mut lines, "In category manager", theme);
+        Self::add_subsection_header(&mut lines, "Task: manage category list", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -494,12 +493,12 @@ impl HelpOverlayState {
         // =====================================================================
         // SETTINGS
         // =====================================================================
-        Self::add_section_header(&mut lines, "SETTINGS", theme);
+        Self::add_section_header(&mut lines, "ADJUST SETTINGS", theme);
 
         // Main settings shortcut
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
-                if binding.action == "Settings" {
+                if binding.action.contains("settings") || binding.action.contains("Settings") {
                     let keys = Self::format_keys(&binding.keys, &binding.alt_keys);
                     let padded_keys = format!("{keys:<18}");
                     lines.push(Line::from(vec![
@@ -515,7 +514,7 @@ impl HelpOverlayState {
         }
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In settings manager", theme);
+        Self::add_subsection_header(&mut lines, "Task: change settings by goal", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -525,7 +524,7 @@ impl HelpOverlayState {
         );
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "Tap-Hold settings (for home-row mods)", theme);
+        Self::add_subsection_header(&mut lines, "Task: tune tap-hold behavior", theme);
         Self::add_context_bindings(
             &mut lines,
             &registry,
@@ -537,7 +536,7 @@ impl HelpOverlayState {
         // =====================================================================
         // TEMPLATES
         // =====================================================================
-        Self::add_section_header(&mut lines, "TEMPLATES", theme);
+        Self::add_section_header(&mut lines, "REUSE TEMPLATES", theme);
 
         // Main template shortcuts
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
@@ -557,7 +556,7 @@ impl HelpOverlayState {
         // =====================================================================
         // FILE OPERATIONS
         // =====================================================================
-        Self::add_section_header(&mut lines, "FILE OPERATIONS", theme);
+        Self::add_section_header(&mut lines, "SAVE AND EXPORT", theme);
 
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
@@ -579,7 +578,7 @@ impl HelpOverlayState {
         // =====================================================================
         // BUILD SYSTEM
         // =====================================================================
-        Self::add_section_header(&mut lines, "BUILD SYSTEM", theme);
+        Self::add_section_header(&mut lines, "GENERATE AND BUILD", theme);
 
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
@@ -599,13 +598,13 @@ impl HelpOverlayState {
         }
 
         lines.push(Line::from(""));
-        Self::add_subsection_header(&mut lines, "In build log", theme);
+        Self::add_subsection_header(&mut lines, "Task: inspect build output", theme);
         Self::add_context_bindings(&mut lines, &registry, contexts::BUILD_LOG, theme, key_style);
 
         // =====================================================================
         // CONFIGURATION
         // =====================================================================
-        Self::add_section_header(&mut lines, "CONFIGURATION", theme);
+        Self::add_section_header(&mut lines, "SET UP KEYBOARD", theme);
 
         if let Some(ctx) = registry.get_context(contexts::MAIN) {
             for binding in &ctx.bindings {
@@ -646,7 +645,7 @@ impl HelpOverlayState {
         // =====================================================================
         // TIPS
         // =====================================================================
-        Self::add_section_header(&mut lines, "TIPS", theme);
+        Self::add_section_header(&mut lines, "GOOD NEXT STEPS", theme);
 
         if let Some(ctx) = registry.get_context(contexts::TIPS) {
             for binding in &ctx.bindings {
@@ -801,7 +800,7 @@ impl crate::tui::component::Component for HelpOverlay {
         let paragraph = Paragraph::new(content)
             .block(
                 Block::default()
-                    .title(" Help - Keyboard Shortcuts ")
+                    .title(" Help - task guide ")
                     .title_alignment(Alignment::Center)
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(theme.primary))
@@ -1102,7 +1101,10 @@ mod tests {
 
         // Footer contains "Press '?' to close" text
         assert!(
-            content.contains("close") || content.contains("scroll") || content.contains("═"),
+            content.contains("build log")
+                || content.contains("Templates")
+                || content.contains("BUILD SYSTEM")
+                || content.contains("─"),
             "Scroll to bottom should show footer content. Got:\n{}",
             content
         );
@@ -1232,15 +1234,12 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
 
+        assert!(text.contains("MOVE AROUND"), "Should have movement section");
         assert!(
-            text.contains("NAVIGATION"),
-            "Should have NAVIGATION section"
+            text.contains("WORK WITH LAYERS"),
+            "Should have layer task section"
         );
-        assert!(text.contains("LAYERS"), "Should have LAYERS section");
-        assert!(
-            text.contains("KEY EDITOR"),
-            "Should have KEY EDITOR section"
-        );
+        assert!(text.contains("EDIT KEYS"), "Should have key task section");
     }
 
     // =========================================================================

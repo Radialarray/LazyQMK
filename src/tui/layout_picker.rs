@@ -4,9 +4,11 @@
 //! saved layout files from ~/.config/LazyQMK/layouts/
 
 use anyhow::{Context, Result};
+use chrono::{DateTime, Local};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout as RatatuiLayout, Rect},
     style::{Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
@@ -35,6 +37,60 @@ pub struct LayoutPickerState {
     pub selected: usize,
     /// Whether user wants to create new layout
     pub create_new: bool,
+}
+
+fn format_timestamp(timestamp: DateTime<chrono::Utc>) -> String {
+    timestamp
+        .with_timezone(&Local)
+        .format("%Y-%m-%d %H:%M")
+        .to_string()
+}
+
+fn metadata_summary(layout_info: &LayoutInfo) -> Vec<Line<'static>> {
+    let metadata = &layout_info.metadata;
+    let modified = format_timestamp(metadata.modified);
+    let created = format_timestamp(metadata.created);
+    let keyboard = metadata.keyboard.as_deref().unwrap_or("Not set");
+    let variant = metadata.layout_variant.as_deref().unwrap_or("Default");
+    let keymap = metadata.keymap_name.as_deref().unwrap_or("Not set");
+    let output = metadata.output_format.as_deref().unwrap_or("Not set");
+
+    let description = if metadata.description.trim().is_empty() {
+        "No description yet.".to_string()
+    } else {
+        metadata.description.trim().to_string()
+    };
+
+    let tags = if metadata.tags.is_empty() {
+        "none".to_string()
+    } else {
+        metadata.tags.join(", ")
+    };
+
+    vec![
+        Line::from(vec![Span::raw("Name: "), Span::raw(metadata.name.clone())]),
+        Line::from(vec![
+            Span::raw("Keyboard: "),
+            Span::raw(keyboard.to_string()),
+        ]),
+        Line::from(vec![
+            Span::raw("Layout variant: "),
+            Span::raw(variant.to_string()),
+        ]),
+        Line::from(vec![
+            Span::raw("Keymap name: "),
+            Span::raw(keymap.to_string()),
+        ]),
+        Line::from(vec![
+            Span::raw("Output format: "),
+            Span::raw(output.to_string()),
+        ]),
+        Line::from(vec![Span::raw("Updated: "), Span::raw(modified)]),
+        Line::from(vec![Span::raw("Created: "), Span::raw(created)]),
+        Line::from(vec![Span::raw("Tags: "), Span::raw(tags)]),
+        Line::from(""),
+        Line::from(description),
+    ]
 }
 
 impl LayoutPickerState {
@@ -221,13 +277,13 @@ fn render_layout_picker_component(
         .margin(2)
         .constraints([
             Constraint::Length(3), // Title
-            Constraint::Min(10),   // List
+            Constraint::Min(10),   // List + details
             Constraint::Length(3), // Instructions
         ])
         .split(size);
 
     // Render title
-    let title = Paragraph::new("Select a Layout")
+    let title = Paragraph::new("Open Saved Layout")
         .style(
             Style::default()
                 .fg(theme.primary)
@@ -236,6 +292,11 @@ fn render_layout_picker_component(
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, vertical_chunks[0]);
+
+    let content_chunks = RatatuiLayout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
+        .split(vertical_chunks[1]);
 
     // Build list items
     let mut items: Vec<ListItem> = Vec::new();
@@ -262,21 +323,25 @@ fn render_layout_picker_component(
             Style::default()
         };
 
-        let modified = layout_info
+        let modified = format_timestamp(layout_info.metadata.modified);
+        let keyboard = layout_info
             .metadata
-            .modified
-            .format("%Y-%m-%d %H:%M")
-            .to_string();
+            .keyboard
+            .as_deref()
+            .unwrap_or("keyboard not set");
 
-        let text = format!("{} ({})", layout_info.metadata.name, modified);
+        let text = format!(
+            "{}  ·  {}  ·  {}",
+            layout_info.metadata.name, keyboard, modified
+        );
 
         items.push(ListItem::new(text).style(style));
     }
 
     let list_title = if state.layouts.is_empty() {
-        "No saved layouts found".to_string()
+        "No saved layouts yet".to_string()
     } else {
-        format!("Saved Layouts ({} total)", state.layouts.len())
+        format!("Saved layouts ({} total)", state.layouts.len())
     };
 
     let list = List::new(items)
@@ -287,10 +352,39 @@ fn render_layout_picker_component(
                 .add_modifier(Modifier::BOLD),
         );
 
-    f.render_widget(list, vertical_chunks[1]);
+    f.render_widget(list, content_chunks[0]);
+
+    let details = if state.create_new {
+        vec![
+            Line::from("Start fresh layout."),
+            Line::from(""),
+            Line::from("Use this when you want:"),
+            Line::from("• blank layout with current keyboard setup"),
+            Line::from("• new experiment without touching saved work"),
+            Line::from("• different keymap or RGB plan"),
+        ]
+    } else if let Some(layout_info) = state.layouts.get(state.selected) {
+        metadata_summary(layout_info)
+    } else {
+        vec![
+            Line::from("No saved layouts yet."),
+            Line::from("Create new layout to get started."),
+        ]
+    };
+
+    let details_title = if state.create_new {
+        "What happens next"
+    } else {
+        "Selected layout details"
+    };
+
+    let details_widget = Paragraph::new(details)
+        .style(Style::default().fg(theme.text))
+        .block(Block::default().borders(Borders::ALL).title(details_title));
+    f.render_widget(details_widget, content_chunks[1]);
 
     // Render instructions
-    let instructions = "↑↓: Navigate  |  Enter: Select  |  Esc: Cancel";
+    let instructions = "↑↓: Review options  |  Enter: Open selected layout  |  Esc: Cancel";
     let paragraph = Paragraph::new(instructions)
         .style(Style::default().fg(theme.text_muted))
         .alignment(Alignment::Center)

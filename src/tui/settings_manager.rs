@@ -19,6 +19,24 @@ use crate::models::{
 };
 
 use super::Theme;
+use super::{popup_border_style, popup_title, PopupType};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RgbSubgroup {
+    Core,
+    Idle,
+    Ripple,
+}
+
+impl RgbSubgroup {
+    const fn display_name(self) -> &'static str {
+        match self {
+            Self::Core => "Core lighting",
+            Self::Idle => "Idle lighting",
+            Self::Ripple => "Press ripple",
+        }
+    }
+}
 
 /// Setting group for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,13 +66,13 @@ impl SettingGroup {
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
         match self {
-            Self::Paths => "Paths [Global]",
-            Self::Build => "Build [Global]",
-            Self::Ui => "UI [Global]",
-            Self::General => "General [Layout]",
-            Self::Rgb => "RGB Lighting [Layout]",
-            Self::TapHold => "Tap-Hold [Layout]",
-            Self::Combos => "Combos [Layout]",
+            Self::Paths => "Setup & folders",
+            Self::Build => "Keyboard & build output",
+            Self::Ui => "Editor behavior",
+            Self::General => "General layout",
+            Self::Rgb => "Lighting behavior",
+            Self::TapHold => "Tap-hold tuning",
+            Self::Combos => "Combos & quick actions",
         }
     }
 
@@ -304,30 +322,61 @@ impl SettingItem {
         }
     }
 
+    #[must_use]
+    const fn rgb_subgroup(self) -> Option<RgbSubgroup> {
+        match self {
+            Self::RgbEnabled
+            | Self::RgbBrightness
+            | Self::RgbSaturation
+            | Self::RgbMatrixSpeed
+            | Self::RgbTimeout
+            | Self::UncoloredKeyBehavior => Some(RgbSubgroup::Core),
+            Self::IdleEffectEnabled
+            | Self::IdleTimeout
+            | Self::IdleEffectDuration
+            | Self::IdleEffectMode => Some(RgbSubgroup::Idle),
+            Self::OverlayRippleEnabled
+            | Self::OverlayRippleMaxRipples
+            | Self::OverlayRippleDuration
+            | Self::OverlayRippleSpeed
+            | Self::OverlayRippleBandWidth
+            | Self::OverlayRippleAmplitude
+            | Self::OverlayRippleColorMode
+            | Self::OverlayRippleFixedColor
+            | Self::OverlayRippleHueShift
+            | Self::OverlayRippleTriggerPress
+            | Self::OverlayRippleTriggerRelease
+            | Self::OverlayRippleIgnoreTransparent
+            | Self::OverlayRippleIgnoreModifiers
+            | Self::OverlayRippleIgnoreLayerSwitch => Some(RgbSubgroup::Ripple),
+            _ => None,
+        }
+    }
+
     /// Returns a human-readable name for this setting.
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
         match self {
-            Self::QmkFirmwarePath => "QMK Firmware Path",
+            Self::QmkFirmwarePath => "QMK Firmware Folder",
             Self::Keyboard => "Keyboard",
             Self::LayoutVariant => "Layout Variant",
             Self::KeymapName => "Keymap Name",
             Self::OutputFormat => "Output Format",
-            Self::OutputDir => "Output Directory",
+            Self::OutputDir => "Build Output Folder",
             Self::ShowHelpOnStartup => "Show Help on Startup",
             Self::ThemeMode => "Theme Mode",
             Self::KeyboardScale => "Keyboard Scale",
-            Self::RgbEnabled => "RGB Master Switch",
-            Self::RgbBrightness => "RGB Brightness",
+            Self::RgbEnabled => "Lighting Enabled",
+            Self::RgbBrightness => "Lighting Brightness",
             Self::RgbSaturation => "RGB Saturation",
             Self::RgbMatrixSpeed => "RGB Matrix Speed",
-            Self::RgbTimeout => "RGB Timeout",
-            Self::IdleEffectEnabled => "Idle Effect Enabled",
-            Self::IdleTimeout => "Idle Timeout",
-            Self::IdleEffectDuration => "Idle Effect Duration",
-            Self::IdleEffectMode => "Idle Effect Mode",
+            Self::RgbTimeout => "Lighting Timeout",
+            Self::IdleEffectEnabled => "Idle Lighting Enabled",
+            Self::IdleTimeout => "Idle Wait Time",
+            Self::IdleEffectDuration => "Idle Effect Length",
+            Self::IdleEffectMode => "Idle Effect",
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
-            Self::OverlayRippleEnabled => "Overlay Ripple Enabled",
+            Self::OverlayRippleEnabled => "Press Ripple Enabled",
             Self::OverlayRippleMaxRipples => "Max Concurrent Ripples",
             Self::OverlayRippleDuration => "Ripple Duration",
             Self::OverlayRippleSpeed => "Ripple Speed",
@@ -367,44 +416,46 @@ impl SettingItem {
     #[must_use]
     pub const fn description(&self) -> &'static str {
         match self {
-            Self::QmkFirmwarePath => "Path to QMK firmware directory (required for builds)",
-            Self::Keyboard => "Target keyboard for firmware builds",
-            Self::LayoutVariant => "Physical layout variant (e.g., LAYOUT_split_3x6_3)",
-            Self::KeymapName => "Name of the keymap (e.g., 'default', 'mymap')",
-            Self::OutputFormat => "Firmware output format: uf2, hex, or bin",
-            Self::OutputDir => "Directory where built firmware will be saved",
+            Self::QmkFirmwarePath => {
+                "Folder containing your local QMK checkout. Needed for keyboard info and builds."
+            }
+            Self::Keyboard => "Keyboard this layout targets when you generate or build firmware.",
+            Self::LayoutVariant => {
+                "Physical layout variant used by this keyboard, such as LAYOUT_split_3x6_3."
+            }
+            Self::KeymapName => "Name used for generated keymap files, such as default or mymap.",
+            Self::OutputFormat => {
+                "Firmware file type to export after build, such as uf2, hex, or bin."
+            }
+            Self::OutputDir => "Folder where built firmware files should be written.",
             Self::ShowHelpOnStartup => "Display help overlay when application starts",
             Self::ThemeMode => "Color theme: Auto (follow OS), Dark, or Light",
             Self::KeyboardScale => "Keyboard display size: 1.0 = default, 0.5 = half, 2.0 = double",
-            Self::RgbEnabled => "Turn all RGB LEDs on or off",
-            Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
+            Self::RgbEnabled => "Turn all keyboard lighting on or off.",
+            Self::RgbBrightness => "Overall keyboard lighting brightness (0-100%).",
             Self::RgbSaturation => {
                 "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)"
             }
             Self::RgbMatrixSpeed => {
                 "Animation speed for RGB effects (0=Slowest, 127=Default, 255=Fastest)"
             }
-            Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
-            Self::IdleEffectEnabled => "Enable idle effect (triggers RGB animation before timeout)",
-            Self::IdleTimeout => "Delay before starting idle effect (0 = disabled)",
+            Self::RgbTimeout => "Turn lighting off after inactivity. Use 0 to keep it on.",
+            Self::IdleEffectEnabled => "Play a temporary lighting effect before full idle timeout.",
+            Self::IdleTimeout => "How long to wait before idle lighting begins. Use 0 to disable.",
             Self::IdleEffectDuration => {
-                "How long to run idle effect before turning off (0 = immediate)"
+                "How long idle lighting runs before lights turn off. Use 0 for immediate off."
             }
-            Self::IdleEffectMode => "RGB animation effect to use during idle period",
+            Self::IdleEffectMode => "Lighting animation used while keyboard is idle.",
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
             }
-            Self::OverlayRippleEnabled => {
-                "Enable additive ripple overlay on key press and/or release"
-            }
+            Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.",
             Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
             Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
             Self::OverlayRippleSpeed => {
                 "Expansion speed in physical LED coordinate space (0-255, higher = faster)"
             }
-            Self::OverlayRippleBandWidth => {
-                "Width of ripple band in physical distance units"
-            }
+            Self::OverlayRippleBandWidth => "Width of ripple band in physical distance units",
             Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)",
             Self::OverlayRippleColorMode => {
                 "How to determine ripple colors (Fixed, Key Color, Hue Shift)"
@@ -474,6 +525,8 @@ pub enum ManagerMode {
         min: u16,
         /// Maximum allowed value
         max: u16,
+        /// Suggested default value
+        default: u16,
     },
     /// Editing a signed numeric value
     EditingSignedNumeric {
@@ -485,6 +538,8 @@ pub enum ManagerMode {
         min: i16,
         /// Maximum allowed value
         max: i16,
+        /// Suggested default value
+        default: i16,
     },
     /// Toggling a boolean value (`retro_tapping`, `chordal_hold`)
     TogglingBoolean {
@@ -601,12 +656,14 @@ impl SettingsManagerState {
         current: u16,
         min: u16,
         max: u16,
+        default: u16,
     ) {
         self.mode = ManagerMode::EditingNumeric {
             setting,
             value: current.to_string(),
             min,
             max,
+            default,
         };
     }
 
@@ -617,12 +674,14 @@ impl SettingsManagerState {
         current: i16,
         min: i16,
         max: i16,
+        default: i16,
     ) {
         self.mode = ManagerMode::EditingSignedNumeric {
             setting,
             value: current.to_string(),
             min,
             max,
+            default,
         };
     }
 
@@ -757,6 +816,13 @@ impl SettingsManagerState {
         }
     }
 
+    /// Reset numeric editor to suggested default value.
+    pub fn reset_numeric_to_default(&mut self) {
+        if let ManagerMode::EditingNumeric { value, default, .. } = &mut self.mode {
+            *value = default.to_string();
+        }
+    }
+
     /// Decrement numeric value
     pub fn decrement_numeric(&mut self, step: u16) {
         if let ManagerMode::EditingNumeric { value, min, .. } = &mut self.mode {
@@ -794,6 +860,13 @@ impl SettingsManagerState {
                 num = num.saturating_sub(step).max(*min);
                 *value = num.to_string();
             }
+        }
+    }
+
+    /// Reset signed numeric editor to suggested default value.
+    pub fn reset_signed_numeric_to_default(&mut self) {
+        if let ManagerMode::EditingSignedNumeric { value, default, .. } = &mut self.mode {
+            *value = default.to_string();
         }
     }
 
@@ -1145,8 +1218,20 @@ impl SettingsManager {
                 self.state.increment_numeric(10);
                 None
             }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.increment_numeric(1);
+                None
+            }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.state.decrement_numeric(10);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.decrement_numeric(1);
+                None
+            }
+            KeyCode::Home => {
+                self.state.reset_numeric_to_default();
                 None
             }
             KeyCode::Char(c) if c.is_ascii_digit() => {
@@ -1172,8 +1257,20 @@ impl SettingsManager {
                 self.state.increment_signed_numeric(10);
                 None
             }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.increment_signed_numeric(1);
+                None
+            }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.state.decrement_signed_numeric(10);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.decrement_signed_numeric(1);
+                None
+            }
+            KeyCode::Home => {
+                self.state.reset_signed_numeric_to_default();
                 None
             }
             KeyCode::Char(c) if c.is_ascii_digit() || c == '-' => {
@@ -1376,7 +1473,8 @@ pub fn render_settings_manager(
     // Background block
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Settings (Shift+S) ")
+        .border_style(popup_border_style(&PopupType::SettingsManager, theme))
+        .title(popup_title(&PopupType::SettingsManager, "Shift+S"))
         .style(Style::default().bg(theme.background));
 
     f.render_widget(block, dialog_area);
@@ -1418,16 +1516,20 @@ pub fn render_settings_manager(
             value,
             min,
             max,
+            default,
         } => {
-            render_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
+            render_numeric_editor(f, inner_area, *setting, value, *min, *max, *default, theme);
         }
         ManagerMode::EditingSignedNumeric {
             setting,
             value,
             min,
             max,
+            default,
         } => {
-            render_signed_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
+            render_signed_numeric_editor(
+                f, inner_area, *setting, value, *min, *max, *default, theme,
+            );
         }
         ManagerMode::TogglingBoolean { setting, value } => {
             render_boolean_toggle(f, inner_area, *setting, *value, theme);
@@ -1475,19 +1577,50 @@ fn render_settings_list(
     layout: &crate::models::Layout,
     theme: &Theme,
 ) {
-    // Split area for list and help text
+    // Split area for task summary, list and help text
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
+            Constraint::Length(3), // Task summary
             Constraint::Min(5),    // Settings list
             Constraint::Length(5), // Help text
         ])
         .split(area);
 
+    let selected_setting = SettingItem::all().get(state.selected).copied();
+    let selected_group = selected_setting.map(|setting| setting.group());
+    let subgroup_summary = selected_setting.and_then(SettingItem::rgb_subgroup).map(|subgroup| {
+        format!(" • Subsection: {}", subgroup.display_name())
+    });
+    let summary = selected_group.map_or_else(
+        || "Choose a setting to edit.".to_string(),
+        |group| {
+            let scope = if group.is_global() {
+                "Saved in config.toml"
+            } else {
+                "Saved in current layout"
+            };
+            format!(
+                "Task area: {} • {}{}",
+                group.display_name(),
+                scope,
+                subgroup_summary.unwrap_or_default()
+            )
+        },
+    );
+    let summary_widget = Paragraph::new(summary).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("What this section controls")
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(summary_widget, chunks[0]);
+
     // Build settings list with group headers
     let settings = SettingItem::all();
     let mut items: Vec<ListItem> = Vec::new();
     let mut current_group: Option<SettingGroup> = None;
+    let mut current_rgb_subgroup: Option<RgbSubgroup> = None;
     let mut display_index = 0;
 
     for setting in settings {
@@ -1505,6 +1638,27 @@ fn render_settings_list(
                     .add_modifier(Modifier::BOLD),
             )])));
             current_group = Some(group);
+            current_rgb_subgroup = None;
+        }
+
+        if group == SettingGroup::Rgb {
+            let subgroup = setting.rgb_subgroup();
+            if subgroup != current_rgb_subgroup {
+                if current_rgb_subgroup.is_some() {
+                    items.push(ListItem::new(Line::from("")));
+                }
+
+                if let Some(subgroup) = subgroup {
+                    items.push(ListItem::new(Line::from(vec![Span::styled(
+                        format!("  {}", subgroup.display_name()),
+                        Style::default()
+                            .fg(theme.text_secondary)
+                            .add_modifier(Modifier::BOLD),
+                    )])));
+                }
+
+                current_rgb_subgroup = subgroup;
+            }
         }
 
         let style = if display_index == state.selected {
@@ -1558,7 +1712,7 @@ fn render_settings_list(
         .block(Block::default().borders(Borders::ALL).title("Settings"))
         .highlight_style(Style::default().bg(theme.surface));
 
-    f.render_widget(list, chunks[0]);
+    f.render_widget(list, chunks[1]);
 
     // Show description of selected setting
     let selected_setting = settings.get(state.selected);
@@ -1585,7 +1739,7 @@ fn render_settings_list(
         .block(Block::default().borders(Borders::ALL).title("Help"))
         .alignment(Alignment::Left);
 
-    f.render_widget(help, chunks[1]);
+    f.render_widget(help, chunks[2]);
 }
 
 /// Get display string for a setting value
@@ -1964,6 +2118,7 @@ fn render_numeric_editor(
     value: &str,
     min: u16,
     max: u16,
+    default: u16,
     theme: &Theme,
 ) {
     let chunks = ratatui::layout::Layout::default()
@@ -2002,7 +2157,7 @@ fn render_numeric_editor(
         Line::from(setting.description()),
         Line::from(""),
         Line::from(Span::styled(
-            format!("Range: {min} to {max}"),
+            format!("Range: {min} to {max}  •  Default: {default}"),
             Style::default().fg(theme.text_muted),
         )),
     ];
@@ -2018,10 +2173,14 @@ fn render_numeric_editor(
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": ±10  "),
+            Span::styled("←/→", Style::default().fg(theme.primary)),
+            Span::raw(": ±1"),
         ]),
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.primary)),
             Span::raw(": Apply  "),
+            Span::styled("Home", Style::default().fg(theme.primary)),
+            Span::raw(": Default  "),
             Span::styled("Esc", Style::default().fg(theme.primary)),
             Span::raw(": Cancel  "),
             Span::styled("Backspace", Style::default().fg(theme.primary)),
@@ -2044,6 +2203,7 @@ fn render_signed_numeric_editor(
     value: &str,
     min: i16,
     max: i16,
+    default: i16,
     theme: &Theme,
 ) {
     let chunks = ratatui::layout::Layout::default()
@@ -2079,7 +2239,7 @@ fn render_signed_numeric_editor(
         Line::from(setting.description()),
         Line::from(""),
         Line::from(Span::styled(
-            format!("Range: {min} to {max}"),
+            format!("Range: {min} to {max}  •  Default: {default}"),
             Style::default().fg(theme.text_muted),
         )),
     ];
@@ -2094,12 +2254,16 @@ fn render_signed_numeric_editor(
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": ±10  "),
+            Span::styled("←/→", Style::default().fg(theme.primary)),
+            Span::raw(": ±1  "),
             Span::styled("-", Style::default().fg(theme.primary)),
             Span::raw(": Negative"),
         ]),
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.primary)),
             Span::raw(": Apply  "),
+            Span::styled("Home", Style::default().fg(theme.primary)),
+            Span::raw(": Default  "),
             Span::styled("Esc", Style::default().fg(theme.primary)),
             Span::raw(": Cancel  "),
             Span::styled("Backspace", Style::default().fg(theme.primary)),
@@ -2599,6 +2763,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_numeric_editor_reset_to_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_numeric(SettingItem::TappingTerm, 275, 100, 500, 200);
+
+        state.reset_numeric_to_default();
+
+        assert_eq!(state.get_numeric_value(), Some(200));
+    }
+
+    #[test]
+    fn test_signed_numeric_editor_reset_to_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_signed_numeric(SettingItem::OverlayRippleHueShift, -45, -180, 180, 60);
+
+        state.reset_signed_numeric_to_default();
+
+        assert_eq!(state.get_signed_numeric_value(), Some(60));
+    }
+
+    #[test]
+    fn test_start_editing_numeric_stores_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_numeric(SettingItem::TappingToggle, 7, 1, 10, 5);
+
+        assert!(matches!(
+            state.mode,
+            ManagerMode::EditingNumeric { default: 5, .. }
+        ));
+    }
+
+    #[test]
     fn test_setting_item_all_includes_idle_effect_settings() {
         let all_settings = SettingItem::all();
 
@@ -2621,17 +2816,14 @@ mod tests {
     fn test_idle_effect_settings_have_display_names() {
         assert_eq!(
             SettingItem::IdleEffectEnabled.display_name(),
-            "Idle Effect Enabled"
+            "Idle Lighting Enabled"
         );
-        assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Timeout");
+        assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Wait Time");
         assert_eq!(
             SettingItem::IdleEffectDuration.display_name(),
-            "Idle Effect Duration"
+            "Idle Effect Length"
         );
-        assert_eq!(
-            SettingItem::IdleEffectMode.display_name(),
-            "Idle Effect Mode"
-        );
+        assert_eq!(SettingItem::IdleEffectMode.display_name(), "Idle Effect");
     }
 
     #[test]

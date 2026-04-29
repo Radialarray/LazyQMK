@@ -119,7 +119,7 @@ impl KeyClipboard {
 
         self.cut_source = Some((layer_index, position));
 
-        format!("Cut: {keycode} - press p to paste, Esc to cancel")
+        format!("Cut queued: {keycode} - source clears after paste, Esc cancels")
     }
 
     /// Copy multiple keys to the clipboard.
@@ -159,7 +159,7 @@ impl KeyClipboard {
         self.multi_content = Some(MultiKeyContent { keys, anchor });
         self.multi_cut_sources = positions.into_iter().map(|p| (layer_index, p)).collect();
 
-        format!("Cut {count} keys - press p to paste, Esc to cancel")
+        format!("Cut queued: {count} keys - sources clear after paste, Esc cancels")
     }
 
     /// Check if there is content to paste (single or multi).
@@ -247,10 +247,10 @@ impl KeyClipboard {
     #[must_use]
     pub fn get_preview(&self) -> Option<String> {
         if let Some(content) = &self.content {
-            let cut_indicator = if self.is_cut() { " (cut)" } else { "" };
+            let cut_indicator = if self.is_cut() { " (queued cut)" } else { "" };
             Some(format!("{}{}", content.keycode, cut_indicator))
         } else if let Some(multi) = &self.multi_content {
-            let cut_indicator = if self.is_cut() { " (cut)" } else { "" };
+            let cut_indicator = if self.is_cut() { " (queued cut)" } else { "" };
             Some(format!("{} keys{}", multi.keys.len(), cut_indicator))
         } else {
             None
@@ -340,7 +340,7 @@ mod tests {
 
         assert!(clipboard.has_content());
         assert!(clipboard.is_cut());
-        assert!(msg.contains("Cut: KC_C"));
+        assert!(msg.contains("Cut queued: KC_C"));
         assert!(clipboard.is_cut_source(0, pos));
         assert!(!clipboard.is_cut_source(1, pos)); // Different layer
         assert!(!clipboard.is_cut_source(0, Position::new(0, 0))); // Different position
@@ -410,7 +410,10 @@ mod tests {
 
         // After cut
         clipboard.cut("KC_A", None, None, 0, Position::new(0, 0));
-        assert_eq!(clipboard.get_preview(), Some("KC_A (cut)".to_string()));
+        assert_eq!(
+            clipboard.get_preview(),
+            Some("KC_A (queued cut)".to_string())
+        );
     }
 
     #[test]

@@ -225,6 +225,8 @@ pub mod contexts {
     pub const SETUP_WIZARD: &str = "setup_wizard";
     /// Unsaved changes prompt
     pub const UNSAVED_PROMPT: &str = "unsaved_prompt";
+    /// Tap dance editor popup
+    pub const TAP_DANCE_EDITOR: &str = "tap_dance_editor";
     /// Clipboard operations (informational)
     pub const CLIPBOARD: &str = "clipboard";
     /// Parameterized keycodes (informational)
@@ -244,7 +246,7 @@ mod tests {
     #[test]
     fn test_load_help_registry() {
         let registry = HelpRegistry::load().expect("Failed to load help registry");
-        assert_eq!(registry.app_name(), "Keyboard Layout Editor");
+        assert_eq!(registry.app_name(), "LazyQMK");
     }
 
     #[test]
@@ -284,5 +286,14 @@ mod tests {
         let hints = registry.format_status_bar_hints(contexts::MAIN, 5);
         assert!(!hints.is_empty());
         assert!(hints.len() <= 5);
+    }
+
+    #[test]
+    fn test_tap_dance_editor_context_has_hints() {
+        let registry = HelpRegistry::load().unwrap();
+        let hints = registry.get_status_bar_hints(contexts::TAP_DANCE_EDITOR);
+
+        assert!(!hints.is_empty());
+        assert_eq!(hints[0].hint.as_deref(), Some("Navigate"));
     }
 }

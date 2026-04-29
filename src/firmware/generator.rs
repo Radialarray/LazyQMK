@@ -824,9 +824,15 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
         code.push_str("    uint8_t layer = get_highest_layer(layer_state);\n");
         code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
-        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
-        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
-        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
+        code.push_str(
+            "        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n",
+        );
+        code.push_str(
+            "        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n",
+        );
+        code.push_str(
+            "        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n",
+        );
         code.push_str("        return color;\n");
         code.push_str("    }\n");
         code.push_str("#endif\n");
@@ -865,9 +871,13 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str("    int16_t hue;\n");
         code.push_str("    if (rgb_max == color.r) {\n");
-        code.push_str("        hue = (int16_t)((43 * ((int16_t)color.g - (int16_t)color.b)) / delta);\n");
+        code.push_str(
+            "        hue = (int16_t)((43 * ((int16_t)color.g - (int16_t)color.b)) / delta);\n",
+        );
         code.push_str("    } else if (rgb_max == color.g) {\n");
-        code.push_str("        hue = (int16_t)(85 + (43 * ((int16_t)color.b - (int16_t)color.r)) / delta);\n");
+        code.push_str(
+            "        hue = (int16_t)(85 + (43 * ((int16_t)color.b - (int16_t)color.r)) / delta);\n",
+        );
         code.push_str("    } else {\n");
         code.push_str("        hue = (int16_t)(171 + (43 * ((int16_t)color.r - (int16_t)color.g)) / delta);\n");
         code.push_str("    }\n");
@@ -903,8 +913,12 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str(
             "        if (distance >= radius && distance < radius + LQMK_RIPPLE_BAND_WIDTH) {\n",
         );
-        code.push_str("            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n");
-        code.push_str("            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n");
+        code.push_str(
+            "            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n",
+        );
+        code.push_str(
+            "            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n",
+        );
         code.push_str("            led_changed = true;\n");
         code.push('\n');
 
@@ -932,19 +946,25 @@ impl<'a> FirmwareGenerator<'a> {
                 ));
             }
             crate::models::layout::RippleColorMode::KeyBased => {
+                code.push_str("            // Key color mode (boost key's resolved base color)\n");
                 code.push_str(
-                    "            // Key color mode (boost key's resolved base color)\n",
+                    "            color.r = lazyqmk_ripple_add_u8(color.r, brightness);\n",
                 );
-                code.push_str("            color.r = lazyqmk_ripple_add_u8(color.r, brightness);\n");
-                code.push_str("            color.g = lazyqmk_ripple_add_u8(color.g, brightness);\n");
-                code.push_str("            color.b = lazyqmk_ripple_add_u8(color.b, brightness);\n");
+                code.push_str(
+                    "            color.g = lazyqmk_ripple_add_u8(color.g, brightness);\n",
+                );
+                code.push_str(
+                    "            color.b = lazyqmk_ripple_add_u8(color.b, brightness);\n",
+                );
             }
             crate::models::layout::RippleColorMode::HueShift => {
                 code.push_str(&format!(
                     "            // Hue shift mode (shift by {} degrees / {} hue steps)\n",
                     settings.hue_shift_deg, hue_shift_steps
                 ));
-                code.push_str("            hsv_t shifted_hsv = lazyqmk_ripple_rgb_to_hsv(base_color);\n");
+                code.push_str(
+                    "            hsv_t shifted_hsv = lazyqmk_ripple_rgb_to_hsv(base_color);\n",
+                );
                 code.push_str(&format!(
                     "            int16_t shifted_hue = (int16_t)shifted_hsv.h + {};\n",
                     hue_shift_steps
@@ -1015,7 +1035,9 @@ impl<'a> FirmwareGenerator<'a> {
             "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
-        code.push_str("        // Apply ripple overlay using layer base colors or global HSV fallback\n");
+        code.push_str(
+            "        // Apply ripple overlay only to affected LEDs using layer colors or HSV fallback\n",
+        );
         code.push_str("        lazyqmk_ripple_apply(i);\n");
         code.push_str("    }\n");
         code.push_str("    return false;\n");

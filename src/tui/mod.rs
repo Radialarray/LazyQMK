@@ -67,7 +67,18 @@ use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
 use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
+use crate::tui::help_registry::HelpRegistry;
 use std::collections::HashMap;
+
+/// Shared popup border style based on popup task type.
+pub fn popup_border_style(popup_type: &PopupType, theme: &Theme) -> Style {
+    Style::default().fg(popup_kind_color(popup_type.visual_kind(), theme))
+}
+
+/// Shared popup title format with task-type label.
+pub fn popup_title(popup_type: &PopupType, label: &str) -> String {
+    format!(" {} · {} ", popup_type.visual_kind().mode_label(), label)
+}
 
 // Re-export TUI components
 pub use build_log::BuildLog;
@@ -155,6 +166,38 @@ pub enum TapDanceFormContext {
     FromEditor,
     /// Launched from keycode picker to assign TD(name) to selected key
     FromKeycodePicker,
+}
+
+/// Visual category for popup chrome and mode labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PopupVisualKind {
+    /// Selection or lookup task that returns to prior context.
+    Picker,
+    /// Editing task that changes draft content directly.
+    Editor,
+    /// Settings management task for global or layout preferences.
+    Settings,
+    /// Guided onboarding or setup flow.
+    Wizard,
+    /// Read-only feedback, logs, or help content.
+    Feedback,
+    /// Confirmation step for risky actions.
+    Confirm,
+}
+
+impl PopupVisualKind {
+    /// Human-readable mode label for title bar and popup chrome.
+    #[must_use]
+    pub const fn mode_label(self) -> &'static str {
+        match self {
+            Self::Picker => "Picker",
+            Self::Editor => "Editor",
+            Self::Settings => "Settings",
+            Self::Wizard => "Wizard",
+            Self::Feedback => "Feedback",
+            Self::Confirm => "Confirm",
+        }
+    }
 }
 
 /// State for the export filename dialog.
@@ -316,6 +359,35 @@ pub enum PopupType {
     TapDanceEditor,
     /// Tap dance form dialog (create/edit)
     TapDanceForm,
+}
+
+impl PopupType {
+    /// Visual task category used for popup chrome and orientation cues.
+    #[must_use]
+    pub const fn visual_kind(&self) -> PopupVisualKind {
+        match self {
+            Self::KeycodePicker
+            | Self::ColorPicker
+            | Self::CategoryPicker
+            | Self::LayerPicker
+            | Self::LayoutPicker
+            | Self::TapKeycodePicker
+            | Self::ModifierPicker => PopupVisualKind::Picker,
+            Self::CategoryManager
+            | Self::LayerManager
+            | Self::TemplateBrowser
+            | Self::MetadataEditor
+            | Self::KeyEditor
+            | Self::TapDanceEditor
+            | Self::TapDanceForm
+            | Self::TemplateSaveDialog
+            | Self::ExportFilenameDialog => PopupVisualKind::Editor,
+            Self::SettingsManager => PopupVisualKind::Settings,
+            Self::SetupWizard => PopupVisualKind::Wizard,
+            Self::BuildLog | Self::HelpOverlay => PopupVisualKind::Feedback,
+            Self::UnsavedChangesPrompt => PopupVisualKind::Confirm,
+        }
+    }
 }
 
 /// Selection mode for multi-key operations
@@ -896,7 +968,7 @@ fn render(f: &mut Frame, state: &AppState) {
     let chunks = RatatuiLayout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Title bar
+            Constraint::Length(4), // Title bar (border + 2 content lines)
             Constraint::Min(10),   // Main content
             Constraint::Length(6), // Status bar (increased for description + clipboard + build + help)
         ])
@@ -924,13 +996,58 @@ fn render(f: &mut Frame, state: &AppState) {
 
 /// Render title bar with layout name and dirty indicator
 fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
-    let dirty_indicator = if state.dirty { " *" } else { "" };
+    let draft_state = if state.dirty { "Unsaved" } else { "Saved" };
+    let mode = if let Some(active_popup) = &state.active_popup {
+        match active_popup.visual_kind() {
+            PopupVisualKind::Settings => "Settings",
+            PopupVisualKind::Wizard => "Onboarding",
+            kind => kind.mode_label(),
+        }
+    } else if let Some(selection_mode) = &state.selection_mode {
+        match selection_mode {
+            SelectionMode::Normal => "Selection",
+            SelectionMode::Rectangle { .. } => "Rectangle select",
+            SelectionMode::Swap { .. } => "Swap",
+        }
+    } else {
+        "Key edit"
+    };
+    let keyboard = state
+        .layout
+        .metadata
+        .keyboard
+        .clone()
+        .unwrap_or_else(|| "Keyboard not set".to_string());
+    let layer_name = state
+        .layout
+        .layers
+        .get(state.current_layer)
+        .map_or("Unknown layer", |layer| layer.name.as_str());
+    let build_summary = state.build_state.as_ref().and_then(|build| {
+        if build.status == crate::firmware::BuildStatus::Idle {
+            None
+        } else if build.last_message.is_empty() {
+            Some(build.status.to_string())
+        } else {
+            Some(format!("{} • {}", build.status, build.last_message))
+        }
+    });
     let title = format!(
-        " {} - Layer {} {}",
-        state.layout.metadata.name, state.current_layer, dirty_indicator
+        " {} | {} | {} | L{} {} [active] | {} ",
+        HelpRegistry::default().app_name(),
+        state.layout.metadata.name,
+        keyboard,
+        state.current_layer,
+        layer_name,
+        draft_state
     );
+    let subtitle = if let Some(build_summary) = build_summary {
+        format!(" Mode: {mode}  |  Build: {build_summary}")
+    } else {
+        format!(" Mode: {mode}")
+    };
 
-    let title_widget = Paragraph::new(title)
+    let title_widget = Paragraph::new(vec![Line::from(title), Line::from(subtitle)])
         .style(
             Style::default()
                 .fg(state.theme.primary)
@@ -939,6 +1056,7 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .title(" Editor ")
                 .style(Style::default().bg(state.theme.background)),
         );
 
@@ -1072,6 +1190,18 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
     }
 }
 
+/// Get popup accent color by task type.
+fn popup_kind_color(kind: PopupVisualKind, theme: &Theme) -> ratatui::style::Color {
+    match kind {
+        PopupVisualKind::Picker => theme.primary,
+        PopupVisualKind::Editor => theme.accent,
+        PopupVisualKind::Settings => theme.success,
+        PopupVisualKind::Wizard => theme.warning,
+        PopupVisualKind::Feedback => theme.text_secondary,
+        PopupVisualKind::Confirm => theme.error,
+    }
+}
+
 /// Render unsaved changes prompt
 fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     let area = centered_rect(60, 30, f.area());
@@ -1087,15 +1217,16 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
         Line::from(""),
         Line::from("You have unsaved changes."),
         Line::from(""),
-        Line::from("  [S] Save and quit"),
-        Line::from("  [Q] Quit without saving"),
+        Line::from("  [Ctrl+S] Save and quit"),
+        Line::from("  [Ctrl+Q] Quit without saving"),
         Line::from("  [Esc] Cancel"),
     ];
 
     let prompt = Paragraph::new(text).block(
         Block::default()
-            .title(" Unsaved Changes ")
+            .title(popup_title(&PopupType::UnsavedChangesPrompt, "Unsaved changes"))
             .borders(Borders::ALL)
+            .border_style(popup_border_style(&PopupType::UnsavedChangesPrompt, theme))
             .style(Style::default().fg(theme.warning)),
     );
 
@@ -1104,7 +1235,7 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
 
 /// Render error overlay on top of all other UI elements
 fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
-    let area = centered_rect(70, 40, f.area());
+    let area = centered_rect(64, 24, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);
@@ -1118,13 +1249,13 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // Title
-            Constraint::Min(3),    // Error message
-            Constraint::Length(2), // Help text
+            Constraint::Min(4),    // Error message
+            Constraint::Length(1), // Help text
         ])
         .split(area);
 
     // Title with error styling
-    let title = Paragraph::new("ERROR")
+    let title = Paragraph::new("Something needs attention")
         .style(
             Style::default()
                 .fg(theme.error)
@@ -1138,15 +1269,23 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
     f.render_widget(title, chunks[0]);
 
     // Error message with word wrap
-    let error_text = Paragraph::new(error)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Details ")
-                .style(Style::default().bg(theme.background)),
-        )
-        .wrap(Wrap { trim: true });
+    let error_text = Paragraph::new(vec![
+        Line::from(vec![Span::styled(
+            "Error: ",
+            Style::default()
+                .fg(theme.error)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(error.to_string()),
+    ])
+    .style(Style::default().fg(theme.text))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Details ")
+            .style(Style::default().bg(theme.background)),
+    )
+    .wrap(Wrap { trim: true });
     f.render_widget(error_text, chunks[1]);
 
     // Help text
@@ -1159,12 +1298,7 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
         ),
         Span::raw(" Dismiss"),
     ])])
-    .style(Style::default().fg(theme.text).bg(theme.background))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default().bg(theme.background)),
-    );
+    .style(Style::default().fg(theme.text_muted).bg(theme.background));
     f.render_widget(help, chunks[2]);
 }
 
@@ -1203,7 +1337,12 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title(popup_title(&PopupType::TemplateSaveDialog, "Template save"))
+                .borders(Borders::ALL)
+                .border_style(popup_border_style(&PopupType::TemplateSaveDialog, theme)),
+        );
     f.render_widget(title, chunks[0]);
 
     // Name field
@@ -1318,7 +1457,12 @@ fn render_export_filename_dialog(f: &mut Frame, state: &AppState) {
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title(popup_title(&PopupType::ExportFilenameDialog, "Export"))
+                .borders(Borders::ALL)
+                .border_style(popup_border_style(&PopupType::ExportFilenameDialog, theme)),
+        );
     f.render_widget(title, chunks[0]);
 
     // Filename field with cursor
