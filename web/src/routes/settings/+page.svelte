@@ -49,9 +49,9 @@
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-4xl font-bold mb-2">Settings</h1>
+			<h1 class="text-4xl font-bold mb-2">Workspace Setup</h1>
 			<p class="text-muted-foreground">
-				Configure LazyQMK workspace and paths
+				Connect LazyQMK to your QMK folder and confirm where layouts live.
 			</p>
 		</div>
 		<Button onclick={() => (window.location.href = '/')}>
@@ -86,9 +86,9 @@
 
 			<!-- QMK Firmware Path -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">QMK Firmware Path</h2>
+				<h2 class="text-xl font-semibold mb-4">QMK firmware folder</h2>
 				<p class="text-sm text-muted-foreground mb-4">
-					Path to your QMK firmware directory (for keyboard metadata and compilation)
+					Point LazyQMK at your local <code class="bg-muted px-1 rounded">qmk_firmware</code> folder so keyboard data and firmware builds work.
 				</p>
 				<Input
 					bind:value={qmkPath}
@@ -102,9 +102,9 @@
 
 			<!-- Workspace Root -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">Workspace Root</h2>
+				<h2 class="text-xl font-semibold mb-4">Layout workspace</h2>
 				<p class="text-sm text-muted-foreground mb-4">
-					Directory containing your layout files. Use <code class="bg-muted px-1 rounded">--workspace</code> when starting the backend to change this.
+					This is where LazyQMK looks for your layout files. Start backend with <code class="bg-muted px-1 rounded">--workspace</code> if you want a different folder.
 				</p>
 				<p class="text-sm">
 					<code class="bg-muted px-2 py-1 rounded">{config?.workspace_root || 'Unknown'}</code>

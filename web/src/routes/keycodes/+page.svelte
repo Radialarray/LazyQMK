@@ -48,9 +48,9 @@
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-4xl font-bold mb-2">Keycodes Browser</h1>
+			<h1 class="text-4xl font-bold mb-2">Keycode Reference</h1>
 			<p class="text-muted-foreground">
-				Browse and search QMK keycodes
+				Find what each keycode does before you assign it to your layout.
 			</p>
 		</div>
 		<Button onclick={() => (window.location.href = '/')}>
@@ -62,7 +62,7 @@
 		<!-- Category Sidebar -->
 		<div class="lg:col-span-1">
 			<Card class="p-4">
-				<h2 class="text-lg font-semibold mb-4">Categories</h2>
+				<h2 class="text-lg font-semibold mb-4">Browse by category</h2>
 				<div class="space-y-2">
 					<button
 						class="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors {selectedCategory ===
@@ -71,7 +71,7 @@
 							: ''}"
 						onclick={() => selectCategory(null)}
 					>
-						All Categories
+						All keycodes
 					</button>
 					{#each categories as category}
 						<button
@@ -95,7 +95,7 @@
 				<div class="flex gap-2">
 					<Input
 						bind:value={searchTerm}
-						placeholder="Search keycodes..."
+						placeholder="Search by code, name, or behavior..."
 						class="flex-1"
 						oninput={() => handleSearch()}
 					/>

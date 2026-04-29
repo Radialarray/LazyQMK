@@ -64,20 +64,20 @@
 	const primaryTabs = [
 		{ id: 'preview', label: 'Editor', icon: 'ED' },
 		{ id: 'layers', label: 'Layers', icon: 'LY' },
-		{ id: 'metadata', label: 'Details', icon: 'DT' },
+		{ id: 'metadata', label: 'Layout Info', icon: 'DT' },
 		{ id: 'firmware', label: 'Firmware', icon: 'FW' }
 	];
 	
 	// Secondary tabs - advanced or supporting tasks
 	const secondaryTabs = [
 		{ id: 'categories', label: 'Categories', icon: 'CT' },
-		{ id: 'tap-dance', label: 'Tap Dance', icon: 'TD' },
-		{ id: 'combos', label: 'Combos', icon: 'CB' },
-		{ id: 'idle-effect', label: 'Idle Effect', icon: 'ID' },
-		{ id: 'overlay-ripple', label: 'Overlay Ripple', icon: 'OR' },
-		{ id: 'validate', label: 'Validate', icon: 'OK' },
-		{ id: 'inspect', label: 'Inspect', icon: 'IN' },
-		{ id: 'export', label: 'Export', icon: 'EX' }
+		{ id: 'tap-dance', label: 'Tap Dance Actions', icon: 'TD' },
+		{ id: 'combos', label: 'Two-Key Holds', icon: 'CB' },
+		{ id: 'idle-effect', label: 'Idle Lighting', icon: 'ID' },
+		{ id: 'overlay-ripple', label: 'Ripple Lighting', icon: 'OR' },
+		{ id: 'validate', label: 'Check Layout', icon: 'OK' },
+		{ id: 'inspect', label: 'Layout Report', icon: 'IN' },
+		{ id: 'export', label: 'Export Layout', icon: 'EX' }
 	];
 	
 	let activeTab = $state('preview');
@@ -660,6 +660,8 @@
 		shiftKey: boolean,
 		isVirtualClick: boolean = false
 	) {
+		hoveredKeyIndex = null;
+
 		// Handle swap mode first
 		if (swapMode) {
 			// Ensure the click doesn't bubble into keyboard navigation or other handlers
@@ -1638,7 +1640,7 @@
 						</span>
 					{/if}
 				</div>
-				<p class="text-muted-foreground text-sm">{layout?.metadata.description || 'Edit layout, inspect keys, then save when ready.'}</p>
+				<p class="text-muted-foreground text-sm">{layout?.metadata.description || 'Shape how this keyboard feels in daily use, then save when ready.'}</p>
 				{#if swapMessage}
 					<p class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</p>
 				{:else if saveStatus === 'saved'}
@@ -1710,7 +1712,7 @@
 					data-testid="tab-more-dropdown"
 				>
 					<span class="mr-1">⋯</span>
-					More tools
+					Advanced tools
 					<svg class="w-4 h-4 ml-1 transition-transform {dropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 					</svg>
@@ -1999,16 +2001,22 @@
 						</div>
 					</div>
 
-					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-						<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-							<span>
-								<strong class="text-foreground">Mode</strong>
-								{inspectMode === 'selected' ? ' inspect key selected' : ' browse preview'}
-							</span>
-							<span><strong class="text-foreground">Click</strong> inspect key</span>
-							<span><strong class="text-foreground">Enter or Edit Keycode</strong> change assignment</span>
-							<span><strong class="text-foreground">Shift+click</strong> multi-select</span>
-							<span><strong class="text-foreground">Shift+W</strong> swap mode</span>
+					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-4 text-sm">
+						<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+							<div>
+								<p class="font-medium text-foreground">Editing modes</p>
+								<p class="mt-1 text-muted-foreground">
+									Browse to inspect. Turn on selection to edit many keys. Turn on swap to trade positions.
+								</p>
+							</div>
+							<div class="grid gap-1 text-muted-foreground sm:grid-cols-2 xl:grid-cols-3 xl:gap-x-4">
+								<span><strong class="text-foreground">Current</strong>: {swapMode ? 'swap' : selectionMode ? 'multi-select' : inspectMode === 'selected' ? 'inspect selected key' : 'browse preview'}</span>
+								<span><strong class="text-foreground">Click</strong>: inspect one key</span>
+								<span><strong class="text-foreground">Edit Keycode</strong>: change assignment</span>
+								<span><strong class="text-foreground">Shift+click</strong>: add more keys</span>
+								<span><strong class="text-foreground">Multi-Select</strong>: keep group editing on</span>
+								<span><strong class="text-foreground">Shift+W</strong>: start swap mode</span>
+							</div>
 						</div>
 					</div>
 
@@ -2020,7 +2028,7 @@
 							variant={selectionMode ? 'default' : 'outline'}
 							data-testid="selection-mode-button"
 						>
-							{selectionMode ? '✓ Selection Mode' : 'Selection Mode'}
+							{selectionMode ? '✓ Multi-Select On' : 'Multi-Select'}
 						</Button>
 						<Button
 							onclick={toggleSwapMode}
@@ -2029,7 +2037,7 @@
 							data-testid="swap-mode-button"
 							title="Swap mode (Shift+W) - Click two keys to swap their properties"
 						>
-							{swapMode ? '✓ Swap Mode' : 'Swap Mode'}
+							{swapMode ? '✓ Swap On' : 'Swap Keys'}
 						</Button>
 						{#if selectionMode || selectedKeyIndices.size > 0}
 							<Button
@@ -2117,19 +2125,19 @@
 					{/if}
 				</Card>
 
-			<!-- Key Details Card - Fixed height to prevent scrollbar jumping -->
+			<!-- Selected Key Card - Fixed height to prevent scrollbar jumping -->
 			<Card class="p-6" style="min-height: 400px;" data-testid="key-details-card">
 				<!-- Heading is always visible (LazyQMK-mpm: no flicker) -->
 				<h2 class="text-lg font-semibold mb-4" data-testid="key-details-heading">
-					Key Metadata
+					Selected Key
 				</h2>
 				
 				{#if selectedKeyIndices.size > 1 && hoveredKeyIndex === null}
 					<!-- Multi-selection summary -->
 					<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="multi-selection-summary">
-						<p class="font-medium text-sm">Multiple Keys Selected ({selectedKeyIndices.size} keys)</p>
+						<p class="font-medium text-sm">{selectedKeyIndices.size} keys ready for batch edits</p>
 						<p class="text-xs text-muted-foreground mt-1">
-							Use Copy, Cut, or Paste operations to modify the selection
+							Use copy, cut, or paste to update all selected keys together.
 						</p>
 					</div>
 				{:else if hoveredKeyIndex !== null && hoveredKey === null}
@@ -2143,6 +2151,12 @@
 						</p>
 					</div>
 				{:else if activeKey}
+					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-4">
+						<p class="text-sm font-medium">What you are editing</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							Review this key first, then change keycode, color, category, or note when needed.
+						</p>
+					</div>
 					<!-- Key Legend Display (LazyQMK-t47: show primary/secondary/tertiary) -->
 					{#if activeKeyRenderMetadata?.display}
 						<div class="mb-4 p-4 bg-muted/30 rounded-lg" data-testid="key-legend-display">
@@ -2197,7 +2211,7 @@
 					{#if activeKeyRenderMetadata && activeKeyRenderMetadata.details.length > 0}
 						<!-- Rich key action breakdown (LazyQMK-t47: full keycode DB descriptions) -->
 						<div class="border-t border-border pt-4 mb-4">
-							<h3 class="font-medium text-sm mb-3">Key Actions</h3>
+							<h3 class="font-medium text-sm mb-3">What this key does</h3>
 							<div class="space-y-2">
 								{#each activeKeyRenderMetadata.details as action}
 									<div class="flex items-start gap-3 text-sm">
@@ -2217,11 +2231,11 @@
 					{#if hoveredKeyIndex === null && selectedKey}
 						<!-- Customization controls (only shown when not hovering, works in selection mode - LazyQMK-yij) -->
 						<div class="border-t border-border pt-4 space-y-4">
-							<h3 class="font-medium text-sm">Key Customization</h3>
+							<h3 class="font-medium text-sm">Change this key</h3>
 							<div class="rounded-lg border border-border bg-muted/20 p-3" data-testid="inspect-first-callout">
 								<p class="text-sm font-medium">Inspect first, then edit</p>
 								<p class="mt-1 text-xs text-muted-foreground">
-									Single click now keeps focus on this key. Open editor only when you choose to change keycode.
+									Single click keeps focus here so you can confirm behavior before making changes.
 								</p>
 							</div>
 
@@ -2230,11 +2244,11 @@
 								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
 								<div class="flex flex-wrap items-center gap-2">
 									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
-										Edit Keycode
-									</Button>
-									<Button onclick={() => (activeTab = 'inspect')} size="sm" variant="outline" data-testid="inspect-layout-button">
-										Inspect Layout
-									</Button>
+									Choose New Keycode
+								</Button>
+								<Button onclick={() => (activeTab = 'inspect')} size="sm" variant="outline" data-testid="inspect-layout-button">
+									Open Layout Report
+								</Button>
 								</div>
 							</div>
 
@@ -2286,7 +2300,7 @@
 									{/if}
 								</select>
 								<p class="text-xs text-muted-foreground mt-1">
-									Assign this key to a category for automatic coloring
+									Group this key so related keys share color and meaning.
 								</p>
 							</div>
 
@@ -2303,7 +2317,7 @@
 									data-testid="key-description-input"
 								></textarea>
 								<p class="text-xs text-muted-foreground mt-1">
-									Optional note or reminder for this key binding
+									Optional reminder for what this key is for in daily use.
 								</p>
 							</div>
 						</div>
@@ -2311,8 +2325,8 @@
 				{:else}
 					<!-- Empty state when no key is selected or hovered -->
 					<div class="p-4 text-center text-muted-foreground" data-testid="key-details-empty">
-						<p class="text-sm">Select or hover over key to inspect details</p>
-						<p class="mt-1 text-xs">Editing starts from selected key panel, not from first click.</p>
+						<p class="text-sm">Select or hover over a key to review what it does</p>
+						<p class="mt-1 text-xs">Editing starts here after you choose a key.</p>
 					</div>
 				{/if}
 			</Card>
@@ -2334,6 +2348,15 @@
 		{:else if activeTab === 'tap-dance'}
 			<!-- Tap Dance Tab -->
 			<Card class="p-6">
+				<p class="text-muted-foreground text-sm mb-4">
+					Give one key different results for tap, double-tap, or hold without crowding main editor.
+				</p>
+				<details class="mb-4 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">When to use tap dance</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Use this when one physical key should handle a few intentional actions, like tap for Escape and hold for Control.
+					</p>
+				</details>
 				<div class="flex items-center justify-between mb-4">
 					<h2 class="text-lg font-semibold">Tap Dance Actions</h2>
 					<Button onclick={addTapDance} size="sm">Add Tap Dance</Button>
@@ -2469,10 +2492,16 @@
 		{:else if activeTab === 'idle-effect'}
 			<!-- Idle Effect Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Idle Effect Settings</h2>
+				<h2 class="text-lg font-semibold mb-4">Idle Lighting</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure the RGB effect that plays when the keyboard is idle.
+					Choose what people see after your keyboard sits untouched for a while.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">Show timing guidance</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Short timeouts feel lively on desk displays. Longer timeouts avoid distractions during active work.
+					</p>
+				</details>
 
 				<div class="space-y-4 max-w-md">
 					<div class="flex items-center gap-3">
@@ -2483,7 +2512,7 @@
 							onchange={(e) => updateIdleEffect('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="idle-enabled" class="text-sm font-medium">Enable Idle Effect</label>
+						<label for="idle-enabled" class="text-sm font-medium">Turn on idle lighting</label>
 					</div>
 
 					<div>
@@ -2548,10 +2577,16 @@
 		{:else if activeTab === 'overlay-ripple'}
 			<!-- Overlay Ripple Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Overlay Ripple Settings</h2>
+				<h2 class="text-lg font-semibold mb-4">Ripple Lighting</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure RGB ripple effects that overlay on top of base layer colors when keys are pressed.
+					Add motion on key press while keeping your normal layer colors underneath.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">How to tune ripple lighting</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Turn ripple lighting on first. Open advanced settings only when you want to fine-tune motion, triggers, or ignore rules.
+					</p>
+				</details>
 
 				<div class="space-y-6 max-w-2xl">
 					<!-- Enable Toggle -->
@@ -2563,11 +2598,12 @@
 							onchange={(e) => updateOverlayRipple('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="ripple-enabled" class="text-sm font-medium">Enable Overlay Ripple</label>
+						<label for="ripple-enabled" class="text-sm font-medium">Turn on ripple lighting</label>
 					</div>
 
-					<!-- Ripple Parameters -->
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<details class="rounded-lg border border-border p-4" open={layout.rgb_overlay_ripple?.enabled ?? false}>
+						<summary class="cursor-pointer font-medium">Advanced ripple settings</summary>
+						<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label for="max-ripples" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Max Ripples</label
@@ -2652,10 +2688,10 @@
 								Brightness boost percentage
 							</p>
 						</div>
-					</div>
+						</div>
 
 					<!-- Color Mode -->
-					<div>
+						<div>
 						<label for="color-mode" class="block text-sm font-medium text-muted-foreground mb-1">Color Mode</label>
 						<select
 							id="color-mode"
@@ -2676,10 +2712,10 @@
 								Shift hue from key's base color by fixed degrees
 							{/if}
 						</p>
-					</div>
+						</div>
 
 					<!-- Fixed Color Picker (shown when color_mode is Fixed) -->
-					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
+						{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Fixed Color'}
 						<div>
 							<label class="block text-sm font-medium text-muted-foreground mb-2">Fixed Color</label>
 							<ColorPicker
@@ -2687,10 +2723,10 @@
 								onSelect={(color) => updateOverlayRipple('fixed_color', color)}
 							/>
 						</div>
-					{/if}
+						{/if}
 
 					<!-- Hue Shift (shown when color_mode is Hue Shift) -->
-					{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Hue Shift'}
+						{#if (layout.rgb_overlay_ripple?.color_mode ?? 'Fixed Color') === 'Hue Shift'}
 						<div>
 							<label for="hue-shift" class="block text-sm font-medium text-muted-foreground mb-1"
 								>Hue Shift (degrees)</label
@@ -2707,10 +2743,10 @@
 								Degrees to shift hue (-180 to 180)
 							</p>
 						</div>
-					{/if}
+						{/if}
 
 					<!-- Trigger Options -->
-					<div class="space-y-3">
+						<div class="space-y-3">
 						<h3 class="text-sm font-semibold">Trigger Options</h3>
 						<div class="flex items-center gap-3">
 							<input
@@ -2732,10 +2768,10 @@
 							/>
 							<label for="trigger-release" class="text-sm">Trigger on key release</label>
 						</div>
-					</div>
+						</div>
 
 					<!-- Ignore Options -->
-					<div class="space-y-3">
+						<div class="space-y-3">
 						<h3 class="text-sm font-semibold">Ignore Options</h3>
 						<div class="flex items-center gap-3">
 							<input
@@ -2767,16 +2803,23 @@
 							/>
 							<label for="ignore-layer-switch" class="text-sm">Ignore layer switch keys</label>
 						</div>
-					</div>
+						</div>
+					</details>
 				</div>
 			</Card>
 		{:else if activeTab === 'combos'}
 			<!-- Combos Tab -->
 			<Card class="p-6">
-				<h2 class="text-lg font-semibold mb-4">Two-Key Hold Combos</h2>
+				<h2 class="text-lg font-semibold mb-4">Two-Key Holds</h2>
 				<p class="text-muted-foreground text-sm mb-6">
-					Configure two-key hold combos for special actions. Hold two keys together on the base layer to trigger an action. Maximum 3 combos.
+					Trigger a bigger action when you hold two keys together. Keep this for rare actions you do not want on everyday keys.
 				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">Show combo setup tips</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						Pick pairs that are easy to hold intentionally but hard to trigger by accident. Great for bootloader or lighting shortcuts.
+					</p>
+				</details>
 
 				<div class="space-y-6 max-w-3xl">
 					<!-- Enable Toggle -->
@@ -2788,7 +2831,7 @@
 							onchange={(e) => updateComboSettings('enabled', e.currentTarget.checked)}
 							class="w-4 h-4"
 						/>
-						<label for="combo-enabled" class="text-sm font-medium">Enable Combos</label>
+						<label for="combo-enabled" class="text-sm font-medium">Turn on two-key holds</label>
 					</div>
 
 					{#if layout.combo_settings?.enabled}
@@ -2947,9 +2990,9 @@
 			<!-- Validate Tab -->
 			<Card class="p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Validate Layout</h2>
+					<h2 class="text-lg font-semibold">Check Layout</h2>
 					<Button onclick={runValidation} disabled={validationLoading}>
-						{validationLoading ? 'Validating...' : 'Run Validation'}
+						{validationLoading ? 'Checking...' : 'Check for Problems'}
 					</Button>
 				</div>
 
@@ -2983,7 +3026,7 @@
 					</div>
 				{:else}
 					<p class="text-muted-foreground text-sm">
-						Click "Run Validation" to check your layout for errors.
+						Check this layout before exporting or building to catch problems early.
 					</p>
 				{/if}
 			</Card>
@@ -2991,9 +3034,9 @@
 			<!-- Inspect Tab -->
 			<Card class="p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Inspect Layout</h2>
+					<h2 class="text-lg font-semibold">Layout Report</h2>
 					<Button onclick={runInspect} disabled={inspectLoading}>
-						{inspectLoading ? 'Loading...' : 'Refresh'}
+						{inspectLoading ? 'Loading...' : 'Refresh Report'}
 					</Button>
 				</div>
 
@@ -3093,7 +3136,7 @@
 					</div>
 				{:else}
 					<p class="text-muted-foreground text-sm">
-						Click "Refresh" to load detailed layout information.
+						Open a summary of layers, counts, and settings for review or troubleshooting.
 					</p>
 				{/if}
 			</Card>
@@ -3101,10 +3144,10 @@
 			<!-- Export Tab -->
 			<Card class="p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Export to Markdown</h2>
+					<h2 class="text-lg font-semibold">Export Layout</h2>
 					<div class="flex gap-2">
 						<Button onclick={runExport} disabled={exportLoading}>
-							{exportLoading ? 'Exporting...' : 'Generate Export'}
+							{exportLoading ? 'Exporting...' : 'Prepare Markdown Export'}
 						</Button>
 						{#if exportResult}
 							<Button onclick={downloadExport}>Download</Button>
@@ -3126,7 +3169,7 @@
 					</div>
 				{:else}
 					<p class="text-muted-foreground text-sm">
-						Generate a markdown export with keyboard diagrams and configuration summary.
+						Create a markdown file you can save, share, or review outside LazyQMK.
 					</p>
 				{/if}
 			</Card>

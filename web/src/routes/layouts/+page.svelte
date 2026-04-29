@@ -35,7 +35,7 @@
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-4xl font-bold mb-2">Layouts</h1>
+			<h1 class="text-4xl font-bold mb-2">My Layouts</h1>
 			<p class="text-muted-foreground">
 				Pick layout to edit, inspect, generate, or build firmware.
 			</p>

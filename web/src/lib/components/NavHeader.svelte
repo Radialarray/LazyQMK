@@ -2,11 +2,11 @@
 	import { page } from '$app/stores';
 
 	const primaryPages = [
-		{ href: '/layouts', label: 'Layouts', match: (pathname: string) => pathname.startsWith('/layouts') },
-		{ href: '/onboarding', label: 'New Layout', match: (pathname: string) => pathname === '/onboarding' || pathname === '/setup' },
-		{ href: '/templates', label: 'Templates', match: (pathname: string) => pathname === '/templates' },
-		{ href: '/keycodes', label: 'Keycodes', match: (pathname: string) => pathname === '/keycodes' },
-		{ href: '/settings', label: 'Settings', match: (pathname: string) => pathname === '/settings' }
+		{ href: '/layouts', label: 'My Layouts', match: (pathname: string) => pathname.startsWith('/layouts') },
+		{ href: '/onboarding', label: 'Create Layout', match: (pathname: string) => pathname === '/onboarding' || pathname === '/setup' },
+		{ href: '/templates', label: 'Starter Layouts', match: (pathname: string) => pathname === '/templates' },
+		{ href: '/keycodes', label: 'Keycode Reference', match: (pathname: string) => pathname === '/keycodes' },
+		{ href: '/settings', label: 'Workspace Setup', match: (pathname: string) => pathname === '/settings' }
 	];
 </script>
 

@@ -115,15 +115,15 @@
 
 <div class="container mx-auto p-6">
 	<div class="mb-8">
-		<h1 class="text-4xl font-bold mb-2">Layout Templates</h1>
-		<p class="text-muted-foreground">Browse and apply keyboard layout templates</p>
+		<h1 class="text-4xl font-bold mb-2">Starter Layouts</h1>
+		<p class="text-muted-foreground">Start from proven layouts, then tailor them to your board and workflow.</p>
 	</div>
 
 	<!-- Search Bar -->
 	<div class="mb-6">
 		<Input
 			type="text"
-			placeholder="Search templates by name, description, or tags..."
+			placeholder="Search starter layouts by name, purpose, or tags..."
 			bind:value={searchQuery}
 			class="max-w-md"
 		/>
@@ -147,7 +147,7 @@
 		<!-- Empty State -->
 		<div data-testid="empty-state">
 			<Card class="p-12 text-center">
-				<h2 class="text-2xl font-semibold mb-2">No Templates Found</h2>
+					<h2 class="text-2xl font-semibold mb-2">No Starter Layouts Found</h2>
 				<p class="text-muted-foreground mb-4">
 					{searchQuery ? 'Try a different search query' : 'Create a template from an existing layout'}
 				</p>
@@ -198,7 +198,7 @@
 					<!-- Actions -->
 					<div class="flex gap-2">
 						<Button onclick={() => openApplyDialog(template)} class="flex-1">
-							Apply Template
+							Use as Starting Point
 						</Button>
 					</div>
 				</Card>
