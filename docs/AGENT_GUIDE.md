@@ -310,9 +310,9 @@ If yes, collect preferences for the settings below. Use the defaults as suggesti
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
 | Max Concurrent Ripples | 4 | 1–8 | How many ripples can run at once |
-| Ripple Duration | 1500ms | 100–5000ms | How long each ripple lasts |
+| Ripple Duration | 1500ms | 1–5000ms | How long each ripple lasts |
 | Ripple Speed | 200 | 0–255 | How fast ring expands in physical LED space |
-| Band Width | 30 | physical LED distance units | How wide ring is |
+| Band Width | 30 | 1+ physical LED distance units | How wide ring is |
 | Amplitude | 50% | 0–100% | Brightness boost over base color |
 | Color Mode | Fixed Color | see below | How ripple color is chosen |
 | Fixed Color | `#00FFFF` (cyan) | hex | Color when mode is Fixed Color |
@@ -344,7 +344,7 @@ If yes, collect preferences for the settings below. Use the defaults as suggesti
 #define LQMK_RIPPLE_TRIGGER_ON_RELEASE 0
 ```
 
-**`keymap.c`**: A `ripple_t` array is declared. `rgb_matrix_indicators_advanced_user()` is hooked to apply ripple colors each frame, calculating distance from the ripple origin and fading over time.
+**`keymap.c`**: A `ripple_t` array is declared. `rgb_matrix_indicators_advanced_user()` applies ripple colors each frame, using layer base colors when available and otherwise a global-HSV fallback. Release-triggered ripples also count as activity for idle-effect wake/restore.
 
 **`.md` file** (only non-default values written; example shows Fixed Color mode):
 ```markdown

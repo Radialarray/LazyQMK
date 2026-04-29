@@ -1217,6 +1217,7 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c.contains("if (led_changed) {"));
     assert!(keymap_c.contains("rgb_matrix_set_color(led_index, color.r, color.g, color.b);"));
     assert!(keymap_c.contains("rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());"));
+    assert!(keymap_c.contains("This preserves configured global color, but not exact per-LED animated frames"));
 
     // Generate config.h
     let config_h = generator
@@ -1304,7 +1305,7 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
         .find("lazyqmk_ripple_trigger(keycode, record);")
         .expect("Ripple trigger call should exist");
     let press_gate_idx = keymap_c
-        .find("if (record->event.pressed)")
+        .find("if (record->event.pressed || ripple_triggered)")
         .expect("Idle-effect press gate should exist");
     assert!(
         trigger_idx < press_gate_idx,
@@ -1350,8 +1351,17 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
     // Verify the ripple trigger helper function exists with proper signature
     assert!(
         keymap_c
-            .contains("static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record)"),
+            .contains("static bool lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record)"),
         "Must have ripple trigger helper function"
+    );
+
+    assert!(
+        keymap_c.contains("bool ripple_triggered = lazyqmk_ripple_trigger(keycode, record);"),
+        "Idle path must capture release-triggered ripple activity"
+    );
+    assert!(
+        keymap_c.contains("if (record->event.pressed || ripple_triggered) {"),
+        "Idle reset/wake path must run for release-triggered ripples too"
     );
 
     // Verify layer_base_colors table is actually generated
@@ -1395,7 +1405,102 @@ fn test_rgb_overlay_ripple_hue_shift_generation() {
         "Hue shift degrees should be converted to signed QMK hue steps"
     );
     assert!(
+        keymap_c.contains("while (shifted_hue < 0) shifted_hue += 256;")
+            && keymap_c.contains("while (shifted_hue >= 256) shifted_hue -= 256;"),
+        "Hue shift wrap must use full 256-step QMK hue space"
+    );
+    assert!(
         !keymap_c.contains("TODO: Implement HSV hue shift"),
         "Hue shift implementation TODO should be removed"
     );
+}
+
+#[test]
+fn test_rgb_overlay_ripple_release_trigger_resets_idle_state() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let mut layout = test_layout_basic(2, 3);
+    layout.rgb_overlay_ripple.enabled = true;
+    layout.rgb_overlay_ripple.trigger_on_press = false;
+    layout.rgb_overlay_ripple.trigger_on_release = true;
+    layout.idle_effect_settings.enabled = true;
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    assert!(
+        keymap_c.contains("if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;"),
+        "Release-only trigger path must be generated"
+    );
+    assert!(
+        keymap_c.contains("return true;") && keymap_c.contains("return false;"),
+        "Ripple helper must report whether trigger fired"
+    );
+    assert!(
+        keymap_c.contains("if (record->event.pressed || ripple_triggered) {")
+            && keymap_c.contains("if (idle_state == IDLE_STATE_OFF) {")
+            && keymap_c.contains("rgb_matrix_enable_noeeprom();"),
+        "Release-triggered ripple must wake idle/off path"
+    );
+}
+
+#[test]
+fn test_rgb_overlay_ripple_distance_uses_wide_accumulator() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let mut layout = test_layout_basic(2, 3);
+    layout.rgb_overlay_ripple.enabled = true;
+
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    let keymap_c = generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+
+    assert!(
+        keymap_c.contains("uint32_t dist_sq = (uint32_t)((int32_t)dx * dx + (int32_t)dy * dy);")
+            && keymap_c.contains("uint32_t x = dist_sq;")
+            && keymap_c.contains("uint32_t y = (x + 1) / 2;"),
+        "Distance math must use 32-bit accumulator for wide keyboards"
+    );
+}
+
+#[test]
+fn test_rgb_overlay_ripple_codegen_rejects_zero_duration_and_band_width() {
+    use fixtures::{test_geometry_basic, test_layout_basic};
+
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    let mut duration_layout = test_layout_basic(2, 3);
+    duration_layout.rgb_overlay_ripple.enabled = true;
+    duration_layout.rgb_overlay_ripple.duration_ms = 0;
+    let duration_generator =
+        FirmwareGenerator::new(&duration_layout, &geometry, &mapping, &config, &keycode_db);
+    assert!(duration_generator.generate_keymap_c().is_err());
+    assert!(duration_generator.generate_merged_config_h().is_err());
+
+    let mut band_width_layout = test_layout_basic(2, 3);
+    band_width_layout.rgb_overlay_ripple.enabled = true;
+    band_width_layout.rgb_overlay_ripple.band_width = 0;
+    let band_width_generator =
+        FirmwareGenerator::new(&band_width_layout, &geometry, &mapping, &config, &keycode_db);
+    assert!(band_width_generator.generate_keymap_c().is_err());
+    assert!(band_width_generator.generate_merged_config_h().is_err());
 }

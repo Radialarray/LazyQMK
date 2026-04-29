@@ -22,6 +22,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
 - Rendered as additive overlay using `rgb_matrix_indicators_advanced_user`
 - Up to 8 concurrent ripples supported
 - Three color modes: Fixed Color, Key Color, Hue Shift
+- Uses layer base colors when available; otherwise falls back to current global RGB HSV, not exact per-LED animated frame data
 
 ## Settings Validation
 
@@ -70,10 +71,11 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
    - [ ] Confirm value updates in display
 
 3. **Test Ripple Duration**
-   - Select setting, press `Enter`
-   - [ ] Try values: 200, 1500, 3000, 5000
-   - [ ] Verify shorter durations = faster ripples
-   - [ ] Confirm millisecond unit in description
+    - Select setting, press `Enter`
+    - [ ] Try values: 200, 1500, 3000, 5000
+    - [ ] Verify value `0` is rejected before save/codegen
+    - [ ] Verify shorter durations = faster ripples
+    - [ ] Confirm millisecond unit in description
 
 4. **Test Ripple Speed**
    - Select setting, press `Enter`
@@ -82,9 +84,10 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
    - [ ] Confirm 0-255 range
 
 5. **Test Ripple Band Width**
-   - Select setting, press `Enter`
-   - [ ] Try values: 10, 30, 60, 120
-   - [ ] Confirm physical-distance description
+    - Select setting, press `Enter`
+    - [ ] Try values: 10, 30, 60, 120
+    - [ ] Verify value `0` is rejected before save/codegen
+    - [ ] Confirm physical-distance description
 
 6. **Test Ripple Amplitude**
    - Select setting, press `Enter`
@@ -195,7 +198,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
     - [ ] Search for "Hue shift mode" comment
     - [ ] Verify hue shift value in code: `shift by 60 degrees`
     - [ ] Confirm HSV → RGB conversion code is present
-    - [ ] Check for hue wrapping logic in 0-255 QMK HSV space
+    - [ ] Check for hue wrapping logic in full 0-255 QMK HSV modular space (`+/- 256` wrap in generated math)
 
 ### Test Filter Generation
 
@@ -236,6 +239,7 @@ Ripple effects are animated overlays rendered on top of base layer colors. When 
     - Open `keymap.c`
     - [ ] Verify check: `if (!record->event.pressed) { /* trigger ripple */ }`
     - [ ] Confirm no trigger on `record->event.pressed`
+    - [ ] Confirm release-triggered ripple also resets idle timer and wakes RGB from idle/off state
 
 24. **Both Press and Release**
     - Enable both "Trigger on Press" and "Trigger on Release"
@@ -269,8 +273,8 @@ The idle effect and overlay ripple are separate features that should work togeth
     - Generate firmware
     - Open `keymap.c`
     - [ ] Verify idle effect runs during idle state
-    - [ ] Verify ripples render on top of idle animation (or after idle exit)
-    - [ ] Confirm ripple resets idle timer (user activity)
+    - [ ] Verify ripples render on top of layer base colors, or on top of global HSV fallback when no layer base colors exist
+    - [ ] Confirm both press-triggered and release-triggered ripples reset idle timer (user activity)
 
 28. **Test Conflict Resolution**
     - Enable both features with aggressive settings (short idle timeout, many ripples)
@@ -371,7 +375,9 @@ The idle effect and overlay ripple are separate features that should work togeth
     - Try to set max ripples to 20
     - [ ] Verify rejected or clamped to maximum (8)
     - Try to set duration to 0
-    - [ ] Verify behavior (instant ripple or minimum value)
+    - [ ] Verify rejected before firmware generation
+    - Try to set band width to 0
+    - [ ] Verify rejected before firmware generation
 
 38. **Test Conflicting Settings**
     - Disable both "Trigger on Press" and "Trigger on Release"

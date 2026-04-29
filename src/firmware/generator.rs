@@ -650,9 +650,7 @@ impl<'a> FirmwareGenerator<'a> {
         // Forward declaration for ripple trigger (defined below in LQMK_RIPPLE_OVERLAY_ENABLED block)
         if has_ripple {
             code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
-            code.push_str(
-                "static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record);\n",
-            );
+            code.push_str("static bool lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record);\n");
             code.push_str("#endif\n");
             code.push('\n');
         }
@@ -664,12 +662,16 @@ impl<'a> FirmwareGenerator<'a> {
         if has_ripple {
             code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
             code.push_str("    // Trigger ripple effect on matching key events\n");
-            code.push_str("    lazyqmk_ripple_trigger(keycode, record);\n");
+            code.push_str("    bool ripple_triggered = lazyqmk_ripple_trigger(keycode, record);\n");
             code.push_str("#endif\n");
             code.push('\n');
         }
 
-        code.push_str("    if (record->event.pressed) {\n");
+        code.push_str("    if (record->event.pressed");
+        if has_ripple {
+            code.push_str(" || ripple_triggered");
+        }
+        code.push_str(") {\n");
         code.push_str("        // Reset activity timer\n");
         code.push_str("        last_activity_time = timer_read32();\n");
         code.push('\n');
@@ -724,6 +726,7 @@ impl<'a> FirmwareGenerator<'a> {
         }
 
         let settings = &self.layout.rgb_overlay_ripple;
+        settings.validate()?;
         let mut code = String::new();
 
         code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
@@ -778,11 +781,11 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    // Use integer approximation of sqrt(dx*dx + dy*dy)\n");
         code.push_str("    // QMK coordinates are 0-224 for X and 0-64 for Y\n");
         code.push_str("    // Cast to int32_t before multiply to avoid signed overflow UB on AVR (16-bit int)\n");
-        code.push_str("    uint16_t dist_sq = (uint16_t)((int32_t)dx * dx + (int32_t)dy * dy);\n");
+        code.push_str("    uint32_t dist_sq = (uint32_t)((int32_t)dx * dx + (int32_t)dy * dy);\n");
         code.push_str("    // Fast integer square root approximation\n");
         code.push_str("    if (dist_sq == 0) return 0;\n");
-        code.push_str("    uint16_t x = dist_sq;\n");
-        code.push_str("    uint16_t y = (x + 1) / 2;\n");
+        code.push_str("    uint32_t x = dist_sq;\n");
+        code.push_str("    uint32_t y = (x + 1) / 2;\n");
         code.push_str("    while (y < x) {\n");
         code.push_str("        x = y;\n");
         code.push_str("        y = (x + dist_sq / x) / 2;\n");
@@ -828,7 +831,8 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    }\n");
         code.push_str("#endif\n");
         code.push('\n');
-        code.push_str("    // Fallback to current matrix HSV when no per-layer base colors exist\n");
+        code.push_str("    // Fallback to current matrix HSV snapshot when no per-layer base colors exist\n");
+        code.push_str("    // This preserves configured global color, but not exact per-LED animated frames\n");
         code.push_str("    rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());\n");
         code.push_str("    color.r = matrix_rgb.r;\n");
         code.push_str("    color.g = matrix_rgb.g;\n");
@@ -868,8 +872,8 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        hue = (int16_t)(171 + (43 * ((int16_t)color.r - (int16_t)color.g)) / delta);\n");
         code.push_str("    }\n");
         code.push('\n');
-        code.push_str("    while (hue < 0) hue += 255;\n");
-        code.push_str("    while (hue >= 255) hue -= 255;\n");
+        code.push_str("    while (hue < 0) hue += 256;\n");
+        code.push_str("    while (hue >= 256) hue -= 256;\n");
         code.push_str("    hsv.h = (uint8_t)hue;\n");
         code.push_str("    return hsv;\n");
         code.push_str("}\n");
@@ -904,7 +908,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            led_changed = true;\n");
         code.push('\n');
 
-        let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 255) / 360;
+        let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 256) / 360;
 
         // Apply color based on color mode
         match settings.color_mode {
@@ -945,8 +949,8 @@ impl<'a> FirmwareGenerator<'a> {
                     "            int16_t shifted_hue = (int16_t)shifted_hsv.h + {};\n",
                     hue_shift_steps
                 ));
-                code.push_str("            while (shifted_hue < 0) shifted_hue += 255;\n");
-                code.push_str("            while (shifted_hue >= 255) shifted_hue -= 255;\n");
+                code.push_str("            while (shifted_hue < 0) shifted_hue += 256;\n");
+                code.push_str("            while (shifted_hue >= 256) shifted_hue -= 256;\n");
                 code.push_str("            shifted_hsv.h = (uint8_t)shifted_hue;\n");
                 code.push_str("            rgb_t shifted_rgb = hsv_to_rgb(shifted_hsv);\n");
                 code.push_str("            color.r = lazyqmk_ripple_add_u8(color.r, lazyqmk_ripple_scale_u8(shifted_rgb.r, brightness));\n");
@@ -968,18 +972,18 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Helper: Trigger ripple on keypress
         code.push_str(
-            "static void lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record) {\n",
+            "static bool lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record) {\n",
         );
 
         // Add filters
         if settings.ignore_transparent {
-            code.push_str("    if (keycode == KC_TRNS) return;\n");
+            code.push_str("    if (keycode == KC_TRNS) return false;\n");
         }
         if settings.ignore_modifiers {
-            code.push_str("    if (IS_MODIFIER_KEYCODE(keycode)) return;\n");
+            code.push_str("    if (IS_MODIFIER_KEYCODE(keycode)) return false;\n");
         }
         if settings.ignore_layer_switch {
-            code.push_str("    if (IS_LAYER_SWITCH_KEYCODE(keycode)) return;\n");
+            code.push_str("    if (IS_LAYER_SWITCH_KEYCODE(keycode)) return false;\n");
         }
 
         code.push_str("    // Get LED index from matrix position\n");
@@ -998,9 +1002,11 @@ impl<'a> FirmwareGenerator<'a> {
             }
             code.push_str("    if (should_trigger) {\n");
             code.push_str("        lazyqmk_ripple_add(led_index);\n");
+            code.push_str("        return true;\n");
             code.push_str("    }\n");
         }
 
+        code.push_str("    return false;\n");
         code.push_str("}\n");
         code.push('\n');
 
@@ -1009,7 +1015,7 @@ impl<'a> FirmwareGenerator<'a> {
             "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
-        code.push_str("        // Apply ripple overlay only to affected LEDs so base frame stays intact\n");
+        code.push_str("        // Apply ripple overlay using layer base colors or global HSV fallback\n");
         code.push_str("        lazyqmk_ripple_apply(i);\n");
         code.push_str("    }\n");
         code.push_str("    return false;\n");

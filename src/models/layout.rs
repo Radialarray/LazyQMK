@@ -501,6 +501,12 @@ impl RgbOverlayRippleSettings {
         if self.max_ripples == 0 || self.max_ripples > 8 {
             anyhow::bail!("max_ripples must be between 1 and 8");
         }
+        if self.duration_ms == 0 {
+            anyhow::bail!("duration_ms must be greater than 0");
+        }
+        if self.band_width == 0 {
+            anyhow::bail!("band_width must be greater than 0");
+        }
         if self.amplitude_pct > 100 {
             anyhow::bail!("amplitude_pct must be between 0 and 100");
         }
@@ -2006,6 +2012,9 @@ impl Layout {
         // Validate tap dance actions and references
         self.validate_tap_dances()?;
 
+        // Validate ripple settings even when loaded from embedded/frontmatter data
+        self.rgb_overlay_ripple.validate()?;
+
         Ok(())
     }
 }
@@ -2092,6 +2101,33 @@ mod tests {
 
         assert!(layout.add_category(category1).is_ok());
         assert!(layout.add_category(category2).is_err()); // Duplicate ID
+    }
+
+    #[test]
+    fn test_ripple_settings_validate_rejects_zero_duration() {
+        let mut settings = RgbOverlayRippleSettings::default();
+        settings.duration_ms = 0;
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn test_ripple_settings_validate_rejects_zero_band_width() {
+        let mut settings = RgbOverlayRippleSettings::default();
+        settings.band_width = 0;
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn test_layout_validate_rejects_invalid_ripple_settings() {
+        let mut layout = Layout::new("Test").unwrap();
+        let mut layer = Layer::new(0, "Base", RgbColor::new(255, 0, 0)).unwrap();
+        layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_A"));
+        layout.add_layer(layer).unwrap();
+        layout.rgb_overlay_ripple.duration_ms = 0;
+
+        assert!(layout.validate().is_err());
     }
 
     #[test]
