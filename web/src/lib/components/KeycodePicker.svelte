@@ -23,6 +23,21 @@
 	let categories = $state<CategoryInfo[]>([]);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+	const quickFilters = ['basic', 'modifier', 'layer', 'media', 'rgb'];
+
+	const filteredCategories = $derived(
+		quickFilters
+			.map((id) => categories.find((category) => category.id === id))
+			.filter((category): category is CategoryInfo => Boolean(category))
+	);
+
+	const activeCategory = $derived(
+		categories.find((category) => category.id === selectedCategory) ?? null
+	);
+
+	const keycodeCountLabel = $derived(
+		loading ? 'Loading results…' : `${keycodes.length} ${keycodes.length === 1 ? 'result' : 'results'}`
+	);
 
 	// Load categories on mount
 	$effect(() => {
@@ -78,6 +93,11 @@
 		onClose();
 	}
 
+	function resetFilters() {
+		searchQuery = '';
+		selectedCategory = '';
+	}
+
 	function handleCategoryChange(categoryId: string) {
 		selectedCategory = categoryId;
 	}
@@ -96,8 +116,6 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		onclick={handleClose}
@@ -116,33 +134,81 @@
 			data-testid="keycode-picker-dialog"
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-border">
-				<h2 id="keycode-picker-title" class="text-lg font-semibold">Select Keycode</h2>
+			<div class="flex items-start justify-between gap-4 p-4 border-b border-border">
+				<div>
+					<h2 id="keycode-picker-title" class="text-lg font-semibold">Select Keycode</h2>
+					<p class="mt-1 text-sm text-muted-foreground">
+						Search by code or meaning. Start with quick groups, then refine.
+					</p>
+				</div>
 				<Button variant="ghost" size="icon" onclick={handleClose} title="Close">
 					<span class="text-xl">✕</span>
 				</Button>
 			</div>
 
 			<!-- Search and Filters -->
-			<div class="p-4 border-b border-border space-y-3">
-				<Input
-					type="text"
-					placeholder="Search keycodes..."
-					value={searchQuery}
-					oninput={handleSearchInput}
-					class="w-full"
-					data-testid="keycode-search-input"
-				/>
+			<div class="p-4 border-b border-border space-y-4">
+				<div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+					<div>
+						<label for="keycode-search" class="mb-2 block text-sm font-medium">Search</label>
+						<Input
+							id="keycode-search"
+							type="text"
+							placeholder="Try: enter, control, rgb, layer…"
+							value={searchQuery}
+							oninput={handleSearchInput}
+							class="w-full"
+							data-testid="keycode-search-input"
+						/>
+					</div>
+					<div class="flex items-center gap-2 text-sm text-muted-foreground">
+						<span data-testid="keycode-results-count">{keycodeCountLabel}</span>
+						{#if searchQuery || selectedCategory}
+							<Button variant="ghost" size="sm" onclick={resetFilters} data-testid="keycode-reset-filters">
+								Reset
+							</Button>
+						{/if}
+					</div>
+				</div>
 
-				<!-- Category Filter -->
-				<div class="flex gap-2 flex-wrap">
+				<div>
+					<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Quick groups</p>
+					<div class="flex gap-2 flex-wrap">
+						<button
+							onclick={() => handleCategoryChange('')}
+							class="px-3 py-1.5 rounded-md text-sm transition-colors
+								{selectedCategory === ''
+								? 'bg-primary text-primary-foreground'
+								: 'bg-muted hover:bg-muted/80'}"
+							data-testid="category-all"
+						>
+							All
+						</button>
+						{#each filteredCategories as category}
+							<button
+								onclick={() => handleCategoryChange(category.id)}
+								class="px-3 py-1.5 rounded-md text-sm transition-colors
+									{selectedCategory === category.id
+									? 'bg-primary text-primary-foreground'
+									: 'bg-muted hover:bg-muted/80'}"
+								data-testid="category-{category.id}"
+							>
+								{category.name}
+							</button>
+						{/each}
+					</div>
+				</div>
+
+				<div>
+					<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">All categories</p>
+					<div class="flex gap-2 flex-wrap max-h-24 overflow-y-auto pr-1">
 					<button
 						onclick={() => handleCategoryChange('')}
 						class="px-3 py-1.5 rounded-md text-sm transition-colors
 							{selectedCategory === ''
 							? 'bg-primary text-primary-foreground'
 							: 'bg-muted hover:bg-muted/80'}"
-						data-testid="category-all"
+						data-testid="category-all-categories"
 					>
 						All
 					</button>
@@ -159,6 +225,14 @@
 						</button>
 					{/each}
 				</div>
+				</div>
+
+				{#if activeCategory}
+					<p class="text-xs text-muted-foreground" data-testid="active-category-description">
+						<strong class="text-foreground">{activeCategory.name}:</strong>
+						{activeCategory.description || 'Category selected.'}
+					</p>
+				{/if}
 			</div>
 
 			<!-- Keycode List -->
@@ -185,12 +259,22 @@
 									{isCurrent ? 'ring-2 ring-primary' : ''}"
 								data-testid="keycode-option-{keycode.code}"
 							>
-								<div class="font-mono text-sm font-medium">{keycode.code}</div>
-								<div class="text-xs text-muted-foreground mt-1">
-									{keycode.name}
-									{#if isCurrent}
-										<span class="ml-2 text-primary">(current)</span>
-									{/if}
+								<div class="flex items-start justify-between gap-3">
+									<div>
+										<div class="font-mono text-sm font-medium">{keycode.code}</div>
+										<div class="text-xs text-muted-foreground mt-1">
+											{keycode.name}
+											{#if isCurrent}
+												<span class="ml-2 text-primary">(current)</span>
+											{/if}
+										</div>
+									</div>
+									<span class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+										{keycode.category}
+									</span>
+								</div>
+								<div class="text-xs text-muted-foreground mt-2">
+									Press to assign this keycode
 								</div>
 								{#if keycode.description}
 									<div class="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -206,7 +290,7 @@
 			<!-- Footer -->
 			<div class="flex items-center justify-between p-4 border-t border-border">
 				<Button variant="outline" onclick={handleClear} data-testid="clear-key-button">
-					Clear Key (KC_TRNS)
+					Set Transparent (KC_TRNS)
 				</Button>
 				<Button variant="ghost" onclick={handleClose}>Cancel</Button>
 			</div>

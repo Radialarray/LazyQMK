@@ -33,6 +33,7 @@
 	let templates = $state<TemplateInfo[]>([]);
 	let templatesLoading = $state(false);
 	let templatesError = $state<string | null>(null);
+	let templateChoiceMessage = $state<string | null>(null);
 	let selectedTemplate = $state<TemplateInfo | null>(null);
 	let newLayoutName = $state('');
 	let applyLoading = $state(false);
@@ -174,6 +175,7 @@
 		selectedTemplate = template;
 		newLayoutName = '';
 		applyError = null;
+		templateChoiceMessage = null;
 		currentStep = 'template';
 	}
 
@@ -205,8 +207,21 @@
 	}
 
 	function startCreateFromScratch() {
+		templateChoiceMessage = null;
 		currentStep = 'create';
 		loadKeyboards();
+	}
+
+	function handleTemplateEntry() {
+		if (templatesLoading) return;
+		if (hasTemplates) {
+			templateChoiceMessage = null;
+			document.getElementById('available-templates')?.scrollIntoView({ behavior: 'smooth' });
+			return;
+		}
+
+		templateChoiceMessage =
+			'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
 	}
 
 	function selectKeyboard(path: string) {
@@ -364,18 +379,12 @@
 							</button>
 						{/if}
 
-						<!-- From Template -->
-						<button
-							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
-							onclick={() => {
-								if (hasTemplates) {
-									document.getElementById('available-templates')?.scrollIntoView({ behavior: 'smooth' });
-								} else {
-									startCreateFromScratch();
-								}
-							}}
-							disabled={templatesLoading}
-						>
+					<!-- From Template -->
+					<button
+						class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
+						onclick={handleTemplateEntry}
+						disabled={templatesLoading}
+					>
 							<div class="text-4xl mb-4">📦</div>
 							<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
 								From Template
@@ -386,7 +395,9 @@
 							{#if templatesLoading}
 								<p class="text-xs text-muted-foreground mt-2">Loading templates...</p>
 							{:else if !hasTemplates}
-								<p class="text-xs text-muted-foreground mt-2">No templates available yet</p>
+								<p class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+									No templates available yet — no automatic fallback
+								</p>
 							{/if}
 						</button>
 
@@ -517,6 +528,13 @@
 						</Button>
 					</div>
 				</div>
+
+				{#if templateChoiceMessage}
+					<div class="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+						<p class="font-medium">Template start unavailable</p>
+						<p class="mt-1">{templateChoiceMessage}</p>
+					</div>
+				{/if}
 			</Card>
 		{:else if currentStep === 'create'}
 			<!-- Create from Scratch -->

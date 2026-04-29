@@ -10,6 +10,7 @@
 		CategoryManager,
 		ColorPicker
 	} from '$components';
+	import { goto } from '$app/navigation';
 	import { apiClient } from '$api';
 	import type { PageData } from './$types';
 	import type {
@@ -53,6 +54,8 @@
 	let isDirty = $state(false);
 	let saveStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
 	let saveError = $state<string | null>(null);
+	let leaveDialogOpen = $state(false);
+	let pendingNavigationTarget = $state<string | null>(null);
 
 	// Tab navigation
 	// Primary tabs - always visible in horizontal bar
@@ -131,6 +134,7 @@
 	// State for keycode picker
 	let keycodePickerOpen = $state(false);
 	let editingKeyVisualIndex = $state<number | null>(null);
+	let inspectMode = $state<'idle' | 'selected'>('idle');
 
 	// State for color/category editing
 	let showKeyColorPicker = $state(false);
@@ -162,6 +166,17 @@
 	onDestroy(() => {
 		stopPolling();
 		stopBuildPolling();
+	});
+
+	$effect(() => {
+		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!isDirty) return;
+			event.preventDefault();
+			event.returnValue = '';
+		};
+
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	function stopPolling() {
@@ -637,12 +652,12 @@
 			selectedKeyIndices = newSelection;
 			// Keep single selection for key details panel
 			selectedKeyIndex = visualIndex;
+			inspectMode = 'selected';
 		} else if (!isVirtualClick) {
 			// Single selection mode (default behavior)
 			selectedKeyIndex = visualIndex;
 			selectedKeyIndices = new Set();
-			// Immediately open keycode picker for TUI-like UX
-			openKeycodePicker();
+			inspectMode = 'selected';
 		}
 	}
 	
@@ -652,6 +667,7 @@
 	function handleKeyboardNavigation(newKeyIndex: number | null, newSelectedIndices: Set<number>) {
 		selectedKeyIndex = newKeyIndex;
 		selectedKeyIndices = newSelectedIndices;
+		inspectMode = newKeyIndex === null ? 'idle' : 'selected';
 	}
 
 	/**
@@ -828,6 +844,7 @@
 	function clearSelection() {
 		selectedKeyIndices = new Set();
 		selectedKeyIndex = null;
+		inspectMode = 'idle';
 	}
 
 	// Clear render metadata for specific keys so the local keycodeMap fallback renders instead of stale backend data.
@@ -935,6 +952,30 @@
 		editingKeyVisualIndex = null;
 	}
 
+	function attemptNavigate(target: string) {
+		if (isDirty) {
+			pendingNavigationTarget = target;
+			leaveDialogOpen = true;
+			return;
+		}
+
+		goto(target);
+	}
+
+	function closeLeaveDialog() {
+		leaveDialogOpen = false;
+		pendingNavigationTarget = null;
+	}
+
+	function confirmLeaveWithoutSaving() {
+		const target = pendingNavigationTarget;
+		leaveDialogOpen = false;
+		pendingNavigationTarget = null;
+		if (target) {
+			goto(target);
+		}
+	}
+
 	function handleLayerChange(index: number) {
 		selectedLayerIndex = index;
 		// Clear selection when changing layers
@@ -982,6 +1023,13 @@
 			await apiClient.saveLayout(filename, layout);
 			saveStatus = 'saved';
 			isDirty = false;
+			if (leaveDialogOpen && pendingNavigationTarget) {
+				const target = pendingNavigationTarget;
+				leaveDialogOpen = false;
+				pendingNavigationTarget = null;
+				goto(target);
+				return;
+			}
 			setTimeout(() => {
 				if (saveStatus === 'saved') saveStatus = 'idle';
 			}, 2000);
@@ -993,7 +1041,7 @@
 
 	async function resetLayout() {
 		if (!filename) return;
-		if (!window.confirm('Discard all unsaved changes?')) return;
+		if (!window.confirm('Discard all unsaved changes? This will revert edits since last save.')) return;
 		try {
 			const savedLayout = await apiClient.getLayout(filename);
 			layout = { ...savedLayout, layers: [...savedLayout.layers] };
@@ -1003,6 +1051,7 @@
 			// Clear selection and editor state
 			selectedKeyIndex = null;
 			selectedKeyIndices = new Set();
+			inspectMode = 'idle';
 			selectionMode = false;
 			keycodePickerOpen = false;
 			editingKeyVisualIndex = null;
@@ -1165,6 +1214,7 @@
 	}
 
 	// Combo settings
+	type ComboPosition = { row: number; col: number };
 	import type { ComboAction } from '$api/types';
 	
 	function updateComboSettings(field: string, value: boolean | number | string | { row: number; col: number }, comboIndex?: number) {
@@ -1529,38 +1579,51 @@
 
 <div class="container mx-auto p-6">
 	<!-- Header -->
-	<div class="mb-6 flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold mb-1">
-				{layout?.metadata.name || 'Loading...'}
-			</h1>
-			<p class="text-muted-foreground text-sm">
-				{layout?.metadata.description || ''}
-			</p>
-		</div>
-		<div class="flex items-center gap-3">
-			{#if isDirty}
-				<span class="text-sm text-yellow-500">Unsaved changes</span>
-			{/if}
-			{#if swapMessage}
-				<span class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</span>
-			{:else if saveStatus === 'saved'}
-				<span class="text-sm text-green-500">Saved!</span>
-			{:else if saveStatus === 'error'}
-				<span class="text-sm text-red-500">{saveError}</span>
-			{/if}
-			{#if isDirty}
-				<Button onclick={resetLayout} variant="outline" data-testid="reset-button">
-					Reset
-				</Button>
-			{/if}
-			<Button onclick={saveLayout} disabled={!isDirty || !canSave || saveStatus === 'saving'} data-testid="save-button">
-				{saveStatus === 'saving' ? 'Saving...' : 'Save'}
-			</Button>
-			<Button onclick={openSaveTemplateDialog} variant="outline" data-testid="save-template-button">Save as Template</Button>
-			<a href="/layouts">
-				<Button>Back</Button>
-			</a>
+	<div class="mb-6 space-y-4">
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+			<div class="space-y-2">
+				<div class="flex flex-wrap items-center gap-2">
+					<h1 class="text-3xl font-bold">{layout?.metadata.name || 'Loading...'}</h1>
+					{#if isDirty}
+						<span class="rounded-full bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-300">
+							Unsaved changes
+						</span>
+					{/if}
+				</div>
+				<p class="text-muted-foreground text-sm">{layout?.metadata.description || 'Edit layout, inspect keys, then save when ready.'}</p>
+				{#if swapMessage}
+					<p class={`text-sm ${swapMessageClass(swapMessageTone)}`}>{swapMessage}</p>
+				{:else if saveStatus === 'saved'}
+					<p class="text-sm text-green-500">Saved!</p>
+				{:else if saveStatus === 'error'}
+					<p class="text-sm text-red-500">{saveError}</p>
+				{/if}
+			</div>
+
+			<div class="flex flex-col items-stretch gap-3 lg:min-w-[420px]">
+				<div class="flex flex-wrap items-center justify-end gap-2">
+					<Button
+						onclick={saveLayout}
+						disabled={!isDirty || !canSave || saveStatus === 'saving'}
+						data-testid="save-button"
+					>
+						{saveStatus === 'saving' ? 'Saving...' : isDirty ? 'Save Changes' : 'All Changes Saved'}
+					</Button>
+					<Button onclick={openSaveTemplateDialog} variant="outline" data-testid="save-template-button">
+						Save as Template
+					</Button>
+				</div>
+				<div class="flex flex-wrap items-center justify-end gap-2">
+					{#if isDirty}
+						<Button onclick={resetLayout} variant="outline" data-testid="reset-button">
+							Discard Unsaved Changes
+						</Button>
+					{/if}
+					<Button variant="ghost" onclick={() => attemptNavigate('/layouts')} data-testid="back-button">
+						← Back to Layouts
+					</Button>
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -1858,6 +1921,19 @@
 						</div>
 					</div>
 
+					<div class="mb-4 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+						<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+							<span>
+								<strong class="text-foreground">Mode</strong>
+								{inspectMode === 'selected' ? ' inspect key selected' : ' browse preview'}
+							</span>
+							<span><strong class="text-foreground">Click</strong> inspect key</span>
+							<span><strong class="text-foreground">Enter or Edit Keycode</strong> change assignment</span>
+							<span><strong class="text-foreground">Shift+click</strong> multi-select</span>
+							<span><strong class="text-foreground">Shift+W</strong> swap mode</span>
+						</div>
+					</div>
+
 					<!-- Selection and Clipboard Controls -->
 					<div class="mb-4 flex items-center gap-2 flex-wrap">
 						<Button
@@ -2064,11 +2140,24 @@
 						<!-- Customization controls (only shown when not hovering, works in selection mode - LazyQMK-yij) -->
 						<div class="border-t border-border pt-4 space-y-4">
 							<h3 class="font-medium text-sm">Key Customization</h3>
+							<div class="rounded-lg border border-border bg-muted/20 p-3" data-testid="inspect-first-callout">
+								<p class="text-sm font-medium">Inspect first, then edit</p>
+								<p class="mt-1 text-xs text-muted-foreground">
+									Single click now keeps focus on this key. Open editor only when you choose to change keycode.
+								</p>
+							</div>
 
 							<!-- Edit Keycode Button -->
 							<div>
 								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
-								<Button onclick={openKeycodePicker} size="sm">Edit Keycode</Button>
+								<div class="flex flex-wrap items-center gap-2">
+									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
+										Edit Keycode
+									</Button>
+									<Button onclick={() => (activeTab = 'inspect')} size="sm" variant="outline" data-testid="inspect-layout-button">
+										Inspect Layout
+									</Button>
+								</div>
 							</div>
 
 							<!-- Key Color Override -->
@@ -2144,7 +2233,8 @@
 				{:else}
 					<!-- Empty state when no key is selected or hovered -->
 					<div class="p-4 text-center text-muted-foreground" data-testid="key-details-empty">
-						<p class="text-sm">Select or hover over a key to view details</p>
+						<p class="text-sm">Select or hover over key to inspect details</p>
+						<p class="mt-1 text-xs">Editing starts from selected key panel, not from first click.</p>
 					</div>
 				{/if}
 			</Card>
@@ -3372,6 +3462,39 @@
 		? currentLayerKeys.find((k) => k.visual_index === editingKeyVisualIndex)?.keycode
 		: undefined}
 />
+
+{#if leaveDialogOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+		onclick={closeLeaveDialog}
+		onkeydown={(e) => e.key === 'Escape' && closeLeaveDialog()}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="leave-editor-title"
+		tabindex="-1"
+	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="w-full max-w-md" onclick={(e: MouseEvent) => e.stopPropagation()}>
+			<Card class="p-6">
+				<h2 id="leave-editor-title" class="text-lg font-semibold">Leave editor with unsaved changes?</h2>
+				<p class="mt-2 text-sm text-muted-foreground">
+					Your changes are not saved yet. Save before leaving, or discard them and continue.
+				</p>
+				<div class="mt-6 flex flex-wrap justify-end gap-2">
+					<Button variant="ghost" onclick={closeLeaveDialog}>Stay Here</Button>
+					<Button onclick={saveLayout} disabled={!canSave || saveStatus === 'saving'}>
+						{saveStatus === 'saving' ? 'Saving...' : 'Save First'}
+					</Button>
+					<Button variant="destructive" onclick={confirmLeaveWithoutSaving} data-testid="confirm-leave-without-saving">
+						Leave Without Saving
+					</Button>
+				</div>
+			</Card>
+		</div>
+	</div>
+{/if}
 
 <!-- Save as Template Dialog -->
 {#if showSaveTemplateDialog}
