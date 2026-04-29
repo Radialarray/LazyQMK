@@ -15,18 +15,18 @@
 
 	// Predefined color palette
 	const colorPalette = [
-		'#FF0000', // Red
-		'#FF8800', // Orange
-		'#FFFF00', // Yellow
-		'#00FF00', // Green
-		'#00FFFF', // Cyan
-		'#0088FF', // Blue
-		'#8800FF', // Purple
-		'#FF00FF', // Magenta
-		'#FFFFFF', // White
-		'#CCCCCC', // Light Gray
-		'#888888', // Gray
-		'#444444' // Dark Gray
+		{ hex: '#FF0000', name: 'Red' },
+		{ hex: '#FF8800', name: 'Orange' },
+		{ hex: '#FFFF00', name: 'Yellow' },
+		{ hex: '#00FF00', name: 'Green' },
+		{ hex: '#00FFFF', name: 'Cyan' },
+		{ hex: '#0088FF', name: 'Blue' },
+		{ hex: '#8800FF', name: 'Purple' },
+		{ hex: '#FF00FF', name: 'Magenta' },
+		{ hex: '#FFFFFF', name: 'White' },
+		{ hex: '#CCCCCC', name: 'Light gray' },
+		{ hex: '#888888', name: 'Gray' },
+		{ hex: '#444444', name: 'Dark gray' }
 	];
 
 	let customHex = $state('');
@@ -66,6 +66,10 @@
 	function handleClear() {
 		onClear?.();
 	}
+
+	function isSelected(hex: string): boolean {
+		return currentHex === hex;
+	}
 </script>
 
 <div class="color-picker">
@@ -86,14 +90,18 @@
 			{#each colorPalette as paletteColor}
 				<button
 					type="button"
-					onclick={() => handlePaletteClick(paletteColor)}
-					class="w-10 h-10 rounded border border-border hover:border-primary transition-colors cursor-pointer"
-					style="background-color: {paletteColor}"
-					title={paletteColor}
-					aria-label="Select color {paletteColor}"
-				></button>
+					onclick={() => handlePaletteClick(paletteColor.hex)}
+					class="group relative h-10 w-10 rounded border transition-colors cursor-pointer {isSelected(paletteColor.hex) ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : 'border-border hover:border-primary'}"
+					style="background-color: {paletteColor.hex}"
+					title={`${paletteColor.name} (${paletteColor.hex})`}
+					aria-label={`Select ${paletteColor.name} color ${paletteColor.hex}`}
+					aria-pressed={isSelected(paletteColor.hex)}
+				>
+					<span class="sr-only">{paletteColor.name}</span>
+				</button>
 			{/each}
 		</div>
+		<p class="mt-2 text-xs text-muted-foreground">Named swatches improve screen reader and keyboard support.</p>
 	</div>
 
 	<!-- Custom hex input -->

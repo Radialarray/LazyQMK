@@ -14,8 +14,11 @@
 	<div class="container mx-auto px-4 h-14 flex items-center justify-between">
 		<!-- Logo/Home -->
 		<a href="/" class="flex items-center gap-2 font-bold text-lg hover:opacity-80">
-			<span class="text-2xl">⌨️</span>
-			<span>LazyQMK</span>
+			<span class="icon-chip h-8 w-8 rounded-lg text-xs">LQ</span>
+			<div class="flex flex-col leading-none">
+				<span>LazyQMK</span>
+				<span class="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">layout studio</span>
+			</div>
 		</a>
 
 		<!-- Main Nav -->

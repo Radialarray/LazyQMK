@@ -78,6 +78,12 @@
 		'Create from scratch'
 	);
 
+	const startOptions = {
+		existing: { icon: 'OPEN', eyebrow: 'Resume work' },
+		template: { icon: 'KIT', eyebrow: 'Starting point' },
+		create: { icon: 'NEW', eyebrow: 'Blank layout' }
+	};
+
 	onMount(async () => {
 		await loadPreflight();
 	});
@@ -282,26 +288,28 @@
 	});
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center justify-center p-6">
+
+<div class="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-6">
 		<div class="w-full max-w-4xl">
 			<!-- Header -->
-			<div class="text-center mb-12">
-				<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-					Welcome to LazyQMK
+			<div class="text-center mb-12 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/10 px-6 py-10 shadow-sm">
+				<div class="brand-badge mb-4">LazyQMK · Layout studio</div>
+				<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+					Welcome to clearer keyboard setup
 				</h1>
 				<p class="text-xl text-muted-foreground">
-					One setup flow for QMK configuration, layout creation, and editor entry.
+					Connect QMK once, pick how to start, then move straight into editing.
 				</p>
 			</div>
 
 			{#if !preflightLoading && !preflightError}
-				<Card class="p-5 mb-6">
+				<Card class="surface-elevated p-5 mb-6">
 					<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 						<div>
-							<p class="text-sm font-medium text-primary">Canonical setup flow</p>
+							<p class="text-sm font-medium text-primary">Guided onboarding</p>
 							<h2 class="text-lg font-semibold mt-1">Step {currentStepNumber} of 2 — {currentStepTitle}</h2>
 							<p class="text-sm text-muted-foreground mt-1">
-								Connect QMK once, then choose existing layout, template, or scratch start.
+								Small orientation up front, faster handoff into real layout work.
 							</p>
 						</div>
 						<div class="grid grid-cols-3 gap-2 text-xs md:text-sm">
@@ -340,21 +348,21 @@
 			</Card>
 		{:else if currentStep === 'config'}
 			<!-- Step 1: QMK Configuration -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
 						1
 					</div>
 					<div>
-						<h2 class="text-2xl font-semibold">Configure QMK Firmware</h2>
-						<p class="text-muted-foreground">Set the path to your QMK firmware directory</p>
+						<h2 class="text-2xl font-semibold">Connect QMK firmware</h2>
+						<p class="text-muted-foreground">Set path to your local QMK firmware folder</p>
 					</div>
 				</div>
 
 				<div class="space-y-4">
 					<div>
 						<label for="qmk-path" class="block text-sm font-medium mb-2">
-							QMK Firmware Path
+							QMK firmware path
 						</label>
 						<Input
 							id="qmk-path"
@@ -363,7 +371,7 @@
 							class="font-mono"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							This is the directory containing your QMK firmware clone
+							Point to folder that contains your QMK firmware clone.
 						</p>
 					</div>
 
@@ -383,7 +391,7 @@
 		{:else if currentStep === 'choose'}
 			<!-- Step 2: Choose Path -->
 			<div class="space-y-6">
-				<Card class="p-8">
+				<Card class="surface-elevated p-8">
 					<div class="flex items-center gap-4 mb-6">
 						<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
 							2
@@ -394,10 +402,10 @@
 						</div>
 					</div>
 
-					<div class="rounded-lg border bg-muted/30 p-4 mb-6 text-sm">
+					<div class="surface-subtle rounded-lg p-4 mb-6 text-sm">
 						<p class="font-medium mb-1">What happens next</p>
 						<p class="text-muted-foreground">
-							After layout opens, core editing lives in workspace tabs. Firmware tasks follow one guided Generate → Build flow.
+							After layout opens, core editing stays in workspace tabs. Firmware tasks follow one steady Generate → Build flow.
 						</p>
 					</div>
 
@@ -411,7 +419,8 @@
 								}}
 								disabled={existingLoading}
 							>
-								<div class="text-4xl mb-4">📁</div>
+								<div class="icon-chip mb-4">{startOptions.existing.icon}</div>
+								<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.existing.eyebrow}</p>
 								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
 									Open Existing Layout
 								</h3>
@@ -434,7 +443,8 @@
 						onclick={handleTemplateEntry}
 						disabled={templatesLoading}
 					>
-							<div class="text-4xl mb-4">📦</div>
+							<div class="icon-chip mb-4">{startOptions.template.icon}</div>
+							<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.template.eyebrow}</p>
 								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
 									Start from Template
 							</h3>
@@ -455,7 +465,8 @@
 							class="p-6 border-2 rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-all group"
 							onclick={startCreateFromScratch}
 						>
-							<div class="text-4xl mb-4">✨</div>
+							<div class="icon-chip mb-4">{startOptions.create.icon}</div>
+							<p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{startOptions.create.eyebrow}</p>
 								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
 									Start from Scratch
 							</h3>
@@ -475,7 +486,7 @@
 
 				<!-- Templates Grid (if available) -->
 				{#if hasTemplates}
-					<Card class="p-6">
+					<Card class="surface-elevated p-6">
 						<h3 id="available-templates" class="text-lg font-semibold mb-4">Available Templates</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each templates as template}
@@ -499,7 +510,7 @@
 
 				<!-- Existing Layouts Grid (if available) -->
 				{#if hasExistingLayouts}
-					<Card class="p-6">
+					<Card class="surface-elevated p-6">
 						<h3 id="your-layouts" class="text-lg font-semibold mb-4">Your Layouts</h3>
 						<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{#each existingLayouts as layout}
@@ -526,7 +537,7 @@
 			</div>
 		{:else if currentStep === 'template'}
 			<!-- Apply Template Step -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<button
 						class="w-10 h-10 rounded-full border hover:bg-muted flex items-center justify-center"
@@ -545,7 +556,7 @@
 
 				<div class="space-y-4">
 					{#if selectedTemplate}
-						<div class="p-4 bg-muted/50 rounded-lg">
+						<div class="surface-subtle p-4 rounded-lg">
 							<h4 class="font-medium mb-1">{selectedTemplate.name}</h4>
 							<p class="text-sm text-muted-foreground">{selectedTemplate.description}</p>
 							<div class="flex gap-4 mt-2 text-xs text-muted-foreground">
@@ -588,7 +599,7 @@
 			</Card>
 		{:else if currentStep === 'create'}
 			<!-- Create from Scratch -->
-			<Card class="p-8">
+			<Card class="surface-elevated p-8">
 				<div class="flex items-center gap-4 mb-6">
 					<button
 						class="w-10 h-10 rounded-full border hover:bg-muted flex items-center justify-center"

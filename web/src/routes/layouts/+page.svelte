@@ -45,7 +45,7 @@
 		</a>
 	</div>
 
-	<Card class="p-4 mb-6">
+	<Card class="surface-subtle p-4 mb-6">
 		<div class="grid gap-4 md:grid-cols-3 text-sm">
 			<div>
 				<p class="font-medium mb-1">Edit layout</p>

@@ -28,7 +28,7 @@
 				role="tab"
 			>
 				{#if tab.icon}
-					<span class="mr-2">{tab.icon}</span>
+					<span class="mr-2 text-xs font-semibold uppercase tracking-wide text-current/80">{tab.icon}</span>
 				{/if}
 				{tab.label}
 			</button>

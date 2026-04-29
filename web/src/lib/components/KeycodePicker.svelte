@@ -136,9 +136,9 @@
 			<!-- Header -->
 			<div class="flex items-start justify-between gap-4 p-4 border-b border-border">
 				<div>
-					<h2 id="keycode-picker-title" class="text-lg font-semibold">Select Keycode</h2>
+					<h2 id="keycode-picker-title" class="text-lg font-semibold">Choose key behavior</h2>
 					<p class="mt-1 text-sm text-muted-foreground">
-						Search by code or meaning. Start with quick groups, then refine.
+						Search by code or plain-language meaning. Start with quick groups, then refine.
 					</p>
 				</div>
 				<Button variant="ghost" size="icon" onclick={handleClose} title="Close">
@@ -290,7 +290,7 @@
 			<!-- Footer -->
 			<div class="flex items-center justify-between p-4 border-t border-border">
 				<Button variant="outline" onclick={handleClear} data-testid="clear-key-button">
-					Set Transparent (KC_TRNS)
+					Use lower layer key <span class="kbd-token ml-2">KC_TRNS</span>
 				</Button>
 				<Button variant="ghost" onclick={handleClose}>Cancel</Button>
 			</div>

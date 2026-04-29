@@ -62,22 +62,22 @@
 	// Tab navigation
 	// Primary tabs - core editing workflow
 	const primaryTabs = [
-		{ id: 'preview', label: 'Editor', icon: '⌨️' },
-		{ id: 'layers', label: 'Layers', icon: '📚' },
-		{ id: 'metadata', label: 'Metadata', icon: '📝' },
-		{ id: 'firmware', label: 'Firmware', icon: '⚙️' }
+		{ id: 'preview', label: 'Editor', icon: 'ED' },
+		{ id: 'layers', label: 'Layers', icon: 'LY' },
+		{ id: 'metadata', label: 'Details', icon: 'DT' },
+		{ id: 'firmware', label: 'Firmware', icon: 'FW' }
 	];
 	
 	// Secondary tabs - advanced or supporting tasks
 	const secondaryTabs = [
-		{ id: 'categories', label: 'Categories', icon: '🎨' },
-		{ id: 'tap-dance', label: 'Tap Dance', icon: '💃' },
-		{ id: 'combos', label: 'Combos', icon: '🔗' },
-		{ id: 'idle-effect', label: 'Idle Effect', icon: '💤' },
-		{ id: 'overlay-ripple', label: 'Overlay Ripple', icon: '🌊' },
-		{ id: 'validate', label: 'Validate', icon: '✓' },
-		{ id: 'inspect', label: 'Inspect', icon: '🔍' },
-		{ id: 'export', label: 'Export', icon: '📄' }
+		{ id: 'categories', label: 'Categories', icon: 'CT' },
+		{ id: 'tap-dance', label: 'Tap Dance', icon: 'TD' },
+		{ id: 'combos', label: 'Combos', icon: 'CB' },
+		{ id: 'idle-effect', label: 'Idle Effect', icon: 'ID' },
+		{ id: 'overlay-ripple', label: 'Overlay Ripple', icon: 'OR' },
+		{ id: 'validate', label: 'Validate', icon: 'OK' },
+		{ id: 'inspect', label: 'Inspect', icon: 'IN' },
+		{ id: 'export', label: 'Export', icon: 'EX' }
 	];
 	
 	let activeTab = $state('preview');
@@ -506,17 +506,17 @@
 	function getBuildStatusBadge(status: string): { class: string; icon: string; text: string } {
 		switch (status) {
 			case 'pending':
-				return { class: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', icon: '⏳', text: 'Pending' };
+				return { class: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200', icon: 'PD', text: 'Pending' };
 			case 'running':
-				return { class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: '🔄', text: 'Running' };
+				return { class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200', icon: 'RN', text: 'Running' };
 			case 'completed':
-				return { class: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: '✅', text: 'Completed' };
+				return { class: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200', icon: 'OK', text: 'Completed' };
 			case 'failed':
-				return { class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: '❌', text: 'Failed' };
+				return { class: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200', icon: 'ER', text: 'Failed' };
 			case 'cancelled':
-				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: '🚫', text: 'Cancelled' };
+				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: 'CN', text: 'Cancelled' };
 			default:
-				return { class: 'bg-gray-100 text-gray-800', icon: '❓', text: status };
+				return { class: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: '??', text: status };
 		}
 	}
 
@@ -1691,7 +1691,7 @@
 					data-testid="tab-{tab.id}"
 				>
 					{#if tab.icon}
-						<span class="mr-2">{tab.icon}</span>
+					<span class="mr-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-current/80">{tab.icon}</span>
 					{/if}
 					{tab.label}
 					</button>
@@ -1710,7 +1710,7 @@
 					data-testid="tab-more-dropdown"
 				>
 					<span class="mr-1">⋯</span>
-					More...
+					More tools
 					<svg class="w-4 h-4 ml-1 transition-transform {dropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 					</svg>
@@ -1744,7 +1744,7 @@
 								data-testid="dropdown-tab-{tab.id}"
 							>
 								{#if tab.icon}
-									<span>{tab.icon}</span>
+									<span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/80">{tab.icon}</span>
 								{/if}
 								{tab.label}
 								{#if activeTab === tab.id}
@@ -2745,7 +2745,7 @@
 								onchange={(e) => updateOverlayRipple('ignore_transparent', e.currentTarget.checked)}
 								class="w-4 h-4"
 							/>
-							<label for="ignore-transparent" class="text-sm">Ignore transparent keys (KC_TRNS)</label>
+							<label for="ignore-transparent" class="text-sm">Ignore lower-layer passthrough keys <span class="kbd-token ml-1">KC_TRNS</span></label>
 						</div>
 						<div class="flex items-center gap-3">
 							<input
