@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-04-29
+
 ### Fixed
 - **Overlay ripple firmware behavior** - Reduced flicker by hardening generated ripple overlay semantics, improving idle wake behavior, and fixing release-trigger handling when idle effects are enabled
 - **Ripple effect math and validation** - Fixed wide-keyboard distance accumulation, corrected QMK hue wrap behavior, and reject invalid ripple settings such as zero duration or zero band width before code generation
@@ -77,4 +79,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 (See git tags for earlier releases)
 
+[0.21.0]: https://github.com/Radialarray/LazyQMK/compare/v0.20.1...v0.21.0
 [0.13.0]: https://github.com/Radialarray/LazyQMK/compare/v0.12.2...v0.13.0
