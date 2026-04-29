@@ -24,6 +24,7 @@ This directory contains comprehensive documentation for LazyQMK development and 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture and design decisions
 - **[FEATURES.md](FEATURES.md)** - Complete feature list and implementation details
 - **[TESTING.md](TESTING.md)** - Testing strategy and guidelines
+- **[CROSS_SURFACE_UX_CONVENTIONS.md](CROSS_SURFACE_UX_CONVENTIONS.md)** - Shared UX rules for TUI and web refactor work
 - **[AGENTS.md](../AGENTS.md)** - Development workflow and contribution guide
 
 ### Web Interface
@@ -36,6 +37,7 @@ This directory contains comprehensive documentation for LazyQMK development and 
 ### Reference
 - **[EXPORT_FORMAT.md](EXPORT_FORMAT.md)** - Layout export format specification
 - **[BRANDING.md](BRANDING.md)** - Project branding guidelines
+- **[CROSS_SURFACE_UX_CONVENTIONS.md](CROSS_SURFACE_UX_CONVENTIONS.md)** - Product vocabulary, editing model, disclosure, feedback, and destructive-action conventions
 - **[RIPPLE_VALIDATION.md](RIPPLE_VALIDATION.md)** - RGB ripple effect validation
 
 ## 🚀 Quick Links by Use Case

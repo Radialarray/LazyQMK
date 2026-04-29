@@ -19,3 +19,7 @@ Relevant docs:
 - docs/FEATURES.md
 - docs/AGENT_GUIDE.md
 - docs/BRANDING.md
+- docs/CROSS_SURFACE_UX_CONVENTIONS.md
+
+Refactor rule:
+- Cross-surface UX decisions for terminology, editing model, destructive actions, state feedback, and progressive disclosure should follow `docs/CROSS_SURFACE_UX_CONVENTIONS.md` unless a later decision document explicitly supersedes it.
