@@ -660,9 +660,10 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Add ripple trigger integration if both features are enabled
         if has_ripple {
+            code.push_str("    bool ripple_triggered = false;\n");
             code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
             code.push_str("    // Trigger ripple effect on matching key events\n");
-            code.push_str("    bool ripple_triggered = lazyqmk_ripple_trigger(keycode, record);\n");
+            code.push_str("    ripple_triggered = lazyqmk_ripple_trigger(keycode, record);\n");
             code.push_str("#endif\n");
             code.push('\n');
         }
