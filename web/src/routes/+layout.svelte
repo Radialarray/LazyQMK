@@ -7,7 +7,7 @@
 	let { children } = $props();
 
 	// Pages that should NOT show the nav header (full-screen experiences)
-	const noHeaderPages = ['/onboarding'];
+	const noHeaderPages = ['/onboarding', '/setup'];
 	let showHeader = $derived(!noHeaderPages.includes($page.url.pathname));
 </script>
 

@@ -113,26 +113,47 @@
 			</div>
 
 			<!-- Primary Actions -->
-			<div class="grid md:grid-cols-2 gap-6 mb-12" data-testid="primary-actions">
-				<a href="/onboarding" class="block" data-testid="create-layout-action">
+			<div class="grid gap-6 mb-12 lg:grid-cols-[1.2fr_0.8fr]" data-testid="primary-actions">
+				<div class="space-y-6">
+					<a href="/onboarding" class="block" data-testid="create-layout-action">
 					<Card class="p-8 h-full border-2 hover:border-primary transition-colors cursor-pointer">
-						<div class="text-3xl mb-4">+</div>
-						<h2 class="text-xl font-semibold mb-2">Create New Layout</h2>
+						<div class="text-3xl mb-4">✨</div>
+						<h2 class="text-xl font-semibold mb-2">Start Layout Setup</h2>
 						<p class="text-muted-foreground">
-							Start fresh with a new keyboard layout
+							Use one guided flow for QMK setup, templates, and new layouts.
 						</p>
+						<p class="text-sm text-primary mt-4">Setup QMK → choose template or scratch → open editor</p>
 					</Card>
-				</a>
+					</a>
 
-				<a href="/layouts" class="block" data-testid="open-layout-action">
+					<a href="/layouts" class="block" data-testid="open-layout-action">
 					<Card class="p-8 h-full border-2 hover:border-primary transition-colors cursor-pointer">
 						<div class="text-3xl mb-4">&#9776;</div>
-						<h2 class="text-xl font-semibold mb-2">Open Existing Layout</h2>
+						<h2 class="text-xl font-semibold mb-2">Open Layout Workspace</h2>
 						<p class="text-muted-foreground">
-							Browse and edit your saved layouts
+							Browse saved layouts and jump back into editing.
 						</p>
 					</Card>
-				</a>
+					</a>
+				</div>
+
+				<Card class="p-6 h-full">
+					<h2 class="text-lg font-semibold mb-4">Main areas</h2>
+					<div class="space-y-4 text-sm">
+						<div>
+							<p class="font-medium">Create</p>
+							<p class="text-muted-foreground">Onboarding, templates, and keyboard setup in one place.</p>
+						</div>
+						<div>
+							<p class="font-medium">Edit</p>
+							<p class="text-muted-foreground">Core editor tools live inside each layout workspace.</p>
+						</div>
+						<div>
+							<p class="font-medium">Firmware workflow</p>
+							<p class="text-muted-foreground">Generate sources first, then build flashable firmware from one guided path.</p>
+						</div>
+					</div>
+				</Card>
 			</div>
 
 			<!-- Recent Layouts -->

@@ -60,17 +60,16 @@
 	let bypassNavigationGuard = $state(false);
 
 	// Tab navigation
-	// Primary tabs - always visible in horizontal bar
+	// Primary tabs - core editing workflow
 	const primaryTabs = [
 		{ id: 'preview', label: 'Editor', icon: '⌨️' },
-		{ id: 'generate', label: 'Generate', icon: '⚙️' },
-		{ id: 'build', label: 'Build', icon: '🔨' }
+		{ id: 'layers', label: 'Layers', icon: '📚' },
+		{ id: 'metadata', label: 'Metadata', icon: '📝' },
+		{ id: 'firmware', label: 'Firmware', icon: '⚙️' }
 	];
 	
-	// Secondary tabs - accessible via "More..." dropdown
+	// Secondary tabs - advanced or supporting tasks
 	const secondaryTabs = [
-		{ id: 'metadata', label: 'Metadata', icon: '📝' },
-		{ id: 'layers', label: 'Layers', icon: '📚' },
 		{ id: 'categories', label: 'Categories', icon: '🎨' },
 		{ id: 'tap-dance', label: 'Tap Dance', icon: '💃' },
 		{ id: 'combos', label: 'Combos', icon: '🔗' },
@@ -83,6 +82,7 @@
 	
 	let activeTab = $state('preview');
 	let dropdownOpen = $state(false);
+	let firmwareStep = $state<'generate' | 'build'>('generate');
 	
 	// Check if active tab is in secondary tabs
 	const isActiveTabSecondary = $derived(secondaryTabs.some(tab => tab.id === activeTab));
@@ -520,6 +520,20 @@
 		}
 	}
 
+	function selectPrimaryTab(tabId: string) {
+		activeTab = tabId;
+		dropdownOpen = false;
+		if (tabId === 'firmware') {
+			firmwareStep = 'generate';
+		}
+	}
+
+	function openFirmwareStep(step: 'generate' | 'build') {
+		activeTab = 'firmware';
+		firmwareStep = step;
+		dropdownOpen = false;
+	}
+
 	// Load geometry when layout is available
 	$effect(() => {
 		if (layout?.metadata.keyboard && layout?.metadata.layout_variant) {
@@ -538,7 +552,7 @@
 
 	// Load build history when switching to Build tab
 	$effect(() => {
-		if (activeTab === 'build' && filename) {
+		if (activeTab === 'firmware' && filename) {
 			loadBuildHistory();
 		}
 	});
@@ -1662,15 +1676,15 @@
 	</div>
 
 	<!-- Tab Navigation with Dropdown -->
-	<div class="tabs-container mb-6" data-testid="tab-navigation">
-		<div class="flex border-b border-border relative">
-			<!-- Primary Tabs -->
-			{#each primaryTabs as tab}
-				<button
-					onclick={() => { activeTab = tab.id; dropdownOpen = false; }}
-					class="tab-button px-4 py-2 text-sm font-medium transition-colors
-						{activeTab === tab.id
-						? 'border-b-2 border-primary text-primary'
+		<div class="tabs-container mb-6" data-testid="tab-navigation">
+			<div class="flex border-b border-border relative">
+				<!-- Primary Tabs -->
+				{#each primaryTabs as tab}
+					<button
+						onclick={() => selectPrimaryTab(tab.id)}
+						class="tab-button px-4 py-2 text-sm font-medium transition-colors
+							{activeTab === tab.id
+							? 'border-b-2 border-primary text-primary'
 						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
 					aria-selected={activeTab === tab.id}
 					role="tab"
@@ -1680,8 +1694,8 @@
 						<span class="mr-2">{tab.icon}</span>
 					{/if}
 					{tab.label}
-				</button>
-			{/each}
+					</button>
+				{/each}
 			
 			<!-- More... Dropdown Button -->
 			<div class="relative">
@@ -1743,6 +1757,36 @@
 			</div>
 		</div>
 	</div>
+
+	{#if activeTab === 'firmware'}
+		<Card class="p-4 mb-6 bg-muted/20 border-dashed" data-testid="firmware-workflow-summary">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div>
+					<h2 class="text-base font-semibold">Firmware workflow</h2>
+					<p class="text-sm text-muted-foreground mt-1">
+						Run source generation first, then compile flashable firmware artifacts.
+					</p>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<button
+						class="rounded-md border px-3 py-2 text-sm transition-colors {firmwareStep === 'generate' ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-muted'}"
+						onclick={() => (firmwareStep = 'generate')}
+						data-testid="firmware-step-generate"
+					>
+						1. Generate sources
+					</button>
+					<span class="text-muted-foreground">→</span>
+					<button
+						class="rounded-md border px-3 py-2 text-sm transition-colors {firmwareStep === 'build' ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-muted'}"
+						onclick={() => (firmwareStep = 'build')}
+						data-testid="firmware-step-build"
+					>
+						2. Build firmware
+					</button>
+				</div>
+			</div>
+		</Card>
+	{/if}
 
 	<!-- Tab Content -->
 	{#if layout}
@@ -3086,11 +3130,16 @@
 					</p>
 				{/if}
 			</Card>
-		{:else if activeTab === 'generate'}
-			<!-- Generate Tab -->
+		{:else if activeTab === 'firmware' && firmwareStep === 'generate'}
+			<!-- Firmware Workflow: Generate Step -->
 			<Card class="p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Generate Firmware</h2>
+					<div>
+						<h2 class="text-lg font-semibold">Step 1: Generate firmware sources</h2>
+						<p class="text-sm text-muted-foreground">
+							Create QMK source files and review generation output before building.
+						</p>
+					</div>
 					<div class="flex gap-2">
 						{#if generateJob && (generateJob.status === 'pending' || generateJob.status === 'running')}
 							<Button 
@@ -3108,6 +3157,22 @@
 							data-testid="generate-button"
 						>
 							{generateLoading || generatePollingActive ? 'Generating...' : 'Generate Firmware'}
+						</Button>
+					</div>
+				</div>
+
+				<div class="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
+					<p class="font-medium mb-1">Why this step comes first</p>
+					<p class="text-muted-foreground">
+						Generate validates layout-specific firmware sources. When complete, continue to build flashable firmware artifacts.
+					</p>
+					<div class="mt-3">
+						<Button
+							variant="outline"
+							onclick={() => openFirmwareStep('build')}
+							data-testid="continue-to-build-button"
+						>
+							Go to build step
 						</Button>
 					</div>
 				</div>
@@ -3248,16 +3313,16 @@
 	}
 </style>
 			</Card>
-		{:else if activeTab === 'build'}
-			<!-- Build Tab - Firmware Compilation -->
+		{:else if activeTab === 'firmware' && firmwareStep === 'build'}
+			<!-- Firmware Workflow: Build Step -->
 			<div class="space-y-6">
 				<!-- Build Controls Card -->
 				<Card class="p-6">
 					<div class="flex items-center justify-between mb-4">
 						<div>
-							<h2 class="text-lg font-semibold">Build Firmware</h2>
+							<h2 class="text-lg font-semibold">Step 2: Build firmware</h2>
 							<p class="text-sm text-muted-foreground">
-								Compile QMK firmware (.uf2/.hex/.bin) for this layout
+								Compile flashable QMK firmware (.uf2/.hex/.bin) after generation.
 							</p>
 						</div>
 						<div class="flex gap-2">
@@ -3277,6 +3342,22 @@
 								data-testid="start-build-button"
 							>
 								{buildLoading || buildPollingActive ? 'Building...' : 'Start Build'}
+							</Button>
+						</div>
+					</div>
+
+					<div class="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
+						<p class="font-medium mb-1">Before building</p>
+						<p class="text-muted-foreground">
+							Save layout changes, generate sources if needed, then compile firmware for flashing.
+						</p>
+						<div class="mt-3">
+							<Button
+								variant="outline"
+								onclick={() => openFirmwareStep('generate')}
+								data-testid="back-to-generate-button"
+							>
+								Back to generate step
 							</Button>
 						</div>
 					</div>

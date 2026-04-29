@@ -37,13 +37,30 @@
 		<div>
 			<h1 class="text-4xl font-bold mb-2">Layouts</h1>
 			<p class="text-muted-foreground">
-				Manage your keyboard layouts
+				Pick layout to edit, inspect, generate, or build firmware.
 			</p>
 		</div>
 		<a href="/onboarding">
 			<Button>Create New Layout</Button>
 		</a>
 	</div>
+
+	<Card class="p-4 mb-6">
+		<div class="grid gap-4 md:grid-cols-3 text-sm">
+			<div>
+				<p class="font-medium mb-1">Edit layout</p>
+				<p class="text-muted-foreground">Change keys, layers, combos, metadata, and visual behavior.</p>
+			</div>
+			<div>
+				<p class="font-medium mb-1">Firmware workflow</p>
+				<p class="text-muted-foreground">Inside layout editor, run guided Generate → Build workflow.</p>
+			</div>
+			<div>
+				<p class="font-medium mb-1">Need new layout?</p>
+				<p class="text-muted-foreground">Unified setup flow handles QMK path, templates, and scratch starts.</p>
+			</div>
+		</div>
+	</Card>
 
 	{#if loading}
 		<p class="text-muted-foreground">Loading layouts...</p>
@@ -57,7 +74,7 @@
 	{:else if layouts.length === 0}
 		<Card class="p-6">
 			<p class="text-muted-foreground">
-				No layouts found. Create one using the CLI or TUI.
+				No layouts found yet. Start with unified setup flow to create one.
 			</p>
 		</Card>
 	{:else}

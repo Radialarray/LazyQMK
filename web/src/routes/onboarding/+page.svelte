@@ -70,6 +70,13 @@
 	let qmkConfigured = $derived(preflight?.qmk_configured ?? false);
 	let hasTemplates = $derived(templates.length > 0);
 	let hasExistingLayouts = $derived(existingLayouts.length > 0);
+	let currentStepNumber = $derived(currentStep === 'config' ? 1 : 2);
+	let currentStepTitle = $derived(
+		currentStep === 'config' ? 'Connect QMK' :
+		currentStep === 'choose' ? 'Choose how to start' :
+		currentStep === 'template' ? 'Create from template' :
+		'Create from scratch'
+	);
 
 	onMount(async () => {
 		await loadPreflight();
@@ -276,16 +283,44 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center justify-center p-6">
-	<div class="w-full max-w-4xl">
-		<!-- Header -->
-		<div class="text-center mb-12">
-			<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-				Welcome to LazyQMK
-			</h1>
-			<p class="text-xl text-muted-foreground">
-				Your keyboard layout editor for QMK firmware
-			</p>
-		</div>
+		<div class="w-full max-w-4xl">
+			<!-- Header -->
+			<div class="text-center mb-12">
+				<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+					Welcome to LazyQMK
+				</h1>
+				<p class="text-xl text-muted-foreground">
+					One setup flow for QMK configuration, layout creation, and editor entry.
+				</p>
+			</div>
+
+			{#if !preflightLoading && !preflightError}
+				<Card class="p-5 mb-6">
+					<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+						<div>
+							<p class="text-sm font-medium text-primary">Canonical setup flow</p>
+							<h2 class="text-lg font-semibold mt-1">Step {currentStepNumber} of 2 — {currentStepTitle}</h2>
+							<p class="text-sm text-muted-foreground mt-1">
+								Connect QMK once, then choose existing layout, template, or scratch start.
+							</p>
+						</div>
+						<div class="grid grid-cols-3 gap-2 text-xs md:text-sm">
+							<div class="rounded-lg border px-3 py-2 {qmkConfigured ? 'border-primary/40 bg-primary/5 text-foreground' : 'text-muted-foreground'}">
+								<p class="font-medium">1. Setup</p>
+								<p>QMK path</p>
+							</div>
+							<div class="rounded-lg border px-3 py-2 {currentStep !== 'config' ? 'border-primary/40 bg-primary/5 text-foreground' : 'text-muted-foreground'}">
+								<p class="font-medium">2. Start</p>
+								<p>Template, scratch, open</p>
+							</div>
+							<div class="rounded-lg border px-3 py-2 text-muted-foreground">
+								<p class="font-medium">3. Edit</p>
+								<p>Inside layout workspace</p>
+							</div>
+						</div>
+					</div>
+				</Card>
+			{/if}
 
 		{#if preflightLoading}
 			<!-- Loading State -->
@@ -354,9 +389,16 @@
 							2
 						</div>
 						<div>
-							<h2 class="text-2xl font-semibold">Get Started</h2>
-							<p class="text-muted-foreground">Choose how to create your first layout</p>
+							<h2 class="text-2xl font-semibold">Choose your starting point</h2>
+							<p class="text-muted-foreground">One place for opening existing work or creating a new layout.</p>
 						</div>
+					</div>
+
+					<div class="rounded-lg border bg-muted/30 p-4 mb-6 text-sm">
+						<p class="font-medium mb-1">What happens next</p>
+						<p class="text-muted-foreground">
+							After layout opens, core editing lives in workspace tabs. Firmware tasks follow one guided Generate → Build flow.
+						</p>
 					</div>
 
 					<div class="grid md:grid-cols-3 gap-6">
@@ -371,7 +413,7 @@
 							>
 								<div class="text-4xl mb-4">📁</div>
 								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-									Load Existing Layout
+									Open Existing Layout
 								</h3>
 								<p class="text-sm text-muted-foreground">
 									Continue working on your saved layouts
@@ -393,8 +435,8 @@
 						disabled={templatesLoading}
 					>
 							<div class="text-4xl mb-4">📦</div>
-							<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-								From Template
+								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
+									Start from Template
 							</h3>
 							<p class="text-sm text-muted-foreground">
 								Start with a pre-configured layout template and customize it
@@ -414,8 +456,8 @@
 							onclick={startCreateFromScratch}
 						>
 							<div class="text-4xl mb-4">✨</div>
-							<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
-								From Scratch
+								<h3 class="text-xl font-semibold mb-2 group-hover:text-primary">
+									Start from Scratch
 							</h3>
 							<p class="text-sm text-muted-foreground">
 								Create a new layout by selecting your keyboard model
