@@ -10,7 +10,7 @@
 		CategoryManager,
 		ColorPicker
 	} from '$components';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { apiClient } from '$api';
 	import type { PageData } from './$types';
 	import type {
@@ -33,6 +33,7 @@
 		BuildArtifact
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
+	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
 	import {
 		shouldCycleLayer,
@@ -56,6 +57,7 @@
 	let saveError = $state<string | null>(null);
 	let leaveDialogOpen = $state(false);
 	let pendingNavigationTarget = $state<string | null>(null);
+	let bypassNavigationGuard = $state(false);
 
 	// Tab navigation
 	// Primary tabs - always visible in horizontal bar
@@ -177,6 +179,23 @@
 
 		window.addEventListener('beforeunload', handleBeforeUnload);
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	});
+
+	beforeNavigate((navigation) => {
+		if (
+			!shouldBlockNavigation(
+				isDirty,
+				bypassNavigationGuard,
+				navigation.from?.url,
+				navigation.to?.url
+			)
+		) {
+			return;
+		}
+
+		navigation.cancel();
+		pendingNavigationTarget = getNavigationTarget(navigation.to?.url);
+		leaveDialogOpen = true;
 	});
 
 	function stopPolling() {
@@ -967,12 +986,27 @@
 		pendingNavigationTarget = null;
 	}
 
-	function confirmLeaveWithoutSaving() {
+	async function navigateWithBypass(target: string) {
+		bypassNavigationGuard = true;
+		try {
+			await goto(target);
+		} finally {
+			bypassNavigationGuard = false;
+		}
+	}
+
+	async function confirmLeaveWithoutSaving() {
 		const target = pendingNavigationTarget;
 		leaveDialogOpen = false;
 		pendingNavigationTarget = null;
 		if (target) {
-			goto(target);
+			await navigateWithBypass(target);
+		} else if (window.history.length > 1) {
+			bypassNavigationGuard = true;
+			setTimeout(() => {
+				bypassNavigationGuard = false;
+			}, 0);
+			window.history.back();
 		}
 	}
 
@@ -1027,7 +1061,7 @@
 				const target = pendingNavigationTarget;
 				leaveDialogOpen = false;
 				pendingNavigationTarget = null;
-				goto(target);
+				await navigateWithBypass(target);
 				return;
 			}
 			setTimeout(() => {

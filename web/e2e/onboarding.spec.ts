@@ -168,6 +168,23 @@ test.describe('Onboarding flow - QMK configured', () => {
 		await expect(page.getByRole('button', { name: /Test Template/ })).toBeVisible();
 	});
 
+	test('shows template unavailable message on choose step when templates missing', async ({ page }) => {
+		await page.route('**/api/templates', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ templates: [] })
+			});
+		});
+
+		await page.goto('/onboarding');
+
+		await expect(page.getByText('Template start unavailable')).toBeVisible();
+		await expect(
+			page.getByText(/Choose “From Scratch” instead of falling back automatically\./)
+		).toBeVisible();
+	});
+
 	test('can select a template', async ({ page }) => {
 		await page.goto('/onboarding');
 

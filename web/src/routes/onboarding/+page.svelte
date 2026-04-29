@@ -118,11 +118,18 @@
 	async function loadTemplates() {
 		templatesLoading = true;
 		templatesError = null;
+		templateChoiceMessage = null;
 		try {
 			const response = await apiClient.listTemplates();
 			templates = response.templates;
+			if (response.templates.length === 0) {
+				templateChoiceMessage =
+					'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
+			}
 		} catch (e) {
 			templatesError = e instanceof Error ? e.message : 'Failed to load templates';
+			templateChoiceMessage =
+				'Templates are unavailable right now. Choose “From Scratch” instead of falling back automatically.';
 		} finally {
 			templatesLoading = false;
 		}
@@ -415,6 +422,13 @@
 							</p>
 						</button>
 					</div>
+
+					{#if templateChoiceMessage}
+						<div class="mt-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+							<p class="font-medium">Template start unavailable</p>
+							<p class="mt-1">{templateChoiceMessage}</p>
+						</div>
+					{/if}
 				</Card>
 
 				<!-- Templates Grid (if available) -->
@@ -529,12 +543,6 @@
 					</div>
 				</div>
 
-				{#if templateChoiceMessage}
-					<div class="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-						<p class="font-medium">Template start unavailable</p>
-						<p class="mt-1">{templateChoiceMessage}</p>
-					</div>
-				{/if}
 			</Card>
 		{:else if currentStep === 'create'}
 			<!-- Create from Scratch -->
