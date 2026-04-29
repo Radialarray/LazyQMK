@@ -102,9 +102,11 @@ test.describe('Metadata Editor', () => {
 		await expect(page.getByTestId('tab-firmware')).toBeVisible();
 
 		await page.getByRole('button', { name: /More/i }).click();
-		await expect(page.getByTestId('dropdown-tab-validate')).toBeVisible();
-		await expect(page.getByTestId('dropdown-tab-export')).toBeVisible();
-		await page.locator('button[aria-label="Close dropdown"]').click({ force: true });
+		await expect(page.getByTestId('dropdown-tab-review')).toBeVisible();
+		await page.getByTestId('dropdown-tab-review').click();
+		await expect(page.getByTestId('review-workflow-tab')).toBeVisible();
+		await expect(page.getByText(/Validation, report, and export now live in one review pass before firmware work\./i)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Run Review' })).toBeVisible();
 
 		await page.getByTestId('tab-firmware').click();
 		await expect(page.getByTestId('firmware-workflow-summary')).toBeVisible();

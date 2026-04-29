@@ -1,106 +1,73 @@
 import { test, expect } from '@playwright/test';
 
+const mockTemplates = {
+	templates: [
+		{
+			filename: 'gaming-split.md',
+			name: 'Gaming Split',
+			description: 'Split gaming starter with layered controls',
+			author: 'Example Author',
+			tags: ['gaming', 'split', 'corne'],
+			created: '2024-01-01T00:00:00Z',
+			layer_count: 4
+		},
+		{
+			filename: 'minimal-42.md',
+			name: 'Minimal 42',
+			description: 'Compact daily driver for 42-key boards',
+			author: 'Example Author',
+			tags: ['minimal', '42-key'],
+			created: '2024-01-02T00:00:00Z',
+			layer_count: 2
+		}
+	]
+};
+
 test.describe('Templates Feature', () => {
-	test('should create template from layout, view in templates list, and apply to new layout', async ({
-		page
-	}) => {
-		// Navigate to layouts page
-		await page.goto('/layouts');
-		await expect(page).toHaveTitle(/LazyQMK/);
-
-		// Click on a layout to edit it (assuming there's at least one layout)
-		const layoutLink = page.locator('a').filter({ hasText: /^my_test_layout/ }).first();
-		if ((await layoutLink.count()) === 0) {
-			test.skip();
-		}
-		await layoutLink.click();
-
-		// Wait for layout to load
-		await expect(page.locator('h1')).toContainText(/test/i, { timeout: 10000 });
-
-		// Click "Save as Template" button
-		await page.getByRole('button', { name: /save as template/i }).click();
-
-		// Fill in template details
-		await page.getByLabel(/template name/i).fill('Test E2E Template');
-		await page.getByLabel(/tags/i).fill('test, e2e, automation');
-
-		// Save template
-		await page.getByRole('button', { name: /save template/i }).click();
-
-		// Wait for success message
-		await expect(page.locator('text=/saved/i')).toBeVisible({ timeout: 5000 });
-
-		// Navigate to templates page
-		await page.goto('/templates');
-
-		// Wait for templates to load
-		await expect(page.locator('h1')).toContainText('Layout Templates');
-
-		// Search for the template we just created
-		await page.getByPlaceholder(/search templates/i).fill('Test E2E Template');
-
-		// Verify template appears in list
-		await expect(page.locator('text=Test E2E Template')).toBeVisible();
-
-		// Verify tags are shown
-		await expect(page.locator('text=test')).toBeVisible();
-		await expect(page.locator('text=e2e')).toBeVisible();
-
-		// Click "Apply Template"
-		await page.getByRole('button', { name: /apply template/i }).first().click();
-
-		// Fill in new layout name
-		await page.getByLabel(/new layout name/i).fill('e2e-generated-layout');
-
-		// Create layout
-		await page.getByRole('button', { name: /create layout/i }).click();
-
-		// Should navigate to the new layout editor
-		await expect(page).toHaveURL(/\/layouts\/e2e-generated-layout/);
-		await expect(page.locator('h1')).toContainText(/test/i);
+	test.beforeEach(async ({ page }) => {
+		await page.route('**/api/templates', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(mockTemplates)
+			});
+		});
 	});
 
-	test('should show empty state when no templates exist', async ({ page }) => {
+	test('shows IA cues on template cards', async ({ page }) => {
 		await page.goto('/templates');
-		
-		await expect(page.locator('h1')).toContainText('Layout Templates');
 
-		// Wait for either empty state or templates grid to appear (loading should be done)
-		await page.waitForSelector('[data-testid="empty-state"], [data-testid="templates-grid"], [data-testid="error-state"]', { timeout: 10000 });
-
-		// Check that we have content
-		const emptyState = page.getByTestId('empty-state');
-		const templatesGrid = page.getByTestId('templates-grid');
-		const errorState = page.getByTestId('error-state');
-
-		// Either empty state OR templates OR error should exist
-		const hasContent = (await emptyState.count()) > 0 || (await templatesGrid.count()) > 0 || (await errorState.count()) > 0;
-		expect(hasContent).toBe(true);
+		await expect(page.getByRole('heading', { name: 'Layout Templates' })).toBeVisible();
+		await expect(page.getByText('Use-case cues')).toBeVisible();
+		await expect(page.getByText('Compatibility cues')).toBeVisible();
+		await expect(page.getByText('Good for gaming-focused boards')).toBeVisible();
+		await expect(page.getByText('Balanced for daily multi-layer use')).toBeVisible();
 	});
 
-	test('should filter templates by search query', async ({ page }) => {
+	test('applies template from accessible dialog', async ({ page }) => {
+		await page.route('**/api/templates/gaming-split.md/apply', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ filename: 'my-gaming-layout.md' })
+			});
+		});
+
 		await page.goto('/templates');
-		await expect(page.locator('h1')).toContainText('Layout Templates');
+		await page.getByRole('button', { name: 'Use as Starting Point' }).first().click();
 
-		// If templates exist, test search
-		const templateCards = page.locator('[class*="grid"] >> [class*="Card"]');
-		const templateCount = await templateCards.count();
+		await expect(page.getByRole('heading', { name: 'Apply template' })).toBeVisible();
+		await page.getByLabel(/New Layout Name/i).fill('my-gaming-layout');
+		await page.getByRole('button', { name: 'Create Layout' }).click();
 
-		if (templateCount > 0) {
-			// Get first template name
-			const firstTemplateName = await page
-				.locator('[class*="grid"] >> [class*="Card"] h3')
-				.first()
-				.textContent();
+		await expect(page).toHaveURL(/\/layouts\/my-gaming-layout/);
+	});
 
-			if (firstTemplateName) {
-				// Search for it
-				await page.getByPlaceholder(/search templates/i).fill(firstTemplateName);
+	test('filters templates by search query', async ({ page }) => {
+		await page.goto('/templates');
+		await page.getByPlaceholder(/search starter layouts by name, purpose, or tags/i).fill('Minimal 42');
 
-				// Should show only matching templates
-				await expect(page.locator(`text="${firstTemplateName}"`)).toBeVisible();
-			}
-		}
+		await expect(page.getByText('Minimal 42')).toBeVisible();
+		await expect(page.getByText('Gaming Split')).not.toBeVisible();
 	});
 });

@@ -158,7 +158,7 @@ test.describe('Onboarding flow - QMK configured', () => {
 		// Should show template and scratch options
 		await expect(page.getByRole('heading', { name: 'Start from Template' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Start from Scratch' })).toBeVisible();
-		await expect(page.getByText(/core editing lives in workspace tabs/i)).toBeVisible();
+		await expect(page.getByText(/After layout opens, core editing stays in workspace tabs\./i)).toBeVisible();
 	});
 
 	test('shows available templates', async ({ page }) => {
@@ -207,8 +207,10 @@ test.describe('Onboarding flow - QMK configured', () => {
 		// Should show Create New Layout step
 		await expect(page.getByRole('heading', { name: 'Create New Layout' })).toBeVisible();
 
-		// Should show keyboard search
-		await expect(page.locator('input#keyboard-search')).toBeVisible();
+		// Recognition mode is default; exact search starts hidden
+		await expect(page.getByRole('button', { name: 'Recognize by board family' })).toBeVisible();
+		await expect(page.getByText('Split and ergonomic')).toBeVisible();
+		await expect(page.locator('input#keyboard-search')).toHaveClass(/sr-only/);
 	});
 });
 
@@ -247,16 +249,13 @@ test.describe('Onboarding flow - Create from scratch', () => {
 		});
 	});
 
-	test('can search keyboards', async ({ page }) => {
+	test('can search keyboards after switching browse mode', async ({ page }) => {
 		await page.goto('/onboarding');
 
-		// Navigate to create from scratch
 		await page.getByRole('button', { name: 'Start from Scratch' }).click();
-
-		// Type in search
+		await page.getByRole('button', { name: 'Search exact names' }).click();
+		await expect(page.locator('input#keyboard-search')).toBeVisible();
 		await page.locator('input#keyboard-search').fill('crkbd');
-
-		// Should filter to show crkbd
 		await expect(page.getByText('crkbd').first()).toBeVisible();
 	});
 
@@ -266,11 +265,8 @@ test.describe('Onboarding flow - Create from scratch', () => {
 		// Navigate to create from scratch
 		await page.getByRole('button', { name: 'Start from Scratch' }).click();
 
-		// Wait for keyboards to load
-		await page.waitForTimeout(500);
-
-		// Select crkbd
-		await page.getByText('crkbd').first().click();
+		// Select crkbd from recognition cards
+		await page.getByRole('button', { name: /crkbd.*2 layout variants available/i }).first().click();
 
 		// Should show variant selection
 		await expect(page.getByText('LAYOUT_split_3x6_3')).toBeVisible();
@@ -282,12 +278,8 @@ test.describe('Onboarding flow - Create from scratch', () => {
 		// Navigate to create from scratch
 		await page.getByRole('button', { name: 'Start from Scratch' }).click();
 
-		await page.waitForTimeout(500);
-
 		// Select keyboard
-		await page.getByText('crkbd').first().click();
-
-		await page.waitForTimeout(500);
+		await page.getByRole('button', { name: /crkbd.*2 layout variants available/i }).first().click();
 
 		// Select variant
 		await page.getByText('LAYOUT_split_3x6_3').click();
@@ -372,17 +364,18 @@ test.describe('Navigation header - promoted primary destinations', () => {
 	test('header shows primary destinations directly', async ({ page }) => {
 		await page.goto('/');
 
-		await expect(page.getByRole('link', { name: 'Layouts', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'New Layout', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Templates', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Keycodes', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
+		const nav = page.getByRole('navigation');
+		await expect(nav.getByRole('link', { name: 'My Layouts' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Create Layout' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Starter Layouts' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Keycode Reference' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Workspace Setup' })).toBeVisible();
 	});
 
 	test('can navigate to Settings from header', async ({ page }) => {
 		await page.goto('/');
 
-		await page.getByRole('link', { name: 'Settings', exact: true }).click();
+		await page.getByRole('link', { name: 'Workspace Setup' }).click();
 
 		// Should navigate to settings
 		await expect(page).toHaveURL('/settings');
@@ -391,7 +384,7 @@ test.describe('Navigation header - promoted primary destinations', () => {
 	test('can navigate to Keycodes from header', async ({ page }) => {
 		await page.goto('/');
 
-		await page.getByRole('link', { name: 'Keycodes', exact: true }).click();
+		await page.getByRole('link', { name: 'Keycode Reference' }).click();
 
 		// Should navigate to keycodes
 		await expect(page).toHaveURL('/keycodes');

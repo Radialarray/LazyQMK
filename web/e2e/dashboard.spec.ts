@@ -79,7 +79,8 @@ test.describe('Home page - configured user', () => {
 		await expect(page.locator('[data-testid="primary-actions"]')).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Start Layout Setup' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Open Layout Workspace' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Main areas' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Workspace dashboard' })).toBeVisible();
+		await expect(page.getByText('Helpful side paths')).toBeVisible();
 
 		// Check recent layouts section is present
 		await expect(page.locator('[data-testid="recent-layouts"]')).toBeVisible();
@@ -135,7 +136,7 @@ test.describe('Home page - configured user', () => {
 		await page.goto('/');
 
 		// Click the "Layouts" nav link
-		await page.getByRole('link', { name: 'Layouts', exact: true }).click();
+		await page.getByRole('link', { name: 'My Layouts' }).click();
 
 		// Should navigate to /layouts
 		await expect(page).toHaveURL('/layouts');
@@ -183,7 +184,9 @@ test.describe('Home page - no layouts', () => {
 		await page.goto('/');
 
 		await expect(page.getByText('No layouts yet')).toBeVisible();
-		await expect(page.getByText('Create your first layout to get started')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Create first layout' })).toBeVisible();
+		await expect(page.getByText('Start setup flow to connect QMK and open first editable layout.')).toBeVisible();
+		await expect(page.getByText('No layouts yet. Guided setup is best next step.')).toBeVisible();
 	});
 
 	test('does not show View all link when no layouts', async ({ page }) => {
@@ -255,7 +258,7 @@ test.describe('Home page - error handling', () => {
 		await page.goto('/');
 
 		// Should show error message
-		await expect(page.getByRole('heading', { name: 'Connection Error' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Could not connect to LazyQMK' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
 	});
 });
