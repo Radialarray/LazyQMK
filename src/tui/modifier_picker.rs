@@ -450,7 +450,11 @@ fn render_modifier_picker_component(f: &mut Frame, picker: &ModifierPicker, them
         ),
         Span::raw(" Cancel"),
     ];
-    let help = Paragraph::new(Line::from(help_spans)).style(Style::default().fg(theme.text_muted));
+    let help = Paragraph::new(vec![
+        Line::from("Columns map to QMK left/right modifier bits."),
+        Line::from(help_spans),
+    ])
+    .style(Style::default().fg(theme.text_muted));
     f.render_widget(help, chunks[7]);
 }
 
@@ -462,7 +466,11 @@ fn render_modifier_column(
     is_left: bool,
     theme: &Theme,
 ) {
-    let header = if is_left { " Left Hand" } else { " Right Hand" };
+    let header = if is_left {
+        " Left-side modifiers"
+    } else {
+        " Right-side modifiers"
+    };
     let header_widget = Paragraph::new(header).style(
         Style::default()
             .fg(theme.text_muted)

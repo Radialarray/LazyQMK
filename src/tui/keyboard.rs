@@ -315,8 +315,8 @@ impl KeyboardWidget {
             },
         );
 
-        let actions = "Actions: Enter details  Ctrl+S save layout  Ctrl+B build firmware  Shift+L layers  ? help";
-        let legend = format!("Legend: {}", Self::color_indicator_legend());
+        let actions = "Actions: Enter details  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
+        let legend = format!("Legend: {}  • red outer border = inbound hold target", Self::color_indicator_legend());
 
         let footer = Paragraph::new(vec![
             Line::from(Span::styled(

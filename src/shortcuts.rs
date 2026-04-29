@@ -327,7 +327,7 @@ impl ShortcutRegistry {
 
         // === CONFIGURATION ===
         self.register(ctx, K::Char('w'), M::CONTROL, Action::SetupWizard);
-        self.register(ctx, K::Char('y'), M::CONTROL, Action::SwitchLayoutVariant);
+        self.register(ctx, K::Char('Y'), M::SHIFT, Action::SwitchLayoutVariant);
 
         // === HELP ===
         self.register(ctx, K::Char('?'), M::NONE, Action::ToggleHelp);
@@ -411,6 +411,10 @@ mod tests {
         // Test new build log shortcut
         let event = KeyEvent::new(KeyCode::Char('B'), KeyModifiers::SHIFT);
         assert_eq!(registry.lookup("main", event), Some(Action::ViewBuildLog));
+
+        // Test safer layout variant shortcut
+        let event = KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::SHIFT);
+        assert_eq!(registry.lookup("main", event), Some(Action::SwitchLayoutVariant));
 
         // Test new metadata editor shortcut
         let event = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::SHIFT);

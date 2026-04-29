@@ -31,6 +31,16 @@ impl StatusBar {
             Some(Line::from(vec![
                 Span::styled("Build: ", Style::default().fg(theme.primary)),
                 Span::styled(status.to_string(), Style::default().fg(color)),
+                if !build_state.last_message.is_empty() {
+                    Span::styled(" • ", Style::default().fg(theme.text_muted))
+                } else {
+                    Span::raw("")
+                },
+                if !build_state.last_message.is_empty() {
+                    Span::styled(build_state.last_message.clone(), Style::default().fg(theme.text_muted))
+                } else {
+                    Span::raw("")
+                },
             ]))
         } else {
             None
@@ -137,13 +147,13 @@ impl StatusBar {
                 "Copy keys"
             };
             return Line::from(vec![
-                Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
+                Span::styled("Clipboard ready: ", Style::default().fg(theme.primary)),
                 Span::styled(clipboard_type, Style::default().fg(theme.text_muted)),
-                Span::raw(" • "),
+                Span::raw(" • next paste uses "),
                 Span::styled(preview, Style::default().fg(theme.accent)),
                 if state.clipboard.is_cut() {
                     Span::styled(
-                        " • source clears only after paste",
+                        " • source clears after paste",
                         Style::default().fg(theme.warning),
                     )
                 } else {
@@ -175,7 +185,7 @@ impl StatusBar {
         }
 
         Line::from(vec![Span::styled(
-            "Enter opens key details. Backspace/Delete clears key. Ctrl+X queues move for next paste.",
+            "Enter opens details. Backspace/Delete clears key. Ctrl+X queues move. Shift+Y switches layout variant.",
             Style::default().fg(theme.text_muted),
         )])
     }

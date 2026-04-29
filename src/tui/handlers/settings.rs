@@ -290,7 +290,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         return Ok(false);
                     }
 
-                    state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
+                    state.set_status("Select layout variant - ↑↓: Navigate, Enter: Apply, Esc: Cancel");
                 }
                 SettingItem::KeymapName => {
                     let keymap = state

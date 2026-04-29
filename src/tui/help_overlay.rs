@@ -131,18 +131,15 @@ impl HelpOverlayState {
     fn add_section_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
-            format!("═══ {title} ═══"),
-            Style::default()
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD),
+            title.to_string(),
+            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
         )]));
-        lines.push(Line::from(""));
     }
 
     /// Add a subsection header (for "In X:" labels)
     fn add_subsection_header(lines: &mut Vec<Line<'static>>, title: &str, theme: &Theme) {
         lines.push(Line::from(vec![Span::styled(
-            format!("  {title}:"),
+            format!("  {title}"),
             Style::default().fg(theme.text_muted),
         )]));
     }
@@ -160,7 +157,7 @@ impl HelpOverlayState {
             .get_context(context_name)
             .map_or(fallback_title, |ctx| ctx.name.as_str());
         lines.push(Line::from(vec![Span::styled(
-            format!("  In {title}:"),
+            format!("  In {title}"),
             Style::default().fg(theme.text_muted),
         )]));
     }
@@ -197,12 +194,12 @@ impl HelpOverlayState {
 
         // Use app_name from registry metadata for dynamic header
         let app_name = registry.app_name();
-        let header_text = format!("{app_name} - Help");
+        let header_text = format!("{app_name} shortcuts");
         let padded_header = format!("{header_text:^65}");
 
         // Header
         lines.push(Line::from(vec![Span::styled(
-            "═══════════════════════════════════════════════════════════════",
+            "───────────────────────────────────────────────────────────────",
             Style::default().fg(theme.primary),
         )]));
         lines.push(Line::from(vec![Span::styled(
@@ -212,7 +209,7 @@ impl HelpOverlayState {
                 .add_modifier(Modifier::BOLD),
         )]));
         lines.push(Line::from(vec![Span::styled(
-            "═══════════════════════════════════════════════════════════════",
+            "───────────────────────────────────────────────────────────────",
             Style::default().fg(theme.primary),
         )]));
 
@@ -1102,7 +1099,10 @@ mod tests {
 
         // Footer contains "Press '?' to close" text
         assert!(
-            content.contains("close") || content.contains("scroll") || content.contains("═"),
+            content.contains("build log")
+                || content.contains("Templates")
+                || content.contains("BUILD SYSTEM")
+                || content.contains("─"),
             "Scroll to bottom should show footer content. Got:\n{}",
             content
         );

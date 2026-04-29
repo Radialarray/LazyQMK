@@ -21,6 +21,6 @@ pub fn handle_switch_layout_variant(state: &mut AppState) -> Result<bool> {
         return Ok(false);
     }
 
-    state.set_status("Select layout variant - ↑↓: Navigate, Enter: Select");
+    state.set_status("Select layout variant - ↑↓: Navigate, Enter: Apply, Esc: Cancel");
     Ok(false)
 }

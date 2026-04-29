@@ -189,7 +189,7 @@ action = "Setup wizard"
 priority = 34
 
 [[contexts.main.bindings]]
-keys = ["Ctrl+Y"]
+keys = ["Shift+Y"]
 action = "Switch layout variant"
 priority = 35
 

@@ -946,11 +946,29 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
         .keyboard
         .clone()
         .unwrap_or_else(|| "Keyboard not set".to_string());
+    let layer_name = state
+        .layout
+        .layers
+        .get(state.current_layer)
+        .map_or("Unknown layer", |layer| layer.name.as_str());
+    let build_summary = state.build_state.as_ref().and_then(|build| {
+        if build.status == crate::firmware::BuildStatus::Idle {
+            None
+        } else if build.last_message.is_empty() {
+            Some(build.status.to_string())
+        } else {
+            Some(format!("{} • {}", build.status, build.last_message))
+        }
+    });
     let title = format!(
-        " LazyQMK | {} | {} | Layer {} | {} ",
-        state.layout.metadata.name, keyboard, state.current_layer, draft_state
+        " LazyQMK | {} | {} | L{} {} | {} ",
+        state.layout.metadata.name, keyboard, state.current_layer, layer_name, draft_state
     );
-    let subtitle = format!(" Mode: {mode}");
+    let subtitle = if let Some(build_summary) = build_summary {
+        format!(" Mode: {mode}  |  Build: {build_summary}")
+    } else {
+        format!(" Mode: {mode}")
+    };
 
     let title_widget = Paragraph::new(vec![Line::from(title), Line::from(subtitle)])
         .style(
@@ -1127,7 +1145,7 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
 
 /// Render error overlay on top of all other UI elements
 fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
-    let area = centered_rect(70, 40, f.area());
+    let area = centered_rect(64, 24, f.area());
 
     // Clear the background area first
     f.render_widget(Clear, area);
@@ -1141,13 +1159,13 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // Title
-            Constraint::Min(3),    // Error message
-            Constraint::Length(2), // Help text
+            Constraint::Min(4),    // Error message
+            Constraint::Length(1), // Help text
         ])
         .split(area);
 
     // Title with error styling
-    let title = Paragraph::new("ERROR")
+    let title = Paragraph::new("Something needs attention")
         .style(
             Style::default()
                 .fg(theme.error)
@@ -1161,7 +1179,13 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
     f.render_widget(title, chunks[0]);
 
     // Error message with word wrap
-    let error_text = Paragraph::new(error)
+    let error_text = Paragraph::new(vec![
+        Line::from(vec![Span::styled(
+            "Error: ",
+            Style::default().fg(theme.error).add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(error.to_string()),
+    ])
         .style(Style::default().fg(theme.text))
         .block(
             Block::default()
@@ -1182,12 +1206,7 @@ fn render_error_overlay(f: &mut Frame, error: &str, theme: &Theme) {
         ),
         Span::raw(" Dismiss"),
     ])])
-    .style(Style::default().fg(theme.text).bg(theme.background))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default().bg(theme.background)),
-    );
+    .style(Style::default().fg(theme.text_muted).bg(theme.background));
     f.render_widget(help, chunks[2]);
 }
 
