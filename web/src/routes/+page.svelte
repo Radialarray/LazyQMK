@@ -91,13 +91,18 @@
 <div class="container mx-auto p-6">
 	{#if loading}
 		<div class="flex items-center justify-center h-64">
-			<p class="text-muted-foreground">Loading...</p>
+			<Card class="state-panel-loading max-w-xl w-full">
+				<p class="state-eyebrow mb-3">Workspace</p>
+				<h2 class="text-2xl font-semibold">Loading home workspace</h2>
+				<p class="mt-2 text-muted-foreground">Checking setup, recent layouts, and editor entry points.</p>
+			</Card>
 		</div>
 	{:else if error}
 		<div class="max-w-2xl mx-auto">
-			<Card class="p-8 border-destructive">
-				<h2 class="text-2xl font-semibold mb-4 text-destructive">Connection Error</h2>
-				<p class="text-muted-foreground mb-6">{error}</p>
+			<Card class="state-panel-error">
+				<p class="state-eyebrow mb-3">Backend unavailable</p>
+				<h2 class="text-2xl font-semibold text-destructive">Could not connect to LazyQMK</h2>
+				<p class="mt-2 text-muted-foreground mb-6">{error}</p>
 				<Button onclick={() => window.location.reload()}>Retry</Button>
 			</Card>
 		</div>
@@ -169,10 +174,15 @@
 				</div>
 
 				{#if recentLayouts.length === 0}
-					<Card class="p-6">
-						<p class="text-muted-foreground text-center">
-							No layouts yet. Create your first layout to get started.
+					<Card class="state-panel-empty">
+						<p class="state-eyebrow mb-3">Nothing recent</p>
+						<h3 class="text-xl font-semibold">Create first layout</h3>
+						<p class="mt-2 text-muted-foreground text-center">
+							Start setup flow to connect QMK and open first editable layout.
 						</p>
+						<div class="mt-6">
+							<a href="/onboarding"><Button>Create Layout</Button></a>
+						</div>
 					</Card>
 				{:else}
 					<div class="space-y-2">

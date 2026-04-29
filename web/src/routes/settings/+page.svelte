@@ -62,10 +62,12 @@
 	{#if loading}
 		<p class="text-muted-foreground">Loading settings...</p>
 	{:else if error && !config}
-		<Card class="p-6">
-			<div class="text-destructive">
-				<p class="font-medium">Error loading settings</p>
-				<p class="text-sm">{error}</p>
+		<Card class="state-panel-error">
+			<p class="state-eyebrow mb-3">Setup unavailable</p>
+			<h2 class="text-2xl font-semibold text-destructive">Could not load settings</h2>
+			<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+			<div class="mt-6">
+				<Button onclick={() => window.location.reload()}>Retry Loading Settings</Button>
 			</div>
 		</Card>
 	{:else}
@@ -95,9 +97,6 @@
 					placeholder="/path/to/qmk_firmware"
 					class="mb-4"
 				/>
-				<p class="text-xs text-muted-foreground">
-					Current: {config?.qmk_firmware_path || 'Not configured'}
-				</p>
 			</Card>
 
 			<!-- Workspace Root -->

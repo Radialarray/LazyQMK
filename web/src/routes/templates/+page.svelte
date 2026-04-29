@@ -131,29 +131,45 @@
 
 	<!-- Loading State -->
 	{#if loading}
-		<div class="text-center py-12" data-testid="loading-state">
-			<p class="text-muted-foreground">Loading templates...</p>
+		<div data-testid="loading-state">
+			<Card class="state-panel-loading">
+				<p class="state-eyebrow mb-3">Starter layouts</p>
+				<h2 class="text-2xl font-semibold">Loading templates</h2>
+				<p class="mt-2 text-muted-foreground">Gathering reusable starting points for your next layout.</p>
+			</Card>
 		</div>
 	{:else if error}
 		<!-- Error State -->
 		<div data-testid="error-state">
-			<Card class="p-6 border-destructive">
-				<h2 class="text-xl font-semibold mb-2 text-destructive">Error</h2>
-				<p class="text-sm mb-4">{error}</p>
-				<Button onclick={loadTemplates}>Retry</Button>
+			<Card class="state-panel-error">
+				<p class="state-eyebrow mb-3">Starter layouts unavailable</p>
+				<h2 class="text-2xl font-semibold text-destructive">Could not load templates</h2>
+				<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+				<div class="mt-6 flex gap-2">
+					<Button onclick={loadTemplates}>Retry</Button>
+					<a href="/onboarding"><Button variant="outline">Start from Scratch</Button></a>
+				</div>
 			</Card>
 		</div>
 	{:else if filteredTemplates.length === 0}
 		<!-- Empty State -->
 		<div data-testid="empty-state">
-			<Card class="p-12 text-center">
-					<h2 class="text-2xl font-semibold mb-2">No Starter Layouts Found</h2>
-				<p class="text-muted-foreground mb-4">
-					{searchQuery ? 'Try a different search query' : 'Create a template from an existing layout'}
+			<Card class="state-panel-empty">
+				<p class="state-eyebrow mb-3">No starter layouts</p>
+				<h2 class="text-2xl font-semibold">{searchQuery ? 'Try broader search terms' : 'Create next reusable starting point'}</h2>
+				<p class="mt-2 text-muted-foreground mb-6">
+					{searchQuery
+						? 'No template matches this search yet. Clear filters or try another keyword.'
+						: 'Save one of your existing layouts as a template so future boards start faster.'}
 				</p>
-				<a href="/layouts">
-					<Button>Go to Layouts</Button>
-				</a>
+				<div class="flex justify-center gap-2">
+					{#if searchQuery}
+						<Button variant="outline" onclick={() => (searchQuery = '')}>Clear Search</Button>
+					{/if}
+					<a href="/layouts">
+						<Button>{searchQuery ? 'Browse Layouts' : 'Open Layouts'}</Button>
+					</a>
+				</div>
 			</Card>
 		</div>
 	{:else}

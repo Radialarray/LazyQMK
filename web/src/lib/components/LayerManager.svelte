@@ -15,6 +15,7 @@
 	let editingLayerIndex = $state<number | null>(null);
 	let editingLayerName = $state('');
 	let colorPickerLayerIndex = $state<number | null>(null);
+	let deleteBlockedMessage = $state<string | null>(null);
 
 	function createNewLayer() {
 		if (!layers.length) return;
@@ -49,9 +50,11 @@
 
 	function deleteLayer(index: number) {
 		if (layers.length <= 1) {
-			alert('Cannot delete the last layer');
+			deleteBlockedMessage = 'Keep at least one layer in layout before deleting.';
 			return;
 		}
+
+		deleteBlockedMessage = null;
 
 		const newLayers = layers.filter((_, i) => i !== index);
 		// Update layer numbers
@@ -199,6 +202,12 @@
 		<h2 class="text-lg font-semibold">Layer Manager</h2>
 		<Button onclick={createNewLayer} size="sm">New Layer</Button>
 	</div>
+
+	{#if deleteBlockedMessage}
+		<div class="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+			{deleteBlockedMessage}
+		</div>
+	{/if}
 
 	<div class="space-y-3">
 		{#each layers as layer, i}

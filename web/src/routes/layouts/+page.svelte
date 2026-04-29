@@ -65,17 +65,26 @@
 	{#if loading}
 		<p class="text-muted-foreground">Loading layouts...</p>
 	{:else if error}
-		<Card class="p-6">
-			<div class="text-destructive">
-				<p class="font-medium">Error loading layouts</p>
-				<p class="text-sm">{error}</p>
+		<Card class="state-panel-error">
+			<p class="state-eyebrow mb-3">Layouts unavailable</p>
+			<h2 class="text-2xl font-semibold text-destructive">Could not load layouts</h2>
+			<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+			<div class="mt-6">
+				<Button onclick={() => window.location.reload()}>Retry Loading Layouts</Button>
 			</div>
 		</Card>
 	{:else if layouts.length === 0}
-		<Card class="p-6">
-			<p class="text-muted-foreground">
-				No layouts found yet. Start with unified setup flow to create one.
+		<Card class="state-panel-empty">
+			<p class="state-eyebrow mb-3">No layouts yet</p>
+			<h2 class="text-2xl font-semibold">Create first layout</h2>
+			<p class="mt-2 text-muted-foreground">
+				Start setup flow to pick keyboard, choose template, or begin from scratch.
 			</p>
+			<div class="mt-6">
+				<a href="/onboarding">
+					<Button>Create Layout</Button>
+				</a>
+			</div>
 		</Card>
 	{:else}
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

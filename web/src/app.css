@@ -86,4 +86,24 @@
 	.kbd-token {
 		@apply rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px];
 	}
+
+	.state-panel {
+		@apply rounded-2xl border border-border/80 bg-card/95 p-8 shadow-sm;
+	}
+
+	.state-panel-loading {
+		@apply state-panel border-dashed bg-muted/20 text-center;
+	}
+
+	.state-panel-error {
+		@apply state-panel border-destructive/40 bg-destructive/5;
+	}
+
+	.state-panel-empty {
+		@apply state-panel text-center;
+	}
+
+	.state-eyebrow {
+		@apply text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+	}
 }

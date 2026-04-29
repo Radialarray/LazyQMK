@@ -103,19 +103,31 @@
 			</Card>
 
 			{#if loading}
-				<p class="text-muted-foreground">Loading keycodes...</p>
+				<Card class="state-panel-loading">
+					<p class="state-eyebrow mb-3">Keycode library</p>
+					<h2 class="text-2xl font-semibold">Loading keycodes</h2>
+					<p class="mt-2 text-muted-foreground">Pulling searchable keycode data for this workspace.</p>
+				</Card>
 			{:else if error}
-				<Card class="p-6">
-					<div class="text-destructive">
-						<p class="font-medium">Error loading keycodes</p>
-						<p class="text-sm">{error}</p>
+				<Card class="state-panel-error">
+					<p class="state-eyebrow mb-3">Keycode library unavailable</p>
+					<h2 class="text-2xl font-semibold text-destructive">Could not load keycodes</h2>
+					<p class="mt-2 text-sm text-muted-foreground">{error}</p>
+					<div class="mt-6">
+						<Button onclick={handleSearch}>Retry Search</Button>
 					</div>
 				</Card>
 			{:else if keycodes.length === 0}
-				<Card class="p-6">
-					<p class="text-muted-foreground">
-						No keycodes found matching your search.
+				<Card class="state-panel-empty">
+					<p class="state-eyebrow mb-3">No matches</p>
+					<h2 class="text-2xl font-semibold">Adjust search and try again</h2>
+					<p class="mt-2 text-muted-foreground">
+						Search by code, readable name, or switch category to widen results.
 					</p>
+					<div class="mt-6 flex justify-center gap-2">
+						<Button variant="outline" onclick={() => { searchTerm = ''; void handleSearch(); }}>Clear Search</Button>
+						<Button variant="outline" onclick={() => selectCategory(null)}>Show All Categories</Button>
+					</div>
 				</Card>
 			{:else}
 				<div class="space-y-2">

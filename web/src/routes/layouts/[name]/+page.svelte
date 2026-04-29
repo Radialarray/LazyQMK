@@ -293,6 +293,7 @@
 
 	// State for switch layout variant
 	let showVariantSwitchDialog = $state(false);
+	let resetDialogOpen = $state(false);
 	let availableVariants = $state<LayoutVariantInfo[]>([]);
 	let variantsLoading = $state(false);
 	let variantsError = $state<string | null>(null);
@@ -1091,7 +1092,6 @@
 
 	async function resetLayout() {
 		if (!filename) return;
-		if (!window.confirm('Discard all unsaved changes? This will revert edits since last save.')) return;
 		try {
 			const savedLayout = await apiClient.getLayout(filename);
 			layout = { ...savedLayout, layers: [...savedLayout.layers] };
@@ -1118,6 +1118,19 @@
 			saveError = 'Failed to reset layout. Please try again.';
 			saveStatus = 'error';
 		}
+	}
+
+	function requestResetLayout() {
+		resetDialogOpen = true;
+	}
+
+	function closeResetDialog() {
+		resetDialogOpen = false;
+	}
+
+	async function confirmResetLayout() {
+		resetDialogOpen = false;
+		await resetLayout();
 	}
 
 	// Tap Dance management
@@ -1665,7 +1678,7 @@
 				</div>
 				<div class="flex flex-wrap items-center justify-end gap-2">
 					{#if isDirty}
-						<Button onclick={resetLayout} variant="outline" data-testid="reset-button">
+						<Button onclick={requestResetLayout} variant="outline" data-testid="reset-button">
 							Discard Unsaved Changes
 						</Button>
 					{/if}
@@ -1961,28 +1974,6 @@
 					</dl>
 				</Card>
 
-				<!-- Layer Selector -->
-				<Card class="p-6">
-					<h2 class="text-lg font-semibold mb-3">Layers</h2>
-					<div class="flex gap-2 flex-wrap">
-						{#each layout.layers as layer, i}
-							<button
-								onclick={() => handleLayerChange(i)}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors text-sm
-									{selectedLayerIndex === i
-									? 'bg-primary text-primary-foreground border-primary'
-									: 'bg-background hover:bg-accent border-border'}"
-							>
-								<span
-									class="w-2.5 h-2.5 rounded-full"
-									style="background-color: {layer.color || '#888'}"
-								></span>
-								<span class="font-medium">{layer.name}</span>
-							</button>
-						{/each}
-					</div>
-				</Card>
-
 				<!-- Keyboard Preview -->
 				<Card class="p-6">
 					<div class="flex items-center justify-between mb-4">
@@ -1998,6 +1989,30 @@
 									Selected: <code class="px-2 py-0.5 bg-muted rounded">{selectedKey.keycode}</code>
 								</span>
 							{/if}
+						</div>
+					</div>
+
+					<div class="mb-4 rounded-lg border border-border bg-background/70 p-4">
+						<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+							<div>
+								<p class="text-sm font-medium">Working layer</p>
+								<p class="mt-1 text-xs text-muted-foreground">Switch layers beside preview so key context stays in view.</p>
+							</div>
+							<div class="flex gap-2 flex-wrap">
+								{#each layout.layers as layer, i}
+									<button
+										onclick={() => handleLayerChange(i)}
+										class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors text-sm
+											{selectedLayerIndex === i
+											? 'bg-primary text-primary-foreground border-primary'
+											: 'bg-background hover:bg-accent border-border'}"
+										data-testid="preview-layer-{i}"
+									>
+										<span class="w-2.5 h-2.5 rounded-full" style="background-color: {layer.color || '#888'}"></span>
+										<span class="font-medium">{layer.name}</span>
+									</button>
+								{/each}
+							</div>
 						</div>
 					</div>
 
@@ -3648,6 +3663,33 @@
 					<Button variant="destructive" onclick={confirmLeaveWithoutSaving} data-testid="confirm-leave-without-saving">
 						Leave Without Saving
 					</Button>
+				</div>
+			</Card>
+		</div>
+	</div>
+{/if}
+
+{#if resetDialogOpen}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+		onclick={closeResetDialog}
+		onkeydown={(e) => e.key === 'Escape' && closeResetDialog()}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="reset-layout-title"
+		tabindex="-1"
+	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="w-full max-w-md" onclick={(e: MouseEvent) => e.stopPropagation()}>
+			<Card class="p-6">
+				<h2 id="reset-layout-title" class="text-lg font-semibold">Discard unsaved changes?</h2>
+				<p class="mt-2 text-sm text-muted-foreground">
+					This reverts editor back to last saved layout state and clears current unsaved edits.
+				</p>
+				<div class="mt-6 flex flex-wrap justify-end gap-2">
+					<Button variant="ghost" onclick={closeResetDialog}>Keep Editing</Button>
+					<Button variant="destructive" onclick={confirmResetLayout}>Discard Changes</Button>
 				</div>
 			</Card>
 		</div>
