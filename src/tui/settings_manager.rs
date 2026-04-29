@@ -19,6 +19,24 @@ use crate::models::{
 };
 
 use super::Theme;
+use super::{popup_border_style, popup_title, PopupType};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RgbSubgroup {
+    Core,
+    Idle,
+    Ripple,
+}
+
+impl RgbSubgroup {
+    const fn display_name(self) -> &'static str {
+        match self {
+            Self::Core => "Core lighting",
+            Self::Idle => "Idle lighting",
+            Self::Ripple => "Press ripple",
+        }
+    }
+}
 
 /// Setting group for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,6 +319,37 @@ impl SettingItem {
             | Self::Combo3Key1
             | Self::Combo3Key2
             | Self::Combo3HoldDuration => SettingGroup::Combos,
+        }
+    }
+
+    #[must_use]
+    const fn rgb_subgroup(self) -> Option<RgbSubgroup> {
+        match self {
+            Self::RgbEnabled
+            | Self::RgbBrightness
+            | Self::RgbSaturation
+            | Self::RgbMatrixSpeed
+            | Self::RgbTimeout
+            | Self::UncoloredKeyBehavior => Some(RgbSubgroup::Core),
+            Self::IdleEffectEnabled
+            | Self::IdleTimeout
+            | Self::IdleEffectDuration
+            | Self::IdleEffectMode => Some(RgbSubgroup::Idle),
+            Self::OverlayRippleEnabled
+            | Self::OverlayRippleMaxRipples
+            | Self::OverlayRippleDuration
+            | Self::OverlayRippleSpeed
+            | Self::OverlayRippleBandWidth
+            | Self::OverlayRippleAmplitude
+            | Self::OverlayRippleColorMode
+            | Self::OverlayRippleFixedColor
+            | Self::OverlayRippleHueShift
+            | Self::OverlayRippleTriggerPress
+            | Self::OverlayRippleTriggerRelease
+            | Self::OverlayRippleIgnoreTransparent
+            | Self::OverlayRippleIgnoreModifiers
+            | Self::OverlayRippleIgnoreLayerSwitch => Some(RgbSubgroup::Ripple),
+            _ => None,
         }
     }
 
@@ -1424,7 +1473,8 @@ pub fn render_settings_manager(
     // Background block
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Settings (Shift+S) ")
+        .border_style(popup_border_style(&PopupType::SettingsManager, theme))
+        .title(popup_title(&PopupType::SettingsManager, "Shift+S"))
         .style(Style::default().bg(theme.background));
 
     f.render_widget(block, dialog_area);
@@ -1539,6 +1589,9 @@ fn render_settings_list(
 
     let selected_setting = SettingItem::all().get(state.selected).copied();
     let selected_group = selected_setting.map(|setting| setting.group());
+    let subgroup_summary = selected_setting.and_then(SettingItem::rgb_subgroup).map(|subgroup| {
+        format!(" • Subsection: {}", subgroup.display_name())
+    });
     let summary = selected_group.map_or_else(
         || "Choose a setting to edit.".to_string(),
         |group| {
@@ -1547,7 +1600,12 @@ fn render_settings_list(
             } else {
                 "Saved in current layout"
             };
-            format!("Task area: {} • {}", group.display_name(), scope)
+            format!(
+                "Task area: {} • {}{}",
+                group.display_name(),
+                scope,
+                subgroup_summary.unwrap_or_default()
+            )
         },
     );
     let summary_widget = Paragraph::new(summary).block(
@@ -1562,6 +1620,7 @@ fn render_settings_list(
     let settings = SettingItem::all();
     let mut items: Vec<ListItem> = Vec::new();
     let mut current_group: Option<SettingGroup> = None;
+    let mut current_rgb_subgroup: Option<RgbSubgroup> = None;
     let mut display_index = 0;
 
     for setting in settings {
@@ -1579,6 +1638,27 @@ fn render_settings_list(
                     .add_modifier(Modifier::BOLD),
             )])));
             current_group = Some(group);
+            current_rgb_subgroup = None;
+        }
+
+        if group == SettingGroup::Rgb {
+            let subgroup = setting.rgb_subgroup();
+            if subgroup != current_rgb_subgroup {
+                if current_rgb_subgroup.is_some() {
+                    items.push(ListItem::new(Line::from("")));
+                }
+
+                if let Some(subgroup) = subgroup {
+                    items.push(ListItem::new(Line::from(vec![Span::styled(
+                        format!("  {}", subgroup.display_name()),
+                        Style::default()
+                            .fg(theme.text_secondary)
+                            .add_modifier(Modifier::BOLD),
+                    )])));
+                }
+
+                current_rgb_subgroup = subgroup;
+            }
         }
 
         let style = if display_index == state.selected {

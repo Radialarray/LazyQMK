@@ -70,6 +70,16 @@ use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
 use crate::tui::help_registry::HelpRegistry;
 use std::collections::HashMap;
 
+/// Shared popup border style based on popup task type.
+pub fn popup_border_style(popup_type: &PopupType, theme: &Theme) -> Style {
+    Style::default().fg(popup_kind_color(popup_type.visual_kind(), theme))
+}
+
+/// Shared popup title format with task-type label.
+pub fn popup_title(popup_type: &PopupType, label: &str) -> String {
+    format!(" {} · {} ", popup_type.visual_kind().mode_label(), label)
+}
+
 // Re-export TUI components
 pub use build_log::BuildLog;
 pub use category_manager::{CategoryManager, CategoryManagerState};
@@ -156,6 +166,38 @@ pub enum TapDanceFormContext {
     FromEditor,
     /// Launched from keycode picker to assign TD(name) to selected key
     FromKeycodePicker,
+}
+
+/// Visual category for popup chrome and mode labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PopupVisualKind {
+    /// Selection or lookup task that returns to prior context.
+    Picker,
+    /// Editing task that changes draft content directly.
+    Editor,
+    /// Settings management task for global or layout preferences.
+    Settings,
+    /// Guided onboarding or setup flow.
+    Wizard,
+    /// Read-only feedback, logs, or help content.
+    Feedback,
+    /// Confirmation step for risky actions.
+    Confirm,
+}
+
+impl PopupVisualKind {
+    /// Human-readable mode label for title bar and popup chrome.
+    #[must_use]
+    pub const fn mode_label(self) -> &'static str {
+        match self {
+            Self::Picker => "Picker",
+            Self::Editor => "Editor",
+            Self::Settings => "Settings",
+            Self::Wizard => "Wizard",
+            Self::Feedback => "Feedback",
+            Self::Confirm => "Confirm",
+        }
+    }
 }
 
 /// State for the export filename dialog.
@@ -317,6 +359,35 @@ pub enum PopupType {
     TapDanceEditor,
     /// Tap dance form dialog (create/edit)
     TapDanceForm,
+}
+
+impl PopupType {
+    /// Visual task category used for popup chrome and orientation cues.
+    #[must_use]
+    pub const fn visual_kind(&self) -> PopupVisualKind {
+        match self {
+            Self::KeycodePicker
+            | Self::ColorPicker
+            | Self::CategoryPicker
+            | Self::LayerPicker
+            | Self::LayoutPicker
+            | Self::TapKeycodePicker
+            | Self::ModifierPicker => PopupVisualKind::Picker,
+            Self::CategoryManager
+            | Self::LayerManager
+            | Self::TemplateBrowser
+            | Self::MetadataEditor
+            | Self::KeyEditor
+            | Self::TapDanceEditor
+            | Self::TapDanceForm
+            | Self::TemplateSaveDialog
+            | Self::ExportFilenameDialog => PopupVisualKind::Editor,
+            Self::SettingsManager => PopupVisualKind::Settings,
+            Self::SetupWizard => PopupVisualKind::Wizard,
+            Self::BuildLog | Self::HelpOverlay => PopupVisualKind::Feedback,
+            Self::UnsavedChangesPrompt => PopupVisualKind::Confirm,
+        }
+    }
 }
 
 /// Selection mode for multi-key operations
@@ -926,12 +997,12 @@ fn render(f: &mut Frame, state: &AppState) {
 /// Render title bar with layout name and dirty indicator
 fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     let draft_state = if state.dirty { "Unsaved" } else { "Saved" };
-    let mode = if matches!(state.active_popup, Some(PopupType::SettingsManager)) {
-        "Settings"
-    } else if matches!(state.active_popup, Some(PopupType::SetupWizard)) {
-        "Onboarding"
-    } else if state.active_popup.is_some() {
-        "Popup"
+    let mode = if let Some(active_popup) = &state.active_popup {
+        match active_popup.visual_kind() {
+            PopupVisualKind::Settings => "Settings",
+            PopupVisualKind::Wizard => "Onboarding",
+            kind => kind.mode_label(),
+        }
     } else if let Some(selection_mode) = &state.selection_mode {
         match selection_mode {
             SelectionMode::Normal => "Selection",
@@ -1119,6 +1190,18 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
     }
 }
 
+/// Get popup accent color by task type.
+fn popup_kind_color(kind: PopupVisualKind, theme: &Theme) -> ratatui::style::Color {
+    match kind {
+        PopupVisualKind::Picker => theme.primary,
+        PopupVisualKind::Editor => theme.accent,
+        PopupVisualKind::Settings => theme.success,
+        PopupVisualKind::Wizard => theme.warning,
+        PopupVisualKind::Feedback => theme.text_secondary,
+        PopupVisualKind::Confirm => theme.error,
+    }
+}
+
 /// Render unsaved changes prompt
 fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
     let area = centered_rect(60, 30, f.area());
@@ -1141,8 +1224,9 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
 
     let prompt = Paragraph::new(text).block(
         Block::default()
-            .title(" Unsaved Changes ")
+            .title(popup_title(&PopupType::UnsavedChangesPrompt, "Unsaved changes"))
             .borders(Borders::ALL)
+            .border_style(popup_border_style(&PopupType::UnsavedChangesPrompt, theme))
             .style(Style::default().fg(theme.warning)),
     );
 
@@ -1253,7 +1337,12 @@ fn render_template_save_dialog(f: &mut Frame, state: &AppState) {
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title(popup_title(&PopupType::TemplateSaveDialog, "Template save"))
+                .borders(Borders::ALL)
+                .border_style(popup_border_style(&PopupType::TemplateSaveDialog, theme)),
+        );
     f.render_widget(title, chunks[0]);
 
     // Name field
@@ -1368,7 +1457,12 @@ fn render_export_filename_dialog(f: &mut Frame, state: &AppState) {
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().borders(Borders::ALL));
+        .block(
+            Block::default()
+                .title(popup_title(&PopupType::ExportFilenameDialog, "Export"))
+                .borders(Borders::ALL)
+                .border_style(popup_border_style(&PopupType::ExportFilenameDialog, theme)),
+        );
     f.render_widget(title, chunks[0]);
 
     // Filename field with cursor

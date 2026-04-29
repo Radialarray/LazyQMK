@@ -4,8 +4,7 @@
 //! Shows all fields (Name, Single Tap, Double Tap, Hold) in one form with Pick buttons.
 
 use crate::models::TapDanceAction;
-use crate::tui::theme::Theme;
-use crate::tui::Component;
+use crate::tui::{popup_border_style, popup_title, theme::Theme, Component, PopupType};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
@@ -348,6 +347,8 @@ impl Component for TapDanceForm {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
+                    .border_style(popup_border_style(&PopupType::TapDanceForm, theme))
+                    .title(popup_title(&PopupType::TapDanceForm, "Tap dance"))
                     .style(Style::default().bg(theme.background)),
             );
         frame.render_widget(title, chunks[0]);
