@@ -57,6 +57,7 @@
 	let layoutFilename = $state('');
 	let createLoading = $state(false);
 	let createError = $state<string | null>(null);
+	let keyboardBrowseMode = $state<'recognition' | 'search'>('recognition');
 
 	// Derived state
 	let filteredKeyboards = $derived(
@@ -83,6 +84,12 @@
 		template: { icon: 'KIT', eyebrow: 'Starting point' },
 		create: { icon: 'NEW', eyebrow: 'Blank layout' }
 	};
+
+	const featuredKeyboardGroups = $derived([
+		{ title: 'Split and ergonomic', items: keyboards.filter((k) => /corne|crkbd|sofle|lily58|ergodox|split/i.test(k.path)).slice(0, 8) },
+		{ title: 'Compact boards', items: keyboards.filter((k) => /40|42|min|planck|vial|ortho/i.test(k.path)).slice(0, 8) },
+		{ title: 'Starter picks', items: keyboards.slice(0, 8) }
+	].filter((group) => group.items.length > 0));
 
 	onMount(async () => {
 		await loadPreflight();
@@ -251,6 +258,14 @@
 		loadVariants();
 	}
 
+	function useRecognitionMode() {
+		keyboardBrowseMode = 'recognition';
+	}
+
+	function useSearchMode() {
+		keyboardBrowseMode = 'search';
+	}
+
 	async function createLayout() {
 		if (!selectedKeyboard || !selectedVariant || !layoutName.trim()) return;
 
@@ -295,8 +310,9 @@
 			<div class="text-center mb-12 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/10 px-6 py-10 shadow-sm">
 				<div class="brand-badge mb-4">LazyQMK · Layout studio</div>
 				<h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-					Welcome to clearer keyboard setup
+					Welcome to LazyQMK
 				</h1>
+				<p class="text-lg font-medium mb-2">Welcome to clearer keyboard setup</p>
 				<p class="text-xl text-muted-foreground">
 					Connect QMK once, pick how to start, then move straight into editing.
 				</p>
@@ -306,7 +322,7 @@
 				<Card class="surface-elevated p-5 mb-6">
 					<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 						<div>
-							<p class="text-sm font-medium text-primary">Guided onboarding</p>
+							<p class="text-sm font-medium text-primary">Canonical setup flow</p>
 							<h2 class="text-lg font-semibold mt-1">Step {currentStepNumber} of 2 — {currentStepTitle}</h2>
 							<p class="text-sm text-muted-foreground mt-1">
 								Small orientation up front, faster handoff into real layout work.
@@ -353,10 +369,10 @@
 					<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
 						1
 					</div>
-					<div>
-						<h2 class="text-2xl font-semibold">Connect QMK firmware</h2>
-						<p class="text-muted-foreground">Set path to your local QMK firmware folder</p>
-					</div>
+						<div>
+							<h2 class="text-2xl font-semibold">Configure QMK Firmware</h2>
+							<p class="text-muted-foreground">Set path to your local QMK firmware folder</p>
+						</div>
 				</div>
 
 				<div class="space-y-4">
@@ -617,7 +633,13 @@
 				<div class="space-y-6">
 					<!-- Keyboard Selection -->
 					<div>
-						<label for="keyboard-search" class="block text-sm font-medium mb-2">Keyboard</label>
+						<div class="flex items-center justify-between gap-4 mb-2">
+							<label for="keyboard-search" class="block text-sm font-medium">Keyboard</label>
+							<div class="flex gap-2 text-xs">
+								<button class="rounded-full border px-3 py-1 {keyboardBrowseMode === 'recognition' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}" onclick={useRecognitionMode}>Recognize by board family</button>
+								<button class="rounded-full border px-3 py-1 {keyboardBrowseMode === 'search' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}" onclick={useSearchMode}>Search exact names</button>
+							</div>
+						</div>
 						{#if keyboardsLoading}
 							<p class="text-muted-foreground">Loading keyboards...</p>
 						{:else if keyboardsError}
@@ -626,32 +648,49 @@
 							</div>
 							<Button onclick={loadKeyboards} size="sm">Retry</Button>
 						{:else}
-							<Input
-								id="keyboard-search"
-								bind:value={keyboardSearch}
-								placeholder="Search keyboards..."
-								class="mb-2"
-							/>
-							<div class="max-h-48 overflow-y-auto border rounded">
-								{#if filteredKeyboards.length === 0}
-									<p class="p-4 text-muted-foreground text-center text-sm">No keyboards found</p>
-								{:else}
-									{#each filteredKeyboards.slice(0, 50) as keyboard}
-										<button
-											class="w-full p-2 text-left hover:bg-muted border-b last:border-b-0 text-sm
-											{selectedKeyboard === keyboard.path ? 'bg-primary/10 border-l-4 border-l-primary' : ''}"
-											onclick={() => selectKeyboard(keyboard.path)}
-										>
-											<span class="font-mono">{keyboard.path}</span>
-										</button>
+							<Input id="keyboard-search" bind:value={keyboardSearch} placeholder="Search keyboards by exact name..." class="mb-2 {keyboardBrowseMode === 'recognition' ? 'sr-only' : ''}" />
+							{#if keyboardBrowseMode === 'recognition'}
+								<div class="space-y-4">
+									<p class="text-sm text-muted-foreground">
+										Start with board families you recognize. Switch to exact search only if needed.
+									</p>
+									{#each featuredKeyboardGroups as group}
+										<div>
+											<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2">{group.title}</p>
+											<div class="grid gap-2 md:grid-cols-2">
+												{#each group.items as keyboard}
+													<button
+														class="rounded-lg border p-3 text-left hover:bg-muted {selectedKeyboard === keyboard.path ? 'border-primary bg-primary/10' : ''}"
+														onclick={() => selectKeyboard(keyboard.path)}
+													>
+														<p class="font-medium">{keyboard.path.split('/').at(-1)}</p>
+														<p class="mt-1 text-xs text-muted-foreground font-mono">{keyboard.path}</p>
+														<p class="mt-2 text-xs text-muted-foreground">{keyboard.layout_count} layout {keyboard.layout_count === 1 ? 'variant' : 'variants'} available</p>
+													</button>
+												{/each}
+											</div>
+										</div>
 									{/each}
-									{#if filteredKeyboards.length > 50}
-										<p class="p-2 text-xs text-muted-foreground text-center">
-											Showing first 50 of {filteredKeyboards.length} results
-										</p>
+								</div>
+							{:else}
+								<div class="max-h-48 overflow-y-auto border rounded">
+									{#if filteredKeyboards.length === 0}
+										<p class="p-4 text-muted-foreground text-center text-sm">No keyboards found</p>
+									{:else}
+										{#each filteredKeyboards.slice(0, 50) as keyboard}
+											<button
+												class="w-full p-2 text-left hover:bg-muted border-b last:border-b-0 text-sm {selectedKeyboard === keyboard.path ? 'bg-primary/10 border-l-4 border-l-primary' : ''}"
+												onclick={() => selectKeyboard(keyboard.path)}
+											>
+												<span class="font-mono">{keyboard.path}</span>
+											</button>
+										{/each}
+										{#if filteredKeyboards.length > 50}
+											<p class="p-2 text-xs text-muted-foreground text-center">Showing first 50 of {filteredKeyboards.length} results</p>
+										{/if}
 									{/if}
-								{/if}
-							</div>
+								</div>
+							{/if}
 						{/if}
 					</div>
 
@@ -733,11 +772,10 @@
 			</Card>
 		{/if}
 
-		<!-- Skip to Home Link -->
-		<div class="text-center mt-8">
-			<a href="/" class="text-sm text-muted-foreground hover:text-foreground">
-				Go to Home
-			</a>
-		</div>
+		{#if currentStep === 'config' || currentStep === 'choose'}
+			<div class="text-center mt-8">
+				<a href="/" class="text-sm text-muted-foreground hover:text-foreground">Go to Home</a>
+			</div>
+		{/if}
 	</div>
 </div>

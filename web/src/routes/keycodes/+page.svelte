@@ -9,6 +9,7 @@
 	let error = $state<string | null>(null);
 	let searchTerm = $state('');
 	let selectedCategory = $state<string | null>(null);
+	const learningPrompts = ['home row mods', 'navigation', 'media', 'lighting', 'layers'];
 
 	onMount(async () => {
 		try {
@@ -43,14 +44,20 @@
 		selectedCategory = categoryId;
 		handleSearch();
 	}
+
+	function runPrompt(prompt: string) {
+		searchTerm = prompt;
+		void handleSearch();
+	}
 </script>
 
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-4xl font-bold mb-2">Keycode Reference</h1>
+			<h1 class="text-4xl font-bold mb-2">Keycodes Browser</h1>
+			<p class="text-lg font-medium mb-1">Keycode Reference</p>
 			<p class="text-muted-foreground">
-				Find what each keycode does before you assign it to your layout.
+				Learn what keycodes mean before you assign them to your layout.
 			</p>
 		</div>
 		<Button onclick={() => (window.location.href = '/')}>
@@ -61,6 +68,19 @@
 	<div class="grid gap-6 lg:grid-cols-4">
 		<!-- Category Sidebar -->
 		<div class="lg:col-span-1">
+			<Card class="p-4 mb-4 surface-subtle">
+				<h2 class="text-lg font-semibold mb-3">Learn faster</h2>
+				<div class="space-y-2 text-sm">
+					<p class="text-muted-foreground">Use plain words, not exact QMK codes. Search for intent first, then inspect matching codes.</p>
+					<div class="flex flex-wrap gap-2 pt-1">
+						{#each learningPrompts as prompt}
+							<button class="rounded-full border px-3 py-1 text-xs hover:bg-accent" onclick={() => runPrompt(prompt)}>
+								{prompt}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</Card>
 			<Card class="p-4">
 				<h2 class="text-lg font-semibold mb-4">Browse by category</h2>
 				<div class="space-y-2">
@@ -95,11 +115,14 @@
 				<div class="flex gap-2">
 					<Input
 						bind:value={searchTerm}
-						placeholder="Search by code, name, or behavior..."
+						placeholder="Search by code, name, or plain-language behavior..."
 						class="flex-1"
 						oninput={() => handleSearch()}
 					/>
 				</div>
+				<p class="mt-3 text-xs text-muted-foreground">
+					Examples: “caps word”, “layer toggle”, “mute”, “rgb off”, “control”.
+				</p>
 			</Card>
 
 			{#if loading}
@@ -146,6 +169,9 @@
 											{keycode.description}
 										</p>
 									{/if}
+									<p class="text-xs text-muted-foreground mt-2">
+										Good when you want: <span class="text-foreground">{keycode.name.toLowerCase()}</span>
+									</p>
 								</div>
 								<span class="text-xs text-muted-foreground">
 									{keycode.category}

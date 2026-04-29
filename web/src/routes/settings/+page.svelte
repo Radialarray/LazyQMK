@@ -49,7 +49,8 @@
 <div class="container mx-auto p-6">
 	<div class="mb-8 flex items-center justify-between">
 		<div>
-			<h1 class="text-4xl font-bold mb-2">Workspace Setup</h1>
+			<h1 class="text-4xl font-bold mb-2">Settings</h1>
+			<p class="text-lg font-medium mb-1">Workspace Setup</p>
 			<p class="text-muted-foreground">
 				Connect LazyQMK to your QMK folder and confirm where layouts live.
 			</p>
@@ -72,6 +73,19 @@
 		</Card>
 	{:else}
 		<div class="max-w-2xl space-y-6">
+			<Card class="surface-subtle p-4">
+				<div class="grid gap-4 md:grid-cols-2 text-sm">
+					<div>
+						<p class="font-medium">Basic</p>
+						<p class="text-muted-foreground mt-1">Set required QMK path so keyboard discovery and builds work.</p>
+					</div>
+					<div>
+						<p class="font-medium">Advanced</p>
+						<p class="text-muted-foreground mt-1">Workspace root is informational here. Change it only when starting backend with a different workspace.</p>
+					</div>
+				</div>
+			</Card>
+
 			<!-- Success Message -->
 			{#if successMessage}
 				<Card class="p-4 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
@@ -88,7 +102,13 @@
 
 			<!-- QMK Firmware Path -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">QMK firmware folder</h2>
+				<div class="mb-4 flex items-center justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Basic</p>
+						<h2 class="text-xl font-semibold mt-1">QMK firmware folder</h2>
+					</div>
+					<span class="rounded-full border px-3 py-1 text-xs text-muted-foreground">Required</span>
+				</div>
 				<p class="text-sm text-muted-foreground mb-4">
 					Point LazyQMK at your local <code class="bg-muted px-1 rounded">qmk_firmware</code> folder so keyboard data and firmware builds work.
 				</p>
@@ -101,7 +121,13 @@
 
 			<!-- Workspace Root -->
 			<Card class="p-6">
-				<h2 class="text-xl font-semibold mb-4">Layout workspace</h2>
+				<div class="mb-4 flex items-center justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Advanced</p>
+						<h2 class="text-xl font-semibold mt-1">Layout workspace</h2>
+					</div>
+					<span class="rounded-full border px-3 py-1 text-xs text-muted-foreground">Read-only</span>
+				</div>
 				<p class="text-sm text-muted-foreground mb-4">
 					This is where LazyQMK looks for your layout files. Start backend with <code class="bg-muted px-1 rounded">--workspace</code> if you want a different folder.
 				</p>

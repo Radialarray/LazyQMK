@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { apiClient } from '$api';
-	import { Button, Card, Input } from '$components';
+	import { AccessibleDialog, Button, Card, Input } from '$components';
 
 	interface TemplateInfo {
 		filename: string;
@@ -111,13 +111,45 @@
 			return dateStr;
 		}
 	}
+
+	function getUseCaseCue(template: TemplateInfo): string {
+		const text = `${template.name} ${template.description} ${template.tags.join(' ')}`.toLowerCase();
+		if (text.includes('gaming')) return 'Good for gaming-focused boards';
+		if (text.includes('minimal') || text.includes('42') || text.includes('40')) return 'Good for compact minimal layouts';
+		if (text.includes('split') || text.includes('corne') || text.includes('erg')) return 'Good for split ergonomic boards';
+		return 'Good general-purpose starting point';
+	}
+
+	function getCompatibilityCue(template: TemplateInfo): string {
+		if (template.layer_count >= 6) return 'Best when you rely on many layers';
+		if (template.layer_count >= 3) return 'Balanced for daily multi-layer use';
+		return 'Best for simple low-layer workflows';
+	}
 </script>
 
 <div class="container mx-auto p-6">
 	<div class="mb-8">
-		<h1 class="text-4xl font-bold mb-2">Starter Layouts</h1>
+		<h1 class="text-4xl font-bold mb-2">Layout Templates</h1>
+		<p class="text-lg font-medium mb-1">Starter Layouts</p>
 		<p class="text-muted-foreground">Start from proven layouts, then tailor them to your board and workflow.</p>
 	</div>
+
+	<Card class="surface-subtle mb-6 p-4">
+		<div class="grid gap-3 md:grid-cols-3 text-sm">
+			<div>
+				<p class="font-medium">Use-case cues</p>
+				<p class="text-muted-foreground">Cards call out who each template fits best.</p>
+			</div>
+			<div>
+				<p class="font-medium">Compatibility cues</p>
+				<p class="text-muted-foreground">Layer depth hints show how much complexity each start point assumes.</p>
+			</div>
+			<div>
+				<p class="font-medium">Fast handoff</p>
+				<p class="text-muted-foreground">Choose one, name layout, then continue inside editor.</p>
+			</div>
+		</div>
+	</Card>
 
 	<!-- Search Bar -->
 	<div class="mb-6">
@@ -180,6 +212,16 @@
 					<div class="mb-4">
 						<h3 class="text-xl font-semibold mb-2">{template.name}</h3>
 						<p class="text-sm text-muted-foreground mb-3">{template.description}</p>
+						<div class="space-y-2 mb-4 text-xs">
+							<div class="rounded-lg border border-border bg-muted/20 px-3 py-2">
+								<p class="font-medium text-foreground">Use case</p>
+								<p class="mt-1 text-muted-foreground">{getUseCaseCue(template)}</p>
+							</div>
+							<div class="rounded-lg border border-border bg-muted/20 px-3 py-2">
+								<p class="font-medium text-foreground">Compatibility</p>
+								<p class="mt-1 text-muted-foreground">{getCompatibilityCue(template)}</p>
+							</div>
+						</div>
 
 						<!-- Metadata -->
 						<div class="space-y-1 text-xs text-muted-foreground mb-3">
@@ -224,62 +266,41 @@
 
 	<!-- Apply Template Dialog -->
 	{#if showApplyDialog && selectedTemplate}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-			onclick={closeApplyDialog}
+		<AccessibleDialog
+			open={showApplyDialog}
+			title="Apply template"
+			description={`Create new layout from ${selectedTemplate.name}.`}
+			onClose={closeApplyDialog}
+			titleId="apply-template-title"
 		>
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div onclick={(e: MouseEvent) => e.stopPropagation()}>
-				<Card class="p-6 max-w-md w-full">
-					<h2 class="text-2xl font-bold mb-4">Apply Template</h2>
-					<p class="text-sm text-muted-foreground mb-4">
-						Create a new layout from template: <strong>{selectedTemplate.name}</strong>
-					</p>
-
-					<div class="mb-4">
-						<label for="layout-name" class="block text-sm font-medium mb-2">
-							New Layout Name
-						</label>
-						<Input
-							id="layout-name"
-							type="text"
-							placeholder="my-awesome-layout"
-							bind:value={newLayoutName}
-							class="w-full"
-						/>
-						<p class="text-xs text-muted-foreground mt-1">
-							Will be saved as: {newLayoutName.trim() || 'my-layout'}.md
-						</p>
-					</div>
-
-					{#if applyError}
-						<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
-							{applyError}
-						</div>
-					{/if}
-
-					<div class="flex gap-2">
-						<Button
-							onclick={applyTemplate}
-							disabled={applyLoading || !newLayoutName.trim()}
-							class="flex-1"
-						>
-							{applyLoading ? 'Creating...' : 'Create Layout'}
-						</Button>
-						<Button
-							onclick={closeApplyDialog}
-							disabled={applyLoading}
-							class="flex-1"
-							variant="ghost"
-						>
-							Cancel
-						</Button>
-					</div>
-				</Card>
+			<div class="mb-4">
+				<label for="layout-name" class="block text-sm font-medium mb-2">
+					New Layout Name
+				</label>
+				<Input
+					id="layout-name"
+					type="text"
+					placeholder="my-awesome-layout"
+					bind:value={newLayoutName}
+					class="w-full"
+				/>
+				<p class="text-xs text-muted-foreground mt-1">
+					Will be saved as: {newLayoutName.trim() || 'my-layout'}.md
+				</p>
 			</div>
-		</div>
+
+			{#if applyError}
+				<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
+					{applyError}
+				</div>
+			{/if}
+
+			<svelte:fragment slot="footer">
+				<Button onclick={closeApplyDialog} disabled={applyLoading} variant="ghost">Cancel</Button>
+				<Button onclick={applyTemplate} disabled={applyLoading || !newLayoutName.trim()}>
+					{applyLoading ? 'Creating...' : 'Create Layout'}
+				</Button>
+			</svelte:fragment>
+		</AccessibleDialog>
 	{/if}
 </div>

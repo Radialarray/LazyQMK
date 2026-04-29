@@ -7,12 +7,13 @@
 	import { goto } from '$app/navigation';
 	import { apiClient, type PreflightResponse, type LayoutSummary } from '$api';
 	import { Button, Card } from '$components';
-	import { getRecentLayouts, filterValidRecentLayouts, type RecentLayout } from '$lib/utils/recentLayouts';
+	import { getRecentLayouts, filterValidRecentLayouts } from '$lib/utils/recentLayouts';
 
 	let preflight = $state<PreflightResponse | null>(null);
 	let recentLayouts = $state<LayoutSummary[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let totalLayouts = $state(0);
 
 	// Maximum number of recent layouts to show
 	const MAX_RECENT_LAYOUTS = 5;
@@ -36,6 +37,7 @@
 
 			// Load all layouts from backend
 			const response = await apiClient.listLayouts();
+			totalLayouts = response.layouts.length;
 			
 			// Get recent layouts from localStorage (tracks when user actually opened them)
 			const storedRecents = getRecentLayouts();
@@ -112,7 +114,8 @@
 			<!-- Header -->
 			<div class="text-center mb-12 rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/5 px-6 py-10 shadow-sm">
 				<div class="brand-badge mb-4">LazyQMK · Web editor</div>
-				<h1 class="text-4xl font-bold mb-2">Build cleaner QMK layouts, faster</h1>
+				<h1 class="text-4xl font-bold mb-2">LazyQMK</h1>
+				<p class="text-lg font-medium mt-2">Build cleaner QMK layouts, faster</p>
 				<p class="text-muted-foreground">
 					Calm workflow for setup, editing, and firmware handoff.
 				</p>
@@ -144,8 +147,16 @@
 				</div>
 
 				<Card class="surface-subtle p-6 h-full">
-					<h2 class="text-lg font-semibold mb-4">Main areas</h2>
+					<h2 class="text-lg font-semibold mb-4">Workspace dashboard</h2>
 					<div class="space-y-4 text-sm">
+						<div class="rounded-lg border border-border bg-background/70 px-4 py-3">
+							<p class="font-medium">Current state</p>
+							<p class="text-muted-foreground mt-1">
+								{totalLayouts === 0
+									? 'No layouts yet. Guided setup is best next step.'
+									: `${totalLayouts} saved ${totalLayouts === 1 ? 'layout is' : 'layouts are'} ready to open.`}
+							</p>
+						</div>
 						<div>
 							<p class="font-medium">Create</p>
 							<p class="text-muted-foreground">Onboarding, templates, and keyboard setup in one place.</p>
@@ -157,6 +168,14 @@
 						<div>
 							<p class="font-medium">Firmware workflow</p>
 							<p class="text-muted-foreground">Generate sources first, then build flashable firmware from one guided path.</p>
+						</div>
+						<div>
+							<p class="font-medium">Helpful side paths</p>
+							<div class="mt-2 flex flex-wrap gap-2">
+								<a href="/templates" class="rounded-full border px-3 py-1 text-xs hover:bg-accent">Browse templates</a>
+								<a href="/keycodes" class="rounded-full border px-3 py-1 text-xs hover:bg-accent">Learn keycodes</a>
+								<a href="/settings" class="rounded-full border px-3 py-1 text-xs hover:bg-accent">Workspace settings</a>
+							</div>
 						</div>
 					</div>
 				</Card>

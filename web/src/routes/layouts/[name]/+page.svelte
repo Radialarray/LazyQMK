@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		AccessibleDialog,
 		Button,
 		Card,
 		KeyboardPreview,
@@ -64,7 +65,7 @@
 	const primaryTabs = [
 		{ id: 'preview', label: 'Editor', icon: 'ED' },
 		{ id: 'layers', label: 'Layers', icon: 'LY' },
-		{ id: 'metadata', label: 'Layout Info', icon: 'DT' },
+		{ id: 'metadata', label: 'Metadata', icon: 'DT' },
 		{ id: 'firmware', label: 'Firmware', icon: 'FW' }
 	];
 	
@@ -75,14 +76,13 @@
 		{ id: 'combos', label: 'Two-Key Holds', icon: 'CB' },
 		{ id: 'idle-effect', label: 'Idle Lighting', icon: 'ID' },
 		{ id: 'overlay-ripple', label: 'Ripple Lighting', icon: 'OR' },
-		{ id: 'validate', label: 'Check Layout', icon: 'OK' },
-		{ id: 'inspect', label: 'Layout Report', icon: 'IN' },
-		{ id: 'export', label: 'Export Layout', icon: 'EX' }
+		{ id: 'review', label: 'Review Layout', icon: 'RV' }
 	];
 	
 	let activeTab = $state('preview');
 	let dropdownOpen = $state(false);
 	let firmwareStep = $state<'generate' | 'build'>('generate');
+	let reviewState = $state<'idle' | 'running' | 'done'>('idle');
 	
 	// Check if active tab is in secondary tabs
 	const isActiveTabSecondary = $derived(secondaryTabs.some(tab => tab.id === activeTab));
@@ -152,6 +152,10 @@
 	let exportLoading = $state(false);
 	let generateResult = $state<GenerateResponse | null>(null);
 	let generateLoading = $state(false);
+	let tapDancePickerIndex = $state<number | null>(null);
+	let tapDancePickerField = $state<'single_tap' | 'double_tap' | 'hold' | null>(null);
+	let comboPickerIndex = $state<number | null>(null);
+	let comboPickerField = $state<'output' | null>(null);
 
 	// Generate job polling state
 	let generateJob = $state<GenerateJob | null>(null);
@@ -965,7 +969,21 @@
 	}
 
 	function handleKeycodeSelect(keycode: string) {
-		if (!layout || editingKeyVisualIndex === null) return;
+		if (!layout) return;
+
+		if (tapDancePickerIndex !== null && tapDancePickerField) {
+			updateTapDance(tapDancePickerIndex, tapDancePickerField, keycode);
+			handleKeycodePickerClose();
+			return;
+		}
+
+		if (comboPickerIndex !== null && comboPickerField === 'output') {
+			updateCombo(comboPickerIndex, 'output', keycode);
+			handleKeycodePickerClose();
+			return;
+		}
+
+		if (editingKeyVisualIndex === null) return;
 		
 		// Find the key in the current layer and update its keycode
 		const keyIndex = layout.layers[selectedLayerIndex].keys.findIndex(
@@ -986,6 +1004,22 @@
 	function handleKeycodePickerClose() {
 		keycodePickerOpen = false;
 		editingKeyVisualIndex = null;
+		tapDancePickerIndex = null;
+		tapDancePickerField = null;
+		comboPickerIndex = null;
+		comboPickerField = null;
+	}
+
+	function openTapDancePicker(index: number, field: 'single_tap' | 'double_tap' | 'hold') {
+		tapDancePickerIndex = index;
+		tapDancePickerField = field;
+		keycodePickerOpen = true;
+	}
+
+	function openComboPicker(index: number) {
+		comboPickerIndex = index;
+		comboPickerField = 'output';
+		keycodePickerOpen = true;
 	}
 
 	function attemptNavigate(target: string) {
@@ -1489,6 +1523,13 @@
 		}
 	}
 
+	async function runReviewWorkflow() {
+		if (!filename) return;
+		reviewState = 'running';
+		await Promise.all([runValidation(), runInspect(), runExport()]);
+		reviewState = 'done';
+	}
+
 	function downloadExport() {
 		if (!exportResult) return;
 		const blob = new Blob([exportResult.markdown], { type: 'text/markdown' });
@@ -1636,6 +1677,14 @@
 
 	// Check if save should be blocked due to metadata validation errors
 	const canSave = $derived(!metadataErrors.some(e => e.field === 'name' || e.field === 'tags'));
+	const currentReviewStatus = $derived.by(() => {
+		if (validationLoading || inspectLoading || exportLoading || reviewState === 'running') return 'Refreshing review…';
+		if (!validationResult && !inspectResult && !exportResult) return 'Review not generated yet';
+		if (validationResult?.valid === false) return 'Problems found in validation';
+		if (validationResult?.warnings?.length) return 'Validation passed with warnings';
+		return 'Review ready';
+	});
+	const reviewReadyForBuild = $derived(Boolean(validationResult?.valid));
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
@@ -1722,10 +1771,11 @@
 						: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
 					aria-haspopup="true"
 					aria-expanded={dropdownOpen}
+					aria-controls="advanced-tools-menu"
 					data-testid="tab-more-dropdown"
 				>
 					<span class="mr-1">⋯</span>
-					Advanced tools
+					More
 					<svg class="w-4 h-4 ml-1 transition-transform {dropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 					</svg>
@@ -1733,19 +1783,13 @@
 				
 				<!-- Dropdown Menu -->
 				{#if dropdownOpen}
-					<!-- Click-outside handler -->
-					<button
-						class="fixed inset-0 z-10"
-						onclick={() => dropdownOpen = false}
-						onkeydown={(e) => e.key === 'Escape' && (dropdownOpen = false)}
-						tabindex="-1"
-						aria-label="Close dropdown"
-					></button>
-					
 					<!-- Dropdown content -->
 					<div
 						class="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-20 py-1"
 						role="menu"
+						id="advanced-tools-menu"
+						tabindex="-1"
+						onkeydown={(e) => e.key === 'Escape' && (dropdownOpen = false)}
 						data-testid="tab-dropdown-menu"
 					>
 						{#each secondaryTabs as tab}
@@ -1810,7 +1854,7 @@
 			<Card class="p-6 max-w-3xl">
 				<h2 class="text-lg font-semibold mb-4">Layout Metadata</h2>
 				<p class="text-sm text-muted-foreground mb-6">
-					Edit the basic information about this layout. Changes are saved when you click the Save button.
+					Edit naming and sharing details here. Keyboard summary stays in Editor so metadata is not duplicated in two places.
 				</p>
 
 				<div class="space-y-6">
@@ -1912,6 +1956,9 @@
 					<!-- Read-only Metadata -->
 					<div class="border-t border-border pt-4">
 						<h3 class="text-sm font-semibold mb-3">System Information</h3>
+						<p class="text-xs text-muted-foreground mb-3">
+							Reference setup details for this layout. Use editor summary for quick context while editing keys.
+						</p>
 						<dl class="grid grid-cols-2 gap-4 text-sm">
 							<div>
 								<dt class="font-medium text-muted-foreground">Keyboard</dt>
@@ -1953,7 +2000,13 @@
 			<div class="space-y-6">
 				<!-- Metadata Card -->
 				<Card class="p-6">
-					<h2 class="text-lg font-semibold mb-3">Metadata</h2>
+					<div class="flex items-start justify-between gap-4 mb-3">
+						<div>
+							<h2 class="text-lg font-semibold">Editor Summary</h2>
+							<p class="mt-1 text-sm text-muted-foreground">Core context for editing lives here. Open Layout Info only when you need to rename, retag, or review system metadata.</p>
+						</div>
+						<Button size="sm" variant="outline" onclick={() => (activeTab = 'metadata')}>Open Layout Info</Button>
+					</div>
 					<dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 						<div>
 							<dt class="font-medium text-muted-foreground">Keyboard</dt>
@@ -1968,8 +2021,8 @@
 							<dd>{layout.metadata.author || 'N/A'}</dd>
 						</div>
 						<div>
-							<dt class="font-medium text-muted-foreground">Modified</dt>
-							<dd>{new Date(layout.metadata.modified).toLocaleDateString()}</dd>
+							<dt class="font-medium text-muted-foreground">Layers</dt>
+							<dd>{layout.layers.length}</dd>
 						</div>
 					</dl>
 				</Card>
@@ -2261,8 +2314,8 @@
 									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
 									Choose New Keycode
 								</Button>
-								<Button onclick={() => (activeTab = 'inspect')} size="sm" variant="outline" data-testid="inspect-layout-button">
-									Open Layout Report
+								<Button onclick={() => (activeTab = 'review')} size="sm" variant="outline" data-testid="inspect-layout-button">
+									Open Review
 								</Button>
 								</div>
 							</div>
@@ -2413,6 +2466,7 @@
 											placeholder="KC_A"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'single_tap')}>Pick</Button>
 									</div>
 									<div>
 										<label for="td-double-{i}" class="block text-xs font-medium text-muted-foreground mb-1"
@@ -2425,6 +2479,7 @@
 											placeholder="KC_B"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'double_tap')}>Pick</Button>
 									</div>
 									<div>
 										<label for="td-hold-{i}" class="block text-xs font-medium text-muted-foreground mb-1">Hold</label>
@@ -2435,6 +2490,7 @@
 											placeholder="KC_LCTL"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'hold')}>Pick</Button>
 									</div>
 								</div>
 							</div>
@@ -2449,6 +2505,9 @@
 					<h2 class="text-lg font-semibold">Combos</h2>
 					<Button onclick={addCombo} size="sm">Add Combo</Button>
 				</div>
+				<p class="text-sm text-muted-foreground mb-4">
+					Use picker for output keycodes so combo results follow same validation path as single-key editing.
+				</p>
 
 				{#if !layout.combos?.length}
 					<p class="text-muted-foreground text-sm">
@@ -2497,6 +2556,7 @@
 											placeholder="KC_ESC"
 											class="font-mono text-sm"
 										/>
+										<Button size="sm" variant="outline" onclick={() => openComboPicker(i)}>Pick</Button>
 									</div>
 								</div>
 							</div>
@@ -2544,7 +2604,7 @@
 							max="600"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							Time before idle effect starts (10-600 seconds)
+							Wait time after last key press before idle lighting begins (10-600 seconds).
 						</p>
 					</div>
 
@@ -2564,7 +2624,7 @@
 							max="3600"
 						/>
 						<p class="text-xs text-muted-foreground mt-1">
-							How long the effect runs before RGB turns off (30-3600 seconds)
+							How long idle effect keeps running before lights turn off again (30-3600 seconds).
 						</p>
 					</div>
 
@@ -2586,6 +2646,7 @@
 							<option value="Rainbow Pinwheels">Rainbow Pinwheels</option>
 							<option value="Jellybean Raindrops">Jellybean Raindrops</option>
 						</select>
+						<p class="text-xs text-muted-foreground mt-1">Visual pattern shown during idle period.</p>
 					</div>
 				</div>
 			</Card>
@@ -2632,7 +2693,7 @@
 								max="8"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Maximum concurrent ripples (1-8)
+								Maximum number of ripple animations visible at same time (1-8).
 							</p>
 						</div>
 
@@ -2649,7 +2710,7 @@
 					max="5000"
 				/>
 							<p class="text-xs text-muted-foreground mt-1">
-								How long each ripple lasts
+								Length of one ripple animation in milliseconds.
 							</p>
 						</div>
 
@@ -2666,7 +2727,7 @@
 					max="255"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Expansion speed (0-255)
+								How quickly ripple expands outward. Higher number = faster motion.
 							</p>
 						</div>
 
@@ -2683,7 +2744,7 @@
 					max="255"
 				/>
 				<p class="text-xs text-muted-foreground mt-1">
-					Width in physical LED distance units (1-255)
+					Thickness of bright ripple band. Higher number = wider ring.
 				</p>
 			</div>
 
@@ -2700,7 +2761,7 @@
 								max="100"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Brightness boost percentage
+								Extra brightness added by ripple compared with base layer color.
 							</p>
 						</div>
 						</div>
@@ -2755,7 +2816,7 @@
 								max="180"
 							/>
 							<p class="text-xs text-muted-foreground mt-1">
-								Degrees to shift hue (-180 to 180)
+								Color shift amount from base key color. Positive and negative move in opposite directions.
 							</p>
 						</div>
 						{/if}
@@ -2979,9 +3040,9 @@
 											min="50"
 											max="2000"
 										/>
-										<p class="text-xs text-muted-foreground mt-1">
-											How long both keys must be held (50-2000ms)
-										</p>
+						<p class="text-xs text-muted-foreground mt-1">
+							Time both keys must stay held before combo action fires (50-2000 ms).
+						</p>
 									</div>
 								</div>
 							{/each}
@@ -3001,65 +3062,58 @@
 					{/if}
 				</div>
 			</Card>
-		{:else if activeTab === 'validate'}
-			<!-- Validate Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Check Layout</h2>
-					<Button onclick={runValidation} disabled={validationLoading}>
-						{validationLoading ? 'Checking...' : 'Check for Problems'}
-					</Button>
+		{:else if activeTab === 'review'}
+			<Card class="p-6" data-testid="review-workflow-tab">
+				<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-6">
+					<div>
+						<h2 class="text-lg font-semibold">Review Layout</h2>
+						<p class="text-sm text-muted-foreground mt-1">Validation, report, and export now live in one review pass before firmware work.</p>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<Button onclick={runReviewWorkflow} disabled={reviewState === 'running' || validationLoading || inspectLoading || exportLoading} data-testid="run-review-workflow-button">
+							{reviewState === 'running' || validationLoading || inspectLoading || exportLoading ? 'Refreshing review…' : 'Run Review'}
+						</Button>
+						{#if exportResult}
+							<Button onclick={downloadExport} variant="outline">Download Export</Button>
+						{/if}
+						<Button onclick={() => openFirmwareStep('generate')} variant="ghost" disabled={!reviewReadyForBuild}>Continue to firmware</Button>
+					</div>
 				</div>
 
-				{#if validationResult}
-					<div
-						class="p-4 rounded-lg {validationResult.valid
-							? 'bg-green-500/10 border border-green-500/30'
-							: 'bg-red-500/10 border border-red-500/30'}"
-					>
-						<div class="flex items-center gap-2 mb-2">
-							<span class="text-lg">{validationResult.valid ? '✓' : '✗'}</span>
-							<span class="font-medium">
-								{validationResult.valid ? 'Layout is valid' : 'Layout has errors'}
-							</span>
+				<div class="mb-6 rounded-lg border bg-muted/20 p-4 text-sm">
+					<p class="font-medium">Review status</p>
+					<p class="mt-1 text-muted-foreground">{currentReviewStatus}</p>
+				</div>
+
+				<div class="space-y-6">
+					<div class="rounded-lg border p-4 {validationResult?.valid ? 'border-green-500/30 bg-green-500/10' : validationResult ? 'border-red-500/30 bg-red-500/10' : 'border-border bg-background'}">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">1. Validation</h3>
+							<Button size="sm" variant="outline" onclick={runValidation} disabled={validationLoading}>{validationLoading ? 'Checking...' : 'Refresh validation'}</Button>
 						</div>
-
-						{#if validationResult.error}
-							<p class="text-red-500 text-sm">{validationResult.error}</p>
-						{/if}
-
-						{#if validationResult.warnings.length > 0}
-							<div class="mt-3">
-								<p class="text-sm font-medium text-yellow-500 mb-1">Warnings:</p>
-								<ul class="list-disc list-inside text-sm text-muted-foreground">
-									{#each validationResult.warnings as warning}
-										<li>{warning}</li>
-									{/each}
+						{#if validationResult}
+							<p class="text-sm font-medium">{validationResult.valid ? 'Layout is valid' : 'Layout has errors'}</p>
+							{#if validationResult.error}<p class="mt-2 text-sm text-red-500">{validationResult.error}</p>{/if}
+							{#if validationResult.warnings.length > 0}
+								<ul class="mt-3 list-disc list-inside text-sm text-muted-foreground">
+									{#each validationResult.warnings as warning}<li>{warning}</li>{/each}
 								</ul>
-							</div>
+							{/if}
+						{:else}
+							<p class="text-sm text-muted-foreground">Run review to check for errors and warnings before build/export.</p>
 						{/if}
 					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Check this layout before exporting or building to catch problems early.
-					</p>
-				{/if}
-			</Card>
-		{:else if activeTab === 'inspect'}
-			<!-- Inspect Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Layout Report</h2>
-					<Button onclick={runInspect} disabled={inspectLoading}>
-						{inspectLoading ? 'Loading...' : 'Refresh Report'}
-					</Button>
-				</div>
 
-				{#if inspectResult}
-					<div class="space-y-6">
-						<!-- Metadata -->
-						<div>
-							<h3 class="font-medium mb-2">Metadata</h3>
+					<div class="rounded-lg border border-border p-4 bg-background">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">2. Layout report</h3>
+							<Button size="sm" variant="outline" onclick={runInspect} disabled={inspectLoading}>{inspectLoading ? 'Loading...' : 'Refresh report'}</Button>
+						</div>
+						{#if inspectResult}
+							<div class="space-y-6">
+								<!-- Metadata -->
+								<div>
+									<h3 class="font-medium mb-2">Metadata</h3>
 							<dl class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
 								<div>
 									<dt class="text-muted-foreground">Layers</dt>
@@ -3148,45 +3202,30 @@
 								</div>
 							</dl>
 						</div>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Open summary of layers, counts, and settings for review or troubleshooting.</p>
+						{/if}
 					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Open a summary of layers, counts, and settings for review or troubleshooting.
-					</p>
-				{/if}
-			</Card>
-		{:else if activeTab === 'export'}
-			<!-- Export Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Export Layout</h2>
-					<div class="flex gap-2">
-						<Button onclick={runExport} disabled={exportLoading}>
-							{exportLoading ? 'Exporting...' : 'Prepare Markdown Export'}
-						</Button>
+
+					<div class="rounded-lg border border-border p-4 bg-background">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">3. Export preview</h3>
+							<div class="flex gap-2">
+								<Button size="sm" variant="outline" onclick={runExport} disabled={exportLoading}>{exportLoading ? 'Exporting...' : 'Refresh export'}</Button>
+								{#if exportResult}<Button size="sm" onclick={downloadExport}>Download</Button>{/if}
+							</div>
+						</div>
 						{#if exportResult}
-							<Button onclick={downloadExport}>Download</Button>
+							<p class="text-sm text-muted-foreground mb-3">Suggested filename: <code class="bg-muted px-2 py-0.5 rounded">{exportResult.suggested_filename}</code></p>
+							<div class="border border-border rounded-lg overflow-hidden">
+								<pre class="p-4 text-sm overflow-x-auto max-h-96 bg-muted/30">{exportResult.markdown}</pre>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Create markdown file you can save, share, or review outside LazyQMK.</p>
 						{/if}
 					</div>
 				</div>
-
-				{#if exportResult}
-					<div class="space-y-4">
-						<p class="text-sm text-muted-foreground">
-							Suggested filename: <code class="bg-muted px-2 py-0.5 rounded"
-								>{exportResult.suggested_filename}</code
-							>
-						</p>
-						<div class="border border-border rounded-lg overflow-hidden">
-							<pre
-								class="p-4 text-sm overflow-x-auto max-h-96 bg-muted/30">{exportResult.markdown}</pre>
-						</div>
-					</div>
-				{:else}
-					<p class="text-muted-foreground text-sm">
-						Create a markdown file you can save, share, or review outside LazyQMK.
-					</p>
-				{/if}
 			</Card>
 		{:else if activeTab === 'firmware' && firmwareStep === 'generate'}
 			<!-- Firmware Workflow: Generate Step -->
@@ -3636,209 +3675,96 @@
 		: undefined}
 />
 
-{#if leaveDialogOpen}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-		onclick={closeLeaveDialog}
-		onkeydown={(e) => e.key === 'Escape' && closeLeaveDialog()}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="leave-editor-title"
-		tabindex="-1"
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="w-full max-w-md" onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6">
-				<h2 id="leave-editor-title" class="text-lg font-semibold">Leave editor with unsaved changes?</h2>
-				<p class="mt-2 text-sm text-muted-foreground">
-					Your changes are not saved yet. Save before leaving, or discard them and continue.
-				</p>
-				<div class="mt-6 flex flex-wrap justify-end gap-2">
-					<Button variant="ghost" onclick={closeLeaveDialog}>Stay Here</Button>
-					<Button onclick={saveLayout} disabled={!canSave || saveStatus === 'saving'}>
-						{saveStatus === 'saving' ? 'Saving...' : 'Save First'}
-					</Button>
-					<Button variant="destructive" onclick={confirmLeaveWithoutSaving} data-testid="confirm-leave-without-saving">
-						Leave Without Saving
-					</Button>
-				</div>
-			</Card>
-		</div>
-	</div>
-{/if}
+<AccessibleDialog
+	open={leaveDialogOpen}
+	title="Leave editor with unsaved changes?"
+	description="Your changes are not saved yet. Save before leaving, or discard them and continue."
+	onClose={closeLeaveDialog}
+	titleId="leave-editor-title"
+>
+	<svelte:fragment slot="footer">
+		<Button variant="ghost" onclick={closeLeaveDialog}>Stay Here</Button>
+		<Button onclick={saveLayout} disabled={!canSave || saveStatus === 'saving'}>
+			{saveStatus === 'saving' ? 'Saving...' : 'Save First'}
+		</Button>
+		<Button variant="destructive" onclick={confirmLeaveWithoutSaving} data-testid="confirm-leave-without-saving">
+			Leave Without Saving
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>
 
-{#if resetDialogOpen}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-		onclick={closeResetDialog}
-		onkeydown={(e) => e.key === 'Escape' && closeResetDialog()}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="reset-layout-title"
-		tabindex="-1"
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="w-full max-w-md" onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6">
-				<h2 id="reset-layout-title" class="text-lg font-semibold">Discard unsaved changes?</h2>
-				<p class="mt-2 text-sm text-muted-foreground">
-					This reverts editor back to last saved layout state and clears current unsaved edits.
-				</p>
-				<div class="mt-6 flex flex-wrap justify-end gap-2">
-					<Button variant="ghost" onclick={closeResetDialog}>Keep Editing</Button>
-					<Button variant="destructive" onclick={confirmResetLayout}>Discard Changes</Button>
-				</div>
-			</Card>
-		</div>
-	</div>
-{/if}
+<AccessibleDialog
+	open={resetDialogOpen}
+	title="Discard unsaved changes?"
+	description="This reverts editor back to last saved layout state and clears current unsaved edits."
+	onClose={closeResetDialog}
+	titleId="reset-layout-title"
+>
+	<svelte:fragment slot="footer">
+		<Button variant="ghost" onclick={closeResetDialog}>Keep Editing</Button>
+		<Button variant="destructive" onclick={confirmResetLayout}>Discard Changes</Button>
+	</svelte:fragment>
+</AccessibleDialog>
 
 <!-- Save as Template Dialog -->
-{#if showSaveTemplateDialog}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-		onclick={closeSaveTemplateDialog}
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6 max-w-md w-full">
-				<h2 class="text-2xl font-bold mb-4">Save as Template</h2>
-				<p class="text-sm text-muted-foreground mb-4">
-					Save this layout as a reusable template for future projects.
-				</p>
-
-				<div class="space-y-4 mb-4">
-					<div>
-						<label for="template-name" class="block text-sm font-medium mb-2">
-							Template Name
-						</label>
-						<Input
-							id="template-name"
-							type="text"
-							placeholder="My Awesome Template"
-							bind:value={templateName}
-							class="w-full"
-						/>
-					</div>
-
-					<div>
-						<label for="template-tags" class="block text-sm font-medium mb-2">
-							Tags (comma-separated)
-						</label>
-						<Input
-							id="template-tags"
-							type="text"
-							placeholder="corne, 42-key, minimal"
-							bind:value={templateTags}
-							class="w-full"
-						/>
-						<p class="text-xs text-muted-foreground mt-1">
-							Tags help organize and find templates later
-						</p>
-					</div>
-				</div>
-
-				{#if saveTemplateError}
-					<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
-						{saveTemplateError}
-					</div>
-				{/if}
-
-				<div class="flex gap-2">
-					<Button
-						onclick={saveAsTemplate}
-						disabled={saveTemplateLoading || !templateName.trim()}
-						class="flex-1"
-					>
-						{saveTemplateLoading ? 'Saving...' : 'Save Template'}
-					</Button>
-					<Button
-						onclick={closeSaveTemplateDialog}
-						disabled={saveTemplateLoading}
-						class="flex-1"
-						variant="ghost"
-					>
-						Cancel
-					</Button>
-				</div>
-			</Card>
+<AccessibleDialog
+	open={showSaveTemplateDialog}
+	title="Save as template"
+	description="Save this layout as reusable template for future projects."
+	onClose={closeSaveTemplateDialog}
+	titleId="save-template-title"
+>
+	<div class="space-y-4 mb-4">
+		<div>
+			<label for="template-name" class="block text-sm font-medium mb-2">Template Name</label>
+			<Input id="template-name" type="text" placeholder="My Awesome Template" bind:value={templateName} class="w-full" />
+		</div>
+		<div>
+			<label for="template-tags" class="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+			<Input id="template-tags" type="text" placeholder="corne, 42-key, minimal" bind:value={templateTags} class="w-full" />
+			<p class="text-xs text-muted-foreground mt-1">Tags help organize and find templates later</p>
 		</div>
 	</div>
-{/if}
+	{#if saveTemplateError}
+		<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">{saveTemplateError}</div>
+	{/if}
+	<svelte:fragment slot="footer">
+		<Button onclick={closeSaveTemplateDialog} disabled={saveTemplateLoading} variant="ghost">Cancel</Button>
+		<Button onclick={saveAsTemplate} disabled={saveTemplateLoading || !templateName.trim()}>
+			{saveTemplateLoading ? 'Saving...' : 'Save Template'}
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>
 
 <!-- Variant Switch Dialog -->
-{#if showVariantSwitchDialog}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-		onclick={() => (showVariantSwitchDialog = false)}
-	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div onclick={(e: MouseEvent) => e.stopPropagation()}>
-			<Card class="p-6 max-w-lg w-full">
-				<h2 class="text-2xl font-bold mb-4">Switch Layout Variant</h2>
-				<p class="text-sm text-muted-foreground mb-4">
-					Change the physical layout variant for this keyboard. This will adjust the key count.
-				</p>
-
-				{#if variantsLoading}
-					<p class="text-muted-foreground">Loading variants...</p>
-				{:else if variantsError}
-					<div class="p-3 bg-destructive/10 text-destructive text-sm rounded mb-4">
-						{variantsError}
-					</div>
-				{:else}
-					<div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
-						{#each availableVariants as variant}
-							{@const isCurrent = variant.name === layout.metadata.layout_variant}
-							<button
-								class="w-full p-3 text-left border rounded hover:bg-muted flex justify-between items-center
-								{isCurrent ? 'bg-primary/10 border-primary' : ''}"
-								onclick={() => !isCurrent && switchToVariant(variant.name)}
-								disabled={switchingVariant || isCurrent}
-							>
-								<span class="font-mono text-sm">{variant.name}</span>
-								<span class="text-xs text-muted-foreground">
-									{variant.key_count} keys
-									{#if isCurrent}
-										<span class="ml-2 text-primary">(current)</span>
-									{/if}
-								</span>
-							</button>
-						{/each}
-					</div>
-				{/if}
-
-				{#if switchVariantError}
-					<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">
-						{switchVariantError}
-					</div>
-				{/if}
-
-				{#if switchVariantWarning}
-					<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm rounded">
-						{switchVariantWarning}
-					</div>
-				{/if}
-
-				<div class="flex justify-end">
-					<Button
-						onclick={() => (showVariantSwitchDialog = false)}
-						disabled={switchingVariant}
-						variant="outline"
-					>
-						{switchingVariant ? 'Switching...' : 'Close'}
-					</Button>
-				</div>
-			</Card>
+<AccessibleDialog
+	open={showVariantSwitchDialog}
+	title="Switch layout variant"
+	description="Change physical layout variant for this keyboard. This may adjust key count."
+	onClose={() => (showVariantSwitchDialog = false)}
+	titleId="switch-layout-variant-title"
+	panelClass="max-w-lg"
+>
+	{#if variantsLoading}
+		<p class="text-muted-foreground">Loading variants...</p>
+	{:else if variantsError}
+		<div class="p-3 bg-destructive/10 text-destructive text-sm rounded mb-4">{variantsError}</div>
+	{:else}
+		<div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+			{#each availableVariants as variant}
+				{@const isCurrent = variant.name === layout.metadata.layout_variant}
+				<button class="w-full p-3 text-left border rounded hover:bg-muted flex justify-between items-center {isCurrent ? 'bg-primary/10 border-primary' : ''}" onclick={() => !isCurrent && switchToVariant(variant.name)} disabled={switchingVariant || isCurrent}>
+					<span class="font-mono text-sm">{variant.name}</span>
+					<span class="text-xs text-muted-foreground">{variant.key_count} keys {#if isCurrent}<span class="ml-2 text-primary">(current)</span>{/if}</span>
+				</button>
+			{/each}
 		</div>
-	</div>
-{/if}
+	{/if}
+	{#if switchVariantError}<div class="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded">{switchVariantError}</div>{/if}
+	{#if switchVariantWarning}<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm rounded">{switchVariantWarning}</div>{/if}
+	<svelte:fragment slot="footer">
+		<Button onclick={() => (showVariantSwitchDialog = false)} disabled={switchingVariant} variant="outline">
+			{switchingVariant ? 'Switching...' : 'Close'}
+		</Button>
+	</svelte:fragment>
+</AccessibleDialog>
