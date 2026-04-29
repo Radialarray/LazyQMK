@@ -77,8 +77,9 @@ test.describe('Home page - configured user', () => {
 
 		// Check primary actions are present
 		await expect(page.locator('[data-testid="primary-actions"]')).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Create New Layout' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Open Existing Layout' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Start Layout Setup' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Open Layout Workspace' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Main areas' })).toBeVisible();
 
 		// Check recent layouts section is present
 		await expect(page.locator('[data-testid="recent-layouts"]')).toBeVisible();
@@ -134,39 +135,28 @@ test.describe('Home page - configured user', () => {
 		await page.goto('/');
 
 		// Click the "Layouts" nav link
-		await page.getByRole('link', { name: 'Layouts' }).click();
+		await page.getByRole('link', { name: 'Layouts', exact: true }).click();
 
 		// Should navigate to /layouts
 		await expect(page).toHaveURL('/layouts');
 		await expect(page.getByRole('heading', { name: 'Layouts' })).toBeVisible();
 	});
 
-	test('navigates to settings via More menu', async ({ page }) => {
+	test('navigates to settings via header nav', async ({ page }) => {
 		await page.goto('/');
 
-		// Click the "More" dropdown
-		await page.getByRole('button', { name: 'More' }).click();
-
-		// Click Settings in dropdown
-		await page.getByRole('link', { name: 'Settings Configure QMK path' }).click();
+		await page.getByRole('link', { name: 'Settings' }).click();
 
 		// Should navigate to /settings
 		await expect(page).toHaveURL('/settings');
 		await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 	});
 
-	test('navigates to build via More menu', async ({ page }) => {
+	test('does not expose global build entry in header nav', async ({ page }) => {
 		await page.goto('/');
 
-		// Click the "More" dropdown
-		await page.getByRole('button', { name: 'More' }).click();
-
-		// Click Build in dropdown
-		await page.getByRole('link', { name: 'Build Compile firmware' }).click();
-
-		// Should navigate to /build
-		await expect(page).toHaveURL('/build');
-		await expect(page.getByRole('heading', { name: 'Build Firmware' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Build' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'More' })).toHaveCount(0);
 	});
 });
 
