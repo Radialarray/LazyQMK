@@ -96,7 +96,26 @@ impl StatusBar {
             },
         );
 
+        let mode_label = if matches!(state.active_popup, Some(super::PopupType::SettingsManager)) {
+            "Settings"
+        } else if matches!(state.active_popup, Some(super::PopupType::SetupWizard)) {
+            "Onboarding"
+        } else if state.active_popup.is_some() {
+            "Popup"
+        } else if let Some(selection_mode) = &state.selection_mode {
+            match selection_mode {
+                super::SelectionMode::Normal => "Selection",
+                super::SelectionMode::Rectangle { .. } => "Rectangle select",
+                super::SelectionMode::Swap { .. } => "Swap",
+            }
+        } else {
+            "Edit"
+        };
+
         Line::from(vec![
+            Span::styled("Mode: ", Style::default().fg(theme.primary)),
+            Span::styled(mode_label, Style::default().fg(theme.accent)),
+            Span::styled("  |  ", Style::default().fg(theme.text_muted)),
             Span::styled("Selection: ", Style::default().fg(theme.primary)),
             Span::styled(key_summary, Style::default().fg(theme.text)),
             Span::styled("  |  Draft: ", Style::default().fg(theme.primary)),
@@ -107,15 +126,29 @@ impl StatusBar {
     fn get_clipboard_or_note_line(state: &AppState, theme: &Theme) -> Line<'static> {
         if let Some(preview) = state.clipboard.get_preview() {
             let clipboard_type = if state.clipboard.is_single() {
-                "Single key"
+                if state.clipboard.is_cut() {
+                    "Move 1 key"
+                } else {
+                    "Copy 1 key"
+                }
+            } else if state.clipboard.is_cut() {
+                "Move keys"
             } else {
-                "Multi key"
+                "Copy keys"
             };
             return Line::from(vec![
                 Span::styled("Clipboard: ", Style::default().fg(theme.primary)),
                 Span::styled(clipboard_type, Style::default().fg(theme.text_muted)),
                 Span::raw(" • "),
                 Span::styled(preview, Style::default().fg(theme.accent)),
+                if state.clipboard.is_cut() {
+                    Span::styled(
+                        " • source clears only after paste",
+                        Style::default().fg(theme.warning),
+                    )
+                } else {
+                    Span::raw("")
+                },
                 if state.clipboard.can_undo() {
                     Span::styled(" • Ctrl+Z undo", Style::default().fg(theme.text_muted))
                 } else {
@@ -142,7 +175,7 @@ impl StatusBar {
         }
 
         Line::from(vec![Span::styled(
-            "Enter opens key details. Use visible actions in keyboard view for common tasks.",
+            "Enter opens key details. Backspace/Delete clears key. Ctrl+X queues move for next paste.",
             Style::default().fg(theme.text_muted),
         )])
     }

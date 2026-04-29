@@ -77,13 +77,13 @@ impl WizardStep {
     #[must_use]
     pub const fn title(&self) -> &'static str {
         match self {
-            Self::Welcome => "Welcome to Keyboard TUI",
-            Self::QmkPath => "QMK Firmware Path",
-            Self::KeyboardSelection => "Select Keyboard",
-            Self::LayoutSelection => "Select Layout",
-            Self::LayoutName => "Layout File Name",
-            Self::OutputPath => "Firmware Output Path",
-            Self::Confirmation => "Confirm Configuration",
+            Self::Welcome => "Welcome to LazyQMK",
+            Self::QmkPath => "Connect QMK Firmware",
+            Self::KeyboardSelection => "Choose Keyboard",
+            Self::LayoutSelection => "Choose Layout Variant",
+            Self::LayoutName => "Name Layout File",
+            Self::OutputPath => "Choose Build Output Folder",
+            Self::Confirmation => "Review Setup",
         }
     }
 
@@ -651,15 +651,19 @@ fn render_welcome(
     let mut text = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "Welcome to Keyboard TUI!",
+            "Welcome to LazyQMK",
             Style::default()
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "Choose how to get started:",
+            "You can start safely with defaults and change everything later.",
             Style::default().fg(theme.text),
+        )),
+        Line::from(Span::styled(
+            "Pick quickest path to first working layout:",
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(""),
     ];
@@ -675,11 +679,16 @@ fn render_welcome(
         };
         text.push(Line::from(Span::styled(
             format!(
-                "  [1] Load Existing Layout ({} found)",
+                "  [1] Open existing layout ({} found)",
                 state.existing_layouts.len()
             ),
             load_existing_style,
         )));
+        text.push(Line::from(Span::styled(
+            "      Fastest option if you already saved a layout with LazyQMK.",
+            Style::default().fg(theme.text_muted),
+        )));
+        text.push(Line::from(""));
     }
 
     let from_scratch_index = usize::from(!state.existing_layouts.is_empty());
@@ -691,9 +700,14 @@ fn render_welcome(
         Style::default().fg(theme.text)
     };
     text.push(Line::from(Span::styled(
-        "  [2] Create From Scratch",
+        "  [2] Start with guided setup",
         from_scratch_style,
     )));
+    text.push(Line::from(Span::styled(
+        "      Recommended for first run. We help with keyboard, layout, and build output.",
+        Style::default().fg(theme.text_muted),
+    )));
+    text.push(Line::from(""));
 
     let from_template_index = if state.existing_layouts.is_empty() {
         1
@@ -708,13 +722,17 @@ fn render_welcome(
         Style::default().fg(theme.text)
     };
     text.push(Line::from(Span::styled(
-        "  [3] Create From Template",
+        "  [3] Start from template",
         from_template_style,
+    )));
+    text.push(Line::from(Span::styled(
+        "      Good when you want a strong starting point instead of empty layout.",
+        Style::default().fg(theme.text_muted),
     )));
 
     text.push(Line::from(""));
     text.push(Line::from(Span::styled(
-        "Use ↑↓ to navigate, Enter to select...",
+        "Use ↑↓ to move, Enter to continue. Esc exits onboarding.",
         Style::default().fg(theme.text_muted),
     )));
 
@@ -737,13 +755,15 @@ fn render_qmk_path_input(
 ) {
     let text = vec![
         Line::from(""),
-        Line::from("Enter the path to your QMK firmware directory:"),
+        Line::from("LazyQMK needs your local QMK firmware folder for keyboard info and builds."),
+        Line::from("If you already use QMK, paste that folder path here."),
         Line::from(""),
         Line::from(Span::styled(
             format!("> {}_", state.input_buffer),
             Style::default().fg(theme.accent),
         )),
         Line::from(""),
+        Line::from("Common folder names: qmk_firmware or qmk."),
         Line::from("Example: /home/user/qmk_firmware"),
         Line::from("         C:\\Users\\user\\qmk_firmware"),
     ];
@@ -754,7 +774,7 @@ fn render_qmk_path_input(
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("QMK Path")
+                .title(" QMK firmware folder ")
                 .style(Style::default().fg(theme.primary).bg(theme.background)),
         );
     f.render_widget(paragraph, area);
@@ -1040,7 +1060,7 @@ fn render_instructions(
     );
 
     let instructions = match state.current_step {
-        WizardStep::Welcome => "Enter: Continue  |  Esc: Exit",
+        WizardStep::Welcome => "↑↓: Choose path  |  Enter: Continue  |  Esc: Exit",
         WizardStep::QmkPath | WizardStep::LayoutName | WizardStep::OutputPath => {
             "Enter: Continue  |  Backspace: Delete  |  Esc: Back"
         }

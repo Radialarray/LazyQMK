@@ -924,13 +924,35 @@ fn render(f: &mut Frame, state: &AppState) {
 
 /// Render title bar with layout name and dirty indicator
 fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
-    let dirty_indicator = if state.dirty { " *" } else { "" };
+    let draft_state = if state.dirty { "Unsaved" } else { "Saved" };
+    let mode = if matches!(state.active_popup, Some(PopupType::SettingsManager)) {
+        "Settings"
+    } else if matches!(state.active_popup, Some(PopupType::SetupWizard)) {
+        "Onboarding"
+    } else if state.active_popup.is_some() {
+        "Popup"
+    } else if let Some(selection_mode) = &state.selection_mode {
+        match selection_mode {
+            SelectionMode::Normal => "Selection",
+            SelectionMode::Rectangle { .. } => "Rectangle select",
+            SelectionMode::Swap { .. } => "Swap",
+        }
+    } else {
+        "Key edit"
+    };
+    let keyboard = state
+        .layout
+        .metadata
+        .keyboard
+        .clone()
+        .unwrap_or_else(|| "Keyboard not set".to_string());
     let title = format!(
-        " {} - Layer {} {}",
-        state.layout.metadata.name, state.current_layer, dirty_indicator
+        " LazyQMK | {} | {} | Layer {} | {} ",
+        state.layout.metadata.name, keyboard, state.current_layer, draft_state
     );
+    let subtitle = format!(" Mode: {mode}");
 
-    let title_widget = Paragraph::new(title)
+    let title_widget = Paragraph::new(vec![Line::from(title), Line::from(subtitle)])
         .style(
             Style::default()
                 .fg(state.theme.primary)
@@ -939,6 +961,7 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .title(" Editor ")
                 .style(Style::default().bg(state.theme.background)),
         );
 

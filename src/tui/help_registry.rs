@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_load_help_registry() {
         let registry = HelpRegistry::load().expect("Failed to load help registry");
-        assert_eq!(registry.app_name(), "Keyboard Layout Editor");
+        assert_eq!(registry.app_name(), "LazyQMK");
     }
 
     #[test]

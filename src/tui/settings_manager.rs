@@ -48,13 +48,13 @@ impl SettingGroup {
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
         match self {
-            Self::Paths => "Paths [Global]",
-            Self::Build => "Build [Global]",
-            Self::Ui => "UI [Global]",
-            Self::General => "General [Layout]",
-            Self::Rgb => "RGB Lighting [Layout]",
-            Self::TapHold => "Tap-Hold [Layout]",
-            Self::Combos => "Combos [Layout]",
+            Self::Paths => "Setup & folders",
+            Self::Build => "Keyboard & build output",
+            Self::Ui => "Editor behavior",
+            Self::General => "General layout",
+            Self::Rgb => "Lighting behavior",
+            Self::TapHold => "Tap-hold tuning",
+            Self::Combos => "Combos & quick actions",
         }
     }
 
@@ -308,26 +308,26 @@ impl SettingItem {
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
         match self {
-            Self::QmkFirmwarePath => "QMK Firmware Path",
+            Self::QmkFirmwarePath => "QMK Firmware Folder",
             Self::Keyboard => "Keyboard",
             Self::LayoutVariant => "Layout Variant",
             Self::KeymapName => "Keymap Name",
             Self::OutputFormat => "Output Format",
-            Self::OutputDir => "Output Directory",
+            Self::OutputDir => "Build Output Folder",
             Self::ShowHelpOnStartup => "Show Help on Startup",
             Self::ThemeMode => "Theme Mode",
             Self::KeyboardScale => "Keyboard Scale",
-            Self::RgbEnabled => "RGB Master Switch",
-            Self::RgbBrightness => "RGB Brightness",
+            Self::RgbEnabled => "Lighting Enabled",
+            Self::RgbBrightness => "Lighting Brightness",
             Self::RgbSaturation => "RGB Saturation",
             Self::RgbMatrixSpeed => "RGB Matrix Speed",
-            Self::RgbTimeout => "RGB Timeout",
-            Self::IdleEffectEnabled => "Idle Effect Enabled",
-            Self::IdleTimeout => "Idle Timeout",
-            Self::IdleEffectDuration => "Idle Effect Duration",
-            Self::IdleEffectMode => "Idle Effect Mode",
+            Self::RgbTimeout => "Lighting Timeout",
+            Self::IdleEffectEnabled => "Idle Lighting Enabled",
+            Self::IdleTimeout => "Idle Wait Time",
+            Self::IdleEffectDuration => "Idle Effect Length",
+            Self::IdleEffectMode => "Idle Effect",
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
-            Self::OverlayRippleEnabled => "Overlay Ripple Enabled",
+            Self::OverlayRippleEnabled => "Press Ripple Enabled",
             Self::OverlayRippleMaxRipples => "Max Concurrent Ripples",
             Self::OverlayRippleDuration => "Ripple Duration",
             Self::OverlayRippleSpeed => "Ripple Speed",
@@ -367,44 +367,46 @@ impl SettingItem {
     #[must_use]
     pub const fn description(&self) -> &'static str {
         match self {
-            Self::QmkFirmwarePath => "Path to QMK firmware directory (required for builds)",
-            Self::Keyboard => "Target keyboard for firmware builds",
-            Self::LayoutVariant => "Physical layout variant (e.g., LAYOUT_split_3x6_3)",
-            Self::KeymapName => "Name of the keymap (e.g., 'default', 'mymap')",
-            Self::OutputFormat => "Firmware output format: uf2, hex, or bin",
-            Self::OutputDir => "Directory where built firmware will be saved",
+            Self::QmkFirmwarePath => {
+                "Folder containing your local QMK checkout. Needed for keyboard info and builds."
+            }
+            Self::Keyboard => "Keyboard this layout targets when you generate or build firmware.",
+            Self::LayoutVariant => {
+                "Physical layout variant used by this keyboard, such as LAYOUT_split_3x6_3."
+            }
+            Self::KeymapName => "Name used for generated keymap files, such as default or mymap.",
+            Self::OutputFormat => {
+                "Firmware file type to export after build, such as uf2, hex, or bin."
+            }
+            Self::OutputDir => "Folder where built firmware files should be written.",
             Self::ShowHelpOnStartup => "Display help overlay when application starts",
             Self::ThemeMode => "Color theme: Auto (follow OS), Dark, or Light",
             Self::KeyboardScale => "Keyboard display size: 1.0 = default, 0.5 = half, 2.0 = double",
-            Self::RgbEnabled => "Turn all RGB LEDs on or off",
-            Self::RgbBrightness => "Global brightness multiplier for all LEDs (0-100%)",
+            Self::RgbEnabled => "Turn all keyboard lighting on or off.",
+            Self::RgbBrightness => "Overall keyboard lighting brightness (0-100%).",
             Self::RgbSaturation => {
                 "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)"
             }
             Self::RgbMatrixSpeed => {
                 "Animation speed for RGB effects (0=Slowest, 127=Default, 255=Fastest)"
             }
-            Self::RgbTimeout => "Auto-off RGB after inactivity (0 = disabled)",
-            Self::IdleEffectEnabled => "Enable idle effect (triggers RGB animation before timeout)",
-            Self::IdleTimeout => "Delay before starting idle effect (0 = disabled)",
+            Self::RgbTimeout => "Turn lighting off after inactivity. Use 0 to keep it on.",
+            Self::IdleEffectEnabled => "Play a temporary lighting effect before full idle timeout.",
+            Self::IdleTimeout => "How long to wait before idle lighting begins. Use 0 to disable.",
             Self::IdleEffectDuration => {
-                "How long to run idle effect before turning off (0 = immediate)"
+                "How long idle lighting runs before lights turn off. Use 0 for immediate off."
             }
-            Self::IdleEffectMode => "RGB animation effect to use during idle period",
+            Self::IdleEffectMode => "Lighting animation used while keyboard is idle.",
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
             }
-            Self::OverlayRippleEnabled => {
-                "Enable additive ripple overlay on key press and/or release"
-            }
+            Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.",
             Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
             Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
             Self::OverlayRippleSpeed => {
                 "Expansion speed in physical LED coordinate space (0-255, higher = faster)"
             }
-            Self::OverlayRippleBandWidth => {
-                "Width of ripple band in physical distance units"
-            }
+            Self::OverlayRippleBandWidth => "Width of ripple band in physical distance units",
             Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)",
             Self::OverlayRippleColorMode => {
                 "How to determine ripple colors (Fixed, Key Color, Hue Shift)"
@@ -1475,14 +1477,36 @@ fn render_settings_list(
     layout: &crate::models::Layout,
     theme: &Theme,
 ) {
-    // Split area for list and help text
+    // Split area for task summary, list and help text
     let chunks = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
+            Constraint::Length(3), // Task summary
             Constraint::Min(5),    // Settings list
             Constraint::Length(5), // Help text
         ])
         .split(area);
+
+    let selected_setting = SettingItem::all().get(state.selected).copied();
+    let selected_group = selected_setting.map(|setting| setting.group());
+    let summary = selected_group.map_or_else(
+        || "Choose a setting to edit.".to_string(),
+        |group| {
+            let scope = if group.is_global() {
+                "Saved in config.toml"
+            } else {
+                "Saved in current layout"
+            };
+            format!("Task area: {} • {}", group.display_name(), scope)
+        },
+    );
+    let summary_widget = Paragraph::new(summary).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("What this section controls")
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(summary_widget, chunks[0]);
 
     // Build settings list with group headers
     let settings = SettingItem::all();
@@ -1558,7 +1582,7 @@ fn render_settings_list(
         .block(Block::default().borders(Borders::ALL).title("Settings"))
         .highlight_style(Style::default().bg(theme.surface));
 
-    f.render_widget(list, chunks[0]);
+    f.render_widget(list, chunks[1]);
 
     // Show description of selected setting
     let selected_setting = settings.get(state.selected);
@@ -1585,7 +1609,7 @@ fn render_settings_list(
         .block(Block::default().borders(Borders::ALL).title("Help"))
         .alignment(Alignment::Left);
 
-    f.render_widget(help, chunks[1]);
+    f.render_widget(help, chunks[2]);
 }
 
 /// Get display string for a setting value
@@ -2621,17 +2645,14 @@ mod tests {
     fn test_idle_effect_settings_have_display_names() {
         assert_eq!(
             SettingItem::IdleEffectEnabled.display_name(),
-            "Idle Effect Enabled"
+            "Idle Lighting Enabled"
         );
-        assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Timeout");
+        assert_eq!(SettingItem::IdleTimeout.display_name(), "Idle Wait Time");
         assert_eq!(
             SettingItem::IdleEffectDuration.display_name(),
-            "Idle Effect Duration"
+            "Idle Effect Length"
         );
-        assert_eq!(
-            SettingItem::IdleEffectMode.display_name(),
-            "Idle Effect Mode"
-        );
+        assert_eq!(SettingItem::IdleEffectMode.display_name(), "Idle Effect");
     }
 
     #[test]

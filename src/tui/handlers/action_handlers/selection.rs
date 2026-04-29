@@ -15,7 +15,9 @@ pub fn handle_toggle_selection_mode(state: &mut AppState) -> Result<bool> {
         state.selection_mode = Some(SelectionMode::Normal);
         state.selected_keys.clear();
         state.selected_keys.push(state.selected_position);
-        state.set_status("Selection mode - Space: toggle key, y: copy, d: cut, Esc: cancel");
+        state.set_status(
+            "Selection mode - Space: toggle, y: copy, Ctrl+X: cut for move, Del: clear, Esc: cancel",
+        );
     }
     Ok(false)
 }

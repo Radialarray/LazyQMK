@@ -429,14 +429,12 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                     return Ok(false);
                 }
                 SettingItem::OverlayRippleHueShift => {
-                    manager
-                        .state_mut()
-                        .start_editing_signed_numeric(
-                            *setting,
-                            state.layout.rgb_overlay_ripple.hue_shift_deg,
-                            -180,
-                            180,
-                        );
+                    manager.state_mut().start_editing_signed_numeric(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.hue_shift_deg,
+                        -180,
+                        180,
+                    );
                 }
                 SettingItem::OverlayRippleTriggerPress => {
                     manager.state_mut().start_toggling_boolean(

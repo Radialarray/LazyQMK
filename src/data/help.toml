@@ -4,7 +4,7 @@
 
 [meta]
 version = "1.0"
-app_name = "Keyboard Layout Editor"
+app_name = "LazyQMK"
 
 # =============================================================================
 # MAIN VIEW - Default keyboard editing context
@@ -45,6 +45,7 @@ priority = 2
 [[contexts.main.bindings]]
 keys = ["Backspace", "Delete"]
 action = "Clear key"
+hint = "Clear"
 priority = 12
 
 [[contexts.main.bindings]]
@@ -97,7 +98,7 @@ priority = 19
 
 [[contexts.main.bindings]]
 keys = ["Ctrl+X"]
-action = "Cut key"
+action = "Cut key for next paste"
 priority = 19
 
 [[contexts.main.bindings]]
@@ -169,7 +170,7 @@ priority = 5
 
 [[contexts.main.bindings]]
 keys = ["Shift+S"]
-action = "Settings"
+action = "Open settings by task"
 priority = 31
 
 [[contexts.main.bindings]]
@@ -718,7 +719,7 @@ priority = 2
 
 [contexts.selection]
 name = "Selection Mode"
-description = "Multi-key selection for copy/cut/color/category"
+description = "Multi-key selection for copy, move, clear, color, and category edits"
 
 [[contexts.selection.bindings]]
 keys = ["↑", "↓", "←", "→"]
@@ -752,14 +753,20 @@ priority = 5
 
 [[contexts.selection.bindings]]
 keys = ["y"]
-action = "Copy selected"
+action = "Copy selected keys"
 hint = "Copy"
 priority = 6
 
 [[contexts.selection.bindings]]
 keys = ["Ctrl+X"]
-action = "Cut selected"
+action = "Cut selected keys for next paste"
 hint = "Cut"
+priority = 7
+
+[[contexts.selection.bindings]]
+keys = ["Backspace", "Delete"]
+action = "Clear selected keys"
+hint = "Clear"
 priority = 7
 
 [[contexts.selection.bindings]]
