@@ -504,6 +504,9 @@ impl RgbOverlayRippleSettings {
         if self.duration_ms == 0 {
             anyhow::bail!("duration_ms must be greater than 0");
         }
+        if self.speed == 0 {
+            anyhow::bail!("speed must be greater than 0");
+        }
         if self.band_width == 0 {
             anyhow::bail!("band_width must be greater than 0");
         }
@@ -2115,6 +2118,14 @@ mod tests {
     fn test_ripple_settings_validate_rejects_zero_band_width() {
         let mut settings = RgbOverlayRippleSettings::default();
         settings.band_width = 0;
+
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn test_ripple_settings_validate_rejects_zero_speed() {
+        let mut settings = RgbOverlayRippleSettings::default();
+        settings.speed = 0;
 
         assert!(settings.validate().is_err());
     }

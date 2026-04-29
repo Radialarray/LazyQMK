@@ -400,7 +400,7 @@ impl SettingItem {
             Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
             Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
             Self::OverlayRippleSpeed => {
-                "Expansion speed in physical LED coordinate space (0-255, higher = faster)"
+                "Expansion speed in physical LED coordinate space (1-255, higher = faster)"
             }
             Self::OverlayRippleBandWidth => {
                 "Width of ripple band in physical distance units"

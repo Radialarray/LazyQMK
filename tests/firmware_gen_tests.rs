@@ -1356,8 +1356,9 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
     );
 
     assert!(
-        keymap_c.contains("bool ripple_triggered = lazyqmk_ripple_trigger(keycode, record);"),
-        "Idle path must capture release-triggered ripple activity"
+        keymap_c.contains("bool ripple_triggered = false;")
+            && keymap_c.contains("ripple_triggered = lazyqmk_ripple_trigger(keycode, record);"),
+        "Idle path must declare ripple flag outside ifdef and assign inside guarded block"
     );
     assert!(
         keymap_c.contains("if (record->event.pressed || ripple_triggered) {"),
@@ -1479,7 +1480,7 @@ fn test_rgb_overlay_ripple_distance_uses_wide_accumulator() {
 }
 
 #[test]
-fn test_rgb_overlay_ripple_codegen_rejects_zero_duration_and_band_width() {
+fn test_rgb_overlay_ripple_codegen_rejects_zero_duration_band_width_and_speed() {
     use fixtures::{test_geometry_basic, test_layout_basic};
 
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
@@ -1503,4 +1504,12 @@ fn test_rgb_overlay_ripple_codegen_rejects_zero_duration_and_band_width() {
         FirmwareGenerator::new(&band_width_layout, &geometry, &mapping, &config, &keycode_db);
     assert!(band_width_generator.generate_keymap_c().is_err());
     assert!(band_width_generator.generate_merged_config_h().is_err());
+
+    let mut speed_layout = test_layout_basic(2, 3);
+    speed_layout.rgb_overlay_ripple.enabled = true;
+    speed_layout.rgb_overlay_ripple.speed = 0;
+    let speed_generator =
+        FirmwareGenerator::new(&speed_layout, &geometry, &mapping, &config, &keycode_db);
+    assert!(speed_generator.generate_keymap_c().is_err());
+    assert!(speed_generator.generate_merged_config_h().is_err());
 }

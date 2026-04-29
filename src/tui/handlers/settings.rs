@@ -394,7 +394,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                     manager.state_mut().start_editing_numeric(
                         *setting,
                         u16::from(state.layout.rgb_overlay_ripple.speed),
-                        0,
+                        1,
                         255,
                     );
                 }
