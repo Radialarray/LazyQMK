@@ -823,16 +823,22 @@ hint = "Next"
 priority = 1
 
 [[contexts.template_save.bindings]]
+keys = ["Shift+Tab"]
+action = "Previous field"
+hint = "Prev"
+priority = 2
+
+[[contexts.template_save.bindings]]
 keys = ["Enter"]
 action = "Save"
 hint = "Save"
-priority = 2
+priority = 3
 
 [[contexts.template_save.bindings]]
 keys = ["Esc"]
 action = "Cancel"
 hint = "Cancel"
-priority = 3
+priority = 4
 
 # =============================================================================
 # EXPORT FILENAME DIALOG
@@ -970,16 +976,22 @@ hint = "Navigate"
 priority = 1
 
 [[contexts.setup_wizard.bindings]]
+keys = ["Tab", "Shift+Tab"]
+action = "Move focus between fields"
+hint = "Focus"
+priority = 2
+
+[[contexts.setup_wizard.bindings]]
 keys = ["Enter"]
 action = "Next/Confirm"
 hint = "Next"
-priority = 2
+priority = 3
 
 [[contexts.setup_wizard.bindings]]
 keys = ["Esc"]
 action = "Back/Cancel"
 hint = "Back"
-priority = 3
+priority = 4
 
 # =============================================================================
 # UNSAVED CHANGES PROMPT
@@ -990,13 +1002,13 @@ name = "Unsaved Changes"
 description = "Prompt when quitting with unsaved changes"
 
 [[contexts.unsaved_prompt.bindings]]
-keys = ["y"]
+keys = ["Ctrl+S", "s"]
 action = "Save and quit"
 hint = "Save"
 priority = 1
 
 [[contexts.unsaved_prompt.bindings]]
-keys = ["n"]
+keys = ["Ctrl+Q", "q"]
 action = "Discard and quit"
 hint = "Discard"
 priority = 2

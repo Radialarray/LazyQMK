@@ -476,6 +476,8 @@ pub enum ManagerMode {
         min: u16,
         /// Maximum allowed value
         max: u16,
+        /// Suggested default value
+        default: u16,
     },
     /// Editing a signed numeric value
     EditingSignedNumeric {
@@ -487,6 +489,8 @@ pub enum ManagerMode {
         min: i16,
         /// Maximum allowed value
         max: i16,
+        /// Suggested default value
+        default: i16,
     },
     /// Toggling a boolean value (`retro_tapping`, `chordal_hold`)
     TogglingBoolean {
@@ -603,12 +607,14 @@ impl SettingsManagerState {
         current: u16,
         min: u16,
         max: u16,
+        default: u16,
     ) {
         self.mode = ManagerMode::EditingNumeric {
             setting,
             value: current.to_string(),
             min,
             max,
+            default,
         };
     }
 
@@ -619,12 +625,14 @@ impl SettingsManagerState {
         current: i16,
         min: i16,
         max: i16,
+        default: i16,
     ) {
         self.mode = ManagerMode::EditingSignedNumeric {
             setting,
             value: current.to_string(),
             min,
             max,
+            default,
         };
     }
 
@@ -759,6 +767,13 @@ impl SettingsManagerState {
         }
     }
 
+    /// Reset numeric editor to suggested default value.
+    pub fn reset_numeric_to_default(&mut self) {
+        if let ManagerMode::EditingNumeric { value, default, .. } = &mut self.mode {
+            *value = default.to_string();
+        }
+    }
+
     /// Decrement numeric value
     pub fn decrement_numeric(&mut self, step: u16) {
         if let ManagerMode::EditingNumeric { value, min, .. } = &mut self.mode {
@@ -796,6 +811,13 @@ impl SettingsManagerState {
                 num = num.saturating_sub(step).max(*min);
                 *value = num.to_string();
             }
+        }
+    }
+
+    /// Reset signed numeric editor to suggested default value.
+    pub fn reset_signed_numeric_to_default(&mut self) {
+        if let ManagerMode::EditingSignedNumeric { value, default, .. } = &mut self.mode {
+            *value = default.to_string();
         }
     }
 
@@ -1147,8 +1169,20 @@ impl SettingsManager {
                 self.state.increment_numeric(10);
                 None
             }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.increment_numeric(1);
+                None
+            }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.state.decrement_numeric(10);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.decrement_numeric(1);
+                None
+            }
+            KeyCode::Home => {
+                self.state.reset_numeric_to_default();
                 None
             }
             KeyCode::Char(c) if c.is_ascii_digit() => {
@@ -1174,8 +1208,20 @@ impl SettingsManager {
                 self.state.increment_signed_numeric(10);
                 None
             }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.state.increment_signed_numeric(1);
+                None
+            }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.state.decrement_signed_numeric(10);
+                None
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.state.decrement_signed_numeric(1);
+                None
+            }
+            KeyCode::Home => {
+                self.state.reset_signed_numeric_to_default();
                 None
             }
             KeyCode::Char(c) if c.is_ascii_digit() || c == '-' => {
@@ -1420,16 +1466,20 @@ pub fn render_settings_manager(
             value,
             min,
             max,
+            default,
         } => {
-            render_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
+            render_numeric_editor(f, inner_area, *setting, value, *min, *max, *default, theme);
         }
         ManagerMode::EditingSignedNumeric {
             setting,
             value,
             min,
             max,
+            default,
         } => {
-            render_signed_numeric_editor(f, inner_area, *setting, value, *min, *max, theme);
+            render_signed_numeric_editor(
+                f, inner_area, *setting, value, *min, *max, *default, theme,
+            );
         }
         ManagerMode::TogglingBoolean { setting, value } => {
             render_boolean_toggle(f, inner_area, *setting, *value, theme);
@@ -1988,6 +2038,7 @@ fn render_numeric_editor(
     value: &str,
     min: u16,
     max: u16,
+    default: u16,
     theme: &Theme,
 ) {
     let chunks = ratatui::layout::Layout::default()
@@ -2026,7 +2077,7 @@ fn render_numeric_editor(
         Line::from(setting.description()),
         Line::from(""),
         Line::from(Span::styled(
-            format!("Range: {min} to {max}"),
+            format!("Range: {min} to {max}  •  Default: {default}"),
             Style::default().fg(theme.text_muted),
         )),
     ];
@@ -2042,10 +2093,14 @@ fn render_numeric_editor(
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": ±10  "),
+            Span::styled("←/→", Style::default().fg(theme.primary)),
+            Span::raw(": ±1"),
         ]),
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.primary)),
             Span::raw(": Apply  "),
+            Span::styled("Home", Style::default().fg(theme.primary)),
+            Span::raw(": Default  "),
             Span::styled("Esc", Style::default().fg(theme.primary)),
             Span::raw(": Cancel  "),
             Span::styled("Backspace", Style::default().fg(theme.primary)),
@@ -2068,6 +2123,7 @@ fn render_signed_numeric_editor(
     value: &str,
     min: i16,
     max: i16,
+    default: i16,
     theme: &Theme,
 ) {
     let chunks = ratatui::layout::Layout::default()
@@ -2103,7 +2159,7 @@ fn render_signed_numeric_editor(
         Line::from(setting.description()),
         Line::from(""),
         Line::from(Span::styled(
-            format!("Range: {min} to {max}"),
+            format!("Range: {min} to {max}  •  Default: {default}"),
             Style::default().fg(theme.text_muted),
         )),
     ];
@@ -2118,12 +2174,16 @@ fn render_signed_numeric_editor(
         Line::from(vec![
             Span::styled("↑/↓", Style::default().fg(theme.primary)),
             Span::raw(": ±10  "),
+            Span::styled("←/→", Style::default().fg(theme.primary)),
+            Span::raw(": ±1  "),
             Span::styled("-", Style::default().fg(theme.primary)),
             Span::raw(": Negative"),
         ]),
         Line::from(vec![
             Span::styled("Enter", Style::default().fg(theme.primary)),
             Span::raw(": Apply  "),
+            Span::styled("Home", Style::default().fg(theme.primary)),
+            Span::raw(": Default  "),
             Span::styled("Esc", Style::default().fg(theme.primary)),
             Span::raw(": Cancel  "),
             Span::styled("Backspace", Style::default().fg(theme.primary)),
@@ -2621,6 +2681,37 @@ fn render_boolean_toggle(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_numeric_editor_reset_to_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_numeric(SettingItem::TappingTerm, 275, 100, 500, 200);
+
+        state.reset_numeric_to_default();
+
+        assert_eq!(state.get_numeric_value(), Some(200));
+    }
+
+    #[test]
+    fn test_signed_numeric_editor_reset_to_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_signed_numeric(SettingItem::OverlayRippleHueShift, -45, -180, 180, 60);
+
+        state.reset_signed_numeric_to_default();
+
+        assert_eq!(state.get_signed_numeric_value(), Some(60));
+    }
+
+    #[test]
+    fn test_start_editing_numeric_stores_default() {
+        let mut state = SettingsManagerState::new();
+        state.start_editing_numeric(SettingItem::TappingToggle, 7, 1, 10, 5);
+
+        assert!(matches!(
+            state.mode,
+            ManagerMode::EditingNumeric { default: 5, .. }
+        ));
+    }
 
     #[test]
     fn test_setting_item_all_includes_idle_effect_settings() {

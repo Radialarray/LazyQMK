@@ -147,6 +147,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.uncolored_key_behavior.as_percent() as u16,
                         0,
                         100,
+                        100,
                     );
                 }
                 SettingItem::TapHoldPreset => {
@@ -160,13 +161,18 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.tap_hold_settings.tapping_term,
                         100,
                         500,
+                        200,
                     );
                 }
                 SettingItem::QuickTapTerm => {
-                    let current = state.layout.tap_hold_settings.quick_tap_term.unwrap_or(0);
+                    let current = state
+                        .layout
+                        .tap_hold_settings
+                        .quick_tap_term
+                        .unwrap_or(state.layout.tap_hold_settings.tapping_term);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 0, 500);
+                        .start_editing_numeric(*setting, current, 0, 500, 200);
                 }
                 SettingItem::HoldMode => {
                     manager
@@ -185,13 +191,18 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.tap_hold_settings.tapping_toggle),
                         1,
                         10,
+                        5,
                     );
                 }
                 SettingItem::FlowTapTerm => {
-                    let current = state.layout.tap_hold_settings.flow_tap_term.unwrap_or(0);
+                    let current = state
+                        .layout
+                        .tap_hold_settings
+                        .flow_tap_term
+                        .unwrap_or(state.layout.tap_hold_settings.tapping_term);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 0, 300);
+                        .start_editing_numeric(*setting, current, 0, 300, 150);
                 }
                 SettingItem::ChordalHold => {
                     manager.state_mut().start_toggling_boolean(
@@ -210,6 +221,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_brightness.as_percent()),
                         0,
                         100,
+                        100,
                     );
                 }
                 SettingItem::RgbSaturation => {
@@ -218,6 +230,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_saturation.as_percent()),
                         0,
                         200,
+                        100,
                     );
                 }
                 SettingItem::RgbMatrixSpeed => {
@@ -226,13 +239,14 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_matrix_default_speed),
                         0,
                         255,
+                        127,
                     );
                 }
                 SettingItem::RgbTimeout => {
                     let current_secs = (state.layout.rgb_timeout_ms / 1000) as u16;
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current_secs, 0, 600);
+                        .start_editing_numeric(*setting, current_secs, 0, 600, 0);
                 }
                 SettingItem::QmkFirmwarePath => {
                     manager.state_mut().start_editing_path(
@@ -344,6 +358,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         (state.config.ui.keyboard_scale * 100.0) as u16,
                         25,  // 25% minimum
                         200, // 200% maximum
+                        100,
                     );
                 }
                 SettingItem::IdleEffectEnabled => {
@@ -357,14 +372,14 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         (state.layout.idle_effect_settings.idle_timeout_ms / 1000) as u16;
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current_secs, 0, 3600);
+                        .start_editing_numeric(*setting, current_secs, 0, 3600, 60);
                 }
                 SettingItem::IdleEffectDuration => {
                     let current_secs =
                         (state.layout.idle_effect_settings.idle_effect_duration_ms / 1000) as u16;
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current_secs, 0, 3600);
+                        .start_editing_numeric(*setting, current_secs, 0, 3600, 300);
                 }
                 SettingItem::IdleEffectMode => {
                     manager.state_mut().start_selecting_idle_effect_mode(
@@ -382,6 +397,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_overlay_ripple.max_ripples),
                         1,
                         8,
+                        4,
                     );
                 }
                 SettingItem::OverlayRippleDuration => {
@@ -390,6 +406,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.duration_ms,
                         100,
                         5000,
+                        1500,
                     );
                 }
                 SettingItem::OverlayRippleSpeed => {
@@ -398,6 +415,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_overlay_ripple.speed),
                         0,
                         255,
+                        64,
                     );
                 }
                 SettingItem::OverlayRippleBandWidth => {
@@ -406,6 +424,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_overlay_ripple.band_width),
                         1,
                         255,
+                        30,
                     );
                 }
                 SettingItem::OverlayRippleAmplitude => {
@@ -414,6 +433,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         u16::from(state.layout.rgb_overlay_ripple.amplitude_pct),
                         0,
                         100,
+                        50,
                     );
                 }
                 SettingItem::OverlayRippleColorMode => {
@@ -436,6 +456,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.hue_shift_deg,
                         -180,
                         180,
+                        60,
                     );
                 }
                 SettingItem::OverlayRippleTriggerPress => {
@@ -501,7 +522,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         .unwrap_or(500);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 50, 2000);
+                        .start_editing_numeric(*setting, current, 50, 2000, 500);
                 }
                 SettingItem::Combo2HoldDuration => {
                     let current = state
@@ -513,7 +534,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         .unwrap_or(500);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 50, 2000);
+                        .start_editing_numeric(*setting, current, 50, 2000, 500);
                 }
                 SettingItem::Combo3HoldDuration => {
                     let current = state
@@ -525,7 +546,7 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         .unwrap_or(500);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 50, 2000);
+                        .start_editing_numeric(*setting, current, 50, 2000, 500);
                 }
             }
             state.set_status("Select option with ↑↓, Enter to apply");

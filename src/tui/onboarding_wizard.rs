@@ -23,6 +23,7 @@ use crate::config::Config;
 use crate::parser::keyboard_json::{
     extract_layout_names, parse_keyboard_info_json, scan_keyboards,
 };
+use crate::tui::help_registry::HelpRegistry;
 use crate::tui::layout_picker::LayoutPickerState;
 
 /// Onboarding wizard steps
@@ -648,10 +649,11 @@ fn render_welcome(
     area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
+    let app_name = HelpRegistry::default().app_name().to_string();
     let mut text = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "Welcome to LazyQMK",
+            format!("Welcome to {app_name}"),
             Style::default()
                 .fg(theme.primary)
                 .add_modifier(Modifier::BOLD),
@@ -685,7 +687,7 @@ fn render_welcome(
             load_existing_style,
         )));
         text.push(Line::from(Span::styled(
-            "      Fastest option if you already saved a layout with LazyQMK.",
+            format!("      Fastest option if you already saved layout with {app_name}."),
             Style::default().fg(theme.text_muted),
         )));
         text.push(Line::from(""));
@@ -732,7 +734,7 @@ fn render_welcome(
 
     text.push(Line::from(""));
     text.push(Line::from(Span::styled(
-        "Use ↑↓ to move, Enter to continue. Esc exits onboarding.",
+        "Use ↑↓ to move, Enter to continue. Esc exits setup.",
         Style::default().fg(theme.text_muted),
     )));
 
@@ -753,9 +755,12 @@ fn render_qmk_path_input(
     area: Rect,
     theme: &crate::tui::theme::Theme,
 ) {
+    let app_name = HelpRegistry::default().app_name().to_string();
     let text = vec![
         Line::from(""),
-        Line::from("LazyQMK needs your local QMK firmware folder for keyboard info and builds."),
+        Line::from(format!(
+            "{app_name} needs your local QMK firmware folder for keyboard info and builds."
+        )),
         Line::from("If you already use QMK, paste that folder path here."),
         Line::from(""),
         Line::from(Span::styled(
@@ -879,9 +884,9 @@ fn render_keyboard_selection(
 
     // Help text
     let help_text = if filter_focused {
-        "Tab: Switch to list | Enter: Select (if 1 result) | Esc: Clear filter or back"
+        "Tab: Next focus | Shift+Tab: Stay here | Enter: Select (if 1 result) | Esc: Clear filter or back"
     } else {
-        "↑↓/jk: Navigate | Enter: Select | Tab: Back to filter | Esc: Back to filter"
+        "↑↓/jk: Navigate | Tab/Shift+Tab: Filter | Enter: Select | Esc: Back to filter"
     };
     let help = Paragraph::new(help_text)
         .style(Style::default().fg(theme.text_muted))
@@ -1065,7 +1070,7 @@ fn render_instructions(
             "Enter: Continue  |  Backspace: Delete  |  Esc: Back"
         }
         WizardStep::KeyboardSelection => {
-            "Type to filter  |  ↑↓: Navigate  |  Enter: Select  |  Esc: Clear filter/Back"
+            "Tab/Shift+Tab: Move focus  |  Type: Filter  |  ↑↓: Navigate  |  Enter: Select"
         }
         WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
         WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
@@ -1136,10 +1141,18 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
         },
         WizardStep::KeyboardSelection => match state.keyboard_selection_focus {
             KeyboardSelectionFocus::FilterInput => match key.code {
-                KeyCode::Tab => {
+                KeyCode::Tab
+                    if !key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
                     // Switch focus to list
                     state.keyboard_selection_focus = KeyboardSelectionFocus::List;
                 }
+                KeyCode::BackTab | KeyCode::Tab
+                    if key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) => {}
                 KeyCode::Enter => {
                     // Enter from filter: if only one result, select it; otherwise switch to list
                     let filtered = state.get_filtered_keyboards();
@@ -1176,7 +1189,18 @@ pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<
                 _ => {}
             },
             KeyboardSelectionFocus::List => match key.code {
-                KeyCode::Tab => {
+                KeyCode::Tab
+                    if !key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
+                    state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
+                }
+                KeyCode::BackTab | KeyCode::Tab
+                    if key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                {
                     // Switch focus back to filter
                     state.keyboard_selection_focus = KeyboardSelectionFocus::FilterInput;
                 }

@@ -269,10 +269,27 @@ impl KeyboardWidget {
                 })
                 .unwrap_or(false);
 
+            let state_marker = if is_flashing {
+                '*'
+            } else if is_selected {
+                '@'
+            } else if is_swap_first {
+                's'
+            } else if is_in_selection {
+                '+'
+            } else if is_cut_source {
+                'x'
+            } else if has_hold_like_inbound {
+                '!'
+            } else {
+                ' '
+            };
+
             Self::render_key_with_indicator(
                 f,
                 key_area,
                 &content,
+                state_marker,
                 color_indicator,
                 key_color,
                 is_selected,
@@ -318,7 +335,7 @@ impl KeyboardWidget {
         let actions =
             "Actions: Enter key actions  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
         let legend = format!(
-            "Legend: {}  • red outer border = inbound hold target",
+            "Legend: @ selected  + multi  x cut  s swap  ! inbound hold  * flash  • {}  • red outer border = inbound hold target",
             Self::color_indicator_legend()
         );
 
@@ -345,6 +362,7 @@ impl KeyboardWidget {
         f: &mut Frame,
         area: Rect,
         content: &[Line],
+        state_marker: char,
         indicator: &str,
         border_color: Color,
         is_selected: bool,
@@ -442,7 +460,7 @@ impl KeyboardWidget {
             }
         }
 
-        // Top border with indicator in right corner: ┌──────i┐
+        // Top border with state marker left and indicator right: ┌@─────i┐
         let top_y = area.y;
         let left_x = area.x;
         let right_x = area.x + area.width.saturating_sub(1);
@@ -465,7 +483,11 @@ impl KeyboardWidget {
 
             for i in 0..top_width {
                 let x = left_x + 1 + i as u16;
-                if i == indicator_pos {
+                if i == 0 && state_marker != ' ' {
+                    buf[(x, top_y)]
+                        .set_char(state_marker)
+                        .set_style(border_style.add_modifier(Modifier::BOLD));
+                } else if i == indicator_pos {
                     // Draw the indicator character with the border color
                     let indicator_style = if is_selected {
                         Style::default()

@@ -1412,7 +1412,9 @@ pub fn handle_export_filename_dialog_input(
 /// Handle input for unsaved changes prompt
 pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
     match key.code {
-        KeyCode::Char('s' | 'S') => {
+        KeyCode::Char('s' | 'S')
+            if key.modifiers.is_empty() || key.modifiers == KeyModifiers::CONTROL =>
+        {
             // Save and quit
             if let Some(path) = &state.source_path.clone() {
                 LayoutService::save(&state.layout, path)?;
@@ -1422,7 +1424,9 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
             state.should_quit = true;
             Ok(true)
         }
-        KeyCode::Char('q' | 'Q') => {
+        KeyCode::Char('q' | 'Q')
+            if key.modifiers.is_empty() || key.modifiers == KeyModifiers::CONTROL =>
+        {
             // Quit without saving
             state.should_quit = true;
             Ok(true)

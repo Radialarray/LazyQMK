@@ -67,6 +67,7 @@ use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
 use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
+use crate::tui::help_registry::HelpRegistry;
 use std::collections::HashMap;
 
 // Re-export TUI components
@@ -961,8 +962,13 @@ fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
         }
     });
     let title = format!(
-        " LazyQMK | {} | {} | L{} {} | {} ",
-        state.layout.metadata.name, keyboard, state.current_layer, layer_name, draft_state
+        " {} | {} | {} | L{} {} [active] | {} ",
+        HelpRegistry::default().app_name(),
+        state.layout.metadata.name,
+        keyboard,
+        state.current_layer,
+        layer_name,
+        draft_state
     );
     let subtitle = if let Some(build_summary) = build_summary {
         format!(" Mode: {mode}  |  Build: {build_summary}")
@@ -1128,8 +1134,8 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
         Line::from(""),
         Line::from("You have unsaved changes."),
         Line::from(""),
-        Line::from("  [S] Save and quit"),
-        Line::from("  [Q] Quit without saving"),
+        Line::from("  [Ctrl+S] Save and quit"),
+        Line::from("  [Ctrl+Q] Quit without saving"),
         Line::from("  [Esc] Cancel"),
     ];
 
