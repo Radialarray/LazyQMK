@@ -702,10 +702,21 @@ impl<'a> FirmwareGenerator<'a> {
         }
 
         // Bootloader combo detection: Q+R (left) or U+P (right) held for 1500ms
+        // Extracts the base keycode from QK_MODS, QK_LAYER_TAP, QK_MOD_TAP wrappers
+        // so combos work even when the physical keys are wrapped in LT/MT/MOD macros.
         code.push_str("    // Bootloader combo: Q+R (left) or U+P (right) held for 1500ms\n");
         code.push_str("    {\n");
-        code.push_str("        bool is_combo_key = (keycode == KC_Q || keycode == KC_R\n");
-        code.push_str("                          || keycode == KC_U || keycode == KC_P);\n");
+        code.push_str("        // Resolve the basic keycode (handle LT/MT/MOD wrappers)\n");
+        code.push_str("        uint16_t base_kc = keycode;\n");
+        code.push_str("        if (IS_QK_MODS(keycode)) {\n");
+        code.push_str("            base_kc = QK_MODS_GET_BASIC_KEYCODE(keycode);\n");
+        code.push_str("        } else if (IS_QK_LAYER_TAP(keycode)) {\n");
+        code.push_str("            base_kc = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);\n");
+        code.push_str("        } else if (IS_QK_MOD_TAP(keycode)) {\n");
+        code.push_str("            base_kc = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);\n");
+        code.push_str("        }\n");
+        code.push_str("        bool is_combo_key = (base_kc == KC_Q || base_kc == KC_R\n");
+        code.push_str("                          || base_kc == KC_U || base_kc == KC_P);\n");
         code.push_str("        if (is_combo_key) {\n");
         code.push_str("            static bool q_held = false;\n");
         code.push_str("            static bool r_held = false;\n");
@@ -713,15 +724,15 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            static bool p_held = false;\n");
         code.push('\n');
         code.push_str("            if (record->event.pressed) {\n");
-        code.push_str("                if (keycode == KC_Q) q_held = true;\n");
-        code.push_str("                if (keycode == KC_R) r_held = true;\n");
-        code.push_str("                if (keycode == KC_U) u_held = true;\n");
-        code.push_str("                if (keycode == KC_P) p_held = true;\n");
+        code.push_str("                if (base_kc == KC_Q) q_held = true;\n");
+        code.push_str("                if (base_kc == KC_R) r_held = true;\n");
+        code.push_str("                if (base_kc == KC_U) u_held = true;\n");
+        code.push_str("                if (base_kc == KC_P) p_held = true;\n");
         code.push_str("            } else {\n");
-        code.push_str("                if (keycode == KC_Q) q_held = false;\n");
-        code.push_str("                if (keycode == KC_R) r_held = false;\n");
-        code.push_str("                if (keycode == KC_U) u_held = false;\n");
-        code.push_str("                if (keycode == KC_P) p_held = false;\n");
+        code.push_str("                if (base_kc == KC_Q) q_held = false;\n");
+        code.push_str("                if (base_kc == KC_R) r_held = false;\n");
+        code.push_str("                if (base_kc == KC_U) u_held = false;\n");
+        code.push_str("                if (base_kc == KC_P) p_held = false;\n");
         code.push_str("            }\n");
         code.push('\n');
         code.push_str("            // Check if either pair is complete\n");
@@ -998,15 +1009,19 @@ impl<'a> FirmwareGenerator<'a> {
                 );
             }
             code.push_str("    hsv_t hsv = palettefx_interp_color(palette, brightness);\n");
-            code.push_str("    // Darken background for subtle hits (matching original PaletteFX)\n");
-            code.push_str("    if (brightness < 32) {\n");
-            code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
-            code.push_str("    }\n");
             code.push_str("    rgb_t contrib = hsv_to_rgb(hsv);\n");
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
-            code.push_str("    base.r = qadd8(base.r, contrib.r);\n");
-            code.push_str("    base.g = qadd8(base.g, contrib.g);\n");
-            code.push_str("    base.b = qadd8(base.b, contrib.b);\n");
+            code.push_str("    // Blend (not saturating-add): dim base by (255-brightness), add burst\n");
+            code.push_str("    uint8_t blend = brightness;\n");
+            code.push_str(
+                "    base.r = qadd8(scale8(base.r, (uint8_t)(255 - blend)), scale8(contrib.r, blend));\n",
+            );
+            code.push_str(
+                "    base.g = qadd8(scale8(base.g, (uint8_t)(255 - blend)), scale8(contrib.g, blend));\n",
+            );
+            code.push_str(
+                "    base.b = qadd8(scale8(base.b, (uint8_t)(255 - blend)), scale8(contrib.b, blend));\n",
+            );
             code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
         } else {
             // Fallback: use the configured color mode (Fixed / KeyBased / HueShift)
@@ -1068,9 +1083,17 @@ impl<'a> FirmwareGenerator<'a> {
                 }
             }
 
-            code.push_str("    base.r = qadd8(base.r, contrib_r);\n");
-            code.push_str("    base.g = qadd8(base.g, contrib_g);\n");
-            code.push_str("    base.b = qadd8(base.b, contrib_b);\n");
+            code.push_str("    // Blend (not saturating-add): dim base by (255-brightness), add burst\n");
+            code.push_str("    uint8_t blend = brightness;\n");
+            code.push_str(
+                "    base.r = qadd8(scale8(base.r, (uint8_t)(255 - blend)), contrib_r);\n",
+            );
+            code.push_str(
+                "    base.g = qadd8(scale8(base.g, (uint8_t)(255 - blend)), contrib_g);\n",
+            );
+            code.push_str(
+                "    base.b = qadd8(scale8(base.b, (uint8_t)(255 - blend)), contrib_b);\n",
+            );
             code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
         }
         code.push_str("}\n");

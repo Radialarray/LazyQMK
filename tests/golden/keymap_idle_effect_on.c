@@ -89,8 +89,17 @@ void matrix_scan_user(void) {
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // Bootloader combo: Q+R (left) or U+P (right) held for 1500ms
     {
-        bool is_combo_key = (keycode == KC_Q || keycode == KC_R
-                          || keycode == KC_U || keycode == KC_P);
+        // Resolve the basic keycode (handle LT/MT/MOD wrappers)
+        uint16_t base_kc = keycode;
+        if (IS_QK_MODS(keycode)) {
+            base_kc = QK_MODS_GET_BASIC_KEYCODE(keycode);
+        } else if (IS_QK_LAYER_TAP(keycode)) {
+            base_kc = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
+        } else if (IS_QK_MOD_TAP(keycode)) {
+            base_kc = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+        }
+        bool is_combo_key = (base_kc == KC_Q || base_kc == KC_R
+                          || base_kc == KC_U || base_kc == KC_P);
         if (is_combo_key) {
             static bool q_held = false;
             static bool r_held = false;
@@ -98,15 +107,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             static bool p_held = false;
 
             if (record->event.pressed) {
-                if (keycode == KC_Q) q_held = true;
-                if (keycode == KC_R) r_held = true;
-                if (keycode == KC_U) u_held = true;
-                if (keycode == KC_P) p_held = true;
+                if (base_kc == KC_Q) q_held = true;
+                if (base_kc == KC_R) r_held = true;
+                if (base_kc == KC_U) u_held = true;
+                if (base_kc == KC_P) p_held = true;
             } else {
-                if (keycode == KC_Q) q_held = false;
-                if (keycode == KC_R) r_held = false;
-                if (keycode == KC_U) u_held = false;
-                if (keycode == KC_P) p_held = false;
+                if (base_kc == KC_Q) q_held = false;
+                if (base_kc == KC_R) r_held = false;
+                if (base_kc == KC_U) u_held = false;
+                if (base_kc == KC_P) p_held = false;
             }
 
             // Check if either pair is complete

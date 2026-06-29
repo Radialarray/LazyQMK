@@ -129,3 +129,13 @@ output_format: uf2
 **PaletteFX Default Palette**: Synthwave
 **PaletteFX All Effects**: On
 **PaletteFX All Palettes**: On
+**Ripple Overlay**: On
+**Ripple Color Mode**: Key Color
+**Ripple Max Ripples**: 4
+**Ripple Duration**: 1000ms
+**Ripple Speed**: 200
+**Ripple Band Width**: 20
+**Ripple Amplitude**: 60%
+**Ripple Trigger on Press**: On
+**Ripple Ignore Transparent**: On
+**Ripple Ignore Modifiers**: On
