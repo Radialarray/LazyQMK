@@ -823,10 +823,36 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
         code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
         code.push('\n');
-        code.push_str("// Reactive key-action overlay (PaletteFX-inspired algorithm)\n");
-        code.push_str("// Renders a radial burst around hit keys that fades with a smooth\n");
-        code.push_str("// amplitude curve. When PaletteFX is compiled in, uses its palette\n");
-        code.push_str("// color lookup; otherwise falls back to the configured color mode.\n");
+        // The reactive key-action burst is a CUSTOM implementation. It started
+        // as a port of PaletteFX's Reactive algorithm (radial bump with
+        // amplitude curve) but diverged to fit the overlay use case:
+        //
+        //   1. EXPANDING WAVEFRONT RING: the radius grows from 0 outward over
+        //      the ripple duration, producing a moving wavefront rather than
+        //      a static glow.
+        //   2. ADDITIVE OVERLAY: instead of replacing LED colors, the burst
+        //      is added on top of the TUI base color, preserving the per-key
+        //      layer colors. PaletteFX's Reactive REPLACES the LED color
+        //      and would clobber the TUI colors.
+        //   3. PER-KEY COLOR: each ripple uses the originating key's TUI
+        //      color (via lazyqmk_ripple_base_color) so different keys
+        //      produce visually distinct bursts. PaletteFX uses one global
+        //      palette color.
+        //   4. MULTI-RIPPLE: each in-range ripple contributes its own
+        //      scaled color to the LED, so pressing multiple keys in
+        //      quick succession produces multiple distinct visible bursts.
+        //   5. MATRIX-POSITION DISTANCE: distance is computed in matrix
+        //      (row, col) space using lazyqmk_led_to_matrix_row/col,
+        //      which is more reliable than g_led_config.point (which can
+        //      be uninitialised for some LEDs on certain keyboards).
+        //
+        // The mathematical shape (radial falloff with amplitude envelope)
+        // is similar to PaletteFX Reactive, but everything else is custom.
+        //
+        // PaletteFX is still used by LazyQMK for the IDLE SCREENSAVER
+        // (see generate_idle_effect_code), not for this key-action burst.
+        code.push_str("// Reactive key-action overlay (custom implementation)\n");
+        code.push_str("// Expanding wavefront ring, additive on TUI colors, per-key color.\n");
         code.push('\n');
         code.push_str("// Forward declaration from QMK (used for per-key layer resolution)\n");
         code.push_str("uint8_t layer_switch_get_layer(keypos_t key);\n");

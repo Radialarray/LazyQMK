@@ -8,7 +8,22 @@
 
 PaletteFX provides 6 animated RGB effects driven by 16 curated color palettes. LazyQMK integrates it as an **idle screensaver** — it plays a PaletteFX animation when the keyboard sits idle, then restores your normal per-key layer colors when you press a key.
 
-This is NOT a replacement for the default RGB mode or the ripple overlay. Your carefully configured TUI layer colors remain the primary display at all times.
+This is NOT a replacement for the default RGB mode or the reactive key-action burst. Your carefully configured TUI layer colors remain the primary display at all times.
+
+## What Uses PaletteFX vs. Custom
+
+| Feature | Implementation |
+|---------|----------------|
+| **Idle screensaver** | PaletteFX community module (the Flow/Vortex/Sparkle/Gradient animations) |
+| **Reactive key-action burst** | **Custom implementation** (expanding wavefront ring, additive overlay, per-key originating color) |
+
+The reactive key-action burst started as a port of PaletteFX's Reactive algorithm but diverged to better fit the overlay use case:
+
+- **PaletteFX Reactive** is a full RGB matrix mode that *replaces* all LED colors. We needed an *additive overlay* that preserves the TUI base colors.
+- **PaletteFX Reactive** has a fixed-radius static bump. We needed an *expanding wavefront ring* that travels outward from the key.
+- **PaletteFX Reactive** uses one global palette color. We needed *per-LED contributions* from multiple in-range ripples, each colored by its own originating key's TUI color.
+
+The custom implementation uses the same mathematical shape (radial falloff, amplitude envelope) but with these overlay-specific behaviors.
 
 ## Architecture
 
