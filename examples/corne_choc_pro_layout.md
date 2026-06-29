@@ -124,3 +124,8 @@ output_format: uf2
 **RGB Saturation**: 200%
 **Uncolored Key Brightness**: 40%
 **RGB Timeout**: 1 min
+**PaletteFX**: On
+**PaletteFX Default Effect**: Flow
+**PaletteFX Default Palette**: Synthwave
+**PaletteFX All Effects**: On
+**PaletteFX All Palettes**: On

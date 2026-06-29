@@ -60,8 +60,8 @@ use crate::config::Config;
 use crate::export;
 use crate::keycode_db::{KeycodeCategory, KeycodeDb, KeycodeDefinition};
 use crate::models::{
-    ComboSettings, IdleEffectSettings, Layout, RgbColor, RgbMatrixEffect, RgbOverlayRippleSettings,
-    TapDanceAction, TapHoldSettings,
+    ComboSettings, IdleEffectSettings, Layout, PaletteFxSettings, RgbColor, RgbMatrixEffect,
+    RgbOverlayRippleSettings, TapDanceAction, TapHoldSettings,
 };
 use crate::parser;
 use crate::services::LayoutService;
@@ -659,6 +659,33 @@ impl From<&IdleEffectSettings> for IdleEffectSettingsDto {
     }
 }
 
+/// PaletteFX settings for API.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaletteFxSettingsDto {
+    /// Master switch for PaletteFX effects.
+    pub enabled: bool,
+    /// Default effect name.
+    pub default_effect: String,
+    /// Default palette name.
+    pub default_palette: String,
+    /// Enable all effects at compile time.
+    pub enable_all_effects: bool,
+    /// Enable all palettes at compile time.
+    pub enable_all_palettes: bool,
+}
+
+impl From<&crate::models::PaletteFxSettings> for PaletteFxSettingsDto {
+    fn from(s: &crate::models::PaletteFxSettings) -> Self {
+        Self {
+            enabled: s.enabled,
+            default_effect: s.default_effect.display_name().to_string(),
+            default_palette: s.default_palette.display_name().to_string(),
+            enable_all_effects: s.enable_all_effects,
+            enable_all_palettes: s.enable_all_palettes,
+        }
+    }
+}
+
 /// Tap hold settings for API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TapHoldSettingsDto {
@@ -727,6 +754,10 @@ pub struct RgbOverlayRippleSettingsDto {
     pub ignore_modifiers: bool,
     /// Ignore layer switch keys.
     pub ignore_layer_switch: bool,
+    /// PaletteFX palette for key-action reactive bursts (display name or empty).
+    /// Empty string means use the current palette.
+    #[serde(default)]
+    pub key_action_palette: String,
 }
 
 impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
@@ -746,6 +777,9 @@ impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
             ignore_transparent: s.ignore_transparent,
             ignore_modifiers: s.ignore_modifiers,
             ignore_layer_switch: s.ignore_layer_switch,
+            key_action_palette: s
+                .key_action_palette
+                .map_or_else(String::new, |p| p.display_name().to_string()),
         }
     }
 }
@@ -948,6 +982,8 @@ pub struct LayoutDto {
     pub idle_effect_settings: IdleEffectSettingsDto,
     /// RGB overlay ripple settings
     pub rgb_overlay_ripple: RgbOverlayRippleSettingsDto,
+    /// PaletteFX settings
+    pub palette_fx: PaletteFxSettingsDto,
     /// Tap-hold settings
     pub tap_hold_settings: TapHoldSettingsDto,
     /// Tap dance definitions
@@ -994,6 +1030,9 @@ pub struct LayoutSaveDto {
     /// RGB overlay ripple settings
     #[serde(default)]
     pub rgb_overlay_ripple: Option<RgbOverlayRippleSettingsDto>,
+    /// PaletteFX settings
+    #[serde(default)]
+    pub palette_fx: Option<PaletteFxSettingsDto>,
     /// Tap-hold settings
     #[serde(default)]
     pub tap_hold_settings: Option<TapHoldSettingsDto>,
@@ -1334,6 +1373,7 @@ async fn get_layout(
         rgb_matrix_default_speed: layout.rgb_matrix_default_speed,
         idle_effect_settings: IdleEffectSettingsDto::from(&layout.idle_effect_settings),
         rgb_overlay_ripple: RgbOverlayRippleSettingsDto::from(&layout.rgb_overlay_ripple),
+        palette_fx: PaletteFxSettingsDto::from(&layout.palette_fx),
         tap_hold_settings: TapHoldSettingsDto::from(&layout.tap_hold_settings),
         tap_dances: layout.tap_dances.iter().map(TapDanceDto::from).collect(),
         combo_settings: ComboSettingsDto::from(&layout.combo_settings),
@@ -1375,6 +1415,18 @@ fn parse_tap_hold_preset(name: &str) -> crate::models::TapHoldPreset {
         "Custom" | "custom" => TapHoldPreset::Custom,
         _ => TapHoldPreset::default(),
     }
+}
+
+/// Parses a PaletteFxEffect from its display name.
+fn parse_palette_fx_effect(name: &str) -> crate::models::PaletteFxEffect {
+    use crate::models::PaletteFxEffect;
+    PaletteFxEffect::from_name(name).unwrap_or_default()
+}
+
+/// Parses a PaletteFxPalette from its display name.
+fn parse_palette_fx_palette(name: &str) -> crate::models::PaletteFxPalette {
+    use crate::models::PaletteFxPalette;
+    PaletteFxPalette::from_name(name).unwrap_or_default()
 }
 
 /// Converts a LayoutSaveDto (from frontend) back to the internal Layout model.
@@ -1463,6 +1515,11 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
             ignore_transparent: ripple_dto.ignore_transparent,
             ignore_modifiers: ripple_dto.ignore_modifiers,
             ignore_layer_switch: ripple_dto.ignore_layer_switch,
+            key_action_palette: if ripple_dto.key_action_palette.is_empty() {
+                None
+            } else {
+                crate::models::PaletteFxPalette::from_name(&ripple_dto.key_action_palette)
+            },
         }
     } else {
         RgbOverlayRippleSettings::default()
@@ -1530,6 +1587,19 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         ComboSettings::default()
     };
 
+    // Convert PaletteFX settings
+    let palette_fx = if let Some(pf_dto) = dto.palette_fx {
+        crate::models::PaletteFxSettings {
+            enabled: pf_dto.enabled,
+            default_effect: parse_palette_fx_effect(&pf_dto.default_effect),
+            default_palette: parse_palette_fx_palette(&pf_dto.default_palette),
+            enable_all_effects: pf_dto.enable_all_effects,
+            enable_all_palettes: pf_dto.enable_all_palettes,
+        }
+    } else {
+        crate::models::PaletteFxSettings::default()
+    };
+
     Layout {
         metadata: dto.metadata,
         layers,
@@ -1542,6 +1612,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         uncolored_key_behavior: dto.uncolored_key_behavior.into(),
         idle_effect_settings,
         rgb_overlay_ripple,
+        palette_fx,
         tap_hold_settings,
         combo_settings,
         tap_dances,
@@ -3777,6 +3848,7 @@ async fn create_layout(
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
         idle_effect_settings: IdleEffectSettings::default(),
         rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
+        palette_fx: PaletteFxSettings::default(),
         tap_hold_settings: TapHoldSettings::default(),
         combo_settings: ComboSettings::default(),
         tap_dances: vec![],

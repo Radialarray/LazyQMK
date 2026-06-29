@@ -22,8 +22,9 @@ pub use layer::{
 };
 pub use layout::{
     ComboAction, ComboDefinition, ComboSettings, HoldDecisionMode, IdleEffectSettings, Layout,
-    LayoutMetadata, RgbBrightness, RgbMatrixEffect, RgbOverlayRippleSettings, RgbSaturation,
-    RippleColorMode, TapDanceAction, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    LayoutMetadata, PaletteFxEffect, PaletteFxPalette, PaletteFxSettings, RgbBrightness,
+    RgbMatrixEffect, RgbOverlayRippleSettings, RgbSaturation, RippleColorMode, TapDanceAction,
+    TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

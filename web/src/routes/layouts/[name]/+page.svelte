@@ -31,7 +31,8 @@
 		SwitchVariantResponse,
 		RenderMetadataResponse,
 		BuildJob,
-		BuildArtifact
+		BuildArtifact,
+		PaletteFxSettings
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
 	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
@@ -75,6 +76,7 @@
 		{ id: 'tap-dance', label: 'Tap Dance Actions', icon: 'TD' },
 		{ id: 'combos', label: 'Two-Key Holds', icon: 'CB' },
 		{ id: 'idle-effect', label: 'Idle Lighting', icon: 'ID' },
+		{ id: 'palette-fx', label: 'PaletteFX', icon: 'PF' },
 		{ id: 'overlay-ripple', label: 'Ripple Lighting', icon: 'OR' },
 		{ id: 'review', label: 'Review Layout', icon: 'RV' }
 	];
@@ -1306,6 +1308,22 @@
 		} else if (field === 'ignore_layer_switch') {
 			layout.rgb_overlay_ripple.ignore_layer_switch = value as boolean;
 		}
+		layout = { ...layout };
+		isDirty = true;
+	}
+
+	function updatePaletteFx(field: string, value: boolean | number | string) {
+		if (!layout) return;
+		if (!layout.palette_fx) {
+			layout.palette_fx = {
+				enabled: true,
+				default_effect: 'Flow',
+				default_palette: 'Synthwave',
+				enable_all_effects: true,
+				enable_all_palettes: true
+			};
+		}
+		layout.palette_fx[field as keyof PaletteFxSettings] = value as never;
 		layout = { ...layout };
 		isDirty = true;
 	}
@@ -2647,6 +2665,73 @@
 							<option value="Jellybean Raindrops">Jellybean Raindrops</option>
 						</select>
 						<p class="text-xs text-muted-foreground mt-1">Visual pattern shown during idle period.</p>
+					</div>
+				</div>
+			</Card>
+		{:else if activeTab === 'palette-fx'}
+			<!-- PaletteFX Tab -->
+			<Card class="p-6">
+				<h2 class="text-lg font-semibold mb-4">PaletteFX Effects</h2>
+				<p class="text-muted-foreground text-sm mb-6">
+					Replace custom ripple overlay with community module effects using professional color palettes.
+				</p>
+				<details class="mb-6 rounded-lg border border-border bg-muted/20 p-4">
+					<summary class="cursor-pointer font-medium">About PaletteFX</summary>
+					<p class="mt-2 text-sm text-muted-foreground">
+						PaletteFX provides animated RGB effects driven by curated color palettes. Requires QMK 0.28+ and the getreuer/palettefx community module installed in qmk_firmware/modules/getreuer/.
+					</p>
+				</details>
+				<div class="space-y-4 max-w-md">
+					<div class="flex items-center gap-3">
+						<input type="checkbox" id="pfx-enabled" checked={layout.palette_fx?.enabled ?? false}
+							onchange={(e) => updatePaletteFx('enabled', e.currentTarget.checked)} class="w-4 h-4" />
+						<label for="pfx-enabled" class="text-sm font-medium">PaletteFX Enabled</label>
+					</div>
+					<div>
+						<label for="pfx-effect" class="block text-sm font-medium text-muted-foreground mb-1">Default Effect</label>
+						<select id="pfx-effect" class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+							value={layout.palette_fx?.default_effect ?? 'Flow'}
+							onchange={(e) => updatePaletteFx('default_effect', e.currentTarget.value)}>
+							<option value="Gradient">Gradient</option>
+							<option value="Flow">Flow</option>
+							<option value="Ripple">Ripple</option>
+							<option value="Sparkle">Sparkle</option>
+							<option value="Vortex">Vortex</option>
+							<option value="Reactive">Reactive</option>
+						</select>
+					</div>
+					<div>
+						<label for="pfx-palette" class="block text-sm font-medium text-muted-foreground mb-1">Default Palette</label>
+						<select id="pfx-palette" class="w-full px-3 py-2 border border-border rounded-lg bg-background"
+							value={layout.palette_fx?.default_palette ?? 'Synthwave'}
+							onchange={(e) => updatePaletteFx('default_palette', e.currentTarget.value)}>
+							<option value="Afterburn">Afterburn</option>
+							<option value="Amber">Amber</option>
+							<option value="Bad Wolf">Bad Wolf</option>
+							<option value="Carnival">Carnival</option>
+							<option value="Classic">Classic</option>
+							<option value="Dracula">Dracula</option>
+							<option value="Groovy">Groovy</option>
+							<option value="Not Pink">Not Pink</option>
+							<option value="Phosphor">Phosphor</option>
+							<option value="Polarized">Polarized</option>
+							<option value="Rose Gold">Rose Gold</option>
+							<option value="Sport">Sport</option>
+							<option value="Synthwave">Synthwave</option>
+							<option value="Thermal">Thermal</option>
+							<option value="Viridis">Viridis</option>
+							<option value="Watermelon">Watermelon</option>
+						</select>
+					</div>
+					<div class="flex items-center gap-3">
+						<input type="checkbox" id="pfx-all-effects" checked={layout.palette_fx?.enable_all_effects ?? true}
+							onchange={(e) => updatePaletteFx('enable_all_effects', e.currentTarget.checked)} class="w-4 h-4" />
+						<label for="pfx-all-effects" class="text-sm font-medium">Enable All Effects</label>
+					</div>
+					<div class="flex items-center gap-3">
+						<input type="checkbox" id="pfx-all-palettes" checked={layout.palette_fx?.enable_all_palettes ?? true}
+							onchange={(e) => updatePaletteFx('enable_all_palettes', e.currentTarget.checked)} class="w-4 h-4" />
+						<label for="pfx-all-palettes" class="text-sm font-medium">Enable All Palettes</label>
 					</div>
 				</div>
 			</Card>

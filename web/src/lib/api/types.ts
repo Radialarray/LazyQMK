@@ -32,6 +32,8 @@ export interface Layout {
 	idle_effect_settings?: IdleEffectSettings;
 	// RGB overlay ripple settings
 	rgb_overlay_ripple?: RgbOverlayRippleSettings;
+	// PaletteFX settings
+	palette_fx?: PaletteFxSettings;
 	// Tap-hold settings
 	tap_hold_settings?: TapHoldSettings;
 	// Combo settings
@@ -68,6 +70,14 @@ export interface IdleEffectSettings {
 	idle_timeout_ms: number;
 	idle_effect_duration_ms: number;
 	idle_effect_mode: string;
+}
+
+export interface PaletteFxSettings {
+	enabled?: boolean;
+	default_effect?: string;
+	default_palette?: string;
+	enable_all_effects?: boolean;
+	enable_all_palettes?: boolean;
 }
 
 export interface RgbOverlayRippleSettings {

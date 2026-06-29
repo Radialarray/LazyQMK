@@ -73,6 +73,12 @@ impl<'a> FirmwareGenerator<'a> {
             self.write_file_to_both(&timestamp_dir, "rules.mk", &rules_mk)?;
         }
 
+        // Generate keymap.json (for QMK community modules like PaletteFX)
+        let keymap_json = self.generate_keymap_json();
+        if !keymap_json.is_empty() {
+            self.write_file_to_both(&timestamp_dir, "keymap.json", &keymap_json)?;
+        }
+
         Ok((keymap_path, config_h_path))
     }
 
@@ -202,6 +208,15 @@ impl<'a> FirmwareGenerator<'a> {
         // Add combo code if enabled
         code.push('\n');
         code.push_str(&self.generate_combo_code()?);
+
+        // Bootloader combo timer check (runs independently of idle/ripple)
+        code.push('\n');
+        code.push_str("// Bootloader combo: check timer in housekeeping task\n");
+        code.push_str("void housekeeping_task_user(void) {\n");
+        code.push_str("    if (bootloader_combo_active && timer_elapsed32(bootloader_combo_timer) > 1500) {\n");
+        code.push_str("        bootloader_jump();\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
 
         Ok(code)
     }
@@ -599,9 +614,18 @@ impl<'a> FirmwareGenerator<'a> {
         // Mirror the same guard used in generate_ripple_overlay_code so that
         // has_ripple is only true when LQMK_RIPPLE_OVERLAY_ENABLED will actually
         // be #defined (i.e., ripple enabled AND keyboard has RGB matrix).
-        let has_ripple = self.layout.rgb_overlay_ripple.enabled && self.geometry.has_rgb_matrix();
+        // Ripple overlay works independently of PaletteFX — PaletteFX is only
+        // used as an idle screensaver, not a replacement for keypress feedback.
+        let has_ripple = self.layout.rgb_overlay_ripple.enabled
+            && self.geometry.has_rgb_matrix();
 
         let mut code = String::new();
+
+        // Bootloader combo state (file scope, works regardless of idle/ripple)
+        code.push_str("// Bootloader combo: Q+R (left) or U+P (right) held for 1500ms\n");
+        code.push_str("static uint32_t bootloader_combo_timer = 0;\n");
+        code.push_str("static bool bootloader_combo_active = false;\n");
+        code.push('\n');
 
         code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
         code.push_str("#ifdef LQMK_IDLE_TIMEOUT_MS\n");
@@ -668,6 +692,43 @@ impl<'a> FirmwareGenerator<'a> {
             code.push('\n');
         }
 
+        // Bootloader combo detection: Q+R (left) or U+P (right) held for 1500ms
+        code.push_str("    // Bootloader combo: Q+R (left) or U+P (right) held for 1500ms\n");
+        code.push_str("    {\n");
+        code.push_str("        bool is_combo_key = (keycode == KC_Q || keycode == KC_R\n");
+        code.push_str("                          || keycode == KC_U || keycode == KC_P);\n");
+        code.push_str("        if (is_combo_key) {\n");
+        code.push_str("            static bool q_held = false;\n");
+        code.push_str("            static bool r_held = false;\n");
+        code.push_str("            static bool u_held = false;\n");
+        code.push_str("            static bool p_held = false;\n");
+        code.push('\n');
+        code.push_str("            if (record->event.pressed) {\n");
+        code.push_str("                if (keycode == KC_Q) q_held = true;\n");
+        code.push_str("                if (keycode == KC_R) r_held = true;\n");
+        code.push_str("                if (keycode == KC_U) u_held = true;\n");
+        code.push_str("                if (keycode == KC_P) p_held = true;\n");
+        code.push_str("            } else {\n");
+        code.push_str("                if (keycode == KC_Q) q_held = false;\n");
+        code.push_str("                if (keycode == KC_R) r_held = false;\n");
+        code.push_str("                if (keycode == KC_U) u_held = false;\n");
+        code.push_str("                if (keycode == KC_P) p_held = false;\n");
+        code.push_str("            }\n");
+        code.push('\n');
+        code.push_str("            // Check if either pair is complete\n");
+        code.push_str("            bool pair_active = (q_held && r_held) || (u_held && p_held);\n");
+        code.push_str("            if (pair_active) {\n");
+        code.push_str("                if (!bootloader_combo_active) {\n");
+        code.push_str("                    bootloader_combo_timer = timer_read32();\n");
+        code.push_str("                    bootloader_combo_active = true;\n");
+        code.push_str("                }\n");
+        code.push_str("            } else {\n");
+        code.push_str("                bootloader_combo_active = false;\n");
+        code.push_str("            }\n");
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push('\n');
+
         code.push_str("    if (record->event.pressed");
         if has_ripple {
             code.push_str(" || ripple_triggered");
@@ -684,7 +745,9 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            }\n");
         code.push('\n');
 
-        // Restore the appropriate mode based on whether layout has custom colors
+        // Restore the appropriate mode on keypress
+        // When PaletteFX is enabled, we still restore TUI layer colors — PaletteFX
+        // is only used as idle screensaver, not the default operating mode.
         if self.layout_has_custom_colors() {
             code.push_str("            // Restore TUI layer colors mode\n");
             code.push_str("            rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS);\n");
@@ -715,25 +778,38 @@ impl<'a> FirmwareGenerator<'a> {
 
     /// Generates RGB overlay ripple code if enabled.
     ///
-    /// Emits C code for ripple effects triggered on keypress using
-    /// `rgb_matrix_indicators_advanced_user` for additive overlay rendering.
-    /// The code integrates with existing `process_record_user` if present (from idle effect).
-    #[allow(clippy::unnecessary_wraps)]
-    #[allow(clippy::cast_possible_truncation)]
+    /// Emits C code to manage ripple effects triggered by keypresses using
+    /// `rgb_matrix_indicators_advanced_user` for overlay on top of TUI layer colors.
+    ///
+    /// NOTE: Ripple overlay works independently of PaletteFX — PaletteFX is
+    /// only used as an idle screensaver effect.
+    #[allow(clippy::too_many_lines)]
     fn generate_ripple_overlay_code(&self) -> Result<String> {
-        // Only generate if ripple overlay is enabled and keyboard has RGB
+        // Only generate if ripple is enabled and keyboard has RGB.
+        // NOTE: PaletteFX does NOT replace key-action effects — it is an idle
+        // screensaver only. Key-action ripple overlay runs independently.
         if !self.layout.rgb_overlay_ripple.enabled || !self.geometry.has_rgb_matrix() {
             return Ok(String::new());
         }
 
         let settings = &self.layout.rgb_overlay_ripple;
         settings.validate()?;
+
+        let has_palettefx = self.layout.palette_fx.enabled;
+        let color_mode = settings.color_mode;
+
         let mut code = String::new();
 
         code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
         code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
         code.push('\n');
-        code.push_str("// RGB Overlay Ripple Configuration\n");
+        code.push_str("// Reactive key-action overlay (PaletteFX-inspired algorithm)\n");
+        code.push_str("// Renders a radial burst around hit keys that fades with a smooth\n");
+        code.push_str("// amplitude curve. When PaletteFX is compiled in, uses its palette\n");
+        code.push_str("// color lookup; otherwise falls back to the configured color mode.\n");
+        code.push('\n');
+        code.push_str("// Forward declaration from QMK (used for per-key layer resolution)\n");
+        code.push_str("uint8_t layer_switch_get_layer(keypos_t key);\n");
         code.push('\n');
 
         // Ripple state structure
@@ -748,7 +824,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES] = {0};\n");
         code.push('\n');
 
-        // Helper: Add new ripple
+        // Helper: Add new ripple (find empty slot or replace oldest)
         code.push_str("static void lazyqmk_ripple_add(uint8_t led_index) {\n");
         code.push_str("    // Find an empty slot or the oldest ripple\n");
         code.push_str("    uint8_t oldest_idx = 0;\n");
@@ -774,30 +850,8 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        // Helper: Calculate distance between two LED indices
-        code.push_str("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2) {\n");
-        code.push_str("    // 2D Euclidean distance using physical LED positions\n");
-        code.push_str("    int16_t dx = (int16_t)g_led_config.point[led1].x - (int16_t)g_led_config.point[led2].x;\n");
-        code.push_str("    int16_t dy = (int16_t)g_led_config.point[led1].y - (int16_t)g_led_config.point[led2].y;\n");
-        code.push_str("    // Use integer approximation of sqrt(dx*dx + dy*dy)\n");
-        code.push_str("    // QMK coordinates are 0-224 for X and 0-64 for Y\n");
-        code.push_str("    // Cast to int32_t before multiply to avoid signed overflow UB on AVR (16-bit int)\n");
-        code.push_str("    uint32_t dist_sq = (uint32_t)((int32_t)dx * dx + (int32_t)dy * dy);\n");
-        code.push_str("    // Fast integer square root approximation\n");
-        code.push_str("    if (dist_sq == 0) return 0;\n");
-        code.push_str("    uint32_t x = dist_sq;\n");
-        code.push_str("    uint32_t y = (x + 1) / 2;\n");
-        code.push_str("    while (y < x) {\n");
-        code.push_str("        x = y;\n");
-        code.push_str("        y = (x + dist_sq / x) / 2;\n");
-        code.push_str("    }\n");
-        code.push_str("    return (uint8_t)(x > 255 ? 255 : x);\n");
-        code.push_str("}\n");
-        code.push('\n');
-
         // Helper: Map matrix position to LED index
         code.push_str("static uint8_t lazyqmk_matrix_to_led(uint8_t row, uint8_t col) {\n");
-        code.push_str("    // Use QMK's g_led_config to map matrix position to LED index\n");
         code.push_str("    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {\n");
         code.push_str("        if (g_led_config.matrix_co[row][col] == i) {\n");
         code.push_str("            return i;\n");
@@ -808,186 +862,208 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        code.push_str("static uint8_t lazyqmk_ripple_add_u8(uint8_t lhs, uint8_t rhs) {\n");
-        code.push_str("    uint16_t sum = (uint16_t)lhs + rhs;\n");
-        code.push_str("    return (uint8_t)(sum > 255 ? 255 : sum);\n");
-        code.push_str("}\n");
+        // LED->matrix position lookup for per-key layer resolution
+        let led_to_matrix = &self.mapping.led_to_matrix;
+        let led_count = self.mapping.key_count();
+        let mut led_row_vals = String::new();
+        let mut led_col_vals = String::new();
+        for (i, &(row, col)) in led_to_matrix.iter().enumerate() {
+            if i > 0 {
+                led_row_vals.push_str(", ");
+                led_col_vals.push_str(", ");
+            }
+            led_row_vals.push_str(&format!("{}", row));
+            led_col_vals.push_str(&format!("{}", col));
+        }
+        code.push_str("// LED index -> matrix position mapping (for per-key layer resolution)\n");
+        code.push_str(&format!(
+            "const uint8_t PROGMEM lazyqmk_led_to_matrix_row[{led_count}] = {{ {led_row_vals} }};\n"
+        ));
+        code.push_str(&format!(
+            "const uint8_t PROGMEM lazyqmk_led_to_matrix_col[{led_count}] = {{ {led_col_vals} }};\n"
+        ));
         code.push('\n');
 
-        code.push_str("static uint8_t lazyqmk_ripple_scale_u8(uint8_t value, uint8_t scale) {\n");
-        code.push_str("    return (uint8_t)(((uint16_t)value * scale) / 255);\n");
-        code.push_str("}\n");
-        code.push('\n');
-
+        // Base color lookup (per-key layer colors or fallback)
         code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
         code.push_str("    RGB color = {0, 0, 0};\n");
         code.push('\n');
         code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
-        code.push_str("    uint8_t layer = get_highest_layer(layer_state);\n");
+        code.push_str("    uint8_t row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
+        code.push_str("    uint8_t col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
+        code.push_str("    keypos_t key = { .row = row, .col = col };\n");
+        code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
         code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
-        code.push_str(
-            "        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n",
-        );
-        code.push_str(
-            "        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n",
-        );
-        code.push_str(
-            "        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n",
-        );
+        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
+        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
+        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
         code.push_str("        return color;\n");
         code.push_str("    }\n");
         code.push_str("#endif\n");
         code.push('\n');
-        code.push_str("    // Fallback to current matrix HSV snapshot when no per-layer base colors exist\n");
-        code.push_str("    // This preserves configured global color, but not exact per-LED animated frames\n");
-        code.push_str("    rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());\n");
+        code.push_str("    rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());\n");
         code.push_str("    color.r = matrix_rgb.r;\n");
         code.push_str("    color.g = matrix_rgb.g;\n");
         code.push_str("    color.b = matrix_rgb.b;\n");
-        code.push('\n');
         code.push_str("    return color;\n");
         code.push_str("}\n");
         code.push('\n');
 
-        code.push_str("static hsv_t lazyqmk_ripple_rgb_to_hsv(RGB color) {\n");
-        code.push_str("    hsv_t hsv = {0, 0, 0};\n");
-        code.push_str("    uint8_t rgb_max = color.r;\n");
-        code.push_str("    uint8_t rgb_min = color.r;\n");
-        code.push('\n');
-        code.push_str("    if (color.g > rgb_max) rgb_max = color.g;\n");
-        code.push_str("    if (color.b > rgb_max) rgb_max = color.b;\n");
-        code.push_str("    if (color.g < rgb_min) rgb_min = color.g;\n");
-        code.push_str("    if (color.b < rgb_min) rgb_min = color.b;\n");
-        code.push('\n');
-        code.push_str("    hsv.v = rgb_max;\n");
-        code.push_str("    if (rgb_max == 0) {\n");
-        code.push_str("        return hsv;\n");
-        code.push_str("    }\n");
-        code.push('\n');
-        code.push_str("    uint8_t delta = rgb_max - rgb_min;\n");
-        code.push_str("    hsv.s = (uint8_t)(((uint16_t)delta * 255) / rgb_max);\n");
-        code.push_str("    if (delta == 0) {\n");
-        code.push_str("        return hsv;\n");
-        code.push_str("    }\n");
-        code.push('\n');
-        code.push_str("    int16_t hue;\n");
-        code.push_str("    if (rgb_max == color.r) {\n");
-        code.push_str(
-            "        hue = (int16_t)((43 * ((int16_t)color.g - (int16_t)color.b)) / delta);\n",
-        );
-        code.push_str("    } else if (rgb_max == color.g) {\n");
-        code.push_str(
-            "        hue = (int16_t)(85 + (43 * ((int16_t)color.b - (int16_t)color.r)) / delta);\n",
-        );
+        // PaletteFX amplitude function — same curve as the community module's
+        // Reactive effect. Linear ramp 0->32ms, plateau 32->55ms, smooth decay after.
+        //
+        // Ported from PaletteFx by Pascal Getreuer (Apache 2.0, Google LLC).
+        code.push_str("// Amplitude curve: linear ramp (0-31ms), plateau (32-55ms), quadratic decay\n");
+        code.push_str("static uint8_t lazyqmk_reactive_amplitude(uint8_t t) {\n");
+        code.push_str("    if (t <= 55) {\n");
+        code.push_str("        return (t < 32) ? (uint8_t)(4 + 8 * t) : 255;\n");
         code.push_str("    } else {\n");
-        code.push_str("        hue = (int16_t)(171 + (43 * ((int16_t)color.r - (int16_t)color.g)) / delta);\n");
+        code.push_str("        t = (uint8_t)(((uint16_t)(255 - t) * (uint16_t)164) >> 7);\n");
+        code.push_str("        return scale8(t, t);\n");
         code.push_str("    }\n");
-        code.push('\n');
-        code.push_str("    while (hue < 0) hue += 256;\n");
-        code.push_str("    while (hue >= 256) hue -= 256;\n");
-        code.push_str("    hsv.h = (uint8_t)hue;\n");
-        code.push_str("    return hsv;\n");
         code.push_str("}\n");
         code.push('\n');
 
-        // Helper: Apply ripple effect to LED without repainting unaffected LEDs
-        code.push_str("static bool lazyqmk_ripple_apply(uint8_t led_index) {\n");
+        // Reactive apply: compute the burst contribution for a single LED.
+        // Uses PaletteFX's radial bump algorithm with qadd8 saturation blending.
+        // When PaletteFX is compiled in, color comes from palettefx_interp_color().
+        // Otherwise, color comes from the configured ripple color mode.
+        code.push_str("static void lazyqmk_reactive_apply(uint8_t led_index) {\n");
         code.push_str("    uint32_t now = timer_read32();\n");
-        code.push_str("    RGB color = lazyqmk_ripple_base_color(led_index);\n");
-        code.push_str("    RGB base_color = color;\n");
-        code.push_str("    bool led_changed = false;\n");
+        code.push_str("    uint8_t brightness = 0;\n");
         code.push('\n');
         code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
         code.push_str("        if (!ripples[i].active) continue;\n");
         code.push('\n');
-        code.push_str("        uint32_t elapsed = now - ripples[i].start_time;\n");
-        code.push_str("        if (elapsed >= LQMK_RIPPLE_DURATION_MS) {\n");
+        code.push_str("        uint32_t elapsed_ms = now - ripples[i].start_time;\n");
+        code.push_str("        if (elapsed_ms >= LQMK_RIPPLE_DURATION_MS) {\n");
         code.push_str("            ripples[i].active = false;\n");
         code.push_str("            continue;\n");
         code.push_str("        }\n");
         code.push('\n');
-        code.push_str("        // Calculate ripple radius in physical LED coordinate space\n");
-        code.push_str("        uint8_t radius = (uint8_t)((elapsed * LQMK_RIPPLE_SPEED) / LQMK_RIPPLE_DURATION_MS);\n");
-        code.push_str("        uint8_t distance = lazyqmk_ripple_distance(led_index, ripples[i].led_index);\n");
+        code.push_str("        // Scale elapsed time by speed factor (matching PaletteFX's approach)\n");
+        code.push_str(
+            "        uint16_t tick = scale16by8((uint16_t)elapsed_ms, (uint8_t)(1 + LQMK_RIPPLE_SPEED / 4));\n",
+        );
+        code.push_str("        if (tick > 255) continue;\n");
+        code.push_str("        uint8_t amp = lazyqmk_reactive_amplitude((uint8_t)tick);\n");
         code.push('\n');
-        code.push_str("        // Check if LED is within ripple band\n");
-        code.push_str(
-            "        if (distance >= radius && distance < radius + LQMK_RIPPLE_BAND_WIDTH) {\n",
-        );
-        code.push_str(
-            "            uint8_t fade = 255 - ((elapsed * 255) / LQMK_RIPPLE_DURATION_MS);\n",
-        );
-        code.push_str(
-            "            uint8_t brightness = (LQMK_RIPPLE_AMPLITUDE_PCT * fade) / 100;\n",
-        );
-        code.push_str("            led_changed = true;\n");
+        code.push_str("        // Compute distance from this LED to the hit LED\n");
+        code.push_str("        uint8_t hit_x = g_led_config.point[ripples[i].led_index].x;\n");
+        code.push_str("        uint8_t hit_y = g_led_config.point[ripples[i].led_index].y;\n");
+        code.push_str("        uint8_t led_x = g_led_config.point[led_index].x;\n");
+        code.push_str("        uint8_t led_y = g_led_config.point[led_index].y;\n");
+        code.push('\n');
+        code.push_str("        uint8_t dx = abs8((led_x - hit_x) / 2);\n");
+        code.push_str("        uint8_t dy = abs8((led_y - hit_y) / 2);\n");
+        code.push_str("        if (dx >= 21 || dy >= 21) continue;\n");
+        code.push('\n');
+        code.push_str("        uint16_t dist_sqr = (uint16_t)dx * dx + (uint16_t)dy * dy;\n");
+        code.push_str("        if (dist_sqr >= (uint16_t)(21 * 21)) continue;\n");
+        code.push_str("        uint8_t dist = sqrt16(dist_sqr);\n");
+        code.push('\n');
+        code.push_str("        // Radial bump: peaks at center, linear falloff to 21-unit radius\n");
+        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 12 * dist), amp);\n");
+        code.push_str("        brightness = qadd8(brightness, bump);\n");
+        code.push_str("        if (brightness == 255) break;\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    // Nothing to render\n");
+        code.push_str("    if (brightness == 0) return;\n");
         code.push('\n');
 
-        let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 256) / 360;
+        // Color application: PaletteFX path vs. simple color mode path
+        if has_palettefx {
+            code.push_str("    // Use PaletteFX palette lookup for rich gradient colors\n");
+            // If user selected a specific palette for key actions, use it.
+            // Otherwise fall back to the current active palette.
+            if let Some(ref palette) = settings.key_action_palette {
+                let index = *palette as u8;
+                code.push_str(&format!(
+                    "    const uint16_t* palette = palettefx_get_palette_data_by_index({index});  // {name}\n",
+                    name = palette.display_name()
+                ));
+            } else {
+                code.push_str(
+                    "    const uint16_t* palette = palettefx_get_palette_data();  // current palette\n",
+                );
+            }
+            code.push_str("    hsv_t hsv = palettefx_interp_color(palette, brightness);\n");
+            code.push_str("    // Darken background for subtle hits (matching original PaletteFX)\n");
+            code.push_str("    if (brightness < 32) {\n");
+            code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
+            code.push_str("    }\n");
+            code.push_str("    rgb_t contrib = rgb_matrix_hsv_to_rgb(hsv);\n");
+            code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
+            code.push_str("    base.r = qadd8(base.r, contrib.r);\n");
+            code.push_str("    base.g = qadd8(base.g, contrib.g);\n");
+            code.push_str("    base.b = qadd8(base.b, contrib.b);\n");
+            code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
+        } else {
+            // Fallback: use the configured color mode (Fixed / KeyBased / HueShift)
+            code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
+            code.push_str("    uint8_t contrib_r, contrib_g, contrib_b;\n");
+            code.push('\n');
 
-        // Apply color based on color mode
-        match settings.color_mode {
-            crate::models::layout::RippleColorMode::Fixed => {
-                let color = &settings.fixed_color;
-                code.push_str(&format!(
-                    "            // Fixed color mode (R={}, G={}, B={})\n",
-                    color.r, color.g, color.b
-                ));
-                code.push_str(&format!(
-                    "            color.r = lazyqmk_ripple_add_u8(color.r, lazyqmk_ripple_scale_u8({}, brightness));\n",
-                    color.r
-                ));
-                code.push_str(&format!(
-                    "            color.g = lazyqmk_ripple_add_u8(color.g, lazyqmk_ripple_scale_u8({}, brightness));\n",
-                    color.g
-                ));
-                code.push_str(&format!(
-                    "            color.b = lazyqmk_ripple_add_u8(color.b, lazyqmk_ripple_scale_u8({}, brightness));\n",
-                    color.b
-                ));
+            match color_mode {
+                crate::models::layout::RippleColorMode::Fixed => {
+                    let color = &settings.fixed_color;
+                    code.push_str("    // Fixed color mode: use the configured fixed color\n");
+                    code.push_str(&format!(
+                        "    contrib_r = scale8({}, brightness);\n",
+                        color.r
+                    ));
+                    code.push_str(&format!(
+                        "    contrib_g = scale8({}, brightness);\n",
+                        color.g
+                    ));
+                    code.push_str(&format!(
+                        "    contrib_b = scale8({}, brightness);\n",
+                        color.b
+                    ));
+                }
+                crate::models::layout::RippleColorMode::KeyBased => {
+                    code.push_str("    // Key color mode: use the trigger key's resolved base color\n");
+                    code.push_str(
+                        "    // NOTE: Uses the LAST active ripple's color when multiple overlap\n",
+                    );
+                    code.push_str("    {\n");
+                    code.push_str("        RGB key_color = {0, 0, 0};\n");
+                    code.push_str("        for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
+                    code.push_str("            if (ripples[i].active) {\n");
+                    code.push_str("                key_color = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
+                    code.push_str("            }\n");
+                    code.push_str("        }\n");
+                    code.push_str("        contrib_r = scale8(key_color.r, brightness);\n");
+                    code.push_str("        contrib_g = scale8(key_color.g, brightness);\n");
+                    code.push_str("        contrib_b = scale8(key_color.b, brightness);\n");
+                    code.push_str("    }\n");
+                }
+                crate::models::layout::RippleColorMode::HueShift => {
+                    let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 256) / 360;
+                    code.push_str("    // Hue shift mode: shift the base color's hue by configured degrees\n");
+                    code.push_str("    {\n");
+                    code.push_str("        hsv_t hsv = rgb_to_hsv(base);\n");
+                    code.push_str(&format!(
+                        "        int16_t shifted_hue = (int16_t)hsv.h + {};\n",
+                        hue_shift_steps
+                    ));
+                    code.push_str("        while (shifted_hue < 0) shifted_hue += 256;\n");
+                    code.push_str("        while (shifted_hue >= 256) shifted_hue -= 256;\n");
+                    code.push_str("        hsv.h = (uint8_t)shifted_hue;\n");
+                    code.push_str("        rgb_t shifted = hsv_to_rgb(hsv);\n");
+                    code.push_str("        contrib_r = scale8(shifted.r, brightness);\n");
+                    code.push_str("        contrib_g = scale8(shifted.g, brightness);\n");
+                    code.push_str("        contrib_b = scale8(shifted.b, brightness);\n");
+                    code.push_str("    }\n");
+                }
             }
-            crate::models::layout::RippleColorMode::KeyBased => {
-                code.push_str("            // Key color mode (boost key's resolved base color)\n");
-                code.push_str(
-                    "            color.r = lazyqmk_ripple_add_u8(color.r, brightness);\n",
-                );
-                code.push_str(
-                    "            color.g = lazyqmk_ripple_add_u8(color.g, brightness);\n",
-                );
-                code.push_str(
-                    "            color.b = lazyqmk_ripple_add_u8(color.b, brightness);\n",
-                );
-            }
-            crate::models::layout::RippleColorMode::HueShift => {
-                code.push_str(&format!(
-                    "            // Hue shift mode (shift by {} degrees / {} hue steps)\n",
-                    settings.hue_shift_deg, hue_shift_steps
-                ));
-                code.push_str(
-                    "            hsv_t shifted_hsv = lazyqmk_ripple_rgb_to_hsv(base_color);\n",
-                );
-                code.push_str(&format!(
-                    "            int16_t shifted_hue = (int16_t)shifted_hsv.h + {};\n",
-                    hue_shift_steps
-                ));
-                code.push_str("            while (shifted_hue < 0) shifted_hue += 256;\n");
-                code.push_str("            while (shifted_hue >= 256) shifted_hue -= 256;\n");
-                code.push_str("            shifted_hsv.h = (uint8_t)shifted_hue;\n");
-                code.push_str("            rgb_t shifted_rgb = hsv_to_rgb(shifted_hsv);\n");
-                code.push_str("            color.r = lazyqmk_ripple_add_u8(color.r, lazyqmk_ripple_scale_u8(shifted_rgb.r, brightness));\n");
-                code.push_str("            color.g = lazyqmk_ripple_add_u8(color.g, lazyqmk_ripple_scale_u8(shifted_rgb.g, brightness));\n");
-                code.push_str("            color.b = lazyqmk_ripple_add_u8(color.b, lazyqmk_ripple_scale_u8(shifted_rgb.b, brightness));\n");
-            }
+
+            code.push_str("    base.r = qadd8(base.r, contrib_r);\n");
+            code.push_str("    base.g = qadd8(base.g, contrib_g);\n");
+            code.push_str("    base.b = qadd8(base.b, contrib_b);\n");
+            code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
         }
-
-        code.push_str("        }\n");
-        code.push_str("    }\n");
-        code.push('\n');
-        code.push_str("    if (led_changed) {\n");
-        code.push_str("        rgb_matrix_set_color(led_index, color.r, color.g, color.b);\n");
-        code.push_str("    }\n");
-        code.push('\n');
-        code.push_str("    return led_changed;\n");
         code.push_str("}\n");
         code.push('\n');
 
@@ -1031,15 +1107,13 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        // RGB Matrix indicators hook with weak attribute
+        // RGB Matrix advanced indicators hook — applies the reactive overlay
+        // on top of whatever the current RGB matrix effect rendered.
         code.push_str(
             "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
-        code.push_str(
-            "        // Apply ripple overlay only to affected LEDs using layer colors or HSV fallback\n",
-        );
-        code.push_str("        lazyqmk_ripple_apply(i);\n");
+        code.push_str("        lazyqmk_reactive_apply(i);\n");
         code.push_str("    }\n");
         code.push_str("    return false;\n");
         code.push_str("}\n");
@@ -1419,6 +1493,23 @@ impl<'a> FirmwareGenerator<'a> {
         content
     }
 
+    /// Generates keymap.json for QMK community module support.
+    ///
+    /// Currently only generates module references when PaletteFX is enabled.
+    /// Returns an empty string if no modules are needed.
+    pub fn generate_keymap_json(&self) -> String {
+        if !self.layout.palette_fx.enabled {
+            return String::new();
+        }
+
+        // Use serde_json to produce compact valid JSON
+        let modules = serde_json::json!({
+            "modules": ["getreuer/palettefx"]
+        });
+
+        serde_json::to_string_pretty(&modules).unwrap_or_default()
+    }
+
     /// Generates config.h for the keymap.
     ///
     /// This generates a minimal keymap-specific config.h.
@@ -1515,7 +1606,10 @@ impl<'a> FirmwareGenerator<'a> {
 
         // === Idle Effect Settings ===
         // When idle effect is enabled, we use a custom state machine instead of RGB_MATRIX_TIMEOUT
+        // When PaletteFX is enabled, the idle effect uses the PaletteFX default effect
+        // as the screensaver animation, rather than a standard RGB effect.
         let idle_settings = &self.layout.idle_effect_settings;
+        let palette_fx = &self.layout.palette_fx;
         if idle_settings.enabled && self.geometry.has_rgb_matrix() {
             content.push_str("\n// Idle Effect Configuration\n");
             content.push_str(&format!(
@@ -1526,10 +1620,18 @@ impl<'a> FirmwareGenerator<'a> {
                 "#define LQMK_IDLE_EFFECT_DURATION_MS {}\n",
                 idle_settings.idle_effect_duration_ms
             ));
-            content.push_str(&format!(
-                "#define LQMK_IDLE_EFFECT_MODE {}\n",
-                idle_settings.idle_effect_mode.qmk_mode_name()
-            ));
+            // When PaletteFX is enabled, use its effect as the idle screensaver animation
+            if palette_fx.enabled {
+                content.push_str(&format!(
+                    "#define LQMK_IDLE_EFFECT_MODE {}\n",
+                    palette_fx.default_effect.qmk_mode_name()
+                ));
+            } else {
+                content.push_str(&format!(
+                    "#define LQMK_IDLE_EFFECT_MODE {}\n",
+                    idle_settings.idle_effect_mode.qmk_mode_name()
+                ));
+            }
         } else {
             // RGB Matrix timeout (auto-off after inactivity) - only when idle effect is disabled
             if self.layout.rgb_timeout_ms > 0 {
@@ -1541,9 +1643,9 @@ impl<'a> FirmwareGenerator<'a> {
             }
         }
 
-        // If the keyboard has RGB matrix and the layout defines
-        // any custom colors, default to the TUI-driven lighting
-        // mode so firmware reflects the editor by default.
+        // If the keyboard has RGB matrix, set the default mode.
+        // PaletteFX effects are ONLY used as idle screensaver, never as the default mode.
+        // The default mode is always TUI_LAYER_COLORS when custom colors are configured.
         if self.geometry.has_rgb_matrix() && self.layout_has_custom_colors() {
             content.push_str("\n// Default to TUI layer-aware RGB colors when available\n");
             content.push_str("#ifdef RGB_MATRIX_ENABLE\n");
@@ -1554,7 +1656,45 @@ impl<'a> FirmwareGenerator<'a> {
             content.push_str("#endif\n");
         }
 
+        // === PaletteFX Module Settings ===
+        // PaletteFX effects are used as idle screensaver animations.
+        // The PALETTEFX_ENABLE_* defines tell the module which effects/palettes
+        // to compile into the firmware.
+        let palette_fx = &self.layout.palette_fx;
+        if palette_fx.enabled && self.geometry.has_rgb_matrix() {
+            content.push_str("\n// PaletteFX Community Module Configuration\n");
+            content.push_str("// Note: PaletteFX runs as idle screensaver, not as default mode.\n");
+            content.push_str("// The idle effect state machine uses LQMK_IDLE_EFFECT_MODE (see above)\n");
+            content.push_str("// which is set to the PaletteFX default effect at compile time.\n");
+            content.push_str("#ifdef RGB_MATRIX_ENABLE\n");
+
+            // Enable all effects or individual effects
+            if palette_fx.enable_all_effects {
+                content.push_str("#    define PALETTEFX_ENABLE_ALL_EFFECTS\n");
+            } else {
+                content.push_str(&format!(
+                    "#    define {}\n",
+                    palette_fx.default_effect.enable_define()
+                ));
+            }
+
+            // Enable all palettes or individual palette
+            if palette_fx.enable_all_palettes {
+                content.push_str("#    define PALETTEFX_ENABLE_ALL_PALETTES\n");
+            } else {
+                content.push_str(&format!(
+                    "#    define {}\n",
+                    palette_fx.default_palette.enable_define()
+                ));
+            }
+
+            content.push_str("#endif // RGB_MATRIX_ENABLE\n");
+        }
+
         // === RGB Overlay Ripple Settings ===
+        // Key-action ripple overlay runs independently of PaletteFX.
+        // PaletteFX is only used as an idle screensaver, never as a replacement
+        // for key-triggered effects.
         let ripple_settings = &self.layout.rgb_overlay_ripple;
         if ripple_settings.enabled && self.geometry.has_rgb_matrix() {
             // Validate settings before generating

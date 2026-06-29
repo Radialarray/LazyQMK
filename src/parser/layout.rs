@@ -119,6 +119,7 @@ pub fn parse_markdown_layout_str(content: &str) -> Result<Layout> {
         uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
         idle_effect_settings: crate::models::IdleEffectSettings::default(),
         rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
+        palette_fx: crate::models::PaletteFxSettings::default(),
         tap_hold_settings: crate::models::TapHoldSettings::default(),
         combo_settings: crate::models::ComboSettings::default(),
         tap_dances: Vec::new(),
@@ -1020,6 +1021,76 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .trim()
                 .to_lowercase();
             layout.rgb_overlay_ripple.ignore_layer_switch =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse Ripple Key Action Palette (PaletteFX palette for reactive key bursts)
+        if line.starts_with("**Ripple Key Action Palette**:") {
+            let value = line
+                .strip_prefix("**Ripple Key Action Palette**:")
+                .unwrap()
+                .trim();
+            if value.eq_ignore_ascii_case("none") || value.eq_ignore_ascii_case("default") {
+                layout.rgb_overlay_ripple.key_action_palette = None;
+            } else if let Some(palette) = crate::models::PaletteFxPalette::from_name(value) {
+                layout.rgb_overlay_ripple.key_action_palette = Some(palette);
+            }
+        }
+
+        // === PaletteFX Settings ===
+
+        // Parse PaletteFX enabled/disabled
+        if line.starts_with("**PaletteFX**:") {
+            let value = line
+                .strip_prefix("**PaletteFX**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.palette_fx.enabled =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse PaletteFX Default Effect
+        if line.starts_with("**PaletteFX Default Effect**:") {
+            let value = line
+                .strip_prefix("**PaletteFX Default Effect**:")
+                .unwrap()
+                .trim();
+            if let Some(effect) = crate::models::PaletteFxEffect::from_name(value) {
+                layout.palette_fx.default_effect = effect;
+            }
+        }
+
+        // Parse PaletteFX Default Palette
+        if line.starts_with("**PaletteFX Default Palette**:") {
+            let value = line
+                .strip_prefix("**PaletteFX Default Palette**:")
+                .unwrap()
+                .trim();
+            if let Some(palette) = crate::models::PaletteFxPalette::from_name(value) {
+                layout.palette_fx.default_palette = palette;
+            }
+        }
+
+        // Parse PaletteFX All Effects
+        if line.starts_with("**PaletteFX All Effects**:") {
+            let value = line
+                .strip_prefix("**PaletteFX All Effects**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.palette_fx.enable_all_effects =
+                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+        }
+
+        // Parse PaletteFX All Palettes
+        if line.starts_with("**PaletteFX All Palettes**:") {
+            let value = line
+                .strip_prefix("**PaletteFX All Palettes**:")
+                .unwrap()
+                .trim()
+                .to_lowercase();
+            layout.palette_fx.enable_all_palettes =
                 matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
 

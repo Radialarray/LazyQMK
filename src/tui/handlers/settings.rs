@@ -4,8 +4,8 @@ use anyhow::Result;
 use crossterm::event;
 
 use crate::models::{
-    HoldDecisionMode, RgbBrightness, RgbMatrixEffect, RgbSaturation, RippleColorMode,
-    TapHoldPreset, UncoloredKeyBehavior,
+    HoldDecisionMode, PaletteFxEffect, PaletteFxPalette, RgbBrightness, RgbMatrixEffect,
+    RgbSaturation, RippleColorMode, TapHoldPreset, UncoloredKeyBehavior,
 };
 use crate::tui::settings_manager::{
     ManagerMode, SettingItem, SettingsManagerContext, SettingsManagerEvent,
@@ -483,10 +483,43 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.ignore_layer_switch,
                     );
                 }
+                SettingItem::OverlayRippleKeyActionPalette => {
+                    manager.state_mut().start_selecting_key_action_palette(
+                        state.layout.rgb_overlay_ripple.key_action_palette,
+                    );
+                }
                 SettingItem::OverlayRippleIgnoreTransparent => {
                     manager.state_mut().start_toggling_boolean(
                         *setting,
                         state.layout.rgb_overlay_ripple.ignore_transparent,
+                    );
+                }
+                // PaletteFX Settings
+                SettingItem::PaletteFxEnabled => {
+                    manager
+                        .state_mut()
+                        .start_toggling_boolean(*setting, state.layout.palette_fx.enabled);
+                }
+                SettingItem::PaletteFxDefaultEffect => {
+                    manager.state_mut().start_selecting_palette_fx_effect(
+                        state.layout.palette_fx.default_effect,
+                    );
+                }
+                SettingItem::PaletteFxDefaultPalette => {
+                    manager.state_mut().start_selecting_palette_fx_palette(
+                        state.layout.palette_fx.default_palette,
+                    );
+                }
+                SettingItem::PaletteFxEnableAllEffects => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.palette_fx.enable_all_effects,
+                    );
+                }
+                SettingItem::PaletteFxEnableAllPalettes => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.palette_fx.enable_all_palettes,
                     );
                 }
                 // Combo Settings
@@ -695,6 +728,47 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                         state.set_status(format!(
                             "Ripple color mode set to: {}",
                             mode.display_name()
+                        ));
+                    }
+                }
+            }
+            crate::tui::settings_manager::ManagerMode::SelectingPaletteFxEffect { .. } => {
+                if let Some(selected_idx) = manager_state.get_selected_option() {
+                    if let Some(&effect) = PaletteFxEffect::all().get(selected_idx) {
+                        state.layout.palette_fx.default_effect = effect;
+                        state.mark_dirty();
+                        state.set_status(format!(
+                            "PaletteFX effect set to: {}",
+                            effect.display_name()
+                        ));
+                    }
+                }
+            }
+            crate::tui::settings_manager::ManagerMode::SelectingPaletteFxPalette { .. } => {
+                if let Some(selected_idx) = manager_state.get_selected_option() {
+                    if let Some(&palette) = PaletteFxPalette::all().get(selected_idx) {
+                        state.layout.palette_fx.default_palette = palette;
+                        state.mark_dirty();
+                        state.set_status(format!(
+                            "PaletteFX palette set to: {}",
+                            palette.display_name()
+                        ));
+                    }
+                }
+            }
+            crate::tui::settings_manager::ManagerMode::SelectingKeyActionPalette { .. } => {
+                if let Some(selected_idx) = manager_state.get_selected_option() {
+                    if selected_idx == 0 {
+                        // "Default" - use current active palette
+                        state.layout.rgb_overlay_ripple.key_action_palette = None;
+                        state.mark_dirty();
+                        state.set_status("Key action palette set to: Default (current)".to_string());
+                    } else if let Some(&palette) = PaletteFxPalette::all().get(selected_idx - 1) {
+                        state.layout.rgb_overlay_ripple.key_action_palette = Some(palette);
+                        state.mark_dirty();
+                        state.set_status(format!(
+                            "Key action palette set to: {}",
+                            palette.display_name()
                         ));
                     }
                 }
@@ -936,6 +1010,34 @@ fn apply_boolean_setting(state: &mut AppState, setting: SettingItem, value: bool
             state.layout.combo_settings.enabled = value;
             let display = if value { "On" } else { "Off" };
             state.set_status(format!("Combos enabled set to: {display}"));
+        }
+        // PaletteFX Settings
+        SettingItem::PaletteFxEnabled => {
+            state.layout.palette_fx.enabled = value;
+            state.mark_dirty();
+            if value {
+                state.set_status("PaletteFX enabled");
+            } else {
+                state.set_status("PaletteFX disabled");
+            }
+        }
+        SettingItem::PaletteFxEnableAllEffects => {
+            state.layout.palette_fx.enable_all_effects = value;
+            state.mark_dirty();
+            if value {
+                state.set_status("PaletteFX all effects enabled");
+            } else {
+                state.set_status("PaletteFX all effects disabled");
+            }
+        }
+        SettingItem::PaletteFxEnableAllPalettes => {
+            state.layout.palette_fx.enable_all_palettes = value;
+            state.mark_dirty();
+            if value {
+                state.set_status("PaletteFX all palettes enabled");
+            } else {
+                state.set_status("PaletteFX all palettes disabled");
+            }
         }
         _ => {}
     }

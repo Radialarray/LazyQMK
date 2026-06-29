@@ -118,6 +118,7 @@ impl GenerateArgs {
                     .generate_merged_config_h()
                     .map_err(|e| CliError::io(format!("Failed to generate config.h: {e}")))?;
                 let rules_mk = generator.generate_rules_mk();
+                let keymap_json = generator.generate_keymap_json();
 
                 // Apply deterministic transformations if requested
                 let keymap_c = if self.deterministic {
@@ -137,10 +138,23 @@ impl GenerateArgs {
                 std::fs::write(self.out_dir.join("config.h"), config_h)
                     .map_err(|e| CliError::io(format!("Failed to write config.h: {e}")))?;
 
+                // Write keymap.json (for QMK community modules)
+                if !keymap_json.is_empty() {
+                    std::fs::write(self.out_dir.join("keymap.json"), &keymap_json)
+                        .map_err(|e| CliError::io(format!("Failed to write keymap.json: {e}")))?;
+                } else {
+                    let json_path = self.out_dir.join("keymap.json");
+                    if json_path.exists() {
+                        std::fs::remove_file(&json_path).map_err(|e| {
+                            CliError::io(format!("Failed to remove stale keymap.json: {e}"))
+                        })?;
+                    }
+                }
+
                 if !rules_mk.is_empty() {
                     std::fs::write(self.out_dir.join("rules.mk"), &rules_mk)
                         .map_err(|e| CliError::io(format!("Failed to write rules.mk: {e}")))?;
-                    println!("✓ Generated keymap.c, config.h, and rules.mk");
+                    println!("✓ Generated keymap.c, config.h, rules.mk, and keymap.json");
                 } else {
                     let rules_mk_path = self.out_dir.join("rules.mk");
                     if rules_mk_path.exists() {
@@ -148,7 +162,11 @@ impl GenerateArgs {
                             CliError::io(format!("Failed to remove stale rules.mk: {e}"))
                         })?;
                     }
-                    println!("✓ Generated keymap.c and config.h");
+                    if !keymap_json.is_empty() {
+                        println!("✓ Generated keymap.c, config.h, and keymap.json");
+                    } else {
+                        println!("✓ Generated keymap.c and config.h");
+                    }
                 }
                 println!("  Output: {}", self.out_dir.display());
             }

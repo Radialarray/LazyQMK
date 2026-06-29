@@ -1557,6 +1557,7 @@ mod tests {
             uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
             idle_effect_settings: crate::models::IdleEffectSettings::default(),
             rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
+            palette_fx: crate::models::PaletteFxSettings::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
             combo_settings: crate::models::ComboSettings::default(),
             tap_dances: vec![],

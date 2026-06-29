@@ -506,6 +506,12 @@ fn generate_settings(layout: &Layout) -> Option<String> {
             let value = if rip.ignore_layer_switch { "On" } else { "Off" };
             output.push_str(&format!("**Ripple Ignore Layer Switch**: {value}\n"));
         }
+
+        // Write key action palette if set
+        if let Some(palette) = &rip.key_action_palette {
+            let palette_name = palette.display_name();
+            output.push_str(&format!("**Ripple Key Action Palette**: {palette_name}\n"));
+        }
     }
 
     // Write tap-hold settings if any are non-default
@@ -716,6 +722,7 @@ mod tests {
             uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
             idle_effect_settings: crate::models::IdleEffectSettings::default(),
             rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
+            palette_fx: crate::models::PaletteFxSettings::default(),
             tap_hold_settings: crate::models::TapHoldSettings::default(),
             combo_settings: crate::models::ComboSettings::default(),
             tap_dances: vec![],
@@ -1367,6 +1374,7 @@ mod tests {
             ignore_transparent: false,
             ignore_modifiers: true,
             ignore_layer_switch: true,
+            key_action_palette: None,
         };
 
         let markdown = generate_markdown(&layout).unwrap();

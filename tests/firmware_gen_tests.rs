@@ -449,6 +449,7 @@ fn create_test_layout() -> Layout {
         uncolored_key_behavior: lazyqmk::models::UncoloredKeyBehavior::default(),
         idle_effect_settings: lazyqmk::models::IdleEffectSettings::default(),
         rgb_overlay_ripple: lazyqmk::models::RgbOverlayRippleSettings::default(),
+        palette_fx: lazyqmk::models::PaletteFxSettings::default(),
         tap_hold_settings: lazyqmk::models::TapHoldSettings::default(),
         rgb_enabled: true,
         rgb_brightness: lazyqmk::models::RgbBrightness::default(),
@@ -1200,24 +1201,22 @@ fn test_rgb_overlay_ripple_generation() {
         .generate_keymap_c()
         .expect("Should generate keymap.c");
 
-    // Verify ripple overlay code is present
+    // Verify reactive overlay code is present (PaletteFX-inspired algorithm)
     assert!(keymap_c.contains("#ifdef RGB_MATRIX_ENABLE"));
     assert!(keymap_c.contains("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED"));
     assert!(keymap_c.contains("typedef struct {"));
     assert!(keymap_c.contains("ripple_t"));
     assert!(keymap_c.contains("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES]"));
     assert!(keymap_c.contains("static void lazyqmk_ripple_add(uint8_t led_index)"));
-    assert!(keymap_c.contains("static uint8_t lazyqmk_ripple_distance(uint8_t led1, uint8_t led2)"));
     assert!(keymap_c.contains("static RGB lazyqmk_ripple_base_color(uint8_t led_index)"));
-    assert!(keymap_c.contains("static bool lazyqmk_ripple_apply(uint8_t led_index)"));
+    assert!(keymap_c.contains("static uint8_t lazyqmk_reactive_amplitude(uint8_t t)"));
+    assert!(keymap_c.contains("static void lazyqmk_reactive_apply(uint8_t led_index)"));
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
-    assert!(keymap_c.contains("RGB color = lazyqmk_ripple_base_color(led_index);"));
-    assert!(keymap_c.contains("lazyqmk_ripple_apply(i);"));
-    assert!(keymap_c.contains("if (led_changed) {"));
-    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, color.r, color.g, color.b);"));
-    assert!(keymap_c.contains("rgb_t matrix_rgb = rgb_matrix_hsv_to_rgb(rgb_matrix_get_hsv());"));
-    assert!(keymap_c.contains("This preserves configured global color, but not exact per-LED animated frames"));
+    assert!(keymap_c.contains("lazyqmk_reactive_apply(i);"));
+    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, base.r, base.g, base.b);"));
+    assert!(keymap_c.contains("rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());"));
+    assert!(keymap_c.contains("qadd8(brightness, bump)"));
 
     // Generate config.h
     let config_h = generator
@@ -1393,26 +1392,23 @@ fn test_rgb_overlay_ripple_hue_shift_generation() {
         .generate_keymap_c()
         .expect("Should generate keymap.c");
 
+    // Hue shift now uses QMK's built-in rgb_to_hsv instead of a custom helper
     assert!(
-        keymap_c.contains("static hsv_t lazyqmk_ripple_rgb_to_hsv(RGB color)"),
-        "Hue shift mode should generate RGB->HSV helper"
+        keymap_c.contains("hsv_t hsv = rgb_to_hsv(base);"),
+        "Hue shift mode should use QMK's rgb_to_hsv"
     );
     assert!(
-        keymap_c.contains("rgb_t shifted_rgb = hsv_to_rgb(shifted_hsv);"),
-        "Hue shift mode must generate real HSV conversion"
+        keymap_c.contains("rgb_t shifted = hsv_to_rgb(hsv);"),
+        "Hue shift mode must convert back to RGB via hsv_to_rgb"
     );
     assert!(
-        keymap_c.contains("int16_t shifted_hue = (int16_t)shifted_hsv.h + -85;"),
-        "Hue shift degrees should be converted to signed QMK hue steps"
+        keymap_c.contains("int16_t shifted_hue = (int16_t)hsv.h + -85;"),
+        "Hue shift degrees should be converted to signed QMK hue steps (-120 deg = -85 steps)"
     );
     assert!(
         keymap_c.contains("while (shifted_hue < 0) shifted_hue += 256;")
             && keymap_c.contains("while (shifted_hue >= 256) shifted_hue -= 256;"),
         "Hue shift wrap must use full 256-step QMK hue space"
-    );
-    assert!(
-        !keymap_c.contains("TODO: Implement HSV hue shift"),
-        "Hue shift implementation TODO should be removed"
     );
 }
 
@@ -1471,11 +1467,14 @@ fn test_rgb_overlay_ripple_distance_uses_wide_accumulator() {
         .generate_keymap_c()
         .expect("Should generate keymap.c");
 
+    // Distance calculation is now inline in lazyqmk_reactive_apply using sqrt16
     assert!(
-        keymap_c.contains("uint32_t dist_sq = (uint32_t)((int32_t)dx * dx + (int32_t)dy * dy);")
-            && keymap_c.contains("uint32_t x = dist_sq;")
-            && keymap_c.contains("uint32_t y = (x + 1) / 2;"),
-        "Distance math must use 32-bit accumulator for wide keyboards"
+        keymap_c.contains("uint16_t dist_sqr = (uint16_t)dx * dx + (uint16_t)dy * dy;"),
+        "Distance calculation must use 16-bit types (sufficient for the 21-unit reactive radius)"
+    );
+    assert!(
+        keymap_c.contains("uint8_t dist = sqrt16(dist_sqr);"),
+        "Distance must use QMK's sqrt16 for fast integer square root"
     );
 }
 

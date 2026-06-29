@@ -14,8 +14,9 @@ use ratatui::{
 };
 
 use crate::models::{
-    HoldDecisionMode, IdleEffectSettings, RgbBrightness, RgbMatrixEffect, RgbOverlayRippleSettings,
-    RippleColorMode, TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    HoldDecisionMode, IdleEffectSettings, PaletteFxEffect, PaletteFxPalette, RgbBrightness,
+    RgbMatrixEffect, RgbOverlayRippleSettings, RippleColorMode, TapHoldPreset, TapHoldSettings,
+    UncoloredKeyBehavior,
 };
 
 use super::Theme;
@@ -26,6 +27,7 @@ enum RgbSubgroup {
     Core,
     Idle,
     Ripple,
+    PaletteFx,
 }
 
 impl RgbSubgroup {
@@ -34,6 +36,7 @@ impl RgbSubgroup {
             Self::Core => "Core lighting",
             Self::Idle => "Idle lighting",
             Self::Ripple => "Press ripple",
+            Self::PaletteFx => "PaletteFX effects",
         }
     }
 }
@@ -159,6 +162,20 @@ pub enum SettingItem {
     OverlayRippleIgnoreModifiers,
     /// Ignore layer switch keys
     OverlayRippleIgnoreLayerSwitch,
+    /// PaletteFX palette for key-action reactive bursts
+    OverlayRippleKeyActionPalette,
+
+    // === PaletteFX Settings (Per-Layout) ===
+    /// PaletteFX master switch
+    PaletteFxEnabled,
+    /// PaletteFX default effect
+    PaletteFxDefaultEffect,
+    /// PaletteFX default palette
+    PaletteFxDefaultPalette,
+    /// Enable all PaletteFX effects at compile time
+    PaletteFxEnableAllEffects,
+    /// Enable all PaletteFX palettes at compile time
+    PaletteFxEnableAllPalettes,
 
     // === Tap-Hold Settings (Per-Layout) ===
     /// Preset for common tap-hold configurations
@@ -243,6 +260,13 @@ impl SettingItem {
             Self::OverlayRippleIgnoreTransparent,
             Self::OverlayRippleIgnoreModifiers,
             Self::OverlayRippleIgnoreLayerSwitch,
+            Self::OverlayRippleKeyActionPalette,
+            // PaletteFX (Per-Layout)
+            Self::PaletteFxEnabled,
+            Self::PaletteFxDefaultEffect,
+            Self::PaletteFxDefaultPalette,
+            Self::PaletteFxEnableAllEffects,
+            Self::PaletteFxEnableAllPalettes,
             // Tap-Hold (Per-Layout)
             Self::TapHoldPreset,
             Self::TappingTerm,
@@ -300,7 +324,13 @@ impl SettingItem {
             | Self::OverlayRippleTriggerRelease
             | Self::OverlayRippleIgnoreTransparent
             | Self::OverlayRippleIgnoreModifiers
-            | Self::OverlayRippleIgnoreLayerSwitch => SettingGroup::Rgb,
+            | Self::OverlayRippleIgnoreLayerSwitch
+            | Self::OverlayRippleKeyActionPalette
+            | Self::PaletteFxEnabled
+            | Self::PaletteFxDefaultEffect
+            | Self::PaletteFxDefaultPalette
+            | Self::PaletteFxEnableAllEffects
+            | Self::PaletteFxEnableAllPalettes => SettingGroup::Rgb,
             Self::TapHoldPreset
             | Self::TappingTerm
             | Self::QuickTapTerm
@@ -348,7 +378,13 @@ impl SettingItem {
             | Self::OverlayRippleTriggerRelease
             | Self::OverlayRippleIgnoreTransparent
             | Self::OverlayRippleIgnoreModifiers
-            | Self::OverlayRippleIgnoreLayerSwitch => Some(RgbSubgroup::Ripple),
+            | Self::OverlayRippleIgnoreLayerSwitch
+            | Self::OverlayRippleKeyActionPalette => Some(RgbSubgroup::Ripple),
+            Self::PaletteFxEnabled
+            | Self::PaletteFxDefaultEffect
+            | Self::PaletteFxDefaultPalette
+            | Self::PaletteFxEnableAllEffects
+            | Self::PaletteFxEnableAllPalettes => Some(RgbSubgroup::PaletteFx),
             _ => None,
         }
     }
@@ -390,6 +426,12 @@ impl SettingItem {
             Self::OverlayRippleIgnoreTransparent => "Ignore Transparent Keys",
             Self::OverlayRippleIgnoreModifiers => "Ignore Modifier Keys",
             Self::OverlayRippleIgnoreLayerSwitch => "Ignore Layer Switch Keys",
+            Self::OverlayRippleKeyActionPalette => "Reactive Key Palette",
+            Self::PaletteFxEnabled => "PaletteFX Effects",
+            Self::PaletteFxDefaultEffect => "PaletteFX Default Effect",
+            Self::PaletteFxDefaultPalette => "PaletteFX Default Palette",
+            Self::PaletteFxEnableAllEffects => "PaletteFX All Effects",
+            Self::PaletteFxEnableAllPalettes => "PaletteFX All Palettes",
             Self::TapHoldPreset => "Preset",
             Self::TappingTerm => "Tapping Term",
             Self::QuickTapTerm => "Quick Tap Term",
@@ -471,6 +513,12 @@ impl SettingItem {
             }
             Self::OverlayRippleIgnoreModifiers => "Don't trigger ripples on modifier keys",
             Self::OverlayRippleIgnoreLayerSwitch => "Don't trigger ripples on layer switch keys",
+            Self::OverlayRippleKeyActionPalette => "PaletteFX palette for key-action reactive bursts. Requires PaletteFX enabled.",
+            Self::PaletteFxEnabled => "Enable PaletteFX community module effects instead of custom ripple overlay.",
+            Self::PaletteFxDefaultEffect => "Default PaletteFX effect shown on startup. User can cycle with RM_NEXT/RM_PREV.",
+            Self::PaletteFxDefaultPalette => "Color palette for PaletteFX effects (16 curated palettes available).",
+            Self::PaletteFxEnableAllEffects => "Include all 6 PaletteFX effects in firmware (Gradient, Flow, Ripple, Sparkle, Vortex, Reactive).",
+            Self::PaletteFxEnableAllPalettes => "Include all 16 PaletteFX palettes in firmware.",
             Self::TapHoldPreset => "Quick configuration preset for common use cases",
             Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
             Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
@@ -589,6 +637,21 @@ pub enum ManagerMode {
         /// Instruction message to show
         instruction: String,
     },
+    /// Selecting PaletteFX effect
+    SelectingPaletteFxEffect {
+        /// Currently highlighted option index
+        selected_option: usize,
+    },
+    /// Selecting PaletteFX palette
+    SelectingPaletteFxPalette {
+        /// Currently highlighted option index
+        selected_option: usize,
+    },
+    /// Selecting key-action reactive palette
+    SelectingKeyActionPalette {
+        /// Currently highlighted option index
+        selected_option: usize,
+    },
 }
 
 /// State for the settings manager dialog
@@ -701,7 +764,10 @@ impl SettingsManagerState {
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
             | ManagerMode::SelectingIdleEffectMode { selected_option }
-            | ManagerMode::SelectingRippleColorMode { selected_option } => {
+            | ManagerMode::SelectingRippleColorMode { selected_option }
+            | ManagerMode::SelectingPaletteFxEffect { selected_option }
+            | ManagerMode::SelectingPaletteFxPalette { selected_option }
+            | ManagerMode::SelectingKeyActionPalette { selected_option } => {
                 if *selected_option > 0 {
                     *selected_option -= 1;
                 } else {
@@ -723,7 +789,10 @@ impl SettingsManagerState {
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
             | ManagerMode::SelectingIdleEffectMode { selected_option }
-            | ManagerMode::SelectingRippleColorMode { selected_option } => {
+            | ManagerMode::SelectingRippleColorMode { selected_option }
+            | ManagerMode::SelectingPaletteFxEffect { selected_option }
+            | ManagerMode::SelectingPaletteFxPalette { selected_option }
+            | ManagerMode::SelectingKeyActionPalette { selected_option } => {
                 *selected_option = (*selected_option + 1) % option_count;
             }
             ManagerMode::TogglingBoolean { value, .. } => {
@@ -742,7 +811,10 @@ impl SettingsManagerState {
             | ManagerMode::SelectingOutputFormat { selected_option }
             | ManagerMode::SelectingThemeMode { selected_option }
             | ManagerMode::SelectingIdleEffectMode { selected_option }
-            | ManagerMode::SelectingRippleColorMode { selected_option } => Some(*selected_option),
+            | ManagerMode::SelectingRippleColorMode { selected_option }
+            | ManagerMode::SelectingPaletteFxEffect { selected_option }
+            | ManagerMode::SelectingPaletteFxPalette { selected_option }
+            | ManagerMode::SelectingKeyActionPalette { selected_option } => Some(*selected_option),
             _ => None,
         }
     }
@@ -938,6 +1010,37 @@ impl SettingsManagerState {
         self.mode = ManagerMode::SelectingRippleColorMode { selected_option };
     }
 
+    /// Start selecting PaletteFX effect
+    pub fn start_selecting_palette_fx_effect(&mut self, current: PaletteFxEffect) {
+        let selected_option = PaletteFxEffect::all()
+            .iter()
+            .position(|&e| e == current)
+            .unwrap_or(0);
+        self.mode = ManagerMode::SelectingPaletteFxEffect { selected_option };
+    }
+
+    /// Start selecting PaletteFX palette
+    pub fn start_selecting_palette_fx_palette(&mut self, current: PaletteFxPalette) {
+        let selected_option = PaletteFxPalette::all()
+            .iter()
+            .position(|&p| p == current)
+            .unwrap_or(0);
+        self.mode = ManagerMode::SelectingPaletteFxPalette { selected_option };
+    }
+
+    /// Start selecting the key-action reactive palette (with "Default" as first option)
+    pub fn start_selecting_key_action_palette(&mut self, current: Option<PaletteFxPalette>) {
+        // Option 0 = "Default" (use current palette)
+        // Options 1.. = specific palettes
+        let selected_option = current.map_or(0, |p| {
+            PaletteFxPalette::all()
+                .iter()
+                .position(|&pal| pal == p)
+                .map_or(0, |i| i + 1)
+        });
+        self.mode = ManagerMode::SelectingKeyActionPalette { selected_option };
+    }
+
     /// Start selecting a key position (for combo configuration)
     pub fn start_selecting_key_position(&mut self, setting: SettingItem, instruction: String) {
         self.mode = ManagerMode::SelectingKeyPosition {
@@ -1092,6 +1195,15 @@ impl SettingsManager {
             }
             ManagerMode::SelectingRippleColorMode { .. } => {
                 self.handle_ripple_color_mode_selection(key)
+            }
+            ManagerMode::SelectingPaletteFxEffect { .. } => {
+                self.handle_palette_fx_effect_selection(key)
+            }
+            ManagerMode::SelectingPaletteFxPalette { .. } => {
+                self.handle_palette_fx_palette_selection(key)
+            }
+            ManagerMode::SelectingKeyActionPalette { .. } => {
+                self.handle_key_action_palette_selection(key)
             }
             ManagerMode::SelectingKeyPosition { .. } => {
                 // Key position selection is handled by the parent (main app input handler)
@@ -1421,6 +1533,72 @@ impl SettingsManager {
             _ => None,
         }
     }
+
+    fn handle_palette_fx_effect_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = PaletteFxEffect::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = PaletteFxEffect::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
+
+    fn handle_palette_fx_palette_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                let count = PaletteFxPalette::all().len();
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let count = PaletteFxPalette::all().len();
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
+
+    fn handle_key_action_palette_selection(
+        &mut self,
+        key: KeyEvent,
+    ) -> Option<SettingsManagerEvent> {
+        // +1 for "Default" option at position 0
+        let count = PaletteFxPalette::all().len() + 1;
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.option_previous(count);
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
 }
 
 impl Default for SettingsManager {
@@ -1551,6 +1729,15 @@ pub fn render_settings_manager(
         }
         ManagerMode::SelectingRippleColorMode { selected_option } => {
             render_ripple_color_mode_selector(f, inner_area, *selected_option, theme);
+        }
+        ManagerMode::SelectingPaletteFxEffect { selected_option } => {
+            render_palette_fx_effect_selector(f, inner_area, *selected_option, theme);
+        }
+        ManagerMode::SelectingPaletteFxPalette { selected_option } => {
+            render_palette_fx_palette_selector(f, inner_area, *selected_option, theme);
+        }
+        ManagerMode::SelectingKeyActionPalette { selected_option } => {
+            render_key_action_palette_selector(f, inner_area, *selected_option, theme);
         }
         ManagerMode::SelectingKeyPosition {
             setting,
@@ -1910,6 +2097,9 @@ fn get_setting_value_display(
             }
             .to_string()
         }
+        SettingItem::OverlayRippleKeyActionPalette => overlay_ripple_settings
+            .key_action_palette
+            .map_or_else(|| "Default".to_string(), |p| p.display_name().to_string()),
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),
@@ -1992,6 +2182,25 @@ fn get_setting_value_display(
                 || "500ms".to_string(),
                 |c| format!("{}ms", c.hold_duration_ms),
             ),
+        // Per-Layout: PaletteFX
+        SettingItem::PaletteFxEnabled => layout
+            .map(|l| if l.palette_fx.enabled { "On" } else { "Off" })
+            .unwrap_or("Off")
+            .to_string(),
+        SettingItem::PaletteFxDefaultEffect => layout
+            .map(|l| l.palette_fx.default_effect.display_name().to_string())
+            .unwrap_or_default(),
+        SettingItem::PaletteFxDefaultPalette => layout
+            .map(|l| l.palette_fx.default_palette.display_name().to_string())
+            .unwrap_or_default(),
+        SettingItem::PaletteFxEnableAllEffects => layout
+            .map(|l| if l.palette_fx.enable_all_effects { "On" } else { "Off" })
+            .unwrap_or("Off")
+            .to_string(),
+        SettingItem::PaletteFxEnableAllPalettes => layout
+            .map(|l| if l.palette_fx.enable_all_palettes { "On" } else { "Off" })
+            .unwrap_or("Off")
+            .to_string(),
     }
 }
 
@@ -2615,6 +2824,56 @@ fn render_ripple_color_mode_selector(f: &mut Frame, area: Rect, selected: usize,
         selected,
         theme,
     );
+}
+
+/// Render PaletteFX effect selector
+fn render_palette_fx_effect_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
+    let options = PaletteFxEffect::all();
+    render_enum_selector(
+        f,
+        area,
+        "PaletteFX Effect",
+        options
+            .iter()
+            .map(|o| (o.display_name(), "Palette-based RGB animation"))
+            .collect::<Vec<_>>()
+            .as_slice(),
+        selected,
+        theme,
+    );
+}
+
+/// Render PaletteFX palette selector
+fn render_palette_fx_palette_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
+    let options = PaletteFxPalette::all();
+    render_enum_selector(
+        f,
+        area,
+        "PaletteFX Palette",
+        options
+            .iter()
+            .map(|o| (o.display_name(), "Color palette for effects"))
+            .collect::<Vec<_>>()
+            .as_slice(),
+        selected,
+        theme,
+    );
+}
+
+/// Render key action palette selector with "Default" as first option
+fn render_key_action_palette_selector(
+    f: &mut Frame,
+    area: Rect,
+    selected: usize,
+    theme: &Theme,
+) {
+    let palettes = PaletteFxPalette::all();
+    let mut options: Vec<(&str, &str)> = Vec::with_capacity(palettes.len() + 1);
+    options.push(("Default (current)", "Use the active PaletteFX palette"));
+    for p in palettes {
+        options.push((p.display_name(), "Fixed palette for key-action bursts"));
+    }
+    render_enum_selector(f, area, "Key-Action Palette", &options, selected, theme);
 }
 
 /// Render key position selector instruction
