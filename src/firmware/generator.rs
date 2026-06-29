@@ -956,11 +956,12 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Reactive apply: compute the burst contribution for a single LED.
         // Uses PaletteFX's radial bump algorithm with qadd8 saturation blending.
-        // When PaletteFX is compiled in, color comes from palettefx_interp_color().
-        // Otherwise, color comes from the configured ripple color mode.
+        // Each active ripple contributes its OWN color to LEDs in its radius,
+        // so multiple simultaneous ripples produce multiple distinct bursts.
         code.push_str("static void lazyqmk_reactive_apply(uint8_t led_index) {\n");
         code.push_str("    uint32_t now = timer_read32();\n");
-        code.push_str("    uint8_t brightness = 0;\n");
+        code.push_str("    // Accumulate color contribution from each ripple in range.\n");
+        code.push_str("    uint8_t contrib_r = 0, contrib_g = 0, contrib_b = 0;\n");
         code.push('\n');
         code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
         code.push_str("        if (!ripples[i].active) continue;\n");
@@ -993,49 +994,41 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str("        // Radial bump: peaks at center, linear falloff to radius edge\n");
         code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 64 * dist), amp);\n");
-        code.push_str("        brightness = qadd8(brightness, bump);\n");
-        code.push_str("        if (brightness == 255) break;\n");
+        code.push_str("        if (bump == 0) continue;\n");
+        code.push('\n');
+        // For each ripple in range, accumulate ITS color contribution to
+        // this LED (scaled by the local bump). This way multiple ripples
+        // produce multiple distinct visible bursts.
+        code.push_str("        // Add THIS ripple's originating color (scaled by its bump) to the LED\n");
+        code.push_str("        {\n");
+        code.push_str("            RGB c = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
+        code.push_str("            contrib_r = qadd8(contrib_r, scale8(c.r, bump));\n");
+        code.push_str("            contrib_g = qadd8(contrib_g, scale8(c.g, bump));\n");
+        code.push_str("            contrib_b = qadd8(contrib_b, scale8(c.b, bump));\n");
+        code.push_str("        }\n");
         code.push_str("    }\n");
         code.push('\n');
         code.push_str("    // Nothing to render\n");
-        code.push_str("    if (brightness == 0) return;\n");
+        code.push_str("    if (contrib_r == 0 && contrib_g == 0 && contrib_b == 0) return;\n");
         code.push('\n');
 
         // Color application: two paths depending on whether TUI background
-        // lighting is configured. If background lighting is on, the ripple
-        // is ADDED on top of the TUI color using the originating key's
-        // color, scaled by the radial brightness. At the edges of the
-        // ripple, contribution = 0, so the TUI color is preserved. At the
-        // center, the contribution is at full intensity, producing a clear
-        // gradient that looks like a ripple. If no background lighting,
-        // the ripple REPLACES the LED color with the PaletteFX palette
-        // (or configured color mode).
+        // lighting is configured. If background lighting is on, the per-LED
+        // contribution (sum of all in-range ripples' colors scaled by their
+        // local bump) is ADDED on top of the TUI color. If no background
+        // lighting, the per-LED contribution REPLACES the LED color with
+        // the PaletteFX palette (or configured color mode).
         let has_background_lighting = self.layout_has_custom_colors();
         if has_background_lighting {
             // Background lighting is on: LAYER the ripple on top of the
-            // TUI color. The contribution is the originating key's TUI
-            // color scaled by the radial brightness. This produces a
-            // gradient from TUI color (at edges) to saturated (at center).
+            // TUI color. The contribution is the sum of in-range ripples'
+            // colors, each scaled by its own local bump.
             code.push_str("    // Read the TUI base color for the current LED\n");
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
-            code.push_str("    // Sum up all active ripples' originating colors\n");
-            code.push_str("    RGB key_color = {0, 0, 0};\n");
-            code.push_str("    {\n");
-            code.push_str("        for (uint8_t k = 0; k < LQMK_RIPPLE_MAX_RIPPLES; k++) {\n");
-            code.push_str("            if (ripples[k].active) {\n");
-            code.push_str("                RGB c = lazyqmk_ripple_base_color(ripples[k].led_index);\n");
-            code.push_str("                key_color.r = qadd8(key_color.r, c.r);\n");
-            code.push_str("                key_color.g = qadd8(key_color.g, c.g);\n");
-            code.push_str("                key_color.b = qadd8(key_color.b, c.b);\n");
-            code.push_str("            }\n");
-            code.push_str("        }\n");
-            code.push_str("    }\n");
-            code.push_str("    // Additive contribution scaled by radial brightness.\n");
-            code.push_str("    // At edges (brightness=0): no contribution, TUI preserved.\n");
-            code.push_str("    // At center (brightness=255): full contribution, saturated.\n");
-            code.push_str("    base.r = qadd8(base.r, scale8(key_color.r, brightness));\n");
-            code.push_str("    base.g = qadd8(base.g, scale8(key_color.g, brightness));\n");
-            code.push_str("    base.b = qadd8(base.b, scale8(key_color.b, brightness));\n");
+            code.push_str("    // Additive contribution (multi-ripple aware)\n");
+            code.push_str("    base.r = qadd8(base.r, contrib_r);\n");
+            code.push_str("    base.g = qadd8(base.g, contrib_g);\n");
+            code.push_str("    base.b = qadd8(base.b, contrib_b);\n");
             code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
         } else if has_palettefx {
             // No background lighting: use PaletteFX palette colors at full intensity

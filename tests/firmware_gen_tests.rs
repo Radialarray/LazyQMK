@@ -1216,11 +1216,11 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
     assert!(keymap_c.contains("lazyqmk_reactive_apply(i);"));
-    // Background-lighting-on path: layer on top via qadd8 (no floor)
-    assert!(keymap_c.contains("RGB key_color = {0, 0, 0};"));
-    assert!(keymap_c.contains("base.r = qadd8(base.r, scale8(key_color.r, brightness));"));
+    // Background-lighting-on path: per-ripple contribution to each LED
+    assert!(keymap_c.contains("uint8_t contrib_r = 0, contrib_g = 0, contrib_b = 0;"));
+    assert!(keymap_c.contains("contrib_r = qadd8(contrib_r, scale8(c.r, bump));"));
+    assert!(keymap_c.contains("base.r = qadd8(base.r, contrib_r);"));
     assert!(keymap_c.contains("rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());"));
-    assert!(keymap_c.contains("qadd8(brightness, bump)"));
 
     // Generate config.h
     let config_h = generator
