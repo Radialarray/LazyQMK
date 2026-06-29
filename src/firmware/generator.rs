@@ -939,25 +939,11 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("}\n");
         code.push('\n');
 
-        // PaletteFX amplitude function — same curve as the community module's
-        // Reactive effect. Linear ramp 0->32ms, plateau 32->55ms, smooth decay after.
-        //
-        // Ported from PaletteFx by Pascal Getreuer (Apache 2.0, Google LLC).
-        code.push_str("// Amplitude curve: linear ramp (0-31ms), plateau (32-55ms), quadratic decay\n");
-        code.push_str("static uint8_t lazyqmk_reactive_amplitude(uint8_t t) {\n");
-        code.push_str("    if (t <= 55) {\n");
-        code.push_str("        return (t < 32) ? (uint8_t)(4 + 8 * t) : 255;\n");
-        code.push_str("    } else {\n");
-        code.push_str("        t = (uint8_t)(((uint16_t)(255 - t) * (uint16_t)164) >> 7);\n");
-        code.push_str("        return scale8(t, t);\n");
-        code.push_str("    }\n");
-        code.push_str("}\n");
-        code.push('\n');
-
         // Reactive apply: compute the burst contribution for a single LED.
-        // Uses PaletteFX's radial bump algorithm with qadd8 saturation blending.
-        // Each active ripple contributes its OWN color to LEDs in its radius,
-        // so multiple simultaneous ripples produce multiple distinct bursts.
+        // Uses an EXPANDING RING algorithm: the wavefront moves outward
+        // from the pressed key over time. Each active ripple contributes
+        // its own color to LEDs near its current wavefront, so multiple
+        // simultaneous ripples produce multiple distinct bursts.
         code.push_str("static void lazyqmk_reactive_apply(uint8_t led_index) {\n");
         code.push_str("    uint32_t now = timer_read32();\n");
         code.push_str("    // Accumulate color contribution from each ripple in range.\n");
@@ -972,15 +958,17 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            continue;\n");
         code.push_str("        }\n");
         code.push('\n');
-        code.push_str("        // Scale elapsed time by speed factor (matching PaletteFX's approach)\n");
-        code.push_str(
-            "        uint16_t tick = scale16by8((uint16_t)elapsed_ms, (uint8_t)(1 + LQMK_RIPPLE_SPEED / 4));\n",
-        );
-        code.push_str("        if (tick > 255) continue;\n");
-        code.push_str("        uint8_t amp = lazyqmk_reactive_amplitude((uint8_t)tick);\n");
+        // Compute the current ring radius (in matrix-space Manhattan distance).
+        // The wavefront expands from 0 to LQMK_RIPPLE_MAX_RADIUS over the
+        // duration. At duration/2, the ring is at max radius and at peak
+        // intensity. After that, it fades and the ring continues outward.
+        code.push_str("        uint8_t radius = (uint8_t)(((uint16_t)elapsed_ms * LQMK_RIPPLE_MAX_RADIUS) / LQMK_RIPPLE_DURATION_MS);\n");
+        code.push_str("        // Intensity envelope: peak at mid-duration, fades at edges\n");
+        code.push_str("        uint8_t amp = (uint8_t)(elapsed_ms < (LQMK_RIPPLE_DURATION_MS / 2)\n");
+        code.push_str("            ? scale16by8((uint16_t)(elapsed_ms * 2), 255 / (LQMK_RIPPLE_DURATION_MS / 2 + 1))\n");
+        code.push_str("            : scale16by8((uint16_t)((LQMK_RIPPLE_DURATION_MS - elapsed_ms) * 2), 255 / (LQMK_RIPPLE_DURATION_MS / 2 + 1)));\n");
         code.push('\n');
-        code.push_str("        // Compute distance using MATRIX positions (more reliable than\n");
-        code.push_str("        // g_led_config.point which can be uninitialised for some LEDs)\n");
+        code.push_str("        // Compute distance using MATRIX positions\n");
         code.push_str("        uint8_t led_row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
         code.push_str("        uint8_t led_col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
         code.push_str("        int8_t drow = (int8_t)led_row - (int8_t)ripples[i].row;\n");
@@ -988,18 +976,21 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        if (drow < 0) drow = -drow;\n");
         code.push_str("        if (dcol < 0) dcol = -dcol;\n");
         code.push('\n');
-        code.push_str("        // Skip if outside the matrix-space radius (2 = ~5x5 area)\n");
-        code.push_str("        if (drow > 2 || dcol > 2) continue;\n");
+        code.push_str("        // Skip if outside the maximum ring area\n");
+        code.push_str("        if (drow > LQMK_RIPPLE_MAX_RADIUS + 1 || dcol > LQMK_RIPPLE_MAX_RADIUS + 1) continue;\n");
         code.push_str("        uint8_t dist = (uint8_t)(drow + dcol);\n");
         code.push('\n');
-        code.push_str("        // Radial bump: peaks at center, linear falloff to radius edge\n");
-        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 64 * dist), amp);\n");
+        code.push_str("        // Distance from this LED to the current wavefront.\n");
+        code.push_str("        // The ring has thickness LQMK_RIPPLE_RING_THICKNESS.\n");
+        code.push_str("        if (dist < radius) continue;  // inside the ring: no contribution\n");
+        code.push_str("        uint8_t ring_dist = dist - radius;\n");
+        code.push_str("        if (ring_dist >= LQMK_RIPPLE_RING_THICKNESS) continue;  // outside the ring\n");
+        code.push('\n');
+        code.push_str("        // Bump: peaks at the wavefront, falls off over ring thickness\n");
+        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 255 * ring_dist / LQMK_RIPPLE_RING_THICKNESS), amp);\n");
         code.push_str("        if (bump == 0) continue;\n");
         code.push('\n');
-        // For each ripple in range, accumulate ITS color contribution to
-        // this LED (scaled by the local bump). This way multiple ripples
-        // produce multiple distinct visible bursts.
-        code.push_str("        // Add THIS ripple's originating color (scaled by its bump) to the LED\n");
+        // For each ripple in range, accumulate ITS color contribution.
         code.push_str("        {\n");
         code.push_str("            RGB c = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
         code.push_str("            contrib_r = qadd8(contrib_r, scale8(c.r, bump));\n");
@@ -1767,6 +1758,21 @@ impl<'a> FirmwareGenerator<'a> {
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_AMPLITUDE_PCT {}\n",
                 ripple_settings.amplitude_pct
+            ));
+            // Ring thickness: keep it small so the wavefront is narrow.
+            // Use band_width / 4 so it scales with user expectation, but
+            // clamp to at least 1 and at most 2 (narrower = sharper ring).
+            let ring_thickness = ripple_settings.band_width / 4;
+            let ring_thickness = ring_thickness.clamp(1, 2);
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_RING_THICKNESS {ring_thickness}\n"
+            ));
+            // Maximum wavefront radius in matrix-space Manhattan distance.
+            // This controls how far the ripple expands outward from the key.
+            // Use amplitude_pct (0-100) mapped to 2..=6 matrix units.
+            let max_radius = 2 + (u16::from(ripple_settings.amplitude_pct) * 4 / 100);
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_MAX_RADIUS {max_radius}\n"
             ));
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",

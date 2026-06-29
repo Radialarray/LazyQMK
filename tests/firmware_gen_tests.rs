@@ -1211,7 +1211,6 @@ fn test_rgb_overlay_ripple_generation() {
         "static void lazyqmk_ripple_add(uint8_t led_index, uint8_t row, uint8_t col)"
     ));
     assert!(keymap_c.contains("static RGB lazyqmk_ripple_base_color(uint8_t led_index)"));
-    assert!(keymap_c.contains("static uint8_t lazyqmk_reactive_amplitude(uint8_t t)"));
     assert!(keymap_c.contains("static void lazyqmk_reactive_apply(uint8_t led_index)"));
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
