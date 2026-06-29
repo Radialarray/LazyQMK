@@ -952,7 +952,7 @@ fn render_layout_name_input(
             Style::default().fg(theme.accent),
         )),
         Line::from(""),
-        Line::from("This will be used as the filename (e.g., my_layout.md)"),
+        Line::from("This will be used as the filename (e.g., my_layout.json)"),
         Line::from("The file will be saved in your layouts directory."),
     ];
 

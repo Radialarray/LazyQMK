@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 use crate::models::LayoutMetadata;
-use crate::parser::layout as layout_parser;
+use crate::services::LayoutService;
 
 /// Layout file information with path and metadata.
 #[derive(Debug, Clone)]
@@ -121,7 +121,7 @@ impl LayoutPickerState {
             return Ok(()); // Empty directory, no layouts
         }
 
-        // Scan directory for .md files
+        // Scan directory for layout files
         let entries = fs::read_dir(&layouts_dir).context(format!(
             "Failed to read layouts directory: {}",
             layouts_dir.display()
@@ -131,13 +131,16 @@ impl LayoutPickerState {
             let entry = entry.context("Failed to read directory entry")?;
             let path = entry.path();
 
-            // Only process .md files
-            if path.extension().and_then(|s| s.to_str()) != Some("md") {
-                continue;
-            }
+            let ext = path.extension().and_then(|s| s.to_str());
 
-            // Try to parse the layout file
-            match layout_parser::parse_markdown_layout(&path) {
+            // Process .json and legacy .md files
+            let layout_result = match ext {
+                Some("json") => LayoutService::load(&path),
+                Some("md") => LayoutService::load(&path), // triggers auto-migration
+                _ => continue,
+            };
+
+            match layout_result {
                 Ok(layout) => {
                     // Don't include template files
                     if !layout.metadata.is_template {

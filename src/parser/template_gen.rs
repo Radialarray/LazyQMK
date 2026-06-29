@@ -7,6 +7,8 @@
 #![allow(clippy::format_push_string)]
 // Allow intentional type casts
 #![allow(clippy::cast_possible_truncation)]
+// Functions kept for migration support (markdown output → JSON)
+#![allow(dead_code)]
 
 use crate::models::Layout;
 use anyhow::{Context, Result};

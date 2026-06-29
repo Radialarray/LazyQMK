@@ -1419,14 +1419,14 @@ pub fn handle_export_filename_dialog_input(
                 return Ok(false);
             }
 
-            // Ensure filename ends with .md (case-insensitive check)
+            // Ensure filename ends with .json (case-insensitive check)
             let filename = if std::path::Path::new(&filename)
                 .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
             {
                 filename
             } else {
-                format!("{filename}.md")
+                format!("{filename}.json")
             };
 
             match file_ops::perform_export(state, &filename) {

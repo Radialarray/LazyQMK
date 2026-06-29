@@ -371,7 +371,7 @@ pub fn temp_config_with_qmk(qmk_path: Option<PathBuf>) -> (Config, TempDir) {
     (config, temp_dir)
 }
 
-/// Writes a layout to a markdown file for CLI testing.
+/// Writes a layout to a JSON file for CLI testing.
 ///
 /// # Arguments
 /// * `layout` - The layout to serialize
@@ -385,7 +385,7 @@ pub fn write_layout_file(layout: &Layout, path: &Path) -> std::io::Result<()> {
 /// Creates a layout file in a temp directory and returns the path.
 pub fn create_temp_layout_file(layout: &Layout) -> (PathBuf, TempDir) {
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let layout_path = temp_dir.path().join("test_layout.md");
+    let layout_path = temp_dir.path().join("test_layout.json");
     write_layout_file(layout, &layout_path).expect("Failed to write layout file");
     (layout_path, temp_dir)
 }

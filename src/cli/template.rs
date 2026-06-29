@@ -2,8 +2,6 @@
 
 use crate::cli::common::{CliError, CliResult};
 use crate::config::Config;
-use crate::parser::layout::parse_markdown_layout;
-use crate::parser::template_gen::save_markdown_layout;
 use crate::services::LayoutService;
 use chrono::Utc;
 use clap::{Args, Subcommand};
@@ -112,7 +110,7 @@ impl ListArgs {
                 .map_err(|e| CliError::io(format!("Failed to create template directory: {e}")))?;
         }
 
-        // Scan for .md files
+        // Scan for template files (.json, legacy .md)
         let entries = fs::read_dir(&template_dir)
             .map_err(|e| CliError::io(format!("Failed to read template directory: {e}")))?;
 
@@ -120,14 +118,15 @@ impl ListArgs {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let ext = path.extension().and_then(|s| s.to_str());
+            if ext == Some("json") || ext == Some("md") {
                 // Try to parse the layout to extract metadata
-                match parse_markdown_layout(&path) {
+                match LayoutService::load(&path) {
                     Ok(layout) => {
                         let file_name = path
                             .file_name()
                             .and_then(|n| n.to_str())
-                            .unwrap_or("unknown.md")
+                            .unwrap_or("unknown.json")
                             .to_string();
 
                         templates.push(TemplateInfo {
@@ -226,7 +225,7 @@ impl SaveArgs {
 
         // Generate safe file name from template name
         let file_name = sanitize_filename(&self.name);
-        let template_path = template_dir.join(format!("{file_name}.md"));
+        let template_path = template_dir.join(format!("{file_name}.json"));
 
         // Check if template already exists
         if template_path.exists() {
@@ -238,7 +237,7 @@ impl SaveArgs {
         }
 
         // Save the template
-        save_markdown_layout(&layout, &template_path)
+        LayoutService::save(&layout, &template_path)
             .map_err(|e| CliError::io(format!("Failed to save template: {e}")))?;
 
         println!("✓ Template saved: {}", self.name);
@@ -270,9 +269,10 @@ impl ApplyArgs {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let ext = path.extension().and_then(|s| s.to_str());
+            if ext == Some("json") || ext == Some("md") {
                 // Try to parse and check name
-                if let Ok(layout) = parse_markdown_layout(&path) {
+                if let Ok(layout) = LayoutService::load(&path) {
                     if layout.metadata.name == self.name {
                         template_path = Some(path);
                         break;
@@ -293,8 +293,8 @@ impl ApplyArgs {
         layout.metadata.created = Utc::now();
         layout.metadata.modified = Utc::now();
 
-        // Save to output file
-        save_markdown_layout(&layout, &self.out)
+        // Save to output file using LayoutService (always .json)
+        LayoutService::save(&layout, &self.out)
             .map_err(|e| CliError::io(format!("Failed to save layout: {e}")))?;
 
         println!("✓ Template applied: {}", self.name);

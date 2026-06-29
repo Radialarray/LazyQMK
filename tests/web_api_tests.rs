@@ -215,7 +215,7 @@ async fn test_list_layouts_with_files() {
 
     // Create a test layout file
     let layout = test_layout_basic(2, 3);
-    let layout_path = temp_dir.path().join("test_layout.md");
+    let layout_path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -224,7 +224,7 @@ async fn test_list_layouts_with_files() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(json["layouts"].as_array().unwrap().len(), 1);
-    assert_eq!(json["layouts"][0]["filename"], "test_layout.md");
+    assert_eq!(json["layouts"][0]["filename"], "test_layout.json");
     assert_eq!(json["layouts"][0]["name"], "Test Layout");
 }
 
@@ -234,12 +234,12 @@ async fn test_get_layout_success() {
 
     // Create a test layout file
     let layout = test_layout_basic(2, 3);
-    let layout_path = temp_dir.path().join("my_layout.md");
+    let layout_path = temp_dir.path().join("my_layout.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
 
-    let (status, json) = get_json(&app, "/api/layouts/my_layout.md").await;
+    let (status, json) = get_json(&app, "/api/layouts/my_layout.json").await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(json["metadata"]["name"], "Test Layout");
@@ -255,12 +255,12 @@ async fn test_save_layout_success() {
     let layout = test_layout_basic(2, 3);
     let layout_json: Value = serde_json::to_value(&layout).unwrap();
 
-    let status = put_json(&app, "/api/layouts/new_layout.md", layout_json).await;
+    let status = put_json(&app, "/api/layouts/new_layout.json", layout_json).await;
 
     assert_eq!(status, StatusCode::NO_CONTENT);
 
     // Verify file was created
-    let saved_path = temp_dir.path().join("new_layout.md");
+    let saved_path = temp_dir.path().join("new_layout.json");
     assert!(saved_path.exists());
 }
 
@@ -404,7 +404,7 @@ async fn test_layouts_found_in_workspace_root() {
 
     // Create a test layout file in the workspace directory
     let layout = test_layout_basic(2, 3);
-    let layout_path = temp_dir.path().join("workspace_test_layout.md");
+    let layout_path = temp_dir.path().join("workspace_test_layout.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -417,7 +417,7 @@ async fn test_layouts_found_in_workspace_root() {
     assert!(
         layouts
             .iter()
-            .any(|l| l["filename"] == "workspace_test_layout.md"),
+            .any(|l| l["filename"] == "workspace_test_layout.json"),
         "Layout should be found in workspace root"
     );
 }
@@ -553,13 +553,13 @@ async fn test_list_templates_finds_saved_template() {
     // Create a template in the template directory with unique name
     let unique_name = format!("test_list_template_{}", std::process::id());
     let template = test_template_basic(2, 3, &unique_name);
-    let template_filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let template_filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let template_path = template_dir.join(&template_filename);
     write_layout_file(&template, &template_path).expect("Failed to write template");
 
     // Also create a non-template layout in workspace (should not appear in templates)
     let layout = test_layout_basic(2, 3);
-    let layout_path = temp_dir.path().join("regular_layout.md");
+    let layout_path = temp_dir.path().join("regular_layout.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -596,7 +596,7 @@ async fn test_get_template_success() {
     // Create a template
     let unique_name = format!("test_get_template_{}", std::process::id());
     let template = test_template_basic(2, 3, &unique_name);
-    let template_filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let template_filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let template_path = template_dir.join(&template_filename);
     write_layout_file(&template, &template_path).expect("Failed to write template");
 
@@ -618,7 +618,7 @@ async fn test_get_template_not_found() {
     let (state, _temp_dir, _template_dir) = create_test_state_with_template_dir();
     let app = create_router(state);
 
-    let (status, json) = get_json(&app, "/api/templates/nonexistent_template.md").await;
+    let (status, json) = get_json(&app, "/api/templates/nonexistent_template.json").await;
 
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert!(json["error"].as_str().unwrap().contains("not found"));
@@ -647,7 +647,7 @@ async fn test_get_template_rejects_non_template() {
     let unique_name = format!("test_non_template_{}", std::process::id());
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.is_template = false; // Explicitly not a template
-    let filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let path = template_dir.join(&filename);
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
@@ -668,7 +668,7 @@ async fn test_save_as_template_success() {
 
     // Create a source layout in workspace
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_template.md";
+    let source_filename = "source_for_template.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -698,7 +698,7 @@ async fn test_save_as_template_success() {
             }
         })
         .collect();
-    let expected_filename = format!("{}.md", expected_filename);
+    let expected_filename = format!("{}.json", expected_filename);
 
     // Cleanup
     cleanup_template(&template_dir, &expected_filename);
@@ -707,7 +707,7 @@ async fn test_save_as_template_success() {
     assert_eq!(json["name"], unique_name);
     assert!(std::path::Path::new(json["filename"].as_str().unwrap())
         .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md")));
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json")));
     assert_eq!(json["layer_count"], 2);
     assert!(json["tags"].as_array().unwrap().contains(&json!("custom")));
 }
@@ -724,7 +724,7 @@ async fn test_save_as_template_source_not_found() {
 
     let (status, json) = post_json(
         &app,
-        "/api/layouts/nonexistent_layout.md/save-as-template",
+        "/api/layouts/nonexistent_layout.json/save-as-template",
         request,
     )
     .await;
@@ -839,7 +839,7 @@ async fn test_create_layout() {
     assert_eq!(json["metadata"]["author"], "Test Author");
 
     // Verify file was created
-    let layout_path = temp_dir.path().join("new_layout.md");
+    let layout_path = temp_dir.path().join("new_layout.json");
     assert!(layout_path.exists());
 }
 
@@ -848,7 +848,7 @@ async fn test_create_layout_already_exists() {
     let (state, temp_dir) = create_test_state_with_qmk();
 
     // Create an existing file
-    let existing_path = temp_dir.path().join("existing_layout.md");
+    let existing_path = temp_dir.path().join("existing_layout.json");
     std::fs::write(&existing_path, "# Existing").expect("Failed to write file");
 
     let app = create_router(state);
@@ -909,7 +909,7 @@ async fn test_switch_layout_variant() {
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.keyboard = Some("test_keyboard".to_string());
     layout.metadata.layout_variant = Some("LAYOUT_test".to_string());
-    let layout_path = temp_dir.path().join("switch_test.md");
+    let layout_path = temp_dir.path().join("switch_test.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -949,7 +949,7 @@ async fn test_switch_layout_variant_no_keyboard() {
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.keyboard = None; // Clear the keyboard
     layout.metadata.layout_variant = None; // Clear the variant
-    let layout_path = temp_dir.path().join("no_keyboard.md");
+    let layout_path = temp_dir.path().join("no_keyboard.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -973,7 +973,7 @@ async fn test_save_as_template_conflict() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_conflict.md";
+    let source_filename = "source_for_conflict.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -990,7 +990,7 @@ async fn test_save_as_template_conflict() {
             }
         })
         .collect();
-    let expected_filename = format!("{}.md", expected_filename);
+    let expected_filename = format!("{}.json", expected_filename);
     let template_path = template_dir.join(&expected_filename);
     write_layout_file(&existing_template, &template_path)
         .expect("Failed to write existing template");
@@ -1048,13 +1048,13 @@ async fn test_apply_template_success() {
     // Create a template
     let unique_name = format!("apply_template_{}", std::process::id());
     let template = test_template_basic(2, 3, &unique_name);
-    let template_filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let template_filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let template_path = template_dir.join(&template_filename);
     write_layout_file(&template, &template_path).expect("Failed to write template");
 
     let app = create_router(state);
 
-    let target_filename = format!("new_from_template_{}.md", std::process::id());
+    let target_filename = format!("new_from_template_{}.json", std::process::id());
     let request = json!({
         "target_filename": target_filename
     });
@@ -1085,12 +1085,12 @@ async fn test_apply_template_not_found() {
     let app = create_router(state);
 
     let request = json!({
-        "target_filename": "new_layout.md"
+        "target_filename": "new_layout.json"
     });
 
     let (status, json) = post_json(
         &app,
-        "/api/templates/nonexistent_template.md/apply",
+        "/api/templates/nonexistent_template.json/apply",
         request,
     )
     .await;
@@ -1106,12 +1106,12 @@ async fn test_apply_template_target_exists_conflict() {
     // Create a template
     let unique_name = format!("apply_conflict_template_{}", std::process::id());
     let template = test_template_basic(2, 3, &unique_name);
-    let template_filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let template_filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let template_path = template_dir.join(&template_filename);
     write_layout_file(&template, &template_path).expect("Failed to write template");
 
     // Pre-create a layout at the target path
-    let target_filename = "existing_layout.md";
+    let target_filename = "existing_layout.json";
     let existing_layout = test_layout_basic(2, 3);
     let target_path = temp_dir.path().join(target_filename);
     write_layout_file(&existing_layout, &target_path).expect("Failed to write existing layout");
@@ -1142,7 +1142,7 @@ async fn test_apply_template_path_traversal_rejected() {
     let app = create_router(state);
 
     let request = json!({
-        "target_filename": "new_layout.md"
+        "target_filename": "new_layout.json"
     });
 
     // URL-encoded path traversal in template filename
@@ -1163,7 +1163,7 @@ async fn test_apply_template_target_path_traversal_rejected() {
     // Create a valid template
     let unique_name = format!("target_traversal_template_{}", std::process::id());
     let template = test_template_basic(2, 3, &unique_name);
-    let template_filename = format!("{}.md", unique_name.to_lowercase().replace(' ', "_"));
+    let template_filename = format!("{}.json", unique_name.to_lowercase().replace(' ', "_"));
     let template_path = template_dir.join(&template_filename);
     write_layout_file(&template, &template_path).expect("Failed to write template");
 
@@ -1171,7 +1171,7 @@ async fn test_apply_template_target_path_traversal_rejected() {
 
     // Path traversal in target filename
     let request = json!({
-        "target_filename": "../evil_layout.md"
+        "target_filename": "../evil_layout.json"
     });
 
     let (status, json) = post_json(
@@ -1197,7 +1197,7 @@ async fn test_save_as_template_validates_name_empty() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_empty_name.md";
+    let source_filename = "source_for_empty_name.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -1225,7 +1225,7 @@ async fn test_save_as_template_validates_name_too_long() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_long_name.md";
+    let source_filename = "source_for_long_name.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -1259,7 +1259,7 @@ async fn test_save_as_template_validates_tag_non_ascii() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_non_ascii_tag.md";
+    let source_filename = "source_for_non_ascii_tag.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -1288,7 +1288,7 @@ async fn test_save_as_template_validates_tag_uppercase() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_uppercase_tag.md";
+    let source_filename = "source_for_uppercase_tag.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -1316,7 +1316,7 @@ async fn test_save_as_template_validates_tag_empty() {
 
     // Create a source layout
     let layout = test_layout_basic(2, 3);
-    let source_filename = "source_for_empty_tag.md";
+    let source_filename = "source_for_empty_tag.json";
     let source_path = temp_dir.path().join(source_filename);
     write_layout_file(&layout, &source_path).expect("Failed to write source layout");
 
@@ -1360,7 +1360,7 @@ async fn test_start_build_missing_layout() {
     let app = create_router(state);
 
     let request = json!({
-        "layout_filename": "nonexistent.md"
+        "layout_filename": "nonexistent.json"
     });
 
     let (status, json) = post_json(&app, "/api/build/start", request).await;
@@ -1376,7 +1376,7 @@ async fn test_start_build_no_keyboard_in_layout() {
     // Create a layout without keyboard metadata
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.keyboard = None; // Remove keyboard field
-    let filename = "no_keyboard_layout.md";
+    let filename = "no_keyboard_layout.json";
     let path = temp_dir.path().join(filename);
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
@@ -1439,7 +1439,7 @@ async fn test_start_build_no_qmk_path() {
     layout.metadata.keyboard = Some("test_keyboard".to_string());
     layout.metadata.keymap_name = Some("default".to_string());
 
-    let filename = "with_keyboard_layout.md";
+    let filename = "with_keyboard_layout.json";
     let path = temp_dir.path().join(filename);
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
@@ -1500,7 +1500,7 @@ async fn test_preflight_with_layouts() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -1520,7 +1520,7 @@ async fn test_preflight_returning_user() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("my_layout.md");
+    let path = temp_dir.path().join("my_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
@@ -1542,7 +1542,7 @@ async fn test_generate_firmware_missing_layout() {
     let (state, _temp_dir) = create_test_state_with_qmk();
     let app = create_router(state);
 
-    let (status, json) = post_json(&app, "/api/layouts/nonexistent.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/nonexistent.json/generate", json!({})).await;
 
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert!(json["error"].as_str().unwrap().contains("not found"));
@@ -1568,12 +1568,12 @@ async fn test_generate_firmware_no_keyboard() {
     // Create a layout file without keyboard defined
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.keyboard = None;
-    let path = temp_dir.path().join("no_keyboard.md");
+    let path = temp_dir.path().join("no_keyboard.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
-    let (status, json) = post_json(&app, "/api/layouts/no_keyboard.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/no_keyboard.json/generate", json!({})).await;
 
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(json["error"].as_str().unwrap().contains("no keyboard"));
@@ -1586,12 +1586,12 @@ async fn test_generate_firmware_no_layout_variant() {
     // Create a layout file without layout_variant defined
     let mut layout = test_layout_basic(2, 3);
     layout.metadata.layout_variant = None;
-    let path = temp_dir.path().join("no_variant.md");
+    let path = temp_dir.path().join("no_variant.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
-    let (status, json) = post_json(&app, "/api/layouts/no_variant.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/no_variant.json/generate", json!({})).await;
 
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(json["error"]
@@ -1606,19 +1606,19 @@ async fn test_generate_firmware_starts_job() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
-    let (status, json) = post_json(&app, "/api/layouts/test_layout.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/test_layout.json/generate", json!({})).await;
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(json["status"], "started");
     assert!(json["job"]["id"].is_string());
     assert!(json["job"]["download_url"].is_string());
     assert_eq!(json["job"]["status"], "pending");
-    assert_eq!(json["job"]["layout_filename"], "test_layout.md");
+    assert_eq!(json["job"]["layout_filename"], "test_layout.json");
 }
 
 #[tokio::test]
@@ -1627,13 +1627,13 @@ async fn test_generate_job_status() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // Start a job
-    let (status, json) = post_json(&app, "/api/layouts/test_layout.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/test_layout.json/generate", json!({})).await;
     assert_eq!(status, StatusCode::OK);
 
     let job_id = json["job"]["id"].as_str().unwrap();
@@ -1662,13 +1662,13 @@ async fn test_generate_job_logs() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // Start a job
-    let (status, json) = post_json(&app, "/api/layouts/test_layout.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/test_layout.json/generate", json!({})).await;
     assert_eq!(status, StatusCode::OK);
 
     let job_id = json["job"]["id"].as_str().unwrap();
@@ -1687,13 +1687,13 @@ async fn test_generate_job_cancel() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // Start a job
-    let (status, json) = post_json(&app, "/api/layouts/test_layout.md/generate", json!({})).await;
+    let (status, json) = post_json(&app, "/api/layouts/test_layout.json/generate", json!({})).await;
     assert_eq!(status, StatusCode::OK);
 
     let job_id = json["job"]["id"].as_str().unwrap();
@@ -1717,13 +1717,13 @@ async fn test_generate_jobs_list() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // Start a job
-    let _ = post_json(&app, "/api/layouts/test_layout.md/generate", json!({})).await;
+    let _ = post_json(&app, "/api/layouts/test_layout.json/generate", json!({})).await;
 
     // List jobs
     let (status, json) = get_json(&app, "/api/generate/jobs").await;
@@ -1752,13 +1752,13 @@ async fn test_get_layout_returns_enriched_key_data() {
 
     // Create a layout file
     let layout = test_layout_basic(2, 3);
-    let path = temp_dir.path().join("test_layout.md");
+    let path = temp_dir.path().join("test_layout.json");
     write_layout_file(&layout, &path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // GET the layout
-    let (status, json) = get_json(&app, "/api/layouts/test_layout.md").await;
+    let (status, json) = get_json(&app, "/api/layouts/test_layout.json").await;
 
     assert_eq!(status, StatusCode::OK);
 
@@ -1810,39 +1810,27 @@ async fn test_swap_keys_swaps_keycodes_and_colors() {
     let (state, temp_dir) = create_test_state();
     let workspace = temp_dir.path();
 
-    // Create test layout with two distinct keys
-    let layout_content = r#"---
-name: Swap Test
-description: Test layout for swap
-author: Test
-created: 2024-01-01T00:00:00Z
-modified: 2024-01-01T00:00:00Z
-tags: []
-is_template: false
-version: '1.0'
-keyboard: test
-layout_variant: LAYOUT_test
-keymap_name: test
-output_format: hex
----
+    // Create test layout with two distinct keys using the write helper
+    let mut layout = test_layout_basic(2, 3);
+    layout.metadata.name = "Swap Test".to_string();
+    layout.metadata.description = "Test layout for swap".to_string();
+    layout.metadata.author = "Test".to_string();
+    layout.metadata.keyboard = Some("test".to_string());
+    layout.metadata.layout_variant = Some("LAYOUT_test".to_string());
 
-# Swap Test
+    // Set keycodes and color overrides on layer 0
+    layout.layers[0].keys[0].keycode = "KC_Q".to_string();
+    layout.layers[0].keys[0].color_override = Some(lazyqmk::models::RgbColor::new(255, 0, 0));
+    layout.layers[0].keys[1].keycode = "KC_W".to_string();
+    layout.layers[0].keys[1].color_override = Some(lazyqmk::models::RgbColor::new(0, 255, 0));
 
-## Layer 0: Base
-**ID**: test-layer
-**Color**: #FFFFFF
-
-| C0 | C1 |
-|------|------|
-| KC_Q{#FF0000} | KC_W{#00FF00} |
-"#;
-
-    fs::write(workspace.join("test_swap.md"), layout_content).unwrap();
+    let layout_path = workspace.join("test_swap.json");
+    write_layout_file(&layout, &layout_path).expect("Failed to write layout");
 
     let app = create_router(state);
 
     // Get initial layout to verify starting state
-    let (status, initial_json) = get_json(&app, "/api/layouts/test_swap.md").await;
+    let (status, initial_json) = get_json(&app, "/api/layouts/test_swap.json").await;
     assert_eq!(status, StatusCode::OK);
 
     let initial_keys = initial_json["layers"][0]["keys"].as_array().unwrap();
@@ -1867,7 +1855,7 @@ output_format: hex
 
     let request = Request::builder()
         .method("POST")
-        .uri("/api/layouts/test_swap.md/swap-keys")
+        .uri("/api/layouts/test_swap.json/swap-keys")
         .header("content-type", "application/json")
         .body(Body::from(serde_json::to_string(&swap_request).unwrap()))
         .unwrap();
@@ -1876,7 +1864,7 @@ output_format: hex
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     // Get layout again to verify swap
-    let (status, swapped_json) = get_json(&app, "/api/layouts/test_swap.md").await;
+    let (status, swapped_json) = get_json(&app, "/api/layouts/test_swap.json").await;
     assert_eq!(status, StatusCode::OK);
 
     let swapped_keys = swapped_json["layers"][0]["keys"].as_array().unwrap();
@@ -1927,10 +1915,14 @@ output_format: hex
         "Key at position 1 should now have red color (b=0)"
     );
 
-    // Verify the file on disk was actually updated
-    let file_content = fs::read_to_string(workspace.join("test_swap.md")).unwrap();
+    // Verify the file on disk was actually updated (JSON format)
+    let file_content = fs::read_to_string(workspace.join("test_swap.json")).unwrap();
     assert!(
-        file_content.contains("KC_W{#00FF00} | KC_Q{#FF0000}"),
-        "Layout file should have swapped keys"
+        file_content.contains(r#""keycode": "KC_W""#),
+        "Layout file should have KC_W (was swapped)"
+    );
+    assert!(
+        file_content.contains(r#""keycode": "KC_Q""#),
+        "Layout file should have KC_Q (was swapped)"
     );
 }

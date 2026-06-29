@@ -1,8 +1,8 @@
 //! Layer references command for displaying inbound layer references and transparency warnings.
 
 use crate::cli::common::{CliError, CliResult};
-use crate::parser::layout::parse_markdown_layout;
 use crate::services::layer_refs::{build_layer_ref_index, is_transparent};
+use crate::services::LayoutService;
 use clap::Args;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -61,8 +61,7 @@ impl LayerRefsArgs {
     /// Execute the layer-refs command
     pub fn execute(&self) -> CliResult<()> {
         // Parse layout file
-        let layout = parse_markdown_layout(&self.layout)
-            .map_err(|e| CliError::io(format!("Failed to load layout: {e}")))?;
+        let layout = LayoutService::load(&self.layout)?;
 
         // Build layer reference index
         let layer_ref_index = build_layer_ref_index(&layout.layers);

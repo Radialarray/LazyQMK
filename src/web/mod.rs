@@ -1147,6 +1147,16 @@ fn validate_filename(filename: &str) -> Result<&str, ApiError> {
     Ok(filename)
 }
 
+/// Appends or changes the filename extension to `.json`.
+fn with_json_ext(filename: &str) -> String {
+    let path = std::path::Path::new(filename);
+    if path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("json")) {
+        filename.to_string()
+    } else {
+        format!("{filename}.json")
+    }
+}
+
 /// Validates a keyboard path to prevent path traversal attacks.
 fn validate_keyboard_path(keyboard: &str) -> Result<(), ApiError> {
     if keyboard.is_empty() {
@@ -1207,8 +1217,8 @@ async fn list_layouts(
 
         let path = entry.path();
 
-        // Only process .md files
-        if path.extension().is_some_and(|ext| ext == "md") {
+        // Process both .json and legacy .md files
+        if path.extension().is_some_and(|ext| ext == "json" || ext == "md") {
             let filename = match path.file_name() {
                 Some(name) => name.to_string_lossy().to_string(),
                 None => continue,
@@ -1241,15 +1251,8 @@ async fn get_layout(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension (case-insensitive)
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -1636,15 +1639,8 @@ async fn save_layout(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension (case-insensitive)
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -1684,15 +1680,8 @@ async fn swap_keys(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension (case-insensitive)
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -1945,7 +1934,7 @@ async fn get_preflight(State(state): State<AppState>) -> Json<PreflightResponse>
         .map(|entries| {
             entries
                 .filter_map(Result::ok)
-                .any(|entry| entry.path().extension().is_some_and(|ext| ext == "md"))
+                .any(|entry| entry.path().extension().is_some_and(|ext| ext == "json" || ext == "md"))
         })
         .unwrap_or(false);
 
@@ -2125,15 +2114,8 @@ async fn validate_layout(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -2188,15 +2170,8 @@ async fn inspect_layout(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -2312,15 +2287,8 @@ async fn get_render_metadata(
     // Validate filename to prevent path traversal
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -2475,11 +2443,11 @@ async fn export_layout(
 
     let filename = if std::path::Path::new(filename)
         .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
     {
         filename.to_string()
     } else {
-        format!("{filename}.md")
+        format!("{filename}.json")
     };
 
     let path = state.workspace_root.join(&filename);
@@ -2600,15 +2568,8 @@ async fn generate_firmware(
     // Validate filename
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -2697,15 +2658,8 @@ async fn start_build(
     let filename = validate_filename(&request.layout_filename)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 
@@ -3166,13 +3120,13 @@ async fn list_templates() -> Result<Json<TemplateListResponse>, (StatusCode, Jso
 
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "md") {
+        if path.extension().is_some_and(|ext| ext == "json" || ext == "md") {
             if let Ok(layout) = LayoutService::load(&path) {
                 if layout.metadata.is_template {
                     let filename = path
                         .file_name()
                         .and_then(|n| n.to_str())
-                        .unwrap_or("unknown.md")
+                        .unwrap_or("unknown.json")
                         .to_string();
 
                     templates.push(TemplateInfo {
@@ -3204,11 +3158,11 @@ async fn get_template(
 
     let filename = if std::path::Path::new(filename)
         .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
     {
         filename.to_string()
     } else {
-        format!("{filename}.md")
+        format!("{filename}.json")
     };
 
     let path = template_dir.join(&filename);
@@ -3262,15 +3216,8 @@ async fn save_as_template(
         })?;
     }
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     // Load the source layout from workspace
     let source_path = state.workspace_root.join(&filename);
@@ -3340,7 +3287,7 @@ async fn save_as_template(
 
     // Generate safe filename
     let template_filename = sanitize_template_filename(&request.name);
-    let template_path = template_dir.join(format!("{template_filename}.md"));
+    let template_path = template_dir.join(format!("{template_filename}.json"));
 
     // Check if template already exists
     if template_path.exists() {
@@ -3365,7 +3312,7 @@ async fn save_as_template(
     })?;
 
     Ok(Json(TemplateInfo {
-        filename: format!("{template_filename}.md"),
+        filename: format!("{template_filename}.json"),
         name: layout.metadata.name.clone(),
         description: layout.metadata.description.clone(),
         author: layout.metadata.author.clone(),
@@ -3388,11 +3335,11 @@ async fn apply_template(
 
     let filename = if std::path::Path::new(filename)
         .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
     {
         filename.to_string()
     } else {
-        format!("{filename}.md")
+        format!("{filename}.json")
     };
 
     let template_path = template_dir.join(&filename);
@@ -3430,11 +3377,11 @@ async fn apply_template(
     // Prepare target path
     let target_filename = if std::path::Path::new(target_filename)
         .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
     {
         target_filename.to_string()
     } else {
-        format!("{target_filename}.md")
+        format!("{target_filename}.json")
     };
 
     let target_path = state.workspace_root.join(&target_filename);
@@ -3724,15 +3671,8 @@ async fn create_layout(
     let filename =
         validate_filename(&request.filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     // Validate keyboard path
     validate_keyboard_path(&request.keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
@@ -3890,15 +3830,8 @@ async fn switch_layout_variant(
     // Validate filename
     let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
 
-    // Ensure .md extension
-    let filename = if std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.md")
-    };
+    // Ensure .json extension
+    let filename = with_json_ext(filename);
 
     let path = state.workspace_root.join(&filename);
 

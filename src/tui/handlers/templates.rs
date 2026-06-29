@@ -126,7 +126,7 @@ pub fn handle_template_save_dialog_input(
                 .chars()
                 .filter(|c| c.is_alphanumeric() || *c == '-')
                 .collect::<String>();
-            let template_path = templates_dir.join(format!("{filename}.md"));
+            let template_path = templates_dir.join(format!("{filename}.json"));
 
             // Save template
             match LayoutService::save(&template_layout, &template_path) {

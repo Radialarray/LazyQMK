@@ -45,7 +45,7 @@ INTERFACES:
   LazyQMK provides two interfaces in one binary:
   
   1. Terminal UI (TUI) - Default when no command specified
-     - Launch: lazyqmk [layout.md]
+      - Launch: lazyqmk [layout.json]
      - Keyboard-driven interface in your terminal
   
   2. Web Editor - Browser-based interface
@@ -58,7 +58,7 @@ QUICK START:
   lazyqmk
   
   # Open specific layout in TUI
-  lazyqmk my-layout.md
+  lazyqmk my-layout.json
   
   # Start web server (default: http://localhost:3001)
   lazyqmk web
@@ -317,11 +317,11 @@ fn main() -> Result<()> {
         if !path.exists() {
             eprintln!("Error: Layout file not found: {}", path.display());
             eprintln!();
-            eprintln!("Please provide a valid path to a Markdown layout file.");
+            eprintln!("Please provide a valid path to a layout file.");
             eprintln!();
             eprintln!("Examples:");
-            eprintln!("  {} my_layout.md", APP_BINARY_NAME);
-            eprintln!("  {} path/to/layout.md", APP_BINARY_NAME);
+            eprintln!("  {} my_layout.json", APP_BINARY_NAME);
+            eprintln!("  {} path/to/layout.json", APP_BINARY_NAME);
             eprintln!();
             eprintln!("To set up the application for the first time, run:");
             eprintln!("  {} --init", APP_BINARY_NAME);
@@ -333,9 +333,9 @@ fn main() -> Result<()> {
 
         // Check if the file has a reasonable extension
         if let Some(ext) = path.extension() {
-            if ext != "md" && ext != "markdown" {
+            if ext != "json" && ext != "md" && ext != "markdown" {
                 eprintln!(
-                    "Warning: Expected a Markdown file (.md), but got: {}",
+                    "Warning: Expected a layout file (.json or .md), but got: {}",
                     path.display()
                 );
                 eprintln!();

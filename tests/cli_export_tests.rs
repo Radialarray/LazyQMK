@@ -17,7 +17,7 @@ fn test_export_basic_succeeds() {
     let layout = test_layout_basic(2, 3);
     let (layout_path, layout_temp) = create_temp_layout_file(&layout);
     let (config, config_temp) = temp_config_with_qmk(None);
-    let out_path = config_temp.path().join("export.md");
+    let out_path = config_temp.path().join("export.json");
 
     let output = Command::new(lazyqmk_bin())
         .args([
@@ -69,7 +69,7 @@ fn test_export_validates_diagram_structure() {
     let layout = test_layout_basic(2, 3);
     let (layout_path, layout_temp) = create_temp_layout_file(&layout);
     let (config, config_temp) = temp_config_with_qmk(None);
-    let out_path = config_temp.path().join("export.md");
+    let out_path = config_temp.path().join("export.json");
 
     let output = Command::new(lazyqmk_bin())
         .args([
@@ -125,7 +125,7 @@ fn test_export_multiple_layers() {
     let layout = test_layout_basic(2, 3);
     let (layout_path, layout_temp) = create_temp_layout_file(&layout);
     let (config, config_temp) = temp_config_with_qmk(None);
-    let out_path = config_temp.path().join("export.md");
+    let out_path = config_temp.path().join("export.json");
 
     let output = Command::new(lazyqmk_bin())
         .args([

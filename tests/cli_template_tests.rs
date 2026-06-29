@@ -26,11 +26,12 @@ fn get_template_dir() -> PathBuf {
 fn cleanup_templates() {
     let template_dir = get_template_dir();
     if template_dir.exists() {
-        // Remove all .md files in the template directory
+        // Remove all template files (both legacy .md and current .json)
         if let Ok(entries) = fs::read_dir(&template_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                let ext = path.extension().and_then(|s| s.to_str());
+                if ext == Some("json") || ext == Some("md") {
                     let _ = fs::remove_file(path);
                 }
             }
@@ -321,7 +322,7 @@ fn test_template_apply_existing_template() {
 
     // Now apply it
     let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
-    let output_path = temp_dir.path().join("applied_layout.md");
+    let output_path = temp_dir.path().join("applied_layout.json");
 
     let output = Command::new(lazyqmk_bin())
         .args([
@@ -353,7 +354,7 @@ fn test_template_apply_existing_template() {
 #[test]
 fn test_template_apply_nonexistent_template() {
     let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
-    let output_path = temp_dir.path().join("output.md");
+    let output_path = temp_dir.path().join("output.json");
 
     let output = Command::new(lazyqmk_bin())
         .args([
@@ -399,7 +400,7 @@ fn test_template_apply_output_file_exists_fails() {
 
     // Create output file that already exists
     let temp_dir = tempfile::TempDir::new().expect("Failed to create temp dir");
-    let output_path = temp_dir.path().join("existing.md");
+    let output_path = temp_dir.path().join("existing.json");
     fs::write(&output_path, "existing content").expect("Failed to create existing file");
 
     // Try to apply (should fail because file exists)

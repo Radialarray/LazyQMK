@@ -161,22 +161,23 @@ fn test_tap_dance_add_two_way() {
     // Verify it was added to the file
     let content = fs::read_to_string(&layout_path).expect("Should read file");
     assert!(
-        content.contains("## Tap Dances"),
+        content.contains("\"tap_dances\""),
         "Should have tap dance section"
     );
     assert!(
-        content.contains("**tab_esc**"),
+        content.contains(r#""name": "tab_esc""#),
         "Should have tap dance in file"
     );
     assert!(
-        content.contains("Single Tap: KC_TAB"),
+        content.contains(r#""single_tap": "KC_TAB""#),
         "Should have single tap"
     );
     assert!(
-        content.contains("Double Tap: KC_ESC"),
+        content.contains(r#""double_tap": "KC_ESC""#),
         "Should have double tap"
     );
 }
+
 
 #[test]
 fn test_tap_dance_add_three_way() {
@@ -205,10 +206,10 @@ fn test_tap_dance_add_three_way() {
 
     // Verify it was added with all three actions
     let content = fs::read_to_string(&layout_path).expect("Should read file");
-    assert!(content.contains("**space_layer**"));
-    assert!(content.contains("Single Tap: KC_SPC"));
-    assert!(content.contains("Double Tap: KC_ENT"));
-    assert!(content.contains("Hold: MO(1)"));
+    assert!(content.contains(r#""name": "space_layer""#));
+    assert!(content.contains(r#""single_tap": "KC_SPC""#));
+    assert!(content.contains(r#""double_tap": "KC_ENT""#));
+    assert!(content.contains(r#""hold": "MO(1)""#));
 }
 
 #[test]
@@ -351,21 +352,21 @@ fn test_tap_dance_add_preserves_formatting() {
 
     // Should preserve metadata
     assert!(
-        modified.contains("name: Test Layout"),
+        modified.contains(r#""name": "Test Layout""#),
         "Should preserve layout name"
     );
     assert!(
-        modified.contains("keyboard: test_keyboard"),
+        modified.contains(r#""keyboard": "test_keyboard""#),
         "Should preserve keyboard"
     );
 
     // Should add tap dance section
     assert!(
-        modified.contains("## Tap Dances"),
+        modified.contains(r#""tap_dances""#),
         "Should have tap dance section"
     );
     assert!(
-        modified.contains("**test_td**"),
+        modified.contains(r#""name": "test_td""#),
         "Should have new tap dance"
     );
 }
@@ -516,7 +517,7 @@ fn test_tap_dance_delete_referenced_force() {
     // Verify definition removed and references replaced
     let content = fs::read_to_string(&layout_path).expect("Should read file");
     assert!(
-        !content.contains("**esc_caps**"),
+        !content.contains(r#""name": "esc_caps""#),
         "Definition should be removed"
     );
     assert!(

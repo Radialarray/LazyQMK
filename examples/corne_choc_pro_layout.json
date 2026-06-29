@@ -4,7 +4,7 @@
     "description": "Keebart Corne Choc Pro Layout",
     "author": "Radialarray",
     "created": "2025-12-05T16:12:07.712768Z",
-    "modified": "2025-12-09T20:44:41.908747Z",
+    "modified": "2026-06-29T16:48:40.462736Z",
     "tags": [],
     "is_template": false,
     "version": "1.0",
@@ -18,57 +18,540 @@
       "id": "2d4174f6-9e41-48a8-9514-fd982fe660b5",
       "number": 0,
       "name": "Base",
-      "default_color": { "r": 212, "g": 212, "b": 212 },
+      "default_color": {
+        "r": 212,
+        "g": 212,
+        "b": 212
+      },
       "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "LCG(KC_Q)", "color_override": { "r": 249, "g": 115, "b": 22 } },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_Q" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "LT(4, KC_W)" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "LT(2, KC_E)" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "LT(1, KC_R)" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "LT(6, KC_T)" },
-        { "position": { "row": 0, "col": 6 }, "keycode": "KC_NO" },
-        { "position": { "row": 0, "col": 7 }, "keycode": "KC_NO" },
-        { "position": { "row": 0, "col": 8 }, "keycode": "KC_Z" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_U" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_I" },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_O" },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_P" },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_SLSH" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_ESC", "color_override": { "r": 59, "g": 130, "b": 246 } },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_A" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "LALT_T(KC_S)" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "LCTL_T(KC_D)" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "LSFT_T(KC_F)", "color_override": { "r": 244, "g": 114, "b": 182 } },
-        { "position": { "row": 1, "col": 5 }, "keycode": "LGUI_T(KC_G)" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_MCTL", "category_id": "macos" },
-        { "position": { "row": 1, "col": 7 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "RGUI_T(KC_H)" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "RSFT_T(KC_J)", "color_override": { "r": 244, "g": 114, "b": 182 } },
-        { "position": { "row": 1, "col": 10 }, "keycode": "RCTL_T(KC_K)" },
-        { "position": { "row": 1, "col": 11 }, "keycode": "RALT_T(KC_L)" },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_MINS" },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_HASH" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "DE_Y" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_X" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_C" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_A" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_B" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_NO" },
-        { "position": { "row": 2, "col": 7 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_N" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_M" },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_COMM" },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_DOT" },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_LEFT", "category_id": "navigation" },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_RGHT", "category_id": "navigation" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_BSPC", "category_id": "delete" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_ENT", "color_override": { "r": 244, "g": 114, "b": 182 } },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "LT(5, KC_TAB)", "category_id": "space" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_SPC", "category_id": "space" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_NO" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "LCG(KC_Q)",
+          "label": null,
+          "color_override": {
+            "r": 249,
+            "g": 115,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false,
+          "description": "MacOS Lock"
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_Q",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "LT(@5f74eeab-9b83-4c1f-b6d5-56aac8592ff2, KC_W)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "LT(@9f534cd5-4dd1-4c28-84a6-a73272b0949f, KC_E)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "LT(@f85996a8-8dbd-403d-a804-fac1f2bc751d, KC_R)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "LT(@6f9af2ee-80b1-417c-addc-5eadc2ad95ad, KC_T)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_Z",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_U",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_I",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_O",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_P",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_SLSH",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_ESC",
+          "label": null,
+          "color_override": {
+            "r": 59,
+            "g": 130,
+            "b": 246
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_A",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "LALT_T(KC_S)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "LCTL_T(KC_D)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "LSFT_T(KC_F)",
+          "label": null,
+          "color_override": {
+            "r": 244,
+            "g": 114,
+            "b": 182
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "LGUI_T(KC_G)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_MCTL",
+          "label": null,
+          "color_override": null,
+          "category_id": "macos",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "RGUI_T(KC_H)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "RSFT_T(KC_J)",
+          "label": null,
+          "color_override": {
+            "r": 244,
+            "g": 114,
+            "b": 182
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "RCTL_T(KC_K)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "RALT_T(KC_L)",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_MINS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_HASH",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "DE_Y",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_X",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_C",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_A",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_B",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_NO",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_N",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_M",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_COMM",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_DOT",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_LEFT",
+          "label": null,
+          "color_override": null,
+          "category_id": "navigation",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_RGHT",
+          "label": null,
+          "color_override": null,
+          "category_id": "navigation",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_BSPC",
+          "label": null,
+          "color_override": null,
+          "category_id": "delete",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_ENT",
+          "label": null,
+          "color_override": {
+            "r": 244,
+            "g": 114,
+            "b": 182
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "LT(@30dd998f-feb2-494d-a68c-23bb141830d7, KC_TAB)",
+          "label": null,
+          "color_override": null,
+          "category_id": "space",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_SPC",
+          "label": null,
+          "color_override": null,
+          "category_id": "space",
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_NO",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -76,54 +559,551 @@
       "id": "f85996a8-8dbd-403d-a804-fac1f2bc751d",
       "number": 1,
       "name": "Symbols",
-      "default_color": { "r": 107, "g": 114, "b": 128 },
+      "default_color": {
+        "r": 107,
+        "g": 114,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_EXLM", "color_override": { "r": 132, "g": 204, "b": 22 } },
-        { "position": { "row": 0, "col": 3 }, "keycode": "DE_QUES", "color_override": { "r": 132, "g": 204, "b": 22 } },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "DE_UDIA", "color_override": { "r": 249, "g": 115, "b": 22 } },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_AMPR", "color_override": { "r": 132, "g": 204, "b": 22 } },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_AT", "color_override": { "r": 132, "g": 204, "b": 22 } },
-        { "position": { "row": 1, "col": 3 }, "keycode": "DE_SS", "color_override": { "r": 249, "g": 115, "b": 22 } },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "DE_ODIA", "color_override": { "r": 249, "g": 115, "b": 22 } },
-        { "position": { "row": 1, "col": 10 }, "keycode": "DE_ADIA", "color_override": { "r": 249, "g": 115, "b": 22 } },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_TRNS" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_EXLM",
+          "label": null,
+          "color_override": {
+            "r": 132,
+            "g": 204,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "DE_QUES",
+          "label": null,
+          "color_override": {
+            "r": 132,
+            "g": 204,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "DE_UDIA",
+          "label": null,
+          "color_override": {
+            "r": 249,
+            "g": 115,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_AMPR",
+          "label": null,
+          "color_override": {
+            "r": 132,
+            "g": 204,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_AT",
+          "label": null,
+          "color_override": {
+            "r": 132,
+            "g": 204,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "DE_SS",
+          "label": null,
+          "color_override": {
+            "r": 249,
+            "g": 115,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "DE_ODIA",
+          "label": null,
+          "color_override": {
+            "r": 249,
+            "g": 115,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "DE_ADIA",
+          "label": null,
+          "color_override": {
+            "r": 249,
+            "g": 115,
+            "b": 22
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -131,54 +1111,535 @@
       "id": "9f534cd5-4dd1-4c28-84a6-a73272b0949f",
       "number": 2,
       "name": "Navigation",
-      "default_color": { "r": 128, "g": 128, "b": 128 },
+      "default_color": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "KC_LEFT", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 1, "col": 10 }, "keycode": "KC_UP", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_DOWN", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_RGHT", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_TRNS" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "KC_LEFT",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "KC_UP",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_DOWN",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_RGHT",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -186,54 +1647,583 @@
       "id": "5f74eeab-9b83-4c1f-b6d5-56aac8592ff2",
       "number": 3,
       "name": "Numbers",
-      "default_color": { "r": 128, "g": 128, "b": 128 },
+      "default_color": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_PMNS", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_7", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_8", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_9", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_PMNS", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "KC_PPLS", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 1, "col": 10 }, "keycode": "KC_4", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_5", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_6", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_PPLS", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_PDOT", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_1", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_2", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_3", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_PEQL", "color_override": { "r": 101, "g": 163, "b": 13 } },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_0", "color_override": { "r": 22, "g": 163, "b": 74 } }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_PMNS",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_7",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_8",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_9",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_PMNS",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "KC_PPLS",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "KC_4",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_5",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_6",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_PPLS",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_PDOT",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_1",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_2",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_3",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_PEQL",
+          "label": null,
+          "color_override": {
+            "r": 101,
+            "g": 163,
+            "b": 13
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_0",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -241,54 +2231,555 @@
       "id": "30dd998f-feb2-494d-a68c-23bb141830d7",
       "number": 4,
       "name": "Code",
-      "default_color": { "r": 128, "g": 128, "b": 128 },
+      "default_color": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_LBRC", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_SLSH", "color_override": { "r": 234, "g": 88, "b": 12 } },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_RBRC", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 10 }, "keycode": "KC_LPRN", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_QUOT", "color_override": { "r": 234, "g": 88, "b": 12 } },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_RPRN", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_LCBR", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_DQUO", "color_override": { "r": 234, "g": 88, "b": 12 } },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_RCBR", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_TRNS" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_LBRC",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_SLSH",
+          "label": null,
+          "color_override": {
+            "r": 234,
+            "g": 88,
+            "b": 12
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_RBRC",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "KC_LPRN",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_QUOT",
+          "label": null,
+          "color_override": {
+            "r": 234,
+            "g": 88,
+            "b": 12
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_RPRN",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_LCBR",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_DQUO",
+          "label": null,
+          "color_override": {
+            "r": 234,
+            "g": 88,
+            "b": 12
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_RCBR",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -296,54 +2787,519 @@
       "id": "a794001c-9dfc-4c37-a696-c6b549b6785d",
       "number": 5,
       "name": "Mouse",
-      "default_color": { "r": 128, "g": 128, "b": 128 },
+      "default_color": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_TRNS" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     },
@@ -351,54 +3307,555 @@
       "id": "6f9af2ee-80b1-417c-addc-5eadc2ad95ad",
       "number": 6,
       "name": "Globals",
-      "default_color": { "r": 128, "g": 128, "b": 128 },
+      "default_color": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+      },
+      "category_id": null,
       "keys": [
-        { "position": { "row": 0, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 10 }, "keycode": "KC_BRID", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 0, "col": 11 }, "keycode": "KC_BRIU", "color_override": { "r": 202, "g": 138, "b": 4 } },
-        { "position": { "row": 0, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 0, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 9 }, "keycode": "KC_MSTP", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 10 }, "keycode": "KC_MPRV", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 11 }, "keycode": "KC_MNXT", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 12 }, "keycode": "KC_MPLY", "color_override": { "r": 22, "g": 163, "b": 74 } },
-        { "position": { "row": 1, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 1, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 0 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 1 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 2 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 3 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 9 }, "keycode": "KC_MUTE", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 2, "col": 10 }, "keycode": "KC_VOLD", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 2, "col": 11 }, "keycode": "KC_VOLU", "color_override": { "r": 219, "g": 39, "b": 119 } },
-        { "position": { "row": 2, "col": 12 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 13 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 2, "col": 14 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 6 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 3, "col": 8 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 4 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 5 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 9 }, "keycode": "KC_TRNS" },
-        { "position": { "row": 4, "col": 10 }, "keycode": "KC_TRNS" }
+        {
+          "position": {
+            "row": 0,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 10
+          },
+          "keycode": "KC_BRID",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 11
+          },
+          "keycode": "KC_BRIU",
+          "label": null,
+          "color_override": {
+            "r": 202,
+            "g": 138,
+            "b": 4
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 0,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 9
+          },
+          "keycode": "KC_MSTP",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 10
+          },
+          "keycode": "KC_MPRV",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 11
+          },
+          "keycode": "KC_MNXT",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 12
+          },
+          "keycode": "KC_MPLY",
+          "label": null,
+          "color_override": {
+            "r": 22,
+            "g": 163,
+            "b": 74
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 1,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 0
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 1
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 2
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 3
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 9
+          },
+          "keycode": "KC_MUTE",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 10
+          },
+          "keycode": "KC_VOLD",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 11
+          },
+          "keycode": "KC_VOLU",
+          "label": null,
+          "color_override": {
+            "r": 219,
+            "g": 39,
+            "b": 119
+          },
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 12
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 13
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 2,
+            "col": 14
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 6
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 3,
+            "col": 8
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 5
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 9
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        },
+        {
+          "position": {
+            "row": 4,
+            "col": 10
+          },
+          "keycode": "KC_TRNS",
+          "label": null,
+          "color_override": null,
+          "category_id": null,
+          "combo_participant": false
+        }
       ],
       "layer_colors_enabled": true
     }
@@ -407,22 +3864,38 @@
     {
       "id": "delete",
       "name": "Delete",
-      "color": { "r": 220, "g": 38, "b": 38 }
+      "color": {
+        "r": 220,
+        "g": 38,
+        "b": 38
+      }
     },
     {
       "id": "space",
       "name": "Space",
-      "color": { "r": 34, "g": 211, "b": 238 }
+      "color": {
+        "r": 34,
+        "g": 211,
+        "b": 238
+      }
     },
     {
       "id": "macos",
       "name": "MacOS",
-      "color": { "r": 249, "g": 115, "b": 22 }
+      "color": {
+        "r": 249,
+        "g": 115,
+        "b": 22
+      }
     },
     {
       "id": "navigation",
       "name": "Navigation",
-      "color": { "r": 74, "g": 222, "b": 128 }
+      "color": {
+        "r": 74,
+        "g": 222,
+        "b": 128
+      }
     }
   ],
   "rgb_enabled": true,
@@ -438,20 +3911,33 @@
     "idle_effect_mode": "breathing"
   },
   "rgb_overlay_ripple": {
-    "enabled": false,
+    "enabled": true,
     "max_ripples": 4,
-    "duration_ms": 1500,
+    "duration_ms": 500,
     "speed": 200,
-    "band_width": 30,
-    "amplitude_pct": 50,
-    "color_mode": "fixed",
-    "fixed_color": { "r": 0, "g": 255, "b": 255 },
+    "band_width": 20,
+    "amplitude_pct": 60,
+    "wave_count": 1,
+    "wave_delay_ms": 400,
+    "color_mode": "key_based",
+    "fixed_color": {
+      "r": 0,
+      "g": 255,
+      "b": 255
+    },
     "hue_shift_deg": 60,
     "trigger_on_press": true,
     "trigger_on_release": false,
     "ignore_transparent": true,
-    "ignore_modifiers": false,
+    "ignore_modifiers": true,
     "ignore_layer_switch": false
+  },
+  "palette_fx": {
+    "enabled": true,
+    "default_effect": "flow",
+    "default_palette": "synthwave",
+    "enable_all_effects": true,
+    "enable_all_palettes": true
   },
   "tap_hold_settings": {
     "tapping_term": 200,
@@ -464,8 +3950,6 @@
     "preset": "Default"
   },
   "combo_settings": {
-    "enabled": false,
-    "combos": []
-  },
-  "tap_dances": []
+    "enabled": false
+  }
 }

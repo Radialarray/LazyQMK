@@ -105,6 +105,7 @@ pub struct KeyDefinition {
     /// Category assignment for this key
     pub category_id: Option<String>,
     /// Flag for combo feature (future use)
+    #[serde(default)]
     pub combo_participant: bool,
     /// Optional user description for this key (e.g., "Primary thumb key")
     #[serde(default, skip_serializing_if = "Option::is_none")]
