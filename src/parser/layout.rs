@@ -1024,6 +1024,30 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
 
+        // Parse Ripple Wave Count
+        if line.starts_with("**Ripple Wave Count**:") {
+            let value = line
+                .strip_prefix("**Ripple Wave Count**:")
+                .unwrap()
+                .trim();
+            if let Ok(count) = value.parse::<u8>() {
+                layout.rgb_overlay_ripple.wave_count = count;
+            }
+        }
+
+        // Parse Ripple Wave Delay
+        if line.starts_with("**Ripple Wave Delay**:") {
+            let value = line
+                .strip_prefix("**Ripple Wave Delay**:")
+                .unwrap()
+                .trim()
+                .trim_end_matches("ms")
+                .trim();
+            if let Ok(delay) = value.parse::<u16>() {
+                layout.rgb_overlay_ripple.wave_delay_ms = delay;
+            }
+        }
+
         // Parse Ripple Key Action Palette (PaletteFX palette for reactive key bursts)
         if line.starts_with("**Ripple Key Action Palette**:") {
             let value = line

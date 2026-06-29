@@ -164,6 +164,10 @@ pub enum SettingItem {
     OverlayRippleIgnoreLayerSwitch,
     /// PaletteFX palette for key-action reactive bursts
     OverlayRippleKeyActionPalette,
+    /// Number of waves per keypress (1-5)
+    OverlayRippleWaveCount,
+    /// Delay between waves in milliseconds (50-500)
+    OverlayRippleWaveDelay,
 
     // === PaletteFX Settings (Per-Layout) ===
     /// PaletteFX master switch
@@ -261,6 +265,8 @@ impl SettingItem {
             Self::OverlayRippleIgnoreModifiers,
             Self::OverlayRippleIgnoreLayerSwitch,
             Self::OverlayRippleKeyActionPalette,
+            Self::OverlayRippleWaveCount,
+            Self::OverlayRippleWaveDelay,
             // PaletteFX (Per-Layout)
             Self::PaletteFxEnabled,
             Self::PaletteFxDefaultEffect,
@@ -326,6 +332,8 @@ impl SettingItem {
             | Self::OverlayRippleIgnoreModifiers
             | Self::OverlayRippleIgnoreLayerSwitch
             | Self::OverlayRippleKeyActionPalette
+            | Self::OverlayRippleWaveCount
+            | Self::OverlayRippleWaveDelay
             | Self::PaletteFxEnabled
             | Self::PaletteFxDefaultEffect
             | Self::PaletteFxDefaultPalette
@@ -378,8 +386,10 @@ impl SettingItem {
             | Self::OverlayRippleTriggerRelease
             | Self::OverlayRippleIgnoreTransparent
             | Self::OverlayRippleIgnoreModifiers
-            | Self::OverlayRippleIgnoreLayerSwitch
-            | Self::OverlayRippleKeyActionPalette => Some(RgbSubgroup::Ripple),
+            |             Self::OverlayRippleIgnoreLayerSwitch
+            | Self::OverlayRippleKeyActionPalette
+            | Self::OverlayRippleWaveCount
+            | Self::OverlayRippleWaveDelay => Some(RgbSubgroup::Ripple),
             Self::PaletteFxEnabled
             | Self::PaletteFxDefaultEffect
             | Self::PaletteFxDefaultPalette
@@ -427,6 +437,8 @@ impl SettingItem {
             Self::OverlayRippleIgnoreModifiers => "Ignore Modifier Keys",
             Self::OverlayRippleIgnoreLayerSwitch => "Ignore Layer Switch Keys",
             Self::OverlayRippleKeyActionPalette => "Reactive Key Palette",
+            Self::OverlayRippleWaveCount => "Ripple Waves per Key",
+            Self::OverlayRippleWaveDelay => "Delay Between Waves",
             Self::PaletteFxEnabled => "PaletteFX Effects",
             Self::PaletteFxDefaultEffect => "PaletteFX Default Effect",
             Self::PaletteFxDefaultPalette => "PaletteFX Default Palette",
@@ -514,6 +526,8 @@ impl SettingItem {
             Self::OverlayRippleIgnoreModifiers => "Don't trigger ripples on modifier keys",
             Self::OverlayRippleIgnoreLayerSwitch => "Don't trigger ripples on layer switch keys",
             Self::OverlayRippleKeyActionPalette => "PaletteFX palette for key-action reactive bursts. Requires PaletteFX enabled.",
+            Self::OverlayRippleWaveCount => "Number of concentric waves per keypress (1-5). Higher = richer cascading effect.",
+            Self::OverlayRippleWaveDelay => "Delay between consecutive waves in milliseconds (50-500ms).",
             Self::PaletteFxEnabled => "Enable PaletteFX community module effects instead of custom ripple overlay.",
             Self::PaletteFxDefaultEffect => "Default PaletteFX effect shown on startup. User can cycle with RM_NEXT/RM_PREV.",
             Self::PaletteFxDefaultPalette => "Color palette for PaletteFX effects (16 curated palettes available).",
@@ -2100,6 +2114,10 @@ fn get_setting_value_display(
         SettingItem::OverlayRippleKeyActionPalette => overlay_ripple_settings
             .key_action_palette
             .map_or_else(|| "Default".to_string(), |p| p.display_name().to_string()),
+        SettingItem::OverlayRippleWaveCount => format!("{}", overlay_ripple_settings.wave_count),
+        SettingItem::OverlayRippleWaveDelay => {
+            format!("{}ms", overlay_ripple_settings.wave_delay_ms)
+        }
         // Per-Layout: Tap-Hold
         SettingItem::TapHoldPreset => tap_hold.preset.display_name().to_string(),
         SettingItem::TappingTerm => format!("{}ms", tap_hold.tapping_term),

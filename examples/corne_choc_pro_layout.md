@@ -132,10 +132,12 @@ output_format: uf2
 **Ripple Overlay**: On
 **Ripple Color Mode**: Key Color
 **Ripple Max Ripples**: 4
-**Ripple Duration**: 1000ms
+**Ripple Duration**: 500ms
 **Ripple Speed**: 200
 **Ripple Band Width**: 20
 **Ripple Amplitude**: 60%
 **Ripple Trigger on Press**: On
 **Ripple Ignore Transparent**: On
 **Ripple Ignore Modifiers**: On
+**Ripple Wave Count**: 1
+**Ripple Wave Delay**: 400ms

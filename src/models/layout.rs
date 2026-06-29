@@ -408,6 +408,16 @@ pub struct RgbOverlayRippleSettings {
     #[serde(default = "default_ripple_amplitude_pct")]
     pub amplitude_pct: u8,
 
+    /// Number of concentric waves per keypress (1-5)
+    /// Default: 1 (single wave)
+    #[serde(default = "default_ripple_wave_count")]
+    pub wave_count: u8,
+
+    /// Delay between consecutive waves in milliseconds (50-500)
+    /// Default: 100ms
+    #[serde(default = "default_ripple_wave_delay_ms")]
+    pub wave_delay_ms: u16,
+
     /// Color mode for ripples
     #[serde(default)]
     pub color_mode: RippleColorMode,
@@ -477,6 +487,14 @@ const fn default_ripple_hue_shift() -> i16 {
     60
 }
 
+const fn default_ripple_wave_count() -> u8 {
+    1
+}
+
+const fn default_ripple_wave_delay_ms() -> u16 {
+    100
+}
+
 const fn default_true() -> bool {
     true
 }
@@ -490,6 +508,8 @@ impl Default for RgbOverlayRippleSettings {
             speed: 200,
             band_width: 30,
             amplitude_pct: 50,
+            wave_count: 1,
+            wave_delay_ms: 100,
             color_mode: RippleColorMode::Fixed,
             fixed_color: RgbColor::new(0, 255, 255),
             hue_shift_deg: 60,
@@ -524,6 +544,12 @@ impl RgbOverlayRippleSettings {
         if self.hue_shift_deg < -180 || self.hue_shift_deg > 180 {
             anyhow::bail!("hue_shift_deg must be between -180 and 180");
         }
+        if self.wave_count == 0 || self.wave_count > 5 {
+            anyhow::bail!("wave_count must be between 1 and 5");
+        }
+        if self.wave_delay_ms < 50 || self.wave_delay_ms > 500 {
+            anyhow::bail!("wave_delay_ms must be between 50 and 500");
+        }
         Ok(())
     }
 
@@ -546,6 +572,8 @@ impl RgbOverlayRippleSettings {
             || self.ignore_modifiers != defaults.ignore_modifiers
             || self.ignore_layer_switch != defaults.ignore_layer_switch
             || self.key_action_palette != defaults.key_action_palette
+            || self.wave_count != defaults.wave_count
+            || self.wave_delay_ms != defaults.wave_delay_ms
     }
 }
 

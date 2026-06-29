@@ -39,6 +39,7 @@ This directory contains comprehensive documentation for LazyQMK development and 
 - **[BRANDING.md](BRANDING.md)** - Project branding guidelines
 - **[CROSS_SURFACE_UX_CONVENTIONS.md](CROSS_SURFACE_UX_CONVENTIONS.md)** - Product vocabulary, editing model, disclosure, feedback, and destructive-action conventions
 - **[RIPPLE_VALIDATION.md](RIPPLE_VALIDATION.md)** - RGB ripple effect validation
+- **[RIPPLE_FEATURE.md](RIPPLE_FEATURE.md)** - RGB ripple feature: algorithm, settings, development history
 
 ## 🚀 Quick Links by Use Case
 

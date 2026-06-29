@@ -494,6 +494,24 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         state.layout.rgb_overlay_ripple.ignore_transparent,
                     );
                 }
+                SettingItem::OverlayRippleWaveCount => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        u16::from(state.layout.rgb_overlay_ripple.wave_count),
+                        1,
+                        5,
+                        1,
+                    );
+                }
+                SettingItem::OverlayRippleWaveDelay => {
+                    manager.state_mut().start_editing_numeric(
+                        *setting,
+                        state.layout.rgb_overlay_ripple.wave_delay_ms,
+                        50,
+                        500,
+                        100,
+                    );
+                }
                 // PaletteFX Settings
                 SettingItem::PaletteFxEnabled => {
                     manager
@@ -908,6 +926,14 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
         SettingItem::OverlayRippleAmplitude => {
             state.layout.rgb_overlay_ripple.amplitude_pct = value as u8;
             state.set_status(format!("Overlay ripple amplitude set to: {value}%"));
+        }
+        SettingItem::OverlayRippleWaveCount => {
+            state.layout.rgb_overlay_ripple.wave_count = value as u8;
+            state.set_status(format!("Overlay ripple waves per key set to: {value}"));
+        }
+        SettingItem::OverlayRippleWaveDelay => {
+            state.layout.rgb_overlay_ripple.wave_delay_ms = value;
+            state.set_status(format!("Overlay ripple wave delay set to: {value}ms"));
         }
         SettingItem::OverlayRippleHueShift => {
             state.layout.rgb_overlay_ripple.hue_shift_deg = value as i16;

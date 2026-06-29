@@ -507,6 +507,16 @@ fn generate_settings(layout: &Layout) -> Option<String> {
             output.push_str(&format!("**Ripple Ignore Layer Switch**: {value}\n"));
         }
 
+        // Write wave count if not default
+        if rip.wave_count != defaults.wave_count {
+            output.push_str(&format!("**Ripple Wave Count**: {}\n", rip.wave_count));
+        }
+
+        // Write wave delay if not default
+        if rip.wave_delay_ms != defaults.wave_delay_ms {
+            output.push_str(&format!("**Ripple Wave Delay**: {}ms\n", rip.wave_delay_ms));
+        }
+
         // Write key action palette if set
         if let Some(palette) = &rip.key_action_palette {
             let palette_name = palette.display_name();
@@ -1366,6 +1376,8 @@ mod tests {
             speed: 255,
             band_width: 4,
             amplitude_pct: 100,
+            wave_count: 3,
+            wave_delay_ms: 150,
             color_mode: RippleColorMode::HueShift,
             fixed_color: RgbColor::new(255, 255, 0), // Yellow
             hue_shift_deg: -90,
@@ -1393,6 +1405,8 @@ mod tests {
         assert!(markdown.contains("**Ripple Ignore Transparent**: Off"));
         assert!(markdown.contains("**Ripple Ignore Modifiers**: On"));
         assert!(markdown.contains("**Ripple Ignore Layer Switch**: On"));
+        assert!(markdown.contains("**Ripple Wave Count**: 3"));
+        assert!(markdown.contains("**Ripple Wave Delay**: 150ms"));
 
         let parsed = parse_markdown_layout_str(&markdown).unwrap();
         let rip = &parsed.rgb_overlay_ripple;
@@ -1402,6 +1416,8 @@ mod tests {
         assert_eq!(rip.speed, 255);
         assert_eq!(rip.band_width, 4);
         assert_eq!(rip.amplitude_pct, 100);
+        assert_eq!(rip.wave_count, 3);
+        assert_eq!(rip.wave_delay_ms, 150);
         assert_eq!(rip.color_mode, RippleColorMode::HueShift);
         assert_eq!(rip.fixed_color, RgbColor::new(255, 255, 0));
         assert_eq!(rip.hue_shift_deg, -90);

@@ -864,6 +864,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    uint8_t row;\n");
         code.push_str("    uint8_t col;\n");
         code.push_str("    uint32_t start_time;\n");
+        code.push_str("    uint32_t trigger_delay_ms;\n");
         code.push_str("    bool active;\n");
         code.push_str("} ripple_t;\n");
         code.push('\n');
@@ -873,8 +874,9 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
 
         // Helper: Add new ripple (find empty slot or replace oldest)
+        // delay_ms: stagger offset for multi-wave cascading (0 = immediate)
         code.push_str(
-            "static void lazyqmk_ripple_add(uint8_t led_index, uint8_t row, uint8_t col) {\n",
+            "static void lazyqmk_ripple_add(uint8_t led_index, uint8_t row, uint8_t col, uint32_t delay_ms) {\n",
         );
         code.push_str("    // Find an empty slot or the oldest ripple\n");
         code.push_str("    uint8_t oldest_idx = 0;\n");
@@ -886,6 +888,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("            ripples[i].row = row;\n");
         code.push_str("            ripples[i].col = col;\n");
         code.push_str("            ripples[i].start_time = timer_read32();\n");
+        code.push_str("            ripples[i].trigger_delay_ms = delay_ms;\n");
         code.push_str("            ripples[i].active = true;\n");
         code.push_str("            return;\n");
         code.push_str("        }\n");
@@ -900,6 +903,7 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    ripples[oldest_idx].row = row;\n");
         code.push_str("    ripples[oldest_idx].col = col;\n");
         code.push_str("    ripples[oldest_idx].start_time = timer_read32();\n");
+        code.push_str("    ripples[oldest_idx].trigger_delay_ms = delay_ms;\n");
         code.push_str("    ripples[oldest_idx].active = true;\n");
         code.push_str("}\n");
         code.push('\n');
@@ -979,20 +983,29 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        if (!ripples[i].active) continue;\n");
         code.push('\n');
         code.push_str("        uint32_t elapsed_ms = now - ripples[i].start_time;\n");
-        code.push_str("        if (elapsed_ms >= LQMK_RIPPLE_DURATION_MS) {\n");
+        code.push_str("        // Respect trigger delay for multi-wave cascading\n");
+        code.push_str("        if (elapsed_ms < ripples[i].trigger_delay_ms) continue;\n");
+        code.push_str("        uint32_t effective_elapsed = elapsed_ms - ripples[i].trigger_delay_ms;\n");
+        code.push_str("        if (effective_elapsed >= LQMK_RIPPLE_DURATION_MS) {\n");
         code.push_str("            ripples[i].active = false;\n");
         code.push_str("            continue;\n");
         code.push_str("        }\n");
         code.push('\n');
-        // Compute the current ring radius (in matrix-space Manhattan distance).
+        // Compute the current ring radius (in matrix-space distance).
         // The wavefront expands from 0 to LQMK_RIPPLE_MAX_RADIUS over the
         // duration. At duration/2, the ring is at max radius and at peak
         // intensity. After that, it fades and the ring continues outward.
-        code.push_str("        uint8_t radius = (uint8_t)(((uint16_t)elapsed_ms * LQMK_RIPPLE_MAX_RADIUS) / LQMK_RIPPLE_DURATION_MS);\n");
-        code.push_str("        // Intensity envelope: peak at mid-duration, fades at edges\n");
-        code.push_str("        uint8_t amp = (uint8_t)(elapsed_ms < (LQMK_RIPPLE_DURATION_MS / 2)\n");
-        code.push_str("            ? scale16by8((uint16_t)(elapsed_ms * 2), 255 / (LQMK_RIPPLE_DURATION_MS / 2 + 1))\n");
-        code.push_str("            : scale16by8((uint16_t)((LQMK_RIPPLE_DURATION_MS - elapsed_ms) * 2), 255 / (LQMK_RIPPLE_DURATION_MS / 2 + 1)));\n");
+        // Speed-aware expansion: radius grows from 0 to LQMK_RIPPLE_MAX_RADIUS
+        // over LQMK_RIPPLE_DURATION_MS. LQMK_RIPPLE_SPEED accelerates (higher = faster).
+        // At default speed=200 this is identity: (elapsed * max * 200) / (dur * 200).
+        code.push_str("        uint32_t scaled = (uint32_t)effective_elapsed * LQMK_RIPPLE_MAX_RADIUS * LQMK_RIPPLE_SPEED;\n");
+        code.push_str("        uint8_t radius = (uint8_t)(scaled / LQMK_RIPPLE_SCALED_DURATION);\n");
+        code.push_str("        // Intensity envelope: triangle ramp 0→255→0 over duration\n");
+        code.push_str("        uint8_t amp = (uint8_t)scale16by8(\n");
+        code.push_str("            effective_elapsed < (LQMK_RIPPLE_DURATION_MS / 2)\n");
+        code.push_str("                ? (uint16_t)(effective_elapsed * 2)\n");
+        code.push_str("                : (uint16_t)((LQMK_RIPPLE_DURATION_MS - effective_elapsed) * 2),\n");
+        code.push_str("            LQMK_RIPPLE_AMP_SCALE);\n");
         code.push('\n');
         code.push_str("        // Compute distance using MATRIX positions\n");
         code.push_str("        uint8_t led_row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
@@ -1006,14 +1019,21 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        if (drow > LQMK_RIPPLE_MAX_RADIUS + 1 || dcol > LQMK_RIPPLE_MAX_RADIUS + 1) continue;\n");
         code.push_str("        uint8_t dist = (uint8_t)(drow + dcol);\n");
         code.push('\n');
-        code.push_str("        // Distance from this LED to the current wavefront.\n");
-        code.push_str("        // The ring has thickness LQMK_RIPPLE_RING_THICKNESS.\n");
-        code.push_str("        if (dist < radius) continue;  // inside the ring: no contribution\n");
-        code.push_str("        uint8_t ring_dist = dist - radius;\n");
-        code.push_str("        if (ring_dist >= LQMK_RIPPLE_RING_THICKNESS) continue;  // outside the ring\n");
-        code.push('\n');
-        code.push_str("        // Bump: peaks at the wavefront, falls off over ring thickness\n");
-        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 255 * ring_dist / LQMK_RIPPLE_RING_THICKNESS), amp);\n");
+        // Soft pulse: brightness peaks at the wavefront, fades smoothly
+        // both inward (toward center) and outward (toward edge).
+        // FADE_WIDTH controls the gradient width — wider = smoother, narrower = sharper.
+        code.push_str("        uint8_t bump;\n");
+        code.push_str("        if (dist <= radius) {\n");
+        code.push_str("            // Inside the wavefront: gradient fading toward center\n");
+        code.push_str("            uint8_t inner_dist = radius - dist;\n");
+        code.push_str("            if (inner_dist > LQMK_RIPPLE_FADE_WIDTH) continue;\n");
+        code.push_str("            bump = scale8((uint8_t)(255 - 255 * inner_dist / LQMK_RIPPLE_FADE_WIDTH), amp);\n");
+        code.push_str("        } else {\n");
+        code.push_str("            // Outside the wavefront: gradient fading outward\n");
+        code.push_str("            uint8_t outer_dist = dist - radius;\n");
+        code.push_str("            if (outer_dist > LQMK_RIPPLE_FADE_WIDTH) continue;\n");
+        code.push_str("            bump = scale8((uint8_t)(255 - 255 * outer_dist / LQMK_RIPPLE_FADE_WIDTH), amp);\n");
+        code.push_str("        }\n");
         code.push_str("        if (bump == 0) continue;\n");
         code.push('\n');
         // For each ripple in range, accumulate ITS color contribution.
@@ -1061,6 +1081,7 @@ impl<'a> FirmwareGenerator<'a> {
                     "    const uint16_t* palette = palettefx_get_palette_data();  // current palette\n",
                 );
             }
+            code.push_str("    uint8_t brightness = rgb_matrix_get_val();\n");
             code.push_str("    hsv_t hsv = palettefx_interp_color(palette, brightness);\n");
             code.push_str("    if (brightness < 32) {\n");
             code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
@@ -1070,6 +1091,7 @@ impl<'a> FirmwareGenerator<'a> {
         } else {
             // No PaletteFX and no background lighting: use configured color mode
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
+            code.push_str("    uint8_t brightness = rgb_matrix_get_val();\n");
             code.push_str("    uint8_t contrib_r, contrib_g, contrib_b;\n");
             code.push('\n');
 
@@ -1160,7 +1182,11 @@ impl<'a> FirmwareGenerator<'a> {
                 code.push_str("    if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;\n");
             }
             code.push_str("    if (should_trigger) {\n");
-            code.push_str("        lazyqmk_ripple_add(led_index, record->event.key.row, record->event.key.col);\n");
+            code.push_str("        // Spawn concentric waves with staggered delays\n");
+            code.push_str("        for (uint8_t w = 0; w < LQMK_RIPPLE_WAVE_COUNT; w++) {\n");
+            code.push_str("            lazyqmk_ripple_add(led_index, record->event.key.row, record->event.key.col,\n");
+            code.push_str("                               (uint32_t)w * LQMK_RIPPLE_WAVE_DELAY_MS);\n");
+            code.push_str("        }\n");
             code.push_str("        return true;\n");
             code.push_str("    }\n");
         }
@@ -1785,20 +1811,40 @@ impl<'a> FirmwareGenerator<'a> {
                 "#define LQMK_RIPPLE_AMPLITUDE_PCT {}\n",
                 ripple_settings.amplitude_pct
             ));
-            // Ring thickness: keep it small so the wavefront is narrow.
-            // Use band_width / 4 so it scales with user expectation, but
-            // clamp to at least 1 and at most 2 (narrower = sharper ring).
-            let ring_thickness = ripple_settings.band_width / 4;
-            let ring_thickness = ring_thickness.clamp(1, 2);
-            content.push_str(&format!(
-                "#define LQMK_RIPPLE_RING_THICKNESS {ring_thickness}\n"
-            ));
-            // Maximum wavefront radius in matrix-space Manhattan distance.
+            // Maximum wavefront radius in matrix-space distance.
             // This controls how far the ripple expands outward from the key.
             // Use amplitude_pct (0-100) mapped to 2..=6 matrix units.
             let max_radius = 2 + (u16::from(ripple_settings.amplitude_pct) * 4 / 100);
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_MAX_RADIUS {max_radius}\n"
+            ));
+            // Fade width: controls gradient softness. Proportional to max radius
+            // so the pulse is always narrower than the total span (visible movement).
+            let fade_width = (max_radius / 2).clamp(1, 4) as u8;
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_FADE_WIDTH {fade_width}\n"
+            ));
+            // Scaled duration for speed-aware radius calculation.
+            // Speed acts as a multiplier on expansion rate.
+            // At default speed=200, LQMK_RIPPLE_SCALED_DURATION = duration_ms * 200.
+            // The radius formula is: (elapsed * max_radius * speed) / scaled_duration
+            // which simplifies to (elapsed * max_radius) / duration at speed=200.
+            let scaled_duration = u32::from(ripple_settings.duration_ms)
+                .saturating_mul(200);
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_SCALED_DURATION {scaled_duration}UL\n"
+            ));
+            // Amplitude envelope scale factor for scale16by8.
+            // Gives a triangular 0→255→0 ramp over the ripple duration.
+            // Pre-computed so the integer math doesn't collapse to zero.
+            let half_duration = u32::from(ripple_settings.duration_ms / 2);
+            let amp_scale = if half_duration > 0 {
+                ((255u32 * 256) / half_duration).min(255) as u8
+            } else {
+                255
+            };
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_AMP_SCALE {amp_scale}\n"
             ));
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",
@@ -1815,6 +1861,16 @@ impl<'a> FirmwareGenerator<'a> {
                 } else {
                     "0"
                 }
+            ));
+            // Multi-wave: number of concentric waves per keypress
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_WAVE_COUNT {}\n",
+                ripple_settings.wave_count
+            ));
+            // Delay between consecutive waves (ms)
+            content.push_str(&format!(
+                "#define LQMK_RIPPLE_WAVE_DELAY_MS {}\n",
+                ripple_settings.wave_delay_ms
             ));
         }
 

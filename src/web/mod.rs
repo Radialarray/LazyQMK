@@ -738,6 +738,10 @@ pub struct RgbOverlayRippleSettingsDto {
     pub band_width: u8,
     /// Amplitude as percentage of base brightness (0-100).
     pub amplitude_pct: u8,
+    /// Number of concentric waves per keypress (1-5).
+    pub wave_count: u8,
+    /// Delay between consecutive waves in milliseconds (50-500).
+    pub wave_delay_ms: u16,
     /// Color mode for ripples.
     pub color_mode: String,
     /// Fixed color (used when color_mode = Fixed).
@@ -769,6 +773,8 @@ impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
             speed: s.speed,
             band_width: s.band_width,
             amplitude_pct: s.amplitude_pct,
+            wave_count: s.wave_count,
+            wave_delay_ms: s.wave_delay_ms,
             color_mode: s.color_mode.display_name().to_string(),
             fixed_color: s.fixed_color,
             hue_shift_deg: s.hue_shift_deg,
@@ -1507,6 +1513,8 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
             speed: ripple_dto.speed,
             band_width: ripple_dto.band_width,
             amplitude_pct: ripple_dto.amplitude_pct,
+            wave_count: ripple_dto.wave_count,
+            wave_delay_ms: ripple_dto.wave_delay_ms,
             color_mode,
             fixed_color: ripple_dto.fixed_color,
             hue_shift_deg: ripple_dto.hue_shift_deg,
