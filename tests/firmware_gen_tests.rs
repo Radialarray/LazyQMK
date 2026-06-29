@@ -1214,7 +1214,8 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
     assert!(keymap_c.contains("lazyqmk_reactive_apply(i);"));
-    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, base.r, base.g, base.b);"));
+    // Non-palettefx path uses contrib_r/contrib_g/contrib_b locals
+    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);"));
     assert!(keymap_c.contains("rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());"));
     assert!(keymap_c.contains("qadd8(brightness, bump)"));
 

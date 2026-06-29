@@ -905,29 +905,32 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
 
         // Base color lookup (per-key layer colors or fallback)
-        code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
-        code.push_str("    RGB color = {0, 0, 0};\n");
-        code.push('\n');
-        code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
-        code.push_str("    uint8_t row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
-        code.push_str("    uint8_t col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
-        code.push_str("    keypos_t key = { .row = row, .col = col };\n");
-        code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
-        code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
-        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
-        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
-        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
-        code.push_str("        return color;\n");
-        code.push_str("    }\n");
-        code.push_str("#endif\n");
-        code.push('\n');
-        code.push_str("    rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());\n");
-        code.push_str("    color.r = matrix_rgb.r;\n");
-        code.push_str("    color.g = matrix_rgb.g;\n");
-        code.push_str("    color.b = matrix_rgb.b;\n");
-        code.push_str("    return color;\n");
-        code.push_str("}\n");
-        code.push('\n');
+        // Only needed for the non-palettefx color modes (Fixed/KeyBased/HueShift).
+        if !has_palettefx {
+            code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
+            code.push_str("    RGB color = {0, 0, 0};\n");
+            code.push('\n');
+            code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
+            code.push_str("    uint8_t row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
+            code.push_str("    uint8_t col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
+            code.push_str("    keypos_t key = { .row = row, .col = col };\n");
+            code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
+            code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
+            code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
+            code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
+            code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
+            code.push_str("        return color;\n");
+            code.push_str("    }\n");
+            code.push_str("#endif\n");
+            code.push('\n');
+            code.push_str("    rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());\n");
+            code.push_str("    color.r = matrix_rgb.r;\n");
+            code.push_str("    color.g = matrix_rgb.g;\n");
+            code.push_str("    color.b = matrix_rgb.b;\n");
+            code.push_str("    return color;\n");
+            code.push_str("}\n");
+            code.push('\n');
+        }
 
         // PaletteFX amplitude function — same curve as the community module's
         // Reactive effect. Linear ramp 0->32ms, plateau 32->55ms, smooth decay after.
@@ -1009,20 +1012,13 @@ impl<'a> FirmwareGenerator<'a> {
                 );
             }
             code.push_str("    hsv_t hsv = palettefx_interp_color(palette, brightness);\n");
+            code.push_str("    // Darken background for subtle hits (matching original PaletteFX)\n");
+            code.push_str("    if (brightness < 32) {\n");
+            code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
+            code.push_str("    }\n");
             code.push_str("    rgb_t contrib = hsv_to_rgb(hsv);\n");
-            code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
-            code.push_str("    // Blend (not saturating-add): dim base by (255-brightness), add burst\n");
-            code.push_str("    uint8_t blend = brightness;\n");
-            code.push_str(
-                "    base.r = qadd8(scale8(base.r, (uint8_t)(255 - blend)), scale8(contrib.r, blend));\n",
-            );
-            code.push_str(
-                "    base.g = qadd8(scale8(base.g, (uint8_t)(255 - blend)), scale8(contrib.g, blend));\n",
-            );
-            code.push_str(
-                "    base.b = qadd8(scale8(base.b, (uint8_t)(255 - blend)), scale8(contrib.b, blend));\n",
-            );
-            code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
+            code.push_str("    // REPLACE the LED color (not blend) so the burst is clearly visible\n");
+            code.push_str("    rgb_matrix_set_color(led_index, contrib.r, contrib.g, contrib.b);\n");
         } else {
             // Fallback: use the configured color mode (Fixed / KeyBased / HueShift)
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
@@ -1083,18 +1079,8 @@ impl<'a> FirmwareGenerator<'a> {
                 }
             }
 
-            code.push_str("    // Blend (not saturating-add): dim base by (255-brightness), add burst\n");
-            code.push_str("    uint8_t blend = brightness;\n");
-            code.push_str(
-                "    base.r = qadd8(scale8(base.r, (uint8_t)(255 - blend)), contrib_r);\n",
-            );
-            code.push_str(
-                "    base.g = qadd8(scale8(base.g, (uint8_t)(255 - blend)), contrib_g);\n",
-            );
-            code.push_str(
-                "    base.b = qadd8(scale8(base.b, (uint8_t)(255 - blend)), contrib_b);\n",
-            );
-            code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
+            code.push_str("    // REPLACE the LED color (not blend) so the burst is clearly visible\n");
+            code.push_str("    rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);\n");
         }
         code.push_str("}\n");
         code.push('\n');
