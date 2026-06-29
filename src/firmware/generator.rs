@@ -996,19 +996,22 @@ impl<'a> FirmwareGenerator<'a> {
 
         // Color application: two paths depending on whether TUI background
         // lighting is configured. If background lighting is on, the ripple
-        // is ADDED on top of the TUI color (originating key's color
-        // contribution, with a brightness floor at the global brightness
-        // setting). If no background lighting, the ripple REPLACES the LED
-        // color with the PaletteFX palette (or configured color mode).
+        // is ADDED on top of the TUI color using the originating key's
+        // color, scaled by the radial brightness. At the edges of the
+        // ripple, contribution = 0, so the TUI color is preserved. At the
+        // center, the contribution is at full intensity, producing a clear
+        // gradient that looks like a ripple. If no background lighting,
+        // the ripple REPLACES the LED color with the PaletteFX palette
+        // (or configured color mode).
         let has_background_lighting = self.layout_has_custom_colors();
         if has_background_lighting {
             // Background lighting is on: LAYER the ripple on top of the
-            // TUI color. The contribution is the originating key's color
-            // scaled by the effective intensity (with a floor at the global
-            // brightness so the ripple is always at least that bright).
+            // TUI color. The contribution is the originating key's TUI
+            // color scaled by the radial brightness. This produces a
+            // gradient from TUI color (at edges) to saturated (at center).
             code.push_str("    // Read the TUI base color for the current LED\n");
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
-            code.push_str("    // Mix in all active ripples' originating colors\n");
+            code.push_str("    // Sum up all active ripples' originating colors\n");
             code.push_str("    RGB key_color = {0, 0, 0};\n");
             code.push_str("    {\n");
             code.push_str("        for (uint8_t k = 0; k < LQMK_RIPPLE_MAX_RIPPLES; k++) {\n");
@@ -1020,19 +1023,12 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str("            }\n");
             code.push_str("        }\n");
             code.push_str("    }\n");
-            code.push_str("    // Floor intensity at the global brightness (255 == full max)\n");
-            code.push_str("#ifdef RGB_MATRIX_MAXIMUM_BRIGHTNESS\n");
-            code.push_str("    uint8_t floor_b = RGB_MATRIX_MAXIMUM_BRIGHTNESS;\n");
-            code.push_str("#else\n");
-            code.push_str("    uint8_t floor_b = 255;\n");
-            code.push_str("#endif\n");
-            code.push_str(
-                "    uint8_t effective_b = qadd8(floor_b, scale8((uint8_t)(255 - floor_b), brightness));\n",
-            );
-            code.push_str("    // LAYER on top: saturating-add the originating color to the TUI color\n");
-            code.push_str("    base.r = qadd8(base.r, scale8(key_color.r, effective_b));\n");
-            code.push_str("    base.g = qadd8(base.g, scale8(key_color.g, effective_b));\n");
-            code.push_str("    base.b = qadd8(base.b, scale8(key_color.b, effective_b));\n");
+            code.push_str("    // Additive contribution scaled by radial brightness.\n");
+            code.push_str("    // At edges (brightness=0): no contribution, TUI preserved.\n");
+            code.push_str("    // At center (brightness=255): full contribution, saturated.\n");
+            code.push_str("    base.r = qadd8(base.r, scale8(key_color.r, brightness));\n");
+            code.push_str("    base.g = qadd8(base.g, scale8(key_color.g, brightness));\n");
+            code.push_str("    base.b = qadd8(base.b, scale8(key_color.b, brightness));\n");
             code.push_str("    rgb_matrix_set_color(led_index, base.r, base.g, base.b);\n");
         } else if has_palettefx {
             // No background lighting: use PaletteFX palette colors at full intensity

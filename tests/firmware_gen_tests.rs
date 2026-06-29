@@ -1214,10 +1214,9 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
     assert!(keymap_c.contains("lazyqmk_reactive_apply(i);"));
-    // Background-lighting-on path: layer on top via qadd8 with global brightness floor
+    // Background-lighting-on path: layer on top via qadd8 (no floor)
     assert!(keymap_c.contains("RGB key_color = {0, 0, 0};"));
-    assert!(keymap_c.contains("uint8_t floor_b = RGB_MATRIX_MAXIMUM_BRIGHTNESS;"));
-    assert!(keymap_c.contains("base.r = qadd8(base.r, scale8(key_color.r, effective_b));"));
+    assert!(keymap_c.contains("base.r = qadd8(base.r, scale8(key_color.r, brightness));"));
     assert!(keymap_c.contains("rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());"));
     assert!(keymap_c.contains("qadd8(brightness, bump)"));
 
