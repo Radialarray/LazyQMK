@@ -1316,10 +1316,10 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
         "Ripple trigger code should not be commented out"
     );
 
-    // Fix 2: Must have __attribute__((weak)) to avoid duplicate symbol conflicts
+    // Fix 2: Must provide rgb_matrix_indicators_advanced_user to override QMK's weak default
     assert!(
-        keymap_c.contains("__attribute__((weak)) bool rgb_matrix_indicators_advanced_user"),
-        "rgb_matrix_indicators_advanced_user must have weak attribute"
+        keymap_c.contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"),
+        "rgb_matrix_indicators_advanced_user must be a strong definition (no weak attribute)"
     );
 
     // Fix 3: Must use actual keypress position, not hardcoded center LED

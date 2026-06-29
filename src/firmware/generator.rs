@@ -124,6 +124,15 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str("#include \"process_keycode/process_tap_dance.h\"\n");
         }
 
+        // lib8tion provides fast integer math (scale8, sin8, cos8, sqrt16, etc.)
+        // Needed by reactive key-action overlay and PaletteFX community module.
+        let needs_lib8tion = self.layout.rgb_overlay_ripple.enabled
+            && self.geometry.has_rgb_matrix()
+            || self.layout.palette_fx.enabled;
+        if needs_lib8tion {
+            code.push_str("#include <lib/lib8tion/lib8tion.h>\n");
+        }
+
         code.push('\n');
 
         // Add tap dance configuration if any tap dances are defined
@@ -993,7 +1002,7 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str("    if (brightness < 32) {\n");
             code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
             code.push_str("    }\n");
-            code.push_str("    rgb_t contrib = rgb_matrix_hsv_to_rgb(hsv);\n");
+            code.push_str("    rgb_t contrib = hsv_to_rgb(hsv);\n");
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
             code.push_str("    base.r = qadd8(base.r, contrib.r);\n");
             code.push_str("    base.g = qadd8(base.g, contrib.g);\n");
@@ -1109,8 +1118,9 @@ impl<'a> FirmwareGenerator<'a> {
 
         // RGB Matrix advanced indicators hook — applies the reactive overlay
         // on top of whatever the current RGB matrix effect rendered.
+        // NOTE: intentionally NOT weak — must override QMK's weak default.
         code.push_str(
-            "__attribute__((weak)) bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
+            "bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {\n",
         );
         code.push_str("    for (uint8_t i = led_min; i < led_max; i++) {\n");
         code.push_str("        lazyqmk_reactive_apply(i);\n");
