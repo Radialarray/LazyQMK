@@ -835,6 +835,8 @@ impl<'a> FirmwareGenerator<'a> {
         // Ripple state structure
         code.push_str("typedef struct {\n");
         code.push_str("    uint8_t led_index;\n");
+        code.push_str("    uint8_t row;\n");
+        code.push_str("    uint8_t col;\n");
         code.push_str("    uint32_t start_time;\n");
         code.push_str("    bool active;\n");
         code.push_str("} ripple_t;\n");
@@ -845,7 +847,9 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
 
         // Helper: Add new ripple (find empty slot or replace oldest)
-        code.push_str("static void lazyqmk_ripple_add(uint8_t led_index) {\n");
+        code.push_str(
+            "static void lazyqmk_ripple_add(uint8_t led_index, uint8_t row, uint8_t col) {\n",
+        );
         code.push_str("    // Find an empty slot or the oldest ripple\n");
         code.push_str("    uint8_t oldest_idx = 0;\n");
         code.push_str("    uint32_t oldest_time = ripples[0].start_time;\n");
@@ -853,6 +857,8 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
         code.push_str("        if (!ripples[i].active) {\n");
         code.push_str("            ripples[i].led_index = led_index;\n");
+        code.push_str("            ripples[i].row = row;\n");
+        code.push_str("            ripples[i].col = col;\n");
         code.push_str("            ripples[i].start_time = timer_read32();\n");
         code.push_str("            ripples[i].active = true;\n");
         code.push_str("            return;\n");
@@ -865,6 +871,8 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
         code.push_str("    // Replace oldest if no empty slot\n");
         code.push_str("    ripples[oldest_idx].led_index = led_index;\n");
+        code.push_str("    ripples[oldest_idx].row = row;\n");
+        code.push_str("    ripples[oldest_idx].col = col;\n");
         code.push_str("    ripples[oldest_idx].start_time = timer_read32();\n");
         code.push_str("    ripples[oldest_idx].active = true;\n");
         code.push_str("}\n");
@@ -970,22 +978,21 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        if (tick > 255) continue;\n");
         code.push_str("        uint8_t amp = lazyqmk_reactive_amplitude((uint8_t)tick);\n");
         code.push('\n');
-        code.push_str("        // Compute distance from this LED to the hit LED\n");
-        code.push_str("        uint8_t hit_x = g_led_config.point[ripples[i].led_index].x;\n");
-        code.push_str("        uint8_t hit_y = g_led_config.point[ripples[i].led_index].y;\n");
-        code.push_str("        uint8_t led_x = g_led_config.point[led_index].x;\n");
-        code.push_str("        uint8_t led_y = g_led_config.point[led_index].y;\n");
+        code.push_str("        // Compute distance using MATRIX positions (more reliable than\n");
+        code.push_str("        // g_led_config.point which can be uninitialised for some LEDs)\n");
+        code.push_str("        uint8_t led_row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
+        code.push_str("        uint8_t led_col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
+        code.push_str("        int8_t drow = (int8_t)led_row - (int8_t)ripples[i].row;\n");
+        code.push_str("        int8_t dcol = (int8_t)led_col - (int8_t)ripples[i].col;\n");
+        code.push_str("        if (drow < 0) drow = -drow;\n");
+        code.push_str("        if (dcol < 0) dcol = -dcol;\n");
         code.push('\n');
-        code.push_str("        uint8_t dx = abs8((led_x - hit_x) / 2);\n");
-        code.push_str("        uint8_t dy = abs8((led_y - hit_y) / 2);\n");
-        code.push_str("        if (dx >= 21 || dy >= 21) continue;\n");
+        code.push_str("        // Skip if outside the matrix-space radius (2 = ~5x5 area)\n");
+        code.push_str("        if (drow > 2 || dcol > 2) continue;\n");
+        code.push_str("        uint8_t dist = (uint8_t)(drow + dcol);\n");
         code.push('\n');
-        code.push_str("        uint16_t dist_sqr = (uint16_t)dx * dx + (uint16_t)dy * dy;\n");
-        code.push_str("        if (dist_sqr >= (uint16_t)(21 * 21)) continue;\n");
-        code.push_str("        uint8_t dist = sqrt16(dist_sqr);\n");
-        code.push('\n');
-        code.push_str("        // Radial bump: peaks at center, linear falloff to 21-unit radius\n");
-        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 12 * dist), amp);\n");
+        code.push_str("        // Radial bump: peaks at center, linear falloff to radius edge\n");
+        code.push_str("        uint8_t bump = scale8((uint8_t)(255 - 64 * dist), amp);\n");
         code.push_str("        brightness = qadd8(brightness, bump);\n");
         code.push_str("        if (brightness == 255) break;\n");
         code.push_str("    }\n");
@@ -1143,7 +1150,7 @@ impl<'a> FirmwareGenerator<'a> {
                 code.push_str("    if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;\n");
             }
             code.push_str("    if (should_trigger) {\n");
-            code.push_str("        lazyqmk_ripple_add(led_index);\n");
+            code.push_str("        lazyqmk_ripple_add(led_index, record->event.key.row, record->event.key.col);\n");
             code.push_str("        return true;\n");
             code.push_str("    }\n");
         }

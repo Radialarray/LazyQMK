@@ -1207,7 +1207,9 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c.contains("typedef struct {"));
     assert!(keymap_c.contains("ripple_t"));
     assert!(keymap_c.contains("static ripple_t ripples[LQMK_RIPPLE_MAX_RIPPLES]"));
-    assert!(keymap_c.contains("static void lazyqmk_ripple_add(uint8_t led_index)"));
+    assert!(keymap_c.contains(
+        "static void lazyqmk_ripple_add(uint8_t led_index, uint8_t row, uint8_t col)"
+    ));
     assert!(keymap_c.contains("static RGB lazyqmk_ripple_base_color(uint8_t led_index)"));
     assert!(keymap_c.contains("static uint8_t lazyqmk_reactive_amplitude(uint8_t t)"));
     assert!(keymap_c.contains("static void lazyqmk_reactive_apply(uint8_t led_index)"));
@@ -1475,14 +1477,10 @@ fn test_rgb_overlay_ripple_distance_uses_wide_accumulator() {
         .generate_keymap_c()
         .expect("Should generate keymap.c");
 
-    // Distance calculation is now inline in lazyqmk_reactive_apply using sqrt16
+    // Distance calculation now uses matrix positions (row, col) for reliability
     assert!(
-        keymap_c.contains("uint16_t dist_sqr = (uint16_t)dx * dx + (uint16_t)dy * dy;"),
-        "Distance calculation must use 16-bit types (sufficient for the 21-unit reactive radius)"
-    );
-    assert!(
-        keymap_c.contains("uint8_t dist = sqrt16(dist_sqr);"),
-        "Distance must use QMK's sqrt16 for fast integer square root"
+        keymap_c.contains("int8_t drow = (int8_t)led_row - (int8_t)ripples[i].row;"),
+        "Distance must use signed matrix-position subtraction"
     );
 }
 
