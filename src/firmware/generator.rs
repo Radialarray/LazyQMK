@@ -905,32 +905,31 @@ impl<'a> FirmwareGenerator<'a> {
         code.push('\n');
 
         // Base color lookup (per-key layer colors or fallback)
-        // Only needed for the non-palettefx color modes (Fixed/KeyBased/HueShift).
-        if !has_palettefx {
-            code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
-            code.push_str("    RGB color = {0, 0, 0};\n");
-            code.push('\n');
-            code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
-            code.push_str("    uint8_t row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
-            code.push_str("    uint8_t col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
-            code.push_str("    keypos_t key = { .row = row, .col = col };\n");
-            code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
-            code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
-            code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
-            code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
-            code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
-            code.push_str("        return color;\n");
-            code.push_str("    }\n");
-            code.push_str("#endif\n");
-            code.push('\n');
-            code.push_str("    rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());\n");
-            code.push_str("    color.r = matrix_rgb.r;\n");
-            code.push_str("    color.g = matrix_rgb.g;\n");
-            code.push_str("    color.b = matrix_rgb.b;\n");
-            code.push_str("    return color;\n");
-            code.push_str("}\n");
-            code.push('\n');
-        }
+        // Always generated: used by the originating-key ripple path when
+        // background lighting is on, and by the non-palettefx color modes.
+        code.push_str("static RGB lazyqmk_ripple_base_color(uint8_t led_index) {\n");
+        code.push_str("    RGB color = {0, 0, 0};\n");
+        code.push('\n');
+        code.push_str("#ifdef LAYER_BASE_COLORS_LAYER_COUNT\n");
+        code.push_str("    uint8_t row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
+        code.push_str("    uint8_t col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
+        code.push_str("    keypos_t key = { .row = row, .col = col };\n");
+        code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
+        code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
+        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
+        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
+        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
+        code.push_str("        return color;\n");
+        code.push_str("    }\n");
+        code.push_str("#endif\n");
+        code.push('\n');
+        code.push_str("    rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());\n");
+        code.push_str("    color.r = matrix_rgb.r;\n");
+        code.push_str("    color.g = matrix_rgb.g;\n");
+        code.push_str("    color.b = matrix_rgb.b;\n");
+        code.push_str("    return color;\n");
+        code.push_str("}\n");
+        code.push('\n');
 
         // PaletteFX amplitude function — same curve as the community module's
         // Reactive effect. Linear ramp 0->32ms, plateau 32->55ms, smooth decay after.
@@ -995,11 +994,52 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    if (brightness == 0) return;\n");
         code.push('\n');
 
-        // Color application: PaletteFX path vs. simple color mode path
-        if has_palettefx {
+        // Color application: two paths depending on whether TUI background
+        // lighting is configured. If background lighting is on, the ripple
+        // uses the originating key's color with a brightness floor at the
+        // global brightness setting. If no background lighting, the ripple
+        // uses the PaletteFX palette (or configured color mode) at full
+        // intensity.
+        let has_background_lighting = self.layout_has_custom_colors();
+        if has_background_lighting {
+            // Background lighting is on: use the originating key's color,
+            // scaled by intensity, with a floor at the global brightness.
+            code.push_str("    // Use the originating key's color (the key that was pressed)\n");
+            code.push_str("    // Mix in all active ripples' originating colors.\n");
+            code.push_str("    RGB key_color = {0, 0, 0};\n");
+            code.push_str("    {\n");
+            code.push_str("        uint16_t ks = 0;\n");
+            code.push_str("        for (uint8_t k = 0; k < LQMK_RIPPLE_MAX_RIPPLES; k++) {\n");
+            code.push_str("            if (ripples[k].active) ks++;\n");
+            code.push_str("        }\n");
+            code.push_str("        if (ks > 0) {\n");
+            code.push_str("            for (uint8_t k = 0; k < LQMK_RIPPLE_MAX_RIPPLES; k++) {\n");
+            code.push_str("                if (ripples[k].active) {\n");
+            code.push_str("                    RGB c = lazyqmk_ripple_base_color(ripples[k].led_index);\n");
+            code.push_str("                    key_color.r = qadd8(key_color.r, c.r);\n");
+            code.push_str("                    key_color.g = qadd8(key_color.g, c.g);\n");
+            code.push_str("                    key_color.b = qadd8(key_color.b, c.b);\n");
+            code.push_str("                }\n");
+            code.push_str("            }\n");
+            code.push_str("        }\n");
+            code.push_str("    }\n");
+            code.push_str("    // Floor intensity at the global brightness (255 == full max)\n");
+            code.push_str("#ifdef RGB_MATRIX_MAXIMUM_BRIGHTNESS\n");
+            code.push_str("    uint8_t floor_b = RGB_MATRIX_MAXIMUM_BRIGHTNESS;\n");
+            code.push_str("#else\n");
+            code.push_str("    uint8_t floor_b = 255;\n");
+            code.push_str("#endif\n");
+            code.push_str("    // effective_b = floor + (255 - floor) * brightness / 255\n");
+            code.push_str(
+                "    uint8_t effective_b = qadd8(floor_b, scale8((uint8_t)(255 - floor_b), brightness));\n",
+            );
+            code.push_str("    rgb_matrix_set_color(led_index,\n");
+            code.push_str("        scale8(key_color.r, effective_b),\n");
+            code.push_str("        scale8(key_color.g, effective_b),\n");
+            code.push_str("        scale8(key_color.b, effective_b));\n");
+        } else if has_palettefx {
+            // No background lighting: use PaletteFX palette colors at full intensity
             code.push_str("    // Use PaletteFX palette lookup for rich gradient colors\n");
-            // If user selected a specific palette for key actions, use it.
-            // Otherwise fall back to the current active palette.
             if let Some(ref palette) = settings.key_action_palette {
                 let index = *palette as u8;
                 code.push_str(&format!(
@@ -1012,15 +1052,13 @@ impl<'a> FirmwareGenerator<'a> {
                 );
             }
             code.push_str("    hsv_t hsv = palettefx_interp_color(palette, brightness);\n");
-            code.push_str("    // Darken background for subtle hits (matching original PaletteFX)\n");
             code.push_str("    if (brightness < 32) {\n");
             code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
             code.push_str("    }\n");
             code.push_str("    rgb_t contrib = hsv_to_rgb(hsv);\n");
-            code.push_str("    // REPLACE the LED color (not blend) so the burst is clearly visible\n");
             code.push_str("    rgb_matrix_set_color(led_index, contrib.r, contrib.g, contrib.b);\n");
         } else {
-            // Fallback: use the configured color mode (Fixed / KeyBased / HueShift)
+            // No PaletteFX and no background lighting: use configured color mode
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
             code.push_str("    uint8_t contrib_r, contrib_g, contrib_b;\n");
             code.push('\n');
@@ -1044,9 +1082,6 @@ impl<'a> FirmwareGenerator<'a> {
                 }
                 crate::models::layout::RippleColorMode::KeyBased => {
                     code.push_str("    // Key color mode: use the trigger key's resolved base color\n");
-                    code.push_str(
-                        "    // NOTE: Uses the LAST active ripple's color when multiple overlap\n",
-                    );
                     code.push_str("    {\n");
                     code.push_str("        RGB key_color = {0, 0, 0};\n");
                     code.push_str("        for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
@@ -1079,7 +1114,6 @@ impl<'a> FirmwareGenerator<'a> {
                 }
             }
 
-            code.push_str("    // REPLACE the LED color (not blend) so the burst is clearly visible\n");
             code.push_str("    rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);\n");
         }
         code.push_str("}\n");

@@ -1214,8 +1214,10 @@ fn test_rgb_overlay_ripple_generation() {
     assert!(keymap_c
         .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"));
     assert!(keymap_c.contains("lazyqmk_reactive_apply(i);"));
-    // Non-palettefx path uses contrib_r/contrib_g/contrib_b locals
-    assert!(keymap_c.contains("rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);"));
+    // Background-lighting-on path: originating-key color with global brightness floor
+    assert!(keymap_c.contains("RGB key_color = {0, 0, 0};"));
+    assert!(keymap_c.contains("uint8_t floor_b = RGB_MATRIX_MAXIMUM_BRIGHTNESS;"));
+    assert!(keymap_c.contains("rgb_matrix_set_color(led_index,\n        scale8(key_color.r, effective_b),"));
     assert!(keymap_c.contains("rgb_t matrix_rgb = hsv_to_rgb(rgb_matrix_get_hsv());"));
     assert!(keymap_c.contains("qadd8(brightness, bump)"));
 
@@ -1378,6 +1380,12 @@ fn test_rgb_overlay_ripple_hue_shift_generation() {
 
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let mut layout = test_layout_basic(2, 3);
+    // Clear layer custom colors so the HueShift fallback path is exercised
+    // (the background-lighting path uses originating-key colors directly)
+    for layer in &mut layout.layers {
+        layer.default_color = RgbColor::default();
+        layer.category_id = None;
+    }
     layout.rgb_overlay_ripple.enabled = true;
     layout.rgb_overlay_ripple.color_mode = RippleColorMode::HueShift;
     layout.rgb_overlay_ripple.hue_shift_deg = -120;
