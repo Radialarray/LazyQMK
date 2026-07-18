@@ -18,12 +18,9 @@ autobins = false
 name = "lazyqmk"
 path = "src/main.rs"
 
-# NOTE: lazyqmk-web binary temporarily commented out for cargo-dist compatibility
-# Will be built separately via custom CI workflow in future releases
-# [[bin]]
-# name = "lazyqmk-web"
-# path = "src/bin/lazyqmk-web.rs"
-# required-features = ["web"]
+# The `lazyqmk` binary already supports `lazyqmk web` as a subcommand (when
+# built with `--features web`, which is the default). The standalone
+# `lazyqmk-web` binary was redundant and removed; no functional change.
 
 [features]
 default = ["ratatui", "web"]
