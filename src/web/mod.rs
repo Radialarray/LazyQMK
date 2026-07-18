@@ -1728,23 +1728,6 @@ async fn swap_keys(
     // Get the layer
     let layer = &mut layout.layers[request.layer as usize];
 
-    // Debug logging
-    eprintln!(
-        "Swap request: layer={}, first=({},{}), second=({},{})",
-        request.layer,
-        request.first_position.row,
-        request.first_position.col,
-        request.second_position.row,
-        request.second_position.col
-    );
-    eprintln!("Layer has {} keys", layer.keys.len());
-    for (i, k) in layer.keys.iter().enumerate() {
-        eprintln!(
-            "  Key {}: pos=({},{}) keycode={}",
-            i, k.position.row, k.position.col, k.keycode
-        );
-    }
-
     // Find indices of both keys by position
     let first_idx = layer.keys.iter().position(|k| {
         k.position.row == request.first_position.row && k.position.col == request.first_position.col
@@ -1754,24 +1737,14 @@ async fn swap_keys(
             && k.position.col == request.second_position.col
     });
 
-    eprintln!(
-        "Found first_idx={:?}, second_idx={:?}",
-        first_idx, second_idx
-    );
-
     match (first_idx, second_idx) {
         (Some(idx1), Some(idx2)) => {
-            // Swap all properties: keycode, color_override, category_id
-            let first_key = layer.keys[idx1].clone();
-            let second_key = layer.keys[idx2].clone();
-
-            layer.keys[idx1].keycode = second_key.keycode;
-            layer.keys[idx1].color_override = second_key.color_override;
-            layer.keys[idx1].category_id = second_key.category_id;
-
-            layer.keys[idx2].keycode = first_key.keycode;
-            layer.keys[idx2].color_override = first_key.color_override;
-            layer.keys[idx2].category_id = first_key.category_id;
+            // Layer guarantees unique positions per key (see Layer::validate in
+            // src/models/layout.rs), so both indices refer to distinct entries.
+            // Swapping whole KeyDefinition structs preserves all 7 fields (keycode,
+            // label, color_override, category_id, combo_participant, description,
+            // position) instead of silently dropping 3 of them.
+            layer.keys.swap(idx1, idx2);
 
             // Save the layout
             LayoutService::save(&layout, &path).map_err(|e| {
