@@ -303,6 +303,7 @@ impl OnboardingWizardState {
     }
 
     /// Advances to the next step
+    #[allow(dead_code)] // bin/lib split: wizard flow helper
     #[allow(clippy::too_many_lines)]
     pub fn next_step(&mut self) -> Result<()> {
         self.error_message = None;
@@ -521,6 +522,7 @@ impl OnboardingWizardState {
     /// This is used when opening the wizard from the TUI with Ctrl+W
     /// to allow editing the current configuration.
     #[must_use]
+    #[allow(dead_code)] // bin/lib split: wizard entry helper (tests use it)
     pub fn from_config(config: &Config) -> Self {
         let mut wizard = Self::new();
 

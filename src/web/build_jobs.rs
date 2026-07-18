@@ -687,37 +687,53 @@ impl BuildJobManager {
     /// (which only happens when a worker thread panicked mid-build) so
     /// other builds can continue.
     fn jobs_write(&self) -> std::sync::RwLockWriteGuard<'_, HashMap<String, BuildJob>> {
-        self.jobs.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.jobs
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the jobs map for reading. Recovers from a poisoned mutex.
     fn jobs_read(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, BuildJob>> {
-        self.jobs.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.jobs
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the cancelled set for reading.
     fn cancelled_read(&self) -> std::sync::RwLockReadGuard<'_, std::collections::HashSet<String>> {
-        self.cancelled.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.cancelled
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the cancelled set for writing.
-    fn cancelled_write(&self) -> std::sync::RwLockWriteGuard<'_, std::collections::HashSet<String>> {
-        self.cancelled.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+    fn cancelled_write(
+        &self,
+    ) -> std::sync::RwLockWriteGuard<'_, std::collections::HashSet<String>> {
+        self.cancelled
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the running count mutex.
     fn running_count_lock(&self) -> std::sync::MutexGuard<'_, usize> {
-        self.running_count.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.running_count
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the command channel sender slot.
     fn command_tx_lock(&self) -> std::sync::MutexGuard<'_, Option<mpsc::Sender<BuildCommand>>> {
-        self.command_tx.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.command_tx
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Locks the qmk_path setter.
     fn qmk_path_write(&self) -> std::sync::RwLockWriteGuard<'_, Option<PathBuf>> {
-        self.qmk_path.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.qmk_path
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Creates a new build job manager.

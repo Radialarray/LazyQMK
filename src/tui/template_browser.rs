@@ -38,7 +38,7 @@ pub enum TemplateBrowserEvent {
     /// User selected a template to load
     TemplateSelected(PathBuf),
     /// User wants to save current layout as template
-    #[allow(dead_code)]
+    #[allow(dead_code)] // bin/lib split: variant in TemplateBrowserEvent (handlers use it)
     SaveAsTemplate,
     /// User cancelled the browser
     Cancelled,

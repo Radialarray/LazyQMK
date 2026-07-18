@@ -52,7 +52,6 @@ pub struct KeyGeometry {
     pub rotation: f32,
 }
 
-#[allow(dead_code)]
 impl KeyGeometry {
     /// Creates a new `KeyGeometry` with the given parameters.
     #[must_use]
@@ -75,6 +74,7 @@ impl KeyGeometry {
     }
 
     /// Sets the key width.
+    #[allow(dead_code)] // bin/lib split: used in tests and builder API
     #[must_use]
     pub const fn with_width(mut self, width: f32) -> Self {
         self.width = width;
@@ -82,6 +82,7 @@ impl KeyGeometry {
     }
 
     /// Sets the key height.
+    #[allow(dead_code)] // bin/lib split: used in tests and builder API
     #[must_use]
     pub const fn with_height(mut self, height: f32) -> Self {
         self.height = height;
@@ -89,6 +90,7 @@ impl KeyGeometry {
     }
 
     /// Sets the key rotation.
+    #[allow(dead_code)] // bin/lib split: used in tests and builder API
     #[must_use]
     pub const fn with_rotation(mut self, rotation: f32) -> Self {
         self.rotation = rotation;
@@ -97,6 +99,7 @@ impl KeyGeometry {
 
     /// Converts visual X position to terminal characters.
     /// Uses the default X scale factor.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_x(&self) -> u16 {
         self.terminal_x_with_scale(terminal_scale::DEFAULT_X_SCALE)
@@ -104,6 +107,7 @@ impl KeyGeometry {
 
     /// Converts visual Y position to terminal lines.
     /// Uses the default Y scale factor.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_y(&self) -> u16 {
         self.terminal_y_with_scale(terminal_scale::DEFAULT_Y_SCALE)
@@ -111,6 +115,7 @@ impl KeyGeometry {
 
     /// Converts key width to terminal characters.
     /// Uses the default X scale factor.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_width(&self) -> u16 {
         self.terminal_width_with_scale(terminal_scale::DEFAULT_X_SCALE)
@@ -118,18 +123,21 @@ impl KeyGeometry {
 
     /// Converts key height to terminal lines.
     /// Uses the default Y scale factor.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_height(&self) -> u16 {
         self.terminal_height_with_scale(terminal_scale::DEFAULT_Y_SCALE)
     }
 
     /// Converts visual X position to terminal characters with custom scale.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_x_with_scale(&self, x_scale: f32) -> u16 {
         (self.visual_x * x_scale) as u16
     }
 
     /// Converts visual Y position to terminal lines with custom scale.
+    #[allow(dead_code)] // bin/lib split: public geometry API for layout rendering
     #[must_use]
     pub fn terminal_y_with_scale(&self, y_scale: f32) -> u16 {
         (self.visual_y * y_scale) as u16
@@ -173,7 +181,6 @@ pub struct KeyboardGeometry {
     pub encoder_count: u8,
 }
 
-#[allow(dead_code)]
 impl KeyboardGeometry {
     /// Creates a new `KeyboardGeometry`.
     pub fn new(
@@ -198,6 +205,7 @@ impl KeyboardGeometry {
     }
 
     /// Gets the total number of keys.
+    #[allow(dead_code)] // bin/lib split: part of public geometry API
     #[must_use]
     pub const fn key_count(&self) -> usize {
         self.keys.len()
@@ -208,6 +216,7 @@ impl KeyboardGeometry {
     /// LED indices are sequential physical wire numbers (0-based). They do not
     /// correspond to matrix positions or visual positions.
     /// Use [`VisualLayoutMapping::visual_to_led_index`] to convert from visual coordinates.
+    #[allow(dead_code)] // bin/lib split: public geometry API for callers
     #[must_use]
     pub fn get_key_by_led(&self, led_index: u8) -> Option<&KeyGeometry> {
         self.keys.iter().find(|k| k.led_index == led_index)

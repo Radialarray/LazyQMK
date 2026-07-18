@@ -57,7 +57,6 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
-use std::time::Duration;
 
 /// Status of a single dependency check.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,29 +125,13 @@ impl DependencyStatus {
 }
 
 /// Checker for QMK development environment dependencies.
-pub struct DependencyChecker {
-    /// Timeout for running external commands (in seconds)
-    /// Currently unused but reserved for future timeout implementation
-    #[allow(dead_code)]
-    command_timeout: Duration,
-}
+pub struct DependencyChecker {}
 
 impl DependencyChecker {
     /// Creates a new dependency checker with default settings.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            command_timeout: Duration::from_secs(5),
-        }
-    }
-
-    /// Creates a new dependency checker with custom timeout.
-    #[must_use]
-    #[allow(dead_code)] // Public API for future timeout implementation
-    pub fn with_timeout(timeout_secs: u64) -> Self {
-        Self {
-            command_timeout: Duration::from_secs(timeout_secs),
-        }
+        Self {}
     }
 
     /// Checks all dependencies and returns their status.

@@ -53,9 +53,6 @@ pub enum SettingGroup {
     Ui,
 
     // === Per-Layout Settings (stored in layout .md file) ===
-    /// General layout settings
-    #[allow(dead_code)] // Placeholder for future general settings UI
-    General,
     /// RGB lighting settings
     Rgb,
     /// Tap-hold timing and behavior settings
@@ -72,7 +69,6 @@ impl SettingGroup {
             Self::Paths => "Setup & folders",
             Self::Build => "Keyboard & build output",
             Self::Ui => "Editor behavior",
-            Self::General => "General layout",
             Self::Rgb => "Lighting behavior",
             Self::TapHold => "Tap-hold tuning",
             Self::Combos => "Combos & quick actions",
@@ -386,7 +382,7 @@ impl SettingItem {
             | Self::OverlayRippleTriggerRelease
             | Self::OverlayRippleIgnoreTransparent
             | Self::OverlayRippleIgnoreModifiers
-            |             Self::OverlayRippleIgnoreLayerSwitch
+            | Self::OverlayRippleIgnoreLayerSwitch
             | Self::OverlayRippleKeyActionPalette
             | Self::OverlayRippleWaveCount
             | Self::OverlayRippleWaveDelay => Some(RgbSubgroup::Ripple),
@@ -1124,7 +1120,7 @@ pub enum SettingsManagerEvent {
     /// User cancelled without making changes
     Cancelled,
     /// Component closed naturally
-    #[allow(dead_code)]
+    #[allow(dead_code)] // bin/lib split: variant in SettingsManagerEvent (handlers use it)
     Closed,
 }
 
@@ -1548,7 +1544,10 @@ impl SettingsManager {
         }
     }
 
-    fn handle_palette_fx_effect_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+    fn handle_palette_fx_effect_selection(
+        &mut self,
+        key: KeyEvent,
+    ) -> Option<SettingsManagerEvent> {
         match key.code {
             KeyCode::Esc => {
                 self.state.cancel();
@@ -1569,7 +1568,10 @@ impl SettingsManager {
         }
     }
 
-    fn handle_palette_fx_palette_selection(&mut self, key: KeyEvent) -> Option<SettingsManagerEvent> {
+    fn handle_palette_fx_palette_selection(
+        &mut self,
+        key: KeyEvent,
+    ) -> Option<SettingsManagerEvent> {
         match key.code {
             KeyCode::Esc => {
                 self.state.cancel();
@@ -1790,9 +1792,9 @@ fn render_settings_list(
 
     let selected_setting = SettingItem::all().get(state.selected).copied();
     let selected_group = selected_setting.map(|setting| setting.group());
-    let subgroup_summary = selected_setting.and_then(SettingItem::rgb_subgroup).map(|subgroup| {
-        format!(" • Subsection: {}", subgroup.display_name())
-    });
+    let subgroup_summary = selected_setting
+        .and_then(SettingItem::rgb_subgroup)
+        .map(|subgroup| format!(" • Subsection: {}", subgroup.display_name()));
     let summary = selected_group.map_or_else(
         || "Choose a setting to edit.".to_string(),
         |group| {
@@ -2212,11 +2214,23 @@ fn get_setting_value_display(
             .map(|l| l.palette_fx.default_palette.display_name().to_string())
             .unwrap_or_default(),
         SettingItem::PaletteFxEnableAllEffects => layout
-            .map(|l| if l.palette_fx.enable_all_effects { "On" } else { "Off" })
+            .map(|l| {
+                if l.palette_fx.enable_all_effects {
+                    "On"
+                } else {
+                    "Off"
+                }
+            })
             .unwrap_or("Off")
             .to_string(),
         SettingItem::PaletteFxEnableAllPalettes => layout
-            .map(|l| if l.palette_fx.enable_all_palettes { "On" } else { "Off" })
+            .map(|l| {
+                if l.palette_fx.enable_all_palettes {
+                    "On"
+                } else {
+                    "Off"
+                }
+            })
             .unwrap_or("Off")
             .to_string(),
     }
@@ -2879,12 +2893,7 @@ fn render_palette_fx_palette_selector(f: &mut Frame, area: Rect, selected: usize
 }
 
 /// Render key action palette selector with "Default" as first option
-fn render_key_action_palette_selector(
-    f: &mut Frame,
-    area: Rect,
-    selected: usize,
-    theme: &Theme,
-) {
+fn render_key_action_palette_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
     let palettes = PaletteFxPalette::all();
     let mut options: Vec<(&str, &str)> = Vec::with_capacity(palettes.len() + 1);
     options.push(("Default (current)", "Use the active PaletteFX palette"));

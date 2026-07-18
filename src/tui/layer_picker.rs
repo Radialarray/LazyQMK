@@ -65,14 +65,6 @@ impl LayerPickerState {
         }
     }
 
-    /// Reset to initial state
-    #[allow(dead_code)] // Utility method for state management, may be used in future
-    pub fn reset(&mut self) {
-        self.selected = 0;
-        self.keycode_prefix.clear();
-        self.extra_param = None;
-    }
-
     /// Move selection up
     pub const fn select_previous(&mut self, layer_count: usize) {
         if layer_count > 0 {

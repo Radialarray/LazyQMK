@@ -383,7 +383,6 @@ impl Config {
     /// Saves configuration to the config file using atomic write.
     ///
     /// Uses temp file + rename pattern for atomic writes.
-    #[allow(dead_code)]
     pub fn save(&self) -> Result<()> {
         self.validate()?;
 
@@ -453,7 +452,6 @@ impl Config {
     }
 
     /// Sets the QMK firmware path with validation.
-    #[allow(dead_code)]
     pub fn set_qmk_firmware_path(&mut self, path: PathBuf) -> Result<()> {
         self.paths.qmk_firmware = Some(path);
         self.validate()?;

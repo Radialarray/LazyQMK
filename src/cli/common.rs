@@ -17,15 +17,6 @@ pub enum ExitCode {
     IoError = 2,
 }
 
-impl ExitCode {
-    /// Convert to i32 for process::exit
-    #[must_use]
-    #[allow(dead_code)] // Used for custom exit code handling if needed in future
-    pub const fn as_i32(self) -> i32 {
-        self as i32
-    }
-}
-
 /// CLI error with exit code.
 #[derive(Debug)]
 pub struct CliError {

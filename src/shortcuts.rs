@@ -11,7 +11,6 @@ use std::collections::HashMap;
 /// This enum represents every action a user can take. It serves as the
 /// bridge between keyboard shortcuts and application behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(dead_code)]
 pub enum Action {
     // === NAVIGATION ===
     /// Move cursor up in the current context.
@@ -122,84 +121,6 @@ pub enum Action {
     // === GENERAL ===
     /// Cancel the current operation or close dialogs.
     Cancel,
-}
-
-impl Action {
-    /// Get the action ID string used in help.toml
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn id(self) -> &'static str {
-        match self {
-            // Navigation
-            Self::NavigateUp => "navigate_up",
-            Self::NavigateDown => "navigate_down",
-            Self::NavigateLeft => "navigate_left",
-            Self::NavigateRight => "navigate_right",
-            Self::JumpToFirst => "jump_first",
-            Self::JumpToLast => "jump_last",
-
-            // Layers
-            Self::NextLayer => "next_layer",
-            Self::PreviousLayer => "previous_layer",
-
-            // Key editing
-            Self::OpenKeycodePicker => "open_keycode_picker",
-            Self::ClearKey => "clear_key",
-
-            // Clipboard
-            Self::CopyKey => "copy_key",
-            Self::CutKey => "cut_key",
-            Self::PasteKey => "paste_key",
-            Self::UndoPaste => "undo_paste",
-
-            // Selection
-            Self::ToggleSelectionMode => "toggle_selection_mode",
-            Self::ToggleCurrentKey => "toggle_current_key",
-            Self::StartRectangleSelect => "rectangle_select",
-            Self::SwapKeys => "swap_keys",
-
-            // Colors
-            Self::SetIndividualKeyColor => "set_individual_key_color",
-            Self::SetLayerColor => "set_layer_color",
-            Self::ToggleLayerColors => "toggle_layer_colors",
-            Self::ToggleAllLayerColors => "toggle_all_layer_colors",
-
-            // Categories
-            Self::OpenCategoryManager => "open_category_manager",
-            Self::AssignCategoryToKey => "assign_category_to_key",
-            Self::AssignCategoryToLayer => "assign_category_to_layer",
-
-            // Managers
-            Self::OpenLayerManager => "open_layer_manager",
-            Self::OpenSettings => "open_settings",
-            Self::EditMetadata => "edit_metadata",
-            Self::OpenTapDanceEditor => "open_tap_dance_editor",
-
-            // File operations
-            Self::Save => "save",
-            Self::ExportLayout => "export_layout",
-            Self::Quit => "quit",
-
-            // Build
-            Self::BuildFirmware => "build_firmware",
-            Self::GenerateFirmware => "generate_firmware",
-            Self::ViewBuildLog => "view_build_log",
-
-            // Templates
-            Self::BrowseTemplates => "browse_templates",
-            Self::SaveAsTemplate => "save_template",
-
-            // Configuration
-            Self::SetupWizard => "setup_wizard",
-            Self::SwitchLayoutVariant => "switch_layout_variant",
-
-            // Help
-            Self::ToggleHelp => "toggle_help",
-
-            // General
-            Self::Cancel => "cancel",
-        }
-    }
 }
 
 /// Shortcut registry that maps key events to actions for a given context.
@@ -351,7 +272,7 @@ impl ShortcutRegistry {
 
     /// Check if a key event matches a specific action in the given context.
     #[must_use]
-    #[allow(dead_code)]
+    #[allow(dead_code)] // bin/lib split: registry helper (tests use it)
     pub fn matches(&self, context: &str, event: KeyEvent, action: Action) -> bool {
         self.lookup(context, event) == Some(action)
     }

@@ -58,6 +58,7 @@ impl CategoryPickerState {
     }
 
     /// Move selection down
+    #[allow(dead_code)] // bin/lib split: list helper (tests use it)
     pub fn next(&mut self, category_count: usize) {
         // Total items = categories + 1 for "None" option
         if self.selected < category_count {

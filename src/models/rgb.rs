@@ -27,7 +27,6 @@ pub struct RgbColor {
     pub b: u8,
 }
 
-#[allow(dead_code)]
 impl RgbColor {
     /// Creates a new `RgbColor` from individual channel values.
     #[must_use]
@@ -92,7 +91,9 @@ impl RgbColor {
 
     /// Converts the color to a Ratatui Color for terminal rendering.
     #[cfg(feature = "ratatui")]
+    #[allow(dead_code)] // bin/lib split: ratatui feature unused by web/bin builds
     #[must_use]
+    #[allow(dead_code)] // bin/lib split: ratatui conversion (used only with ratatui feature; tests in lib)
     pub const fn to_ratatui_color(&self) -> ratatui::style::Color {
         ratatui::style::Color::Rgb(self.r, self.g, self.b)
     }

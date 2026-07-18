@@ -34,9 +34,6 @@ struct Binding {
     alt_keys: Vec<String>,
     action: String,
     #[serde(default)]
-    #[allow(dead_code)] // May be used in future for context-aware hints
-    hint: String,
-    #[serde(default)]
     priority: u32,
 }
 

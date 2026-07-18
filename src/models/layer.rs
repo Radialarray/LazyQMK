@@ -14,7 +14,8 @@ use uuid::Uuid;
 ///
 /// This constant represents the default limit of 8 layers. Validation should
 /// allow up to 32 layers by default but warn users about the actual QMK configuration.
-#[allow(dead_code)]
+#[allow(dead_code)] // bin/lib split: legacy default constant for QMK 8-layer configs
+#[allow(dead_code)] // bin/lib split: re-exported via models::mod; consumed by lib tests
 pub const DEFAULT_QMK_LAYER_LIMIT: u8 = 8;
 
 /// Maximum QMK layer limit (with LAYER_STATE_32BIT configuration).
@@ -112,7 +113,6 @@ pub struct KeyDefinition {
     pub description: Option<String>,
 }
 
-#[allow(dead_code)]
 impl KeyDefinition {
     /// Creates a new `KeyDefinition` at the given **visual** position with the given keycode.
     ///
@@ -144,12 +144,16 @@ impl KeyDefinition {
     }
 
     /// Sets the display label for this key.
+    #[allow(dead_code)] // bin/lib split: builder API used in tests
+    #[allow(dead_code)] // bin/lib split: builder for KeyDefinition (tests use it)
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
     /// Sets the description for this key.
+    #[allow(dead_code)] // bin/lib split: builder API used in tests
+    #[allow(dead_code)] // bin/lib split: builder for KeyDefinition (tests use it)
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
@@ -209,7 +213,6 @@ const fn default_layer_colors_enabled() -> bool {
     true
 }
 
-#[allow(dead_code)]
 impl Layer {
     /// Creates a new Layer with the given number and name.
     ///
@@ -287,16 +290,22 @@ impl Layer {
     }
 
     /// Sets the category for this layer.
+    #[allow(dead_code)] // bin/lib split: setter in public layer API
+    #[allow(dead_code)] // bin/lib split: Layer mutator (tests use it)
     pub fn set_category(&mut self, category_id: Option<String>) {
         self.category_id = category_id;
     }
 
     /// Sets the default color for this layer.
+    #[allow(dead_code)] // bin/lib split: setter in public layer API
+    #[allow(dead_code)] // bin/lib split: Layer mutator (tests use it)
     pub const fn set_default_color(&mut self, color: RgbColor) {
         self.default_color = color;
     }
 
     /// Updates the layer name with validation.
+    #[allow(dead_code)] // bin/lib split: setter in public layer API
+    #[allow(dead_code)] // bin/lib split: Layer mutator (tests use it)
     pub fn set_name(&mut self, name: impl Into<String>) -> Result<()> {
         let name = name.into();
         Self::validate_name(&name)?;

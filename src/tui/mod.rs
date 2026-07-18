@@ -32,7 +32,6 @@ pub mod layer_picker;
 pub mod layout_picker;
 pub mod metadata_editor;
 pub mod modifier_picker;
-#[allow(dead_code)]
 pub mod onboarding_wizard;
 pub mod settings_manager;
 pub mod status_bar;
@@ -315,7 +314,6 @@ pub enum TemplateSaveField {
 
 /// Popup types that can be displayed over the main UI
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum PopupType {
     /// Keycode picker popup
     KeycodePicker,
@@ -412,7 +410,6 @@ pub enum SelectionMode {
 /// This enum wraps all component types that implement the Component or ContextualComponent trait.
 /// Only one component can be active at a time.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum ActiveComponent {
     /// Color picker component
     ColorPicker(ColorPicker),
@@ -433,6 +430,7 @@ pub enum ActiveComponent {
     /// Template browser component
     TemplateBrowser(TemplateBrowser),
     /// Layout picker component (for loading saved layouts)
+    #[allow(dead_code)] // bin/lib split: variant present in enum (legacy/disabled)
     LayoutPicker(LayoutPicker),
     /// Tap dance editor component
     TapDanceEditor(tap_dance_editor::TapDanceEditor),
@@ -640,13 +638,6 @@ impl AppState {
     /// Clear dirty flag (after save)
     pub const fn mark_clean(&mut self) {
         self.dirty = false;
-    }
-
-    /// Returns a reference to the current theme
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn theme(&self) -> &Theme {
-        &self.theme
     }
 
     /// Rebuild keyboard geometry and visual layout mapping for a new layout variant.
@@ -1229,7 +1220,10 @@ fn render_unsaved_prompt(f: &mut Frame, theme: &Theme) {
 
     let prompt = Paragraph::new(text).block(
         Block::default()
-            .title(popup_title(&PopupType::UnsavedChangesPrompt, "Unsaved changes"))
+            .title(popup_title(
+                &PopupType::UnsavedChangesPrompt,
+                "Unsaved changes",
+            ))
             .borders(Borders::ALL)
             .border_style(popup_border_style(&PopupType::UnsavedChangesPrompt, theme))
             .style(Style::default().fg(theme.warning)),

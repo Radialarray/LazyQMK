@@ -84,11 +84,12 @@ fn test_qmk_firmware_valid_directory() {
 }
 
 #[test]
-fn test_custom_timeout() {
-    let checker = DependencyChecker::with_timeout(10);
-    let statuses = checker.check_all(None);
-
-    // Should still return all 4 dependencies
+fn test_custom_timeout_placeholder() {
+    // `with_timeout` was removed in the dead-code cleanup since `command_timeout`
+    // was never read. This test stays as a placeholder so the test surface
+    // doesn't change; the timeout arg is no longer necessary.
+    let _checker = DependencyChecker::new();
+    let statuses = _checker.check_all(None);
     assert_eq!(statuses.len(), 4);
 }
 

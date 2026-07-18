@@ -36,7 +36,7 @@ pub enum MetadataEditorEvent {
     /// User cancelled without saving
     Cancelled,
     /// Editor closed
-    #[allow(dead_code)]
+    #[allow(dead_code)] // bin/lib split: variant in MetadataEditorEvent (tests use it)
     Closed,
 }
 

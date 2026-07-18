@@ -14,7 +14,7 @@ use std::thread;
 
 /// Build status tracking.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
+#[allow(dead_code)] // All variants exercised in tests; bin doesn't link
 pub enum BuildStatus {
     /// Build not started
     Idle,
@@ -82,10 +82,10 @@ pub enum LogLevel {
     Error,
 }
 
-#[allow(dead_code)]
 impl LogLevel {
     /// Returns the terminal color for this log level.
     #[must_use]
+    #[allow(dead_code)] // Display helper for tests; bin target doesn't link
     pub const fn color(&self) -> ratatui::style::Color {
         match self {
             Self::Info => ratatui::style::Color::Gray,

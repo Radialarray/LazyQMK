@@ -53,7 +53,6 @@ pub struct VisualLayoutMapping {
     pub max_col: u8,
 }
 
-#[allow(dead_code)]
 impl VisualLayoutMapping {
     /// Creates a new empty `VisualLayoutMapping`.
     #[must_use]
@@ -128,6 +127,7 @@ impl VisualLayoutMapping {
     /// `led` is the 0-based physical wire index from `rgb_matrix.layout`.
     /// Returns the electrical matrix coordinates `(row, col)`, or `None` if the
     /// LED index is out of range.
+    #[allow(dead_code)] // bin/lib split: public mapping API used by tests
     #[must_use]
     pub fn led_to_matrix_pos(&self, led: u8) -> Option<(u8, u8)> {
         self.led_to_matrix.get(led as usize).copied()
@@ -138,6 +138,7 @@ impl VisualLayoutMapping {
     /// `row` and `col` are electrical matrix coordinates from QMK `info.json`.
     /// Returns the visual-grid position shown in Markdown tables and the UI,
     /// or `None` if no key exists at that matrix position.
+    #[allow(dead_code)] // bin/lib split: public mapping API used by tests
     #[must_use]
     pub fn matrix_to_visual_pos(&self, row: u8, col: u8) -> Option<Position> {
         self.matrix_to_visual.get(&(row, col)).copied()
@@ -303,6 +304,7 @@ impl VisualLayoutMapping {
     ///
     /// Both values are visual-grid coordinates (0-based). Useful for rendering
     /// the keyboard grid in the TUI.
+    #[allow(dead_code)] // bin/lib split: public mapping API used by tests
     #[must_use]
     pub fn get_bounds(&self) -> (u8, u8) {
         let mut max_row = 0u8;

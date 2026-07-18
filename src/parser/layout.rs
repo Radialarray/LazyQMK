@@ -14,24 +14,6 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use std::path::Path;
 
-/// Parsing state machine states.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-enum ParseState {
-    /// Reading YAML frontmatter (between --- markers)
-    InFrontmatter,
-    /// Reading main content (after frontmatter)
-    InContent,
-    /// Reading layer header line (## Layer N: Name)
-    InLayerHeader,
-    /// Reading layer properties (Color, Category)
-    InLayerProperties,
-    /// Reading layer table
-    InLayerTable,
-    /// Reading categories section
-    InCategories,
-}
-
 /// Parses a Markdown layout file into a Layout structure.
 ///
 /// # File Format

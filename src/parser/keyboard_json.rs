@@ -149,7 +149,7 @@ const fn default_key_size() -> f32 {
 /// - The QMK keyboards directory doesn't exist
 /// - The `qmk list-keyboards` command fails
 /// - The command output cannot be parsed
-#[allow(dead_code)]
+#[allow(dead_code)] // Public API; tests are in lib target (bin doesn't link)
 pub fn scan_keyboards(qmk_path: &Path) -> Result<Vec<String>> {
     use std::process::Command;
 
@@ -592,7 +592,7 @@ pub fn extract_layout_definition<'a>(
 /// # Returns
 ///
 /// `KeyboardGeometry` with physical key positions and matrix mappings
-#[allow(dead_code)]
+#[allow(dead_code)] // Public API; tests are in lib target (bin doesn't link)
 pub fn build_keyboard_geometry(
     info: &QmkInfoJson,
     keyboard_name: &str,

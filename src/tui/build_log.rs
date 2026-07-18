@@ -22,9 +22,6 @@ pub enum BuildLogEvent {
 pub struct BuildLogState {
     /// Scroll offset (number of lines from top)
     pub scroll_offset: usize,
-    /// Whether the log viewer is visible
-    #[allow(dead_code)] // Part of state struct, may be used in future visibility toggle
-    pub visible: bool,
 }
 
 impl BuildLogState {
@@ -33,7 +30,6 @@ impl BuildLogState {
     pub const fn new() -> Self {
         Self {
             scroll_offset: 0,
-            visible: false,
         }
     }
 
