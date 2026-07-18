@@ -82,17 +82,12 @@ pub fn handle_swap_keys(state: &mut AppState) -> Result<bool> {
 
             match (first_idx, second_idx) {
                 (Some(idx1), Some(idx2)) => {
-                    // Swap all properties: keycode, color_override, category_id
-                    let first_key = layer.keys[idx1].clone();
-                    let second_key = layer.keys[idx2].clone();
-
-                    layer.keys[idx1].keycode = second_key.keycode;
-                    layer.keys[idx1].color_override = second_key.color_override;
-                    layer.keys[idx1].category_id = second_key.category_id;
-
-                    layer.keys[idx2].keycode = first_key.keycode;
-                    layer.keys[idx2].color_override = first_key.color_override;
-                    layer.keys[idx2].category_id = first_key.category_id;
+                    // Layer guarantees unique positions per key (see Layer::validate in
+                    // src/models/layout.rs), so both indices refer to distinct entries.
+                    // Swapping whole KeyDefinition structs preserves all 7 fields (keycode,
+                    // label, color_override, category_id, combo_participant, description,
+                    // position). The previous field-by-field copy silently dropped 3 of them.
+                    layer.keys.swap(idx1, idx2);
 
                     // Mark dirty and exit swap mode
                     state.dirty = true;
