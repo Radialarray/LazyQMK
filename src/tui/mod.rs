@@ -933,12 +933,17 @@ pub fn run_tui(
 
         // Poll for events with 100ms timeout
         if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if handle_key_event(state, key)? {
-                    break; // User quit
+            match event::read()? {
+                Event::Key(key) => {
+                    if handle_key_event(state, key)? {
+                        break;
+                    }
                 }
-            } else if let Event::Resize(_, _) = event::read()? {
-                // Terminal resized, will re-render on next loop
+                Event::Resize(_, _) => {
+                    // Terminal resized, will re-render on next loop
+                }
+                // Ignore focus/mouse/paste — not used by this app
+                _ => {}
             }
         }
 
