@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-12-12
 
 ## Active Technologies
+
 - Rust 1.91.1+ + Ratatui 0.29 (TUI framework), Crossterm 0.29 (terminal backend), Serde 1.0 (serialization) (archived/021-dependency-updates)
 - Human-readable files (Markdown layouts, TOML 0.9 configuration, JSON5 1.3 parsing, serde_yml 0.0.12 for YAML) (archived/021-dependency-updates)
 - CLI: Clap 4.5, Config: dirs 6.0, Clipboard: arboard 3.6, UUID: 1.19 (archived/021-dependency-updates)
@@ -27,6 +28,7 @@ cargo build --release                        # Build release binary
 Rust 1.75+: Follow standard conventions
 
 ## Recent Changes
+
 - 023-idle-effect: Added idle effect screensaver for RGB lighting with configurable timeout (default 1 min), duration (default 5 min), and 9 selectable effects (default Breathing). Generates QMK C state machine for idle → effect → off transitions. Settings managed via TUI Settings Manager and stored per-layout in markdown files.
 - archived/021-dependency-updates: Updated all dependencies to latest versions (json5 1.3, dirs 6.0, ratatui 0.29, crossterm 0.29, clap 4.5, serde_yml, toml 0.9, arboard 3.6, uuid 1.19), fixed 43 ratatui deprecation warnings, migrated from deprecated serde_yaml to serde_yml
 - archived/020-robust-keyboard-picker: Added JSON5 parser support, robust QMK config discovery and merging
@@ -37,6 +39,7 @@ Rust 1.75+: Follow standard conventions
 ## Development Workflow
 
 ### Testing Requirements
+
 - **Always run tests before and after changes**: `cargo test`
 - **All tests must pass locally before committing**: No exceptions
 - **Run clippy before committing**: `cargo clippy --all-features -- -D warnings`
@@ -49,6 +52,7 @@ Rust 1.75+: Follow standard conventions
 - **Required Rust version**: 1.91.1 or newer (matches CI to ensure consistent clippy behavior)
 
 #### Test Categories
+
 LazyQMK has three categories of tests:
 
 1. **CI Tests (Automated)** - Run on every push/PR
@@ -73,6 +77,7 @@ LazyQMK has three categories of tests:
 These tests validate integration with the QMK firmware submodule and are too resource-intensive for CI. They are marked with `#[ignore]` and must be run manually.
 
 ##### 1. Initialize QMK Submodule
+
 ```bash
 # Initialize the qmk_firmware submodule (~500MB, one-time setup)
 git submodule update --init --recursive qmk_firmware
@@ -83,6 +88,7 @@ qmk setup
 ```
 
 ##### 2. Run Full Pipeline Integration Tests (2 critical tests)
+
 ```bash
 # Test QMK CLI integration (finds crkbd in real QMK submodule)
 cargo test --test qmk_info_json_tests test_scan_keyboards_finds_crkbd -- --ignored
@@ -93,13 +99,13 @@ cargo test --test cli_tap_dance_tests test_tap_dance_add_use_generate -- --ignor
 # Expected: Both tests pass
 # These validate: End-to-end firmware generation, QMK submodule integration
 
-# Note: There are 2 additional deprecated tests that can be ignored:
-# - test_generation_vial_json_structure (deprecated after Vial removal)
-# - test_check_deprecated_options_clean (deprecated after Vial removal)
-# These can be safely removed from the codebase.
+# Note: The two deprecated Vial tests (test_generation_vial_json_structure,
+# test_check_deprecated_options_clean) were already removed from the codebase
+# in a prior commit. No further action needed.
 ```
 
 ##### 3. Final Validation Checklist
+
 - [ ] All CI tests pass: `cargo test --tests && cargo test --lib`
 - [ ] All pre-release tests pass: `cargo test -- --ignored`
 - [ ] Clippy clean: `cargo clippy --all-features -- -D warnings`
@@ -111,6 +117,7 @@ cargo test --test cli_tap_dance_tests test_tap_dance_add_use_generate -- --ignor
 **Only proceed with release creation if all checklist items are complete.**
 
 ##### Why These Tests Are Manual
+
 - **QMK submodule:** 500MB+ repository, expensive for CI
 - **Compilation time:** 5-10 minutes for full firmware builds
 - **External dependencies:** Requires QMK CLI tools
@@ -121,11 +128,13 @@ These 2 tests provide critical end-to-end validation that fixtures and mocks can
 **Note:** QMK metadata tests (list-keyboards, list-layouts, geometry) now run in CI using lightweight fixtures, so only the 2 full pipeline tests require manual execution before release.
 
 ### Help System Source of Truth
+
 - **Context help and help menu text must come from `src/data/help.toml`**. Do not hardcode help strings in code; add or update entries in `help.toml` instead.
 
 ### Code Quality Standards
 
 #### Privacy & Personal Information
+
 - **NEVER include personal information** in code, comments, or commits:
   - ❌ Real names (use generic placeholders like "user", "developer", "author")
   - ❌ Email addresses (use example.com domains or GitHub no-reply emails)
@@ -141,6 +150,7 @@ These 2 tests provide critical end-to-end validation that fixtures and mocks can
   - Configure: `git config user.email "123456+username@users.noreply.github.com"`
 
 #### Dead Code Management
+
 - Remove truly unused code (functions, structs, enums that are never referenced)
 - Keep `#[allow(dead_code)]` annotations when:
   - Compiler has false positives (public API that's unused internally)
@@ -149,6 +159,7 @@ These 2 tests provide critical end-to-end validation that fixtures and mocks can
 - Document reasoning when keeping dead code
 
 #### Refactoring Best Practices
+
 1. **Analyze first**: Use `grep`/`rg` to understand code usage before removing
 2. **Start with safe removals**: Remove obviously unused code first
 3. **Test incrementally**: Run tests after each major removal phase
@@ -156,6 +167,7 @@ These 2 tests provide critical end-to-end validation that fixtures and mocks can
 5. **Document decisions**: Explain why code was kept or removed
 
 #### Component Trait Pattern (Spec 017)
+
 - All TUI components should implement either `Component` or `ContextualComponent<T>` traits
 - Components encapsulate: state, rendering logic, and input handling
 - Use event-driven communication between components and AppState
@@ -165,7 +177,9 @@ These 2 tests provide critical end-to-end validation that fixtures and mocks can
 ### Git Workflow
 
 #### Commit Message Format
+
 Follow Conventional Commits specification:
+
 ```
 <type>(<scope>): <description>
 
@@ -175,6 +189,7 @@ Follow Conventional Commits specification:
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `refactor`: Code restructuring (no behavior change)
@@ -187,6 +202,7 @@ Follow Conventional Commits specification:
 - `ci`: CI/CD configuration changes
 
 **Examples:**
+
 ```
 feat(keycode-picker): add language keycodes with selector and persistence
 fix(ui): apply theme background color globally
@@ -195,6 +211,7 @@ chore: bump version to 0.6.0
 ```
 
 **Guidelines:**
+
 - Use present tense, lowercase
 - Keep description under 72 characters
 - Add body for context when needed
@@ -202,6 +219,7 @@ chore: bump version to 0.6.0
 - Be specific, avoid generic messages like "Update files" or "Fix bug"
 
 #### Branch Naming
+
 - `feat/feature-name` - New features
 - `fix/bug-description` - Bug fixes
 - `refactor/refactor-name` - Code restructuring
@@ -213,6 +231,7 @@ chore: bump version to 0.6.0
 **IMPORTANT:** Releases are automated via GitHub Actions. **Do NOT manually create CHANGELOG.md files.**
 
 **How Releases Work:**
+
 1. **Version Bump**: Update version in `Cargo.toml` (e.g., `0.10.0` → `0.11.0`)
 2. **Commit Version Bump**: Create commit with message `chore: bump version to X.Y.Z`
 3. **Create Git Tag**: Create annotated tag with `git tag -a vX.Y.Z -m "Release vX.Y.Z: Brief Description"`
@@ -226,6 +245,7 @@ chore: bump version to 0.6.0
    - Calculates and includes SHA256 checksums
 
 **Changelog Generation:**
+
 - Changelogs are auto-generated from git commit messages using conventional commits format
 - The workflow script (`.github/workflows/release.yml`) parses commit types and formats them:
   - `feat:` → ✨ **Feature**
@@ -242,6 +262,7 @@ chore: bump version to 0.6.0
 - Download links and checksums are automatically added
 
 **What NOT To Do:**
+
 - ❌ Don't create or edit `CHANGELOG.md` files manually
 - ❌ Don't manually create GitHub releases
 - ❌ Don't manually build release binaries
@@ -249,6 +270,7 @@ chore: bump version to 0.6.0
 - ❌ Don't push tags before committing version changes
 
 **Example Release Flow:**
+
 ```bash
 # 1. Bump version
 sed -i '' 's/version = "0.10.0"/version = "0.11.0"/' Cargo.toml
@@ -270,6 +292,7 @@ git push origin v0.11.0
 ```
 
 #### Review Process
+
 - Always validate changes with tests before committing
 - Check `git diff` to review all modifications
 - Ensure no unintended changes are included
@@ -279,13 +302,16 @@ git push origin v0.11.0
 ### Architecture Guidelines
 
 #### TUI Component Structure
+
 - **State Management**: Use centralized `AppState` as single source of truth
 - **Component Lifecycle**: Initialize → Handle Input → Render
 - **Event Communication**: Components emit events, handlers update state
 - **Rendering**: Immediate mode - rebuild UI every frame from state
 
 #### Coordinate Systems
+
 The project uses three coordinate systems:
+
 1. **Matrix Coordinates**: Electrical wiring (rows/columns)
 2. **LED Index**: Sequential RGB LED numbering
 3. **Visual Position**: User's mental model (what appears in UI)
@@ -293,12 +319,14 @@ The project uses three coordinate systems:
 Always use `VisualLayoutMapping` for transformations between systems.
 
 #### File Formats
+
 - **Layouts**: Markdown with YAML frontmatter
 - **Configuration**: TOML
 - **Keycode Database**: JSON
 - **QMK Metadata**: JSON (parsed from `info.json`)
 
 ### Performance Considerations
+
 - Target 60fps (16ms/frame), typical event-driven rendering
 - Pre-allocate fixed-size vectors where possible
 - Use buffered I/O (`BufReader`, `BufWriter`)
@@ -308,6 +336,7 @@ Always use `VisualLayoutMapping` for transformations between systems.
 ### Common Patterns
 
 #### Error Handling
+
 ```rust
 use anyhow::{Context, Result};
 
@@ -317,6 +346,7 @@ fn operation() -> Result<T> {
 ```
 
 #### Component Implementation
+
 ```rust
 impl Component for MyComponent {
     type Event = MyEvent;
@@ -332,6 +362,7 @@ impl Component for MyComponent {
 ```
 
 #### State Updates
+
 ```rust
 // Always set dirty flag when modifying layout data
 state.dirty = true;
@@ -341,6 +372,7 @@ state.layout.layers[layer_idx].keys[idx].keycode = new_keycode;
 ### Code Review Checklist
 
 Before committing changes:
+
 - [ ] All tests pass (`cargo test`)
 - [ ] No compiler warnings (`cargo clippy --all-features -- -D warnings`)
 - [ ] Clippy passes with zero warnings (never use allow/ignore flags)
@@ -357,6 +389,7 @@ Before committing changes:
 ### Troubleshooting
 
 #### Common Issues
+
 1. **Tests failing after refactor**: Check for removed methods still in use
 2. **Clippy warnings**: Fix the underlying issue, never use allow/ignore flags
 3. **Coordinate system confusion**: Always use `VisualLayoutMapping` methods
@@ -364,6 +397,7 @@ Before committing changes:
 5. **Component not rendering**: Check `ActiveComponent` enum and popup routing
 
 #### Debug Techniques
+
 - Use `cargo test -- --nocapture` to see println! output
 - Add `eprintln!` for debugging (goes to stderr, not captured by tests)
 - Use `cargo check` for faster iteration than `cargo build`
@@ -381,11 +415,13 @@ LazyQMK Docker images use **Rust 1.92** for consistent, reproducible builds acro
 - **CI uses stable**: To catch future compatibility issues early
 
 **Why pin in Docker but use stable in CI?**
+
 - Docker: Reproducible production builds, stable deployment baseline
 - CI: Early detection of breaking changes in newer Rust versions
 - Local: Flexible (rust-toolchain.toml uses "stable")
 
 **When to update the pin:**
+
 1. Test locally with new version: `rustup override set 1.93.0 && cargo test --all-features`
 2. Test Docker build: `docker build -f Dockerfile -t test .`
 3. Test on all platforms (via CI or manually)
@@ -403,6 +439,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 ```
 
 **Why this approach:**
+
 - Official recommended method from NodeSource
 - Industry standard, widely used in production
 - HTTPS download with `-fsSL` flags for security
@@ -410,15 +447,18 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 - Simpler than multi-stage Node build
 
 **Security considerations:**
+
 - Script is verified over HTTPS
 - Alternative approaches documented in [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md)
 - Open to improvement if security concerns arise
 
 **See also:**
+
 - [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md) - Complete Docker build documentation
 - [docs/DOCKER_QMK_SETUP.md](docs/DOCKER_QMK_SETUP.md) - QMK firmware integration
 
 ### Resources
+
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete technical architecture
 - [FEATURES.md](docs/FEATURES.md) - All implemented features
 - [QUICKSTART.md](QUICKSTART.md) - User guide
@@ -439,17 +479,20 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
@@ -485,17 +528,20 @@ bd close <id>         # Complete work
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
