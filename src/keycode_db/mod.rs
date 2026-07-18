@@ -11,7 +11,7 @@ mod display;
 // Re-exports for web feature - used by web::mod.rs but may appear unused
 // when compiling the main binary with web feature enabled.
 #[cfg(feature = "web")]
-#[allow(unused_imports)]
+#[allow(unused_imports)] // cfg-gated; bin doesn't link web feature path
 pub use display::{
     ActionKind, KeyDetailAction, KeyDisplay, KeyDisplayMetadata, TapDanceDisplayInfo,
 };

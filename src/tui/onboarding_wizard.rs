@@ -48,6 +48,7 @@ pub enum WizardStep {
 impl WizardStep {
     /// Gets the next step in the wizard
     #[must_use]
+    #[allow(dead_code)] // bin/lib split: enum helper (tests use it)
     pub const fn next(&self) -> Option<Self> {
         match self {
             Self::Welcome => Some(Self::QmkPath),

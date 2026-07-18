@@ -13,7 +13,7 @@ pub mod template_gen;
 pub use json_serde::{parse_json_layout, save_json_layout};
 
 // Legacy markdown parser (kept for .md → .json migration)
-#[allow(unused_imports)]
+#[allow(unused_imports)] // bin/lib split: lib tests use this
 pub use layout::parse_markdown_layout;
-#[allow(unused_imports)]
+#[allow(unused_imports)] // bin/lib split: lib tests use this
 pub use template_gen::save_markdown_layout;

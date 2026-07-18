@@ -10,5 +10,5 @@ pub mod formatter;
 pub use checker::{DependencyChecker, DependencyStatus, ToolStatus};
 
 // Re-export formatter types (allow unused for public API exports)
-#[allow(unused_imports)]
+#[allow(unused_imports)] // bin/lib split: used by cli/doctor.rs
 pub use formatter::{DoctorFormatter, JsonDependency, JsonOutput, OutputFormat, Platform};

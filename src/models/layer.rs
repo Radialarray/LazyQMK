@@ -14,7 +14,6 @@ use uuid::Uuid;
 ///
 /// This constant represents the default limit of 8 layers. Validation should
 /// allow up to 32 layers by default but warn users about the actual QMK configuration.
-#[allow(dead_code)] // bin/lib split: legacy default constant for QMK 8-layer configs
 #[allow(dead_code)] // bin/lib split: re-exported via models::mod; consumed by lib tests
 pub const DEFAULT_QMK_LAYER_LIMIT: u8 = 8;
 
