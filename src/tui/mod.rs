@@ -479,12 +479,22 @@ pub struct AppState {
     /// Currently active component (if any)
     pub active_component: Option<ActiveComponent>,
 
-    // Legacy component states (to be removed incrementally during migration)
+    // Cross-popup state — fields that bridge popup boundaries.
+    //
+    // The Component-trait migration (`active_component: Option<ActiveComponent>`) is
+    // complete for popups that hold all their state internally. The fields below
+    // remain because they cross popup boundaries — e.g. `category_manager_state` is
+    // preserved across color picker interactions so opening a color picker mid-edit
+    // doesn't drop the user's mode/selection.
+    //
+    // A full migration would require each popup to persist+restore state through a
+    // dedicated bridge (e.g. `Component::suspend()` / `Component::restore()`). This is
+    // large-scale refactoring — tracked in LazyQMK-aopx.5.5 as future work; the
+    // fields below are intentionally retained.
+    //
     /// Context for category picker (what's being categorized)
     pub category_picker_context: Option<CategoryPickerContext>,
     /// Category manager component state (preserved across color picker interactions)
-    /// NOTE: Unlike fully migrated components, this state is synced with the component
-    /// to preserve mode/selection when color picker opens (replacing the component)
     pub category_manager_state: CategoryManagerState,
     /// Template save dialog component state
     pub template_save_dialog_state: TemplateSaveDialogState,
