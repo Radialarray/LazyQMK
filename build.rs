@@ -1,4 +1,4 @@
-//! Build script for LazyQMK.
+//! Build script for `LazyQMK`.
 //!
 //! This script ensures the web frontend is built before compiling the Rust binary.
 //! The web frontend build output is embedded into the binary using rust-embed.
@@ -36,9 +36,8 @@ fn build_web_frontend() {
         if build_dir.exists() {
             println!("cargo:warning=SKIP_WEB_BUILD set, using existing web frontend build");
             return;
-        } else {
-            panic!("SKIP_WEB_BUILD is set but web/build/ directory does not exist");
         }
+        panic!("SKIP_WEB_BUILD is set but web/build/ directory does not exist");
     }
 
     // Check if node_modules exists, if not run npm install
