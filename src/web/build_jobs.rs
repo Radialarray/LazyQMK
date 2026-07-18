@@ -683,6 +683,43 @@ pub struct BuildJobManager {
 }
 
 impl BuildJobManager {
+    /// Locks the jobs map for writing. Recovers from a poisoned mutex
+    /// (which only happens when a worker thread panicked mid-build) so
+    /// other builds can continue.
+    fn jobs_write(&self) -> std::sync::RwLockWriteGuard<'_, HashMap<String, BuildJob>> {
+        self.jobs.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the jobs map for reading. Recovers from a poisoned mutex.
+    fn jobs_read(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, BuildJob>> {
+        self.jobs.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the cancelled set for reading.
+    fn cancelled_read(&self) -> std::sync::RwLockReadGuard<'_, std::collections::HashSet<String>> {
+        self.cancelled.read().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the cancelled set for writing.
+    fn cancelled_write(&self) -> std::sync::RwLockWriteGuard<'_, std::collections::HashSet<String>> {
+        self.cancelled.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the running count mutex.
+    fn running_count_lock(&self) -> std::sync::MutexGuard<'_, usize> {
+        self.running_count.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the command channel sender slot.
+    fn command_tx_lock(&self) -> std::sync::MutexGuard<'_, Option<mpsc::Sender<BuildCommand>>> {
+        self.command_tx.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Locks the qmk_path setter.
+    fn qmk_path_write(&self) -> std::sync::RwLockWriteGuard<'_, Option<PathBuf>> {
+        self.qmk_path.write().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
     /// Creates a new build job manager.
     pub fn new(
         logs_dir: PathBuf,
@@ -734,7 +771,7 @@ impl BuildJobManager {
     /// Starts the background worker thread.
     fn start_worker(self: &Arc<Self>) {
         let (tx, rx) = mpsc::channel::<BuildCommand>();
-        *self.command_tx.lock().unwrap() = Some(tx);
+        *self.command_tx_lock() = Some(tx);
 
         let manager = Arc::clone(self);
 
@@ -755,7 +792,7 @@ impl BuildJobManager {
 
         // Update job to running
         {
-            let mut jobs = self.jobs.write().unwrap();
+            let mut jobs = self.jobs_write();
             if let Some(job) = jobs.get_mut(&cmd.job_id) {
                 job.status = JobStatus::Running;
                 job.started_at = Some(chrono::Utc::now().to_rfc3339());
@@ -851,7 +888,7 @@ impl BuildJobManager {
 
         // Decrement running count
         {
-            let mut count = self.running_count.lock().unwrap();
+            let mut count = self.running_count_lock();
             *count = count.saturating_sub(1);
         }
 
@@ -1017,7 +1054,7 @@ impl BuildJobManager {
 
     /// Checks if a job has been cancelled.
     fn is_cancelled(&self, job_id: &str) -> bool {
-        self.cancelled.read().unwrap().contains(job_id)
+        self.cancelled_read().contains(job_id)
     }
 
     /// Updates a job's status.
@@ -1029,7 +1066,7 @@ impl BuildJobManager {
         firmware_path: Option<String>,
         artifacts: Vec<BuildArtifact>,
     ) {
-        let mut jobs = self.jobs.write().unwrap();
+        let mut jobs = self.jobs_write();
         if let Some(job) = jobs.get_mut(job_id) {
             job.status = status;
             job.completed_at = Some(chrono::Utc::now().to_rfc3339());
@@ -1055,7 +1092,7 @@ impl BuildJobManager {
         use std::time::SystemTime;
 
         // Get list of completed/failed/cancelled jobs with their completion times
-        let jobs = self.jobs.read().unwrap();
+        let jobs = self.jobs_read();
         let mut cleanable_jobs: Vec<(String, SystemTime)> = Vec::new();
 
         for (job_id, job) in jobs.iter() {
@@ -1158,7 +1195,7 @@ impl BuildJobManager {
 
         // Check concurrency limit
         {
-            let count = self.running_count.lock().unwrap();
+            let count = self.running_count_lock();
             if *count >= MAX_CONCURRENT_BUILDS {
                 return Err(
                     "Build already in progress. Please wait for it to complete.".to_string()
@@ -1172,7 +1209,7 @@ impl BuildJobManager {
 
         // Store job
         {
-            let mut jobs = self.jobs.write().unwrap();
+            let mut jobs = self.jobs_write();
             jobs.insert(job_id.clone(), job.clone());
         }
 
@@ -1184,7 +1221,7 @@ impl BuildJobManager {
 
         // Increment running count
         {
-            let mut count = self.running_count.lock().unwrap();
+            let mut count = self.running_count_lock();
             *count += 1;
         }
 
@@ -1202,7 +1239,7 @@ impl BuildJobManager {
         };
 
         {
-            let tx = self.command_tx.lock().unwrap();
+            let tx = self.command_tx_lock();
             if let Some(sender) = tx.as_ref() {
                 sender
                     .send(cmd)
@@ -1215,13 +1252,13 @@ impl BuildJobManager {
 
     /// Gets the status of a job.
     pub fn get_job(&self, job_id: &str) -> Option<BuildJob> {
-        self.jobs.read().unwrap().get(job_id).cloned()
+        self.jobs_read().get(job_id).cloned()
     }
 
     /// Gets the logs for a job.
     pub fn get_logs(&self, job_id: &str, offset: usize, limit: usize) -> Option<JobLogsResponse> {
         // Check job exists
-        if !self.jobs.read().unwrap().contains_key(job_id) {
+        if !self.jobs_read().contains_key(job_id) {
             return None;
         }
 
@@ -1280,7 +1317,7 @@ impl BuildJobManager {
     pub fn cancel_job(&self, job_id: &str) -> CancelJobResponse {
         // Check job exists
         let job = {
-            let jobs = self.jobs.read().unwrap();
+            let jobs = self.jobs_read();
             jobs.get(job_id).cloned()
         };
 
@@ -1288,7 +1325,7 @@ impl BuildJobManager {
             Some(job) => {
                 if job.status == JobStatus::Running || job.status == JobStatus::Pending {
                     // Mark as cancelled
-                    self.cancelled.write().unwrap().insert(job_id.to_string());
+                    self.cancelled_write().insert(job_id.to_string());
 
                     // Update job status
                     self.update_job_status(job_id, JobStatus::Cancelled, None, None, Vec::new());
@@ -1313,14 +1350,14 @@ impl BuildJobManager {
 
     /// Lists all jobs.
     pub fn list_jobs(&self) -> Vec<BuildJob> {
-        let mut list: Vec<_> = self.jobs.read().unwrap().values().cloned().collect();
+        let mut list: Vec<_> = self.jobs_read().values().cloned().collect();
         list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         list
     }
 
     /// Updates the QMK firmware path.
     pub fn set_qmk_path(&self, path: Option<PathBuf>) {
-        *self.qmk_path.write().unwrap() = path;
+        *self.qmk_path_write() = path;
     }
 
     /// Gets the artifacts for a completed job.
