@@ -5,11 +5,12 @@ use crossterm::event::{self, KeyCode, KeyModifiers};
 
 use crate::keycode_db::{KeycodeDb, ParamType};
 use crate::services::LayoutService;
+use crate::tui::editor::key_editor;
 use crate::tui::{
     build_log::BuildLogEvent,
     color_picker::ColorPickerEvent,
     component::{Component, ContextualComponent},
-    key_editor, keycode_picker,
+    keycode_picker,
     keycode_picker::KeycodePickerEvent,
     metadata_editor, onboarding_wizard, ActiveComponent, AppState, LayoutVariantPickerEvent,
     PopupType,
@@ -1541,7 +1542,7 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
 mod tests {
     use super::*;
     use crate::models::{Layout, LayoutMetadata};
-    use crate::tui::key_editor::{ComboEditPart, ComboKeycodeType as ComboType};
+    use crate::tui::editor::key_editor::{ComboEditPart, ComboKeycodeType as ComboType};
     use crate::tui::AppState;
 
     fn create_test_state() -> AppState {

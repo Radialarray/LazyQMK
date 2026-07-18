@@ -21,10 +21,11 @@ pub mod clipboard;
 pub mod color_picker;
 pub mod component;
 pub mod config_dialogs;
+/// Editor components (key property editing UI).
+pub mod editor;
 pub mod handlers;
 pub mod help_overlay;
 pub mod help_registry;
-pub mod key_editor;
 pub mod keyboard;
 pub mod keycode_picker;
 pub mod layer_manager;
@@ -66,6 +67,7 @@ use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
 use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
+use crate::tui::editor::key_editor;
 use crate::tui::help_registry::HelpRegistry;
 use std::collections::HashMap;
 
@@ -88,8 +90,8 @@ pub use component::{Component, ContextualComponent};
 pub use config_dialogs::{
     LayoutPicker as LayoutVariantPicker, LayoutPickerEvent as LayoutVariantPickerEvent,
 };
+pub use editor::key_editor::KeyEditorState;
 pub use help_overlay::HelpOverlay;
-pub use key_editor::KeyEditorState;
 pub use keyboard::KeyboardWidget;
 pub use keycode_picker::KeycodePicker;
 pub use layer_manager::{LayerManager, LayerManagerEvent};

@@ -1,7 +1,8 @@
 // Popup management action handlers
 
 use crate::models::KeyDefinition;
-use crate::tui::{key_editor, onboarding_wizard, ActiveComponent, AppState, PopupType};
+use crate::tui::editor::key_editor;
+use crate::tui::{onboarding_wizard, ActiveComponent, AppState, PopupType};
 use anyhow::Result;
 
 /// Handle open layer manager action
