@@ -13,6 +13,55 @@ use crate::models::{Category, KeyDefinition, Layer, Layout, LayoutMetadata, Posi
 use anyhow::{Context, Result};
 use regex::Regex;
 use std::path::Path;
+use std::sync::OnceLock;
+
+/// Cached regex for validating layout tag identifiers (lowercase, digits, hyphens).
+fn tag_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"^[a-z0-9-]+$").unwrap())
+}
+
+/// Cached regex for parsing `## Layer N: Name` headers.
+fn layer_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"^##\s+Layer\s+(\d+):\s+(.+)$").unwrap())
+}
+
+/// Cached regex for parsing keycode cell syntax (with optional color and category).
+fn keycode_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(
+            r"^([A-Z_][A-Z_0-9]*(?:\([^)]*\))?)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$",
+        )
+        .unwrap()
+    })
+}
+
+/// Cached regex for parsing category lines: `- id: Name (#RRGGBB)`.
+fn category_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"^-\s+([a-z][a-z0-9-]*):\s+(.+?)\s+\(#([0-9A-Fa-f]{6})\)$").unwrap()
+    })
+}
+
+/// Cached regex for parsing combo lines.
+fn combo_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(
+            r"^\*\*Combo\s+(\d+)\*\*:\s*\((\d+),(\d+)\)\s*\+\s*\((\d+),(\d+)\)\s*→\s*(.+?)\s*(?:\[(\d+)ms\])?$",
+        )
+        .unwrap()
+    })
+}
+
+/// Cached regex for parsing key description lines: `- layer:row:col: description`.
+fn desc_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"^-\s+(\d+):(\d+):(\d+):\s+(.+)$").unwrap())
+}
 
 /// Parses a Markdown layout file into a Layout structure.
 ///
@@ -181,9 +230,8 @@ fn validate_metadata(metadata: &LayoutMetadata) -> Result<()> {
     }
 
     // Validate tags
-    let tag_regex = Regex::new(r"^[a-z0-9-]+$").unwrap();
     for tag in &metadata.tags {
-        if !tag_regex.is_match(tag) {
+        if !tag_regex().is_match(tag) {
             anyhow::bail!(
                 "Invalid tag '{tag}'. Tags must be lowercase with hyphens and alphanumeric characters only"
             );
@@ -254,8 +302,7 @@ fn parse_layer(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result
     let header_line = lines[line_num];
 
     // Parse layer header: ## Layer N: Name
-    let layer_regex = Regex::new(r"^##\s+Layer\s+(\d+):\s+(.+)$").unwrap();
-    let captures = layer_regex
+    let captures = layer_regex()
         .captures(header_line)
         .ok_or_else(|| anyhow::anyhow!("Invalid layer header format: {header_line}"))?;
 
@@ -446,12 +493,7 @@ fn parse_keycode_syntax(cell: &str, row: u8, col: u8) -> Result<KeyDefinition> {
     //   (?:\([^)]*\))?    - Optional parentheses with anything inside (for params)
     //   (?:\{...\})?      - Optional color override
     //   (?:@...)?         - Optional category suffix (@ only allowed here, not in keycode)
-    let keycode_regex = Regex::new(
-        r"^([A-Z_][A-Z_0-9]*(?:\([^)]*\))?)(?:\{(#[0-9A-Fa-f]{6})\})?(?:@([a-z][a-z0-9-]*))?\s*$",
-    )
-    .unwrap();
-
-    let captures = keycode_regex
+    let captures = keycode_regex()
         .captures(cell)
         .ok_or_else(|| anyhow::anyhow!("Invalid keycode syntax: {cell}"))?;
 
@@ -480,9 +522,6 @@ fn parse_keycode_syntax(cell: &str, row: u8, col: u8) -> Result<KeyDefinition> {
 fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     let mut line_num = start_line + 1; // Skip "## Categories" header
 
-    let category_regex =
-        Regex::new(r"^-\s+([a-z][a-z0-9-]*):\s+(.+?)\s+\(#([0-9A-Fa-f]{6})\)$").unwrap();
-
     while line_num < lines.len() {
         let line = lines[line_num].trim();
 
@@ -498,7 +537,7 @@ fn parse_categories(lines: &[&str], start_line: usize, layout: &mut Layout) -> R
         }
 
         // Parse category line: - id: Name (#RRGGBB)
-        if let Some(captures) = category_regex.captures(line) {
+        if let Some(captures) = category_regex().captures(line) {
             let id = captures[1].to_string();
             let name = captures[2].to_string();
             let color_hex = format!("#{}", &captures[3]);
@@ -524,12 +563,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
     // Track if a preset was explicitly specified in the file
     let mut explicit_preset: Option<TapHoldPreset> = None;
 
-    // Pre-compile regex for combo parsing (outside loop to avoid recreating)
-    let combo_regex = Regex::new(
-        r"^\*\*Combo\s+(\d+)\*\*:\s*\((\d+),(\d+)\)\s*\+\s*\((\d+),(\d+)\)\s*→\s*(.+?)\s*(?:\[(\d+)ms\])?$"
-    )
-    .unwrap();
-
+    // Regex compiled once via combo_regex() helper (cached with OnceLock)
     while line_num < lines.len() {
         let line = lines[line_num].trim();
 
@@ -1008,10 +1042,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 
         // Parse Ripple Wave Count
         if line.starts_with("**Ripple Wave Count**:") {
-            let value = line
-                .strip_prefix("**Ripple Wave Count**:")
-                .unwrap()
-                .trim();
+            let value = line.strip_prefix("**Ripple Wave Count**:").unwrap().trim();
             if let Ok(count) = value.parse::<u8>() {
                 layout.rgb_overlay_ripple.wave_count = count;
             }
@@ -1052,8 +1083,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
                 .unwrap()
                 .trim()
                 .to_lowercase();
-            layout.palette_fx.enabled =
-                matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
+            layout.palette_fx.enabled = matches!(value.as_str(), "on" | "true" | "yes" | "enabled");
         }
 
         // Parse PaletteFX Default Effect
@@ -1117,7 +1147,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
         // Parse individual combo definitions
         // Format: **Combo N**: (row1,col1)+(row2,col2) → Action [duration]
         // Example: **Combo 1**: (0,0)+(0,1) → Disable Effects [500ms]
-        if let Some(captures) = combo_regex.captures(line) {
+        if let Some(captures) = combo_regex().captures(line) {
             let combo_num: usize = captures[1].parse().unwrap_or(0);
             let row1: u8 = captures[2].parse().unwrap_or(0);
             let col1: u8 = captures[3].parse().unwrap_or(0);
@@ -1174,9 +1204,7 @@ fn parse_settings(lines: &[&str], start_line: usize, layout: &mut Layout) -> Res
 fn parse_key_descriptions(lines: &[&str], start_line: usize, layout: &mut Layout) -> Result<usize> {
     let mut line_num = start_line + 1; // Skip "## Key Descriptions" header
 
-    // Regex to match: - layer:row:col: description
-    let desc_regex = Regex::new(r"^-\s+(\d+):(\d+):(\d+):\s+(.+)$").unwrap();
-
+    // Regex compiled once via desc_regex() helper (cached with OnceLock)
     while line_num < lines.len() {
         let line = lines[line_num].trim();
 
@@ -1192,7 +1220,7 @@ fn parse_key_descriptions(lines: &[&str], start_line: usize, layout: &mut Layout
         }
 
         // Parse description line: - layer:row:col: description text
-        if let Some(captures) = desc_regex.captures(line) {
+        if let Some(captures) = desc_regex().captures(line) {
             let layer_idx: usize = captures[1].parse().unwrap_or(0);
             let row: u8 = captures[2].parse().unwrap_or(0);
             let col: u8 = captures[3].parse().unwrap_or(0);
