@@ -385,6 +385,26 @@ Before committing changes:
 - [ ] No unrelated changes included
 - [ ] No personal information in code, comments, or commit messages
 - [ ] git diff reviewed for accuracy
+- [ ] `./scripts/check-style.sh` passes (style/quality audit gate; informational
+      warnings like >500-line files are tracked in bd but not blocking)
+
+### Project Style Invariants
+
+These are enforced by `scripts/check-style.sh` and tracked via bd issues:
+
+- **File size**: target ≤500 lines; >500 is a warning; >1000 is an error
+  (currently 18 files >1000 — see LazyQMK-aopx.4.* for splits)
+- **Lock unwraps**: `.lock().unwrap()` panics on poison; use the helpers
+  in `web/build_jobs.rs` / `web/generate_jobs.rs` that recover via
+  `unwrap_or_else(PoisonError::into_inner)` — 17 sites remain, tracked
+  in LazyQMK-aopx.12
+- **`#[allow(dead_code)]`**: must carry an inline justification comment
+  explaining why (typically: bin/lib split, test-only API, or unused
+  import re-export). Use `rg -n '#\[allow\(dead_code\)\]' src/` to find
+  candidates needing comments
+- **`dbg!()`**: banned; use `tracing::debug!` instead
+- **Production `.unwrap()`**: 700+ sites remain; tracked in
+  LazyQMK-aopx.12 and `.5.6` (in-progress reductions)
 
 ### Troubleshooting
 

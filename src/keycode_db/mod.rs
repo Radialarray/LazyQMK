@@ -196,7 +196,7 @@ pub struct TapHoldInfo {
     pub arg2: Option<String>,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // bin/lib split: heavily used by tests + CLI subcommands
 impl KeycodeDb {
     /// Loads the keycode database from embedded category files.
     pub fn load() -> Result<Self> {
