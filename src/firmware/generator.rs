@@ -1276,11 +1276,16 @@ impl<'a> FirmwareGenerator<'a> {
         // markdown without any coordinate conversion). Pass them straight to
         // `get_key()` which also operates on visual positions.
         for (idx, combo) in real_combos.iter().enumerate() {
-            // Get keycodes for the two positions from base layer (layer 0)
-            let base_layer = self
-                .layout
-                .get_layer(0)
-                .expect("Base layer must exist for combos");
+            // Get keycodes for the two positions from base layer (layer 0).
+            // A keyboard layout must always have a base layer; if it doesn't,
+            // we cannot generate combo code that references it.
+            let base_layer = self.layout.get_layer(0).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Cannot generate firmware for layout '{}': missing base layer (layer 0). \
+                     A keyboard layout must always contain a base layer.",
+                    self.layout.metadata.name
+                )
+            })?;
 
             let key1 = base_layer
                 .get_key(combo.key1)
