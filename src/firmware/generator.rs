@@ -1435,15 +1435,19 @@ impl<'a> FirmwareGenerator<'a> {
         sorted_tds.sort_by_key(|td| &td.name);
 
         for td in sorted_tds {
-            // Only generate helper functions for 3-way tap dances (those with hold)
-            if td.hold.is_none() {
+            // Only generate helper functions for 3-way tap dances.
+            // A 2-way-hold tap dance (single + hold, no double_tap) is valid
+            // by the model but doesn't fit the finished()/reset() helpers
+            // which dispatch on count == 2.
+            if !td.is_three_way() {
                 continue;
             }
 
             let name_lower = td.name.to_lowercase();
             let single_tap = &td.single_tap;
-            let double_tap = td.double_tap.as_ref().unwrap(); // 3-way always has double_tap
-            let hold = td.hold.as_ref().unwrap();
+            // SAFETY: is_three_way() above guarantees both are Some
+            let double_tap = td.double_tap.as_ref().expect("is_three_way implies double_tap is Some");
+            let hold = td.hold.as_ref().expect("is_three_way implies hold is Some");
 
             // Generate finished function
             code.push_str(&format!(
