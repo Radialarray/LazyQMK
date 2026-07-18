@@ -191,7 +191,6 @@ pub enum RgbMatrixEffect {
 impl RgbMatrixEffect {
     /// Returns all available effects.
     #[must_use]
-    #[allow(dead_code)]
     pub const fn all() -> &'static [Self] {
         &[
             Self::SolidColor,
@@ -611,7 +610,6 @@ pub enum PaletteFxEffect {
 impl PaletteFxEffect {
     /// Returns all available effects.
     #[must_use]
-    #[allow(dead_code)]
     pub const fn all() -> &'static [Self] {
         &[
             Self::Gradient,
@@ -625,7 +623,6 @@ impl PaletteFxEffect {
 
     /// Returns a human-readable display name.
     #[must_use]
-    #[allow(dead_code)]
     pub const fn display_name(&self) -> &'static str {
         match self {
             Self::Gradient => "Gradient",
@@ -738,7 +735,6 @@ pub enum PaletteFxPalette {
 impl PaletteFxPalette {
     /// Returns all available palettes.
     #[must_use]
-    #[allow(dead_code)]
     pub const fn all() -> &'static [Self] {
         &[
             Self::Afterburn,
@@ -762,7 +758,6 @@ impl PaletteFxPalette {
 
     /// Returns a human-readable display name.
     #[must_use]
-    #[allow(dead_code)]
     pub const fn display_name(&self) -> &'static str {
         match self {
             Self::Afterburn => "Afterburn",
@@ -872,20 +867,6 @@ impl Default for PaletteFxSettings {
     }
 }
 
-impl PaletteFxSettings {
-    /// Checks if any settings differ from defaults.
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn has_custom_settings(&self) -> bool {
-        let defaults = Self::default();
-        self.enabled != defaults.enabled
-            || self.default_effect != defaults.default_effect
-            || self.default_palette != defaults.default_palette
-            || self.enable_all_effects != defaults.enable_all_effects
-            || self.enable_all_palettes != defaults.enable_all_palettes
-    }
-}
-
 // ============================================================================
 // Combo Settings
 // ============================================================================
@@ -907,9 +888,8 @@ pub enum ComboAction {
 
 impl ComboAction {
     /// Returns all available combo actions.
-    /// Part of public API for future UI/settings integration.
+    #[allow(dead_code)] // Public API; used by tests/lib consumers (bin doesn't link)
     #[must_use]
-    #[allow(dead_code)]
     pub const fn all() -> &'static [Self] {
         &[
             Self::DisableEffects,
@@ -925,18 +905,6 @@ impl ComboAction {
             Self::DisableEffects => "Disable Effects",
             Self::DisableLighting => "Disable Lighting",
             Self::Bootloader => "Bootloader",
-        }
-    }
-
-    /// Returns a description of this action.
-    /// Part of public API for future UI/settings integration.
-    #[must_use]
-    #[allow(dead_code)]
-    pub const fn description(&self) -> &'static str {
-        match self {
-            Self::DisableEffects => "Disable RGB effects and revert to TUI layer colors",
-            Self::DisableLighting => "Toggle all RGB lighting on/off",
-            Self::Bootloader => "Enter bootloader mode for firmware flashing",
         }
     }
 
@@ -1039,7 +1007,7 @@ impl ComboDefinition {
     /// Checks:
     /// - Key positions are different
     /// - Hold duration is reasonable (50-2000ms)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Public API; tests are in lib target
     pub fn validate(&self) -> Result<()> {
         if self.key1 == self.key2 {
             anyhow::bail!(
@@ -1079,7 +1047,7 @@ impl ComboSettings {
     /// Creates new combo settings with enabled flag.
     /// Part of public API for future UI/settings integration.
     #[must_use]
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Public API; tests are in lib target
     pub const fn new(enabled: bool) -> Self {
         Self {
             enabled,
@@ -1088,8 +1056,7 @@ impl ComboSettings {
     }
 
     /// Adds a combo definition.
-    /// Part of public API for future UI/settings integration.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Public API; tests are in lib target
     pub fn add_combo(&mut self, combo: ComboDefinition) -> Result<()> {
         if self.combos.len() >= 3 {
             anyhow::bail!("Maximum of 3 combos allowed");
@@ -1113,27 +1080,6 @@ impl ComboSettings {
         }
 
         self.combos.push(combo);
-        Ok(())
-    }
-
-    /// Removes a combo by index.
-    /// Part of public API for future UI/settings integration.
-    #[allow(dead_code)]
-    pub fn remove_combo(&mut self, index: usize) -> Option<ComboDefinition> {
-        if index < self.combos.len() {
-            Some(self.combos.remove(index))
-        } else {
-            None
-        }
-    }
-
-    /// Validates all combo definitions.
-    /// Part of public API for future validation in UI/settings.
-    #[allow(dead_code)]
-    pub fn validate(&self) -> Result<()> {
-        for combo in &self.combos {
-            combo.validate()?;
-        }
         Ok(())
     }
 
@@ -1167,8 +1113,6 @@ pub struct TapDanceAction {
     pub hold: Option<String>,
 }
 
-// Keep public API methods for future TUI editor (Phase 3) and firmware generation (Phase 4)
-#[allow(dead_code)]
 impl TapDanceAction {
     /// Creates a new tap dance with only single tap defined.
     ///
@@ -1596,7 +1540,6 @@ pub struct LayoutMetadata {
     pub output_format: Option<String>,
 }
 
-#[allow(dead_code)]
 impl LayoutMetadata {
     /// Creates new metadata with default values.
     pub fn new(name: impl Into<String>) -> Result<Self> {
@@ -1642,19 +1585,8 @@ impl LayoutMetadata {
         self.modified = Utc::now();
     }
 
-    /// Sets the description.
-    pub fn set_description(&mut self, description: impl Into<String>) {
-        self.description = description.into();
-        self.touch();
-    }
-
-    /// Sets the author.
-    pub fn set_author(&mut self, author: impl Into<String>) {
-        self.author = author.into();
-        self.touch();
-    }
-
     /// Adds a tag with validation.
+    #[allow(dead_code)] // Public API; tests are in lib target
     pub fn add_tag(&mut self, tag: impl Into<String>) -> Result<()> {
         let tag = tag.into();
         Self::validate_tag(&tag)?;
@@ -1668,6 +1600,7 @@ impl LayoutMetadata {
     }
 
     /// Validates tag format (lowercase, hyphens, alphanumeric).
+    #[allow(dead_code)] // Helper for add_tag
     fn validate_tag(tag: &str) -> Result<()> {
         if tag.is_empty() {
             anyhow::bail!("Tag cannot be empty");
@@ -1776,7 +1709,6 @@ const fn default_rgb_enabled() -> bool {
     true
 }
 
-#[allow(dead_code)]
 impl Layout {
     /// Creates a new Layout with default metadata.
     pub fn new(name: impl Into<String>) -> Result<Self> {
@@ -1828,6 +1760,7 @@ impl Layout {
     }
 
     /// Gets a mutable reference to the layer at the given index.
+    #[allow(dead_code)] // Public API; tests are in lib target
     pub fn get_layer_mut(&mut self, index: usize) -> Option<&mut Layer> {
         self.metadata.touch();
         self.layers.get_mut(index)
@@ -1849,12 +1782,6 @@ impl Layout {
     #[must_use]
     pub fn get_category(&self, id: &str) -> Option<&Category> {
         self.categories.iter().find(|c| c.id == id)
-    }
-
-    /// Gets a mutable reference to a category by ID.
-    pub fn get_category_mut(&mut self, id: &str) -> Option<&mut Category> {
-        self.metadata.touch();
-        self.categories.iter_mut().find(|c| c.id == id)
     }
 
     /// Removes a category by ID.
@@ -1890,12 +1817,6 @@ impl Layout {
         }
         self.metadata.touch();
         new_state
-    }
-
-    /// Checks if any layer has layer-level colors enabled.
-    #[must_use]
-    pub fn any_layer_colors_enabled(&self) -> bool {
-        self.layers.iter().any(|l| l.layer_colors_enabled)
     }
 
     /// Resolves the color for a key using the four-level priority system.
@@ -1963,6 +1884,7 @@ impl Layout {
     /// Returns `None` only if the layer has colors disabled AND the key has no
     /// individual color or key category. This allows showing a neutral color
     /// for keys that would normally inherit from the layer.
+    #[allow(dead_code)] // Public API; tests are in lib target
     #[must_use]
     pub fn resolve_key_color_if_enabled(
         &self,
@@ -2103,6 +2025,7 @@ impl Layout {
     }
 
     /// Gets a layer by its unique ID.
+    #[allow(dead_code)] // Public API; tests are in lib target
     #[must_use]
     pub fn get_layer_by_id(&self, id: &str) -> Option<&Layer> {
         self.layers.iter().find(|layer| layer.id == id)
@@ -2133,12 +2056,6 @@ impl Layout {
     #[must_use]
     pub fn get_tap_dance(&self, name: &str) -> Option<&TapDanceAction> {
         self.tap_dances.iter().find(|td| td.name == name)
-    }
-
-    /// Gets a mutable reference to a tap dance by name.
-    pub fn get_tap_dance_mut(&mut self, name: &str) -> Option<&mut TapDanceAction> {
-        self.metadata.touch();
-        self.tap_dances.iter_mut().find(|td| td.name == name)
     }
 
     /// Removes a tap dance by name.
@@ -2275,6 +2192,7 @@ impl Layout {
     /// Creates a layer keycode with a reference to a layer by ID.
     /// Example: `create_layer_keycode("MO`", "abc-123", None) -> "MO(@abc-123)"
     /// Example: `create_layer_keycode("LT`", "abc-123", `Some("KC_SPC`")) -> "LT(@abc-123, `KC_SPC`)"
+    #[allow(dead_code)] // Public API; tests are in lib target
     #[must_use]
     pub fn create_layer_keycode(prefix: &str, layer_id: &str, extra: Option<&str>) -> String {
         match extra {
