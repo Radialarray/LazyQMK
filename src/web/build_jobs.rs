@@ -876,10 +876,10 @@ impl BuildJobManager {
             DeployResult::CreatedDirectory(dir) => {
                 if dir.exists() {
                     if let Err(e) = fs::remove_dir_all(dir) {
-                        eprintln!(
-                            "Warning: failed to clean up created keymap directory {}: {}",
-                            dir.display(),
-                            e
+                        tracing::warn!(
+                            dir = %dir.display(),
+                            error = %e,
+                            "failed to clean up created keymap directory"
                         );
                     }
                 }
@@ -889,13 +889,13 @@ impl BuildJobManager {
                 let keymap_c_path = dir.join("keymap.c");
                 if keymap_c_path.exists() {
                     if let Err(e) = fs::remove_file(&keymap_c_path) {
-                        eprintln!("Warning: failed to clean up keymap.c: {}", e);
+                        tracing::warn!(error = %e, "failed to clean up keymap.c");
                     }
                 }
                 let config_h_path = dir.join("config.h");
                 if config_h_path.exists() {
                     if let Err(e) = fs::remove_file(&config_h_path) {
-                        eprintln!("Warning: failed to clean up config.h: {}", e);
+                        tracing::warn!(error = %e, "failed to clean up config.h");
                     }
                 }
             }

@@ -34,6 +34,7 @@ use crate::firmware::validator::FirmwareValidator;
 use crate::keycode_db::KeycodeDb;
 use crate::services::geometry::{self, GeometryContext};
 use crate::services::LayoutService;
+use tracing::{info, warn};
 
 /// Maximum number of concurrent generate jobs.
 const MAX_CONCURRENT_JOBS: usize = 1;
@@ -614,28 +615,28 @@ impl GenerateJobManager {
 
         let manager = Arc::clone(self);
 
-        eprintln!("[INFO] Generate worker thread starting");
+        info!("Generate worker thread starting");
 
         thread::spawn(move || {
-            eprintln!("[INFO] Generate worker thread started, waiting for jobs");
+            info!("Generate worker thread started, waiting for jobs");
             for cmd in rx {
-                eprintln!("[INFO] Worker received job {} for processing", cmd.job_id);
+                info!(job_id = %cmd.job_id, "Worker received job for processing");
                 manager.process_generate(cmd);
             }
-            eprintln!("[INFO] Generate worker thread stopped (channel closed)");
+            info!("Generate worker thread stopped (channel closed)");
         });
     }
 
     /// Processes a generate command.
     fn process_generate(self: &Arc<Self>, cmd: GenerateCommand) {
-        eprintln!(
-            "[INFO] Processing job {}: transition Pending → Running",
-            cmd.job_id
+        info!(
+            job_id = %cmd.job_id,
+            "Processing job: transition Pending → Running"
         );
 
         // Check if cancelled before starting
         if self.is_cancelled(&cmd.job_id) {
-            eprintln!("[INFO] Job {} was cancelled before processing", cmd.job_id);
+            info!(job_id = %cmd.job_id, "Job was cancelled before processing");
             self.update_job_status(&cmd.job_id, GenerateJobStatus::Cancelled, None, None);
             return;
         }
@@ -680,9 +681,9 @@ impl GenerateJobManager {
 
         // Check if cancelled after generation
         if self.is_cancelled(&cmd.job_id) {
-            eprintln!(
-                "[INFO] Job {} completed but was cancelled, marking as Cancelled",
-                cmd.job_id
+            info!(
+                job_id = %cmd.job_id,
+                "Job completed but was cancelled, marking as Cancelled"
             );
             self.update_job_status(&cmd.job_id, GenerateJobStatus::Cancelled, None, None);
             return;
@@ -691,9 +692,9 @@ impl GenerateJobManager {
         // Update job with result
         match result {
             Ok(zip_path) => {
-                eprintln!(
-                    "[INFO] Job {} completed successfully: transition Running → Completed",
-                    cmd.job_id
+                info!(
+                    job_id = %cmd.job_id,
+                    "Job completed successfully: transition Running → Completed"
                 );
                 self.update_job_status(
                     &cmd.job_id,
@@ -703,9 +704,10 @@ impl GenerateJobManager {
                 );
             }
             Err(error) => {
-                eprintln!(
-                    "[WARN] Job {} failed: transition Running → Failed ({})",
-                    cmd.job_id, error
+                warn!(
+                    job_id = %cmd.job_id,
+                    error = %error,
+                    "Job failed: transition Running → Failed"
                 );
                 self.update_job_status(&cmd.job_id, GenerateJobStatus::Failed, Some(error), None);
             }
@@ -810,9 +812,9 @@ impl GenerateJobManager {
             let tx = self.command_tx_lock();
             match tx.as_ref() {
                 None => {
-                    eprintln!(
-                        "[ERROR] Generate worker not running for job {}, cannot enqueue",
-                        job_id
+                    warn!(
+                        job_id = %job_id,
+                        "Generate worker not running, cannot enqueue"
                     );
                     Err("Generate worker not running".to_string())
                 }
@@ -841,13 +843,14 @@ impl GenerateJobManager {
                 None,
             );
 
-            eprintln!("[WARN] Job {} failed to enqueue: {}", job_id, error_msg);
+            warn!(job_id = %job_id, error = %error_msg, "Job failed to enqueue");
             return Err(error_msg);
         }
 
-        eprintln!(
-            "[INFO] Job {} queued successfully for layout {}",
-            job_id, job.layout_filename
+        info!(
+            job_id = %job_id,
+            layout = %job.layout_filename,
+            "Job queued successfully"
         );
         Ok(job)
     }
