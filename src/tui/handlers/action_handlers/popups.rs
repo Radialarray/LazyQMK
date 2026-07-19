@@ -5,39 +5,62 @@ use crate::tui::editor::key_editor;
 use crate::tui::{onboarding_wizard, ActiveComponent, AppState, PopupType};
 use anyhow::Result;
 
+/// Open a popup by invoking `opener` on the state and set a status message.
+///
+/// Consolidates the repeated `state.foo(); state.set_status(...); Ok(false)`
+/// pattern across the simple popup-open handlers.
+fn open_popup_with_status<F>(state: &mut AppState, opener: F, status: &str) -> Result<bool>
+where
+    F: FnOnce(&mut AppState),
+{
+    opener(state);
+    state.set_status(status);
+    Ok(false)
+}
+
 /// Handle open layer manager action
 pub fn handle_open_layer_manager(state: &mut AppState) -> Result<bool> {
-    state.open_layer_manager();
-    state.set_status("Layers: add, rename, reorder, copy, or delete layers");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_layer_manager,
+        "Layers: add, rename, reorder, copy, or delete layers",
+    )
 }
 
 /// Handle open category manager action
 pub fn handle_open_category_manager(state: &mut AppState) -> Result<bool> {
-    state.open_category_manager();
-    state.set_status("Key categories: add, rename, recolor, or delete categories");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_category_manager,
+        "Key categories: add, rename, recolor, or delete categories",
+    )
 }
 
 /// Handle open settings action
 pub fn handle_open_settings(state: &mut AppState) -> Result<bool> {
-    state.open_settings_manager();
-    state.set_status("Settings: choose task, Enter edits, Esc closes");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_settings_manager,
+        "Settings: choose task, Enter edits, Esc closes",
+    )
 }
 
 /// Handle edit metadata action
 pub fn handle_edit_metadata(state: &mut AppState) -> Result<bool> {
-    state.open_metadata_editor();
-    state.set_status("Metadata: Tab moves between fields, Enter saves");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_metadata_editor,
+        "Metadata: Tab moves between fields, Enter saves",
+    )
 }
 
 /// Handle browse templates action
 pub fn handle_browse_templates(state: &mut AppState) -> Result<bool> {
-    state.open_template_browser();
-    state.set_status("Templates: Enter loads, / searches");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_template_browser,
+        "Templates: Enter loads, / searches",
+    )
 }
 
 /// Handle toggle help action
@@ -125,7 +148,9 @@ pub fn handle_setup_wizard(state: &mut AppState) -> Result<bool> {
 
 /// Handle open tap dance editor action
 pub fn handle_open_tap_dance_editor(state: &mut AppState) -> Result<bool> {
-    state.open_tap_dance_editor();
-    state.set_status("Tap Dance Editor - visible actions shown in status bar and help");
-    Ok(false)
+    open_popup_with_status(
+        state,
+        crate::tui::AppState::open_tap_dance_editor,
+        "Tap Dance Editor - visible actions shown in status bar and help",
+    )
 }
