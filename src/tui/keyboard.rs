@@ -576,7 +576,8 @@ impl KeyboardWidget {
             TapHoldType::LayerTap => {
                 // LT(layer, keycode) - Layer Tap
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
-                let tap_display = crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
+                let tap_display =
+                    crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}"),
                     tap: tap_display,
@@ -585,7 +586,8 @@ impl KeyboardWidget {
             TapHoldType::ModTap => {
                 // MT(mod, keycode) - Custom Mod Tap
                 let mod_display = crate::keycode_db::format::format_modifier(&info.arg1);
-                let tap_display = crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
+                let tap_display =
+                    crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
@@ -608,7 +610,8 @@ impl KeyboardWidget {
             TapHoldType::LayerMod => {
                 // LM(layer, mod) - Layer Mod
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
-                let mod_display = crate::keycode_db::format::format_modifier(info.arg2.as_deref().unwrap_or(""));
+                let mod_display =
+                    crate::keycode_db::format::format_modifier(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}+"),
                     tap: mod_display,
@@ -657,7 +660,10 @@ mod tests {
     fn test_format_simple_keycode() {
         assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_A"), "A");
         assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_SPC"), "SPC");
-        assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_ENTER"), "ENTER");
+        assert_eq!(
+            crate::keycode_db::format::strip_kc_prefix("KC_ENTER"),
+            "ENTER"
+        );
         assert_eq!(crate::keycode_db::format::strip_kc_prefix("MO(1)"), "MO(1)");
     }
 
@@ -667,7 +673,10 @@ mod tests {
         assert_eq!(crate::keycode_db::format::format_modifier("MOD_LSFT"), "S");
         assert_eq!(crate::keycode_db::format::format_modifier("MOD_LALT"), "A");
         assert_eq!(crate::keycode_db::format::format_modifier("MOD_LGUI"), "G");
-        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT"), "CS");
+        assert_eq!(
+            crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT"),
+            "CS"
+        );
         assert_eq!(
             crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"),
             "CSA"

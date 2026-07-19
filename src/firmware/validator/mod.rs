@@ -13,4 +13,3 @@ mod report;
 
 pub use core::FirmwareValidator;
 pub use report::ValidationErrorKind;
-

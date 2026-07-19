@@ -49,4 +49,3 @@ pub fn format_modifier(mod_str: &str) -> String {
         result
     }
 }
-

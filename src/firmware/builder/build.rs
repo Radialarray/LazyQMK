@@ -149,7 +149,11 @@ pub(super) fn run_build(
 /// Finds the compiled firmware file.
 ///
 /// QMK typically outputs to .build/{keyboard}_{keymap}.{ext}
-pub(super) fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Result<PathBuf> {
+pub(super) fn find_firmware_file(
+    qmk_path: &PathBuf,
+    keyboard: &str,
+    keymap: &str,
+) -> Result<PathBuf> {
     // Clean keyboard path (replace / with _)
     let keyboard_clean = keyboard.replace('/', "_");
 
@@ -170,8 +174,8 @@ pub(super) fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &st
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::state::{BuildMessage, BuildState, BuildStatus, LogLevel};
+    use super::*;
 
     #[test]
     fn test_build_status_display() {

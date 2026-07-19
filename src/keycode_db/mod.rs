@@ -28,14 +28,9 @@ pub use display::{
     ActionKind, KeyDetailAction, KeyDisplay, KeyDisplayMetadata, TapDanceDisplayInfo,
 };
 
-
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-
-
-
 
 /// Category of keycodes for organization in the picker.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

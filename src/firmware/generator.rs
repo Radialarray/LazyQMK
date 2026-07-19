@@ -625,8 +625,7 @@ impl<'a> FirmwareGenerator<'a> {
         // be #defined (i.e., ripple enabled AND keyboard has RGB matrix).
         // Ripple overlay works independently of PaletteFX — PaletteFX is only
         // used as an idle screensaver, not a replacement for keypress feedback.
-        let has_ripple = self.layout.rgb_overlay_ripple.enabled
-            && self.geometry.has_rgb_matrix();
+        let has_ripple = self.layout.rgb_overlay_ripple.enabled && self.geometry.has_rgb_matrix();
 
         let mut code = String::new();
 
@@ -683,7 +682,9 @@ impl<'a> FirmwareGenerator<'a> {
         // Forward declaration for ripple trigger (defined below in LQMK_RIPPLE_OVERLAY_ENABLED block)
         if has_ripple {
             code.push_str("#ifdef LQMK_RIPPLE_OVERLAY_ENABLED\n");
-            code.push_str("static bool lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record);\n");
+            code.push_str(
+                "static bool lazyqmk_ripple_trigger(uint16_t keycode, keyrecord_t *record);\n",
+            );
             code.push_str("#endif\n");
             code.push('\n');
         }
@@ -954,9 +955,15 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("    keypos_t key = { .row = row, .col = col };\n");
         code.push_str("    uint8_t layer = layer_switch_get_layer(key);\n");
         code.push_str("    if (layer < layer_base_colors_layer_count) {\n");
-        code.push_str("        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n");
-        code.push_str("        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n");
-        code.push_str("        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n");
+        code.push_str(
+            "        color.r = pgm_read_byte(&layer_base_colors[layer][led_index][0]);\n",
+        );
+        code.push_str(
+            "        color.g = pgm_read_byte(&layer_base_colors[layer][led_index][1]);\n",
+        );
+        code.push_str(
+            "        color.b = pgm_read_byte(&layer_base_colors[layer][led_index][2]);\n",
+        );
         code.push_str("        return color;\n");
         code.push_str("    }\n");
         code.push_str("#endif\n");
@@ -985,7 +992,9 @@ impl<'a> FirmwareGenerator<'a> {
         code.push_str("        uint32_t elapsed_ms = now - ripples[i].start_time;\n");
         code.push_str("        // Respect trigger delay for multi-wave cascading\n");
         code.push_str("        if (elapsed_ms < ripples[i].trigger_delay_ms) continue;\n");
-        code.push_str("        uint32_t effective_elapsed = elapsed_ms - ripples[i].trigger_delay_ms;\n");
+        code.push_str(
+            "        uint32_t effective_elapsed = elapsed_ms - ripples[i].trigger_delay_ms;\n",
+        );
         code.push_str("        if (effective_elapsed >= LQMK_RIPPLE_DURATION_MS) {\n");
         code.push_str("            ripples[i].active = false;\n");
         code.push_str("            continue;\n");
@@ -999,17 +1008,25 @@ impl<'a> FirmwareGenerator<'a> {
         // over LQMK_RIPPLE_DURATION_MS. LQMK_RIPPLE_SPEED accelerates (higher = faster).
         // At default speed=200 this is identity: (elapsed * max * 200) / (dur * 200).
         code.push_str("        uint32_t scaled = (uint32_t)effective_elapsed * LQMK_RIPPLE_MAX_RADIUS * LQMK_RIPPLE_SPEED;\n");
-        code.push_str("        uint8_t radius = (uint8_t)(scaled / LQMK_RIPPLE_SCALED_DURATION);\n");
+        code.push_str(
+            "        uint8_t radius = (uint8_t)(scaled / LQMK_RIPPLE_SCALED_DURATION);\n",
+        );
         code.push_str("        // Intensity envelope: triangle ramp 0→255→0 over duration\n");
         code.push_str("        uint8_t amp = (uint8_t)scale16by8(\n");
         code.push_str("            effective_elapsed < (LQMK_RIPPLE_DURATION_MS / 2)\n");
         code.push_str("                ? (uint16_t)(effective_elapsed * 2)\n");
-        code.push_str("                : (uint16_t)((LQMK_RIPPLE_DURATION_MS - effective_elapsed) * 2),\n");
+        code.push_str(
+            "                : (uint16_t)((LQMK_RIPPLE_DURATION_MS - effective_elapsed) * 2),\n",
+        );
         code.push_str("            LQMK_RIPPLE_AMP_SCALE);\n");
         code.push('\n');
         code.push_str("        // Compute distance using MATRIX positions\n");
-        code.push_str("        uint8_t led_row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n");
-        code.push_str("        uint8_t led_col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n");
+        code.push_str(
+            "        uint8_t led_row = pgm_read_byte(&lazyqmk_led_to_matrix_row[led_index]);\n",
+        );
+        code.push_str(
+            "        uint8_t led_col = pgm_read_byte(&lazyqmk_led_to_matrix_col[led_index]);\n",
+        );
         code.push_str("        int8_t drow = (int8_t)led_row - (int8_t)ripples[i].row;\n");
         code.push_str("        int8_t dcol = (int8_t)led_col - (int8_t)ripples[i].col;\n");
         code.push_str("        if (drow < 0) drow = -drow;\n");
@@ -1087,7 +1104,9 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str("        hsv.v = scale8(hsv.v, (uint8_t)(64 + 6 * brightness));\n");
             code.push_str("    }\n");
             code.push_str("    rgb_t contrib = hsv_to_rgb(hsv);\n");
-            code.push_str("    rgb_matrix_set_color(led_index, contrib.r, contrib.g, contrib.b);\n");
+            code.push_str(
+                "    rgb_matrix_set_color(led_index, contrib.r, contrib.g, contrib.b);\n",
+            );
         } else {
             // No PaletteFX and no background lighting: use configured color mode
             code.push_str("    RGB base = lazyqmk_ripple_base_color(led_index);\n");
@@ -1113,10 +1132,14 @@ impl<'a> FirmwareGenerator<'a> {
                     ));
                 }
                 crate::models::layout::RippleColorMode::KeyBased => {
-                    code.push_str("    // Key color mode: use the trigger key's resolved base color\n");
+                    code.push_str(
+                        "    // Key color mode: use the trigger key's resolved base color\n",
+                    );
                     code.push_str("    {\n");
                     code.push_str("        RGB key_color = {0, 0, 0};\n");
-                    code.push_str("        for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n");
+                    code.push_str(
+                        "        for (uint8_t i = 0; i < LQMK_RIPPLE_MAX_RIPPLES; i++) {\n",
+                    );
                     code.push_str("            if (ripples[i].active) {\n");
                     code.push_str("                key_color = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
                     code.push_str("            }\n");
@@ -1128,7 +1151,9 @@ impl<'a> FirmwareGenerator<'a> {
                 }
                 crate::models::layout::RippleColorMode::HueShift => {
                     let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 256) / 360;
-                    code.push_str("    // Hue shift mode: shift the base color's hue by configured degrees\n");
+                    code.push_str(
+                        "    // Hue shift mode: shift the base color's hue by configured degrees\n",
+                    );
                     code.push_str("    {\n");
                     code.push_str("        hsv_t hsv = rgb_to_hsv(base);\n");
                     code.push_str(&format!(
@@ -1146,7 +1171,9 @@ impl<'a> FirmwareGenerator<'a> {
                 }
             }
 
-            code.push_str("    rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);\n");
+            code.push_str(
+                "    rgb_matrix_set_color(led_index, contrib_r, contrib_g, contrib_b);\n",
+            );
         }
         code.push_str("}\n");
         code.push('\n');
@@ -1185,7 +1212,9 @@ impl<'a> FirmwareGenerator<'a> {
             code.push_str("        // Spawn concentric waves with staggered delays\n");
             code.push_str("        for (uint8_t w = 0; w < LQMK_RIPPLE_WAVE_COUNT; w++) {\n");
             code.push_str("            lazyqmk_ripple_add(led_index, record->event.key.row, record->event.key.col,\n");
-            code.push_str("                               (uint32_t)w * LQMK_RIPPLE_WAVE_DELAY_MS);\n");
+            code.push_str(
+                "                               (uint32_t)w * LQMK_RIPPLE_WAVE_DELAY_MS);\n",
+            );
             code.push_str("        }\n");
             code.push_str("        return true;\n");
             code.push_str("    }\n");
@@ -1446,7 +1475,10 @@ impl<'a> FirmwareGenerator<'a> {
             let name_lower = td.name.to_lowercase();
             let single_tap = &td.single_tap;
             // SAFETY: is_three_way() above guarantees both are Some
-            let double_tap = td.double_tap.as_ref().expect("is_three_way implies double_tap is Some");
+            let double_tap = td
+                .double_tap
+                .as_ref()
+                .expect("is_three_way implies double_tap is Some");
             let hold = td.hold.as_ref().expect("is_three_way implies hold is Some");
 
             // Generate finished function
@@ -1762,7 +1794,9 @@ impl<'a> FirmwareGenerator<'a> {
         if palette_fx.enabled && self.geometry.has_rgb_matrix() {
             content.push_str("\n// PaletteFX Community Module Configuration\n");
             content.push_str("// Note: PaletteFX runs as idle screensaver, not as default mode.\n");
-            content.push_str("// The idle effect state machine uses LQMK_IDLE_EFFECT_MODE (see above)\n");
+            content.push_str(
+                "// The idle effect state machine uses LQMK_IDLE_EFFECT_MODE (see above)\n",
+            );
             content.push_str("// which is set to the PaletteFX default effect at compile time.\n");
             content.push_str("#ifdef RGB_MATRIX_ENABLE\n");
 
@@ -1824,22 +1858,17 @@ impl<'a> FirmwareGenerator<'a> {
             // This controls how far the ripple expands outward from the key.
             // Use amplitude_pct (0-100) mapped to 2..=6 matrix units.
             let max_radius = 2 + (u16::from(ripple_settings.amplitude_pct) * 4 / 100);
-            content.push_str(&format!(
-                "#define LQMK_RIPPLE_MAX_RADIUS {max_radius}\n"
-            ));
+            content.push_str(&format!("#define LQMK_RIPPLE_MAX_RADIUS {max_radius}\n"));
             // Fade width: controls gradient softness. Proportional to max radius
             // so the pulse is always narrower than the total span (visible movement).
             let fade_width = (max_radius / 2).clamp(1, 4) as u8;
-            content.push_str(&format!(
-                "#define LQMK_RIPPLE_FADE_WIDTH {fade_width}\n"
-            ));
+            content.push_str(&format!("#define LQMK_RIPPLE_FADE_WIDTH {fade_width}\n"));
             // Scaled duration for speed-aware radius calculation.
             // Speed acts as a multiplier on expansion rate.
             // At default speed=200, LQMK_RIPPLE_SCALED_DURATION = duration_ms * 200.
             // The radius formula is: (elapsed * max_radius * speed) / scaled_duration
             // which simplifies to (elapsed * max_radius) / duration at speed=200.
-            let scaled_duration = u32::from(ripple_settings.duration_ms)
-                .saturating_mul(200);
+            let scaled_duration = u32::from(ripple_settings.duration_ms).saturating_mul(200);
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_SCALED_DURATION {scaled_duration}UL\n"
             ));
@@ -1852,9 +1881,7 @@ impl<'a> FirmwareGenerator<'a> {
             } else {
                 255
             };
-            content.push_str(&format!(
-                "#define LQMK_RIPPLE_AMP_SCALE {amp_scale}\n"
-            ));
+            content.push_str(&format!("#define LQMK_RIPPLE_AMP_SCALE {amp_scale}\n"));
             content.push_str(&format!(
                 "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",
                 if ripple_settings.trigger_on_press {

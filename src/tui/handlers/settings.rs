@@ -519,9 +519,9 @@ fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         .start_toggling_boolean(*setting, state.layout.palette_fx.enabled);
                 }
                 SettingItem::PaletteFxDefaultEffect => {
-                    manager.state_mut().start_selecting_palette_fx_effect(
-                        state.layout.palette_fx.default_effect,
-                    );
+                    manager
+                        .state_mut()
+                        .start_selecting_palette_fx_effect(state.layout.palette_fx.default_effect);
                 }
                 SettingItem::PaletteFxDefaultPalette => {
                     manager.state_mut().start_selecting_palette_fx_palette(
@@ -780,7 +780,8 @@ fn apply_settings(state: &mut AppState) -> Result<()> {
                         // "Default" - use current active palette
                         state.layout.rgb_overlay_ripple.key_action_palette = None;
                         state.mark_dirty();
-                        state.set_status("Key action palette set to: Default (current)".to_string());
+                        state
+                            .set_status("Key action palette set to: Default (current)".to_string());
                     } else if let Some(&palette) = PaletteFxPalette::all().get(selected_idx - 1) {
                         state.layout.rgb_overlay_ripple.key_action_palette = Some(palette);
                         state.mark_dirty();

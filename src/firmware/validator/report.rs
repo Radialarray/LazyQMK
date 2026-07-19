@@ -4,8 +4,6 @@
 // Allow format! appended to String - more readable for building messages
 #![allow(clippy::format_push_string)]
 
-
-
 /// Validation result with specific errors and warnings.
 #[derive(Debug, Clone)]
 pub struct ValidationReport {

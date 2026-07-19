@@ -13,4 +13,3 @@ mod build;
 mod state;
 
 pub use state::{BuildState, BuildStatus, LogLevel};
-

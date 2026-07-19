@@ -1,0 +1,1 @@
+Now update the validate functions to return `AppError`:

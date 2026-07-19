@@ -55,15 +55,20 @@ pub fn parse_json_layout_str(content: &str) -> Result<Layout> {
 ///
 /// Returns an error if serialization or file I/O fails.
 pub fn save_json_layout(layout: &Layout, path: &Path) -> Result<()> {
-    let content = serde_json::to_string_pretty(layout)
-        .context("Failed to serialize layout to JSON")?;
+    let content =
+        serde_json::to_string_pretty(layout).context("Failed to serialize layout to JSON")?;
 
     // Atomic write: write to .json.tmp, then rename to .json
     let temp_path = path.with_extension("json.tmp");
     fs::write(&temp_path, &content)
         .with_context(|| format!("Failed to write temporary file to {}", temp_path.display()))?;
-    fs::rename(&temp_path, path)
-        .with_context(|| format!("Failed to rename {} to {}", temp_path.display(), path.display()))?;
+    fs::rename(&temp_path, path).with_context(|| {
+        format!(
+            "Failed to rename {} to {}",
+            temp_path.display(),
+            path.display()
+        )
+    })?;
 
     Ok(())
 }
@@ -102,7 +107,10 @@ mod tests {
         let layout = parse_json_layout(example_path)?;
         assert_eq!(layout.metadata.name, "corne_choc_pro_layout");
         assert_eq!(layout.layers.len(), 7);
-        assert_eq!(layout.metadata.layout_variant.as_deref(), Some("LAYOUT_split_3x6_3_ex2"));
+        assert_eq!(
+            layout.metadata.layout_variant.as_deref(),
+            Some("LAYOUT_split_3x6_3_ex2")
+        );
         assert_eq!(layout.categories.len(), 4);
 
         // Verify key details in Base layer
@@ -111,7 +119,10 @@ mod tests {
         assert_eq!(base.keys.len(), 46);
 
         // Find first non-trns key
-        let first_key = base.keys.iter().find(|k| k.keycode != "KC_TRNS" && k.keycode != "KC_NO");
+        let first_key = base
+            .keys
+            .iter()
+            .find(|k| k.keycode != "KC_TRNS" && k.keycode != "KC_NO");
         assert!(first_key.is_some(), "Expected at least one non-trns key");
         Ok(())
     }
@@ -163,7 +174,7 @@ mod tests {
             return Ok(());
         }
         let layout = parse_json_layout(example_path)?;
-        
+
         // Verify categories
         assert!(!layout.categories.is_empty());
         let nav = layout.categories.iter().find(|c| c.id == "navigation");
@@ -172,7 +183,11 @@ mod tests {
 
         // Verify categories are properly referenced in keys
         let base = &layout.layers[0];
-        let cat_keys: Vec<_> = base.keys.iter().filter(|k| k.category_id.is_some()).collect();
+        let cat_keys: Vec<_> = base
+            .keys
+            .iter()
+            .filter(|k| k.category_id.is_some())
+            .collect();
         assert!(!cat_keys.is_empty(), "Expected some keys with categories");
         Ok(())
     }

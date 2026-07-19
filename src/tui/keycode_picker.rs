@@ -463,7 +463,13 @@ fn render_keycode_picker_component(
     context: &KeycodeDb,
     theme: &super::Theme,
 ) {
-    render_keycode_picker_internal(f, picker.state(), context, theme, picker.flow_context.as_ref());
+    render_keycode_picker_internal(
+        f,
+        picker.state(),
+        context,
+        theme,
+        picker.flow_context.as_ref(),
+    );
 }
 
 /// Internal shared rendering function for keycode picker
@@ -508,7 +514,9 @@ fn render_keycode_picker_internal(
                 Span::styled(" Flow: ", Style::default().fg(theme.primary)),
                 Span::styled(
                     &flow_context.title,
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(Span::styled(

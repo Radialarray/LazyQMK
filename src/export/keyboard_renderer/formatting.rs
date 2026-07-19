@@ -44,7 +44,11 @@ pub(super) fn format_keycode(keycode: &str) -> String {
     ] {
         if let Some(inner) = keycode.strip_prefix(prefix) {
             if let Some(tap) = inner.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
-                return format!("{} / {}", mod_name, crate::keycode_db::format::strip_kc_prefix(tap));
+                return format!(
+                    "{} / {}",
+                    mod_name,
+                    crate::keycode_db::format::strip_kc_prefix(tap)
+                );
             }
         }
     }

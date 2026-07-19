@@ -10,7 +10,6 @@ use super::{
 };
 use crate::keycode_db::KeycodeDb;
 
-
 #[allow(dead_code)] // bin/lib split: heavily used by tests + CLI subcommands
 impl KeycodeDb {
     /// Loads the keycode database from embedded category files.

@@ -8,7 +8,6 @@ use std::thread;
 
 use super::build::run_build;
 
-
 /// Build status tracking.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)] // All variants exercised in tests; bin doesn't link

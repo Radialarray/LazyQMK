@@ -1283,7 +1283,13 @@ async fn get_layout(
 
     // Build position_to_geometry mapping from keyboard geometry (if available)
     // This provides the authoritative mapping from visual position to geometry data
-    let qmk_path = state.config.read().expect("config lock poisoned").paths.qmk_firmware.clone();
+    let qmk_path = state
+        .config
+        .read()
+        .expect("config lock poisoned")
+        .paths
+        .qmk_firmware
+        .clone();
     let position_to_geometry: std::collections::HashMap<String, (u8, [u8; 2], u8)> =
         if let (Some(keyboard), Some(qmk_path)) =
             (layout.metadata.keyboard.as_ref(), qmk_path.as_ref())
@@ -1880,7 +1886,13 @@ async fn update_config(
     *state.config.write().expect("config lock poisoned") = config;
 
     // Propagate QMK path update to build and generate managers
-    let new_qmk_path = state.config.read().expect("config lock poisoned").paths.qmk_firmware.clone();
+    let new_qmk_path = state
+        .config
+        .read()
+        .expect("config lock poisoned")
+        .paths
+        .qmk_firmware
+        .clone();
     state.build_manager.set_qmk_path(new_qmk_path.clone());
     state.generate_manager.set_qmk_path(new_qmk_path);
 
@@ -2293,7 +2305,13 @@ async fn get_render_metadata(
 
     // Build position_to_visual_index mapping from geometry (if keyboard info is available)
     // This mapping converts key positions (row,col) to the visual_index expected by the frontend
-    let qmk_path = state.config.read().expect("config lock poisoned").paths.qmk_firmware.clone();
+    let qmk_path = state
+        .config
+        .read()
+        .expect("config lock poisoned")
+        .paths
+        .qmk_firmware
+        .clone();
     let position_to_visual_index: std::collections::HashMap<String, u8> =
         if let (Some(keyboard), Some(qmk_path)) =
             (layout.metadata.keyboard.as_ref(), qmk_path.as_ref())
@@ -2456,7 +2474,13 @@ async fn export_layout(
         layout.metadata.keyboard.as_ref(),
         layout.metadata.layout_variant.as_ref(),
     ) {
-        let qmk_path = state.config.read().expect("config lock poisoned").paths.qmk_firmware.clone();
+        let qmk_path = state
+            .config
+            .read()
+            .expect("config lock poisoned")
+            .paths
+            .qmk_firmware
+            .clone();
         if let Some(qmk_path) = qmk_path {
             parser::keyboard_json::parse_keyboard_info_json(&qmk_path, keyboard)
                 .ok()

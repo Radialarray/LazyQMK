@@ -1321,7 +1321,8 @@ fn test_rgb_overlay_ripple_with_idle_effect_integration() {
 
     // Fix 2: Must provide rgb_matrix_indicators_advanced_user to override QMK's weak default
     assert!(
-        keymap_c.contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"),
+        keymap_c
+            .contains("bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max)"),
         "rgb_matrix_indicators_advanced_user must be a strong definition (no weak attribute)"
     );
 
@@ -1443,7 +1444,9 @@ fn test_rgb_overlay_ripple_release_trigger_resets_idle_state() {
         .expect("Should generate keymap.c");
 
     assert!(
-        keymap_c.contains("if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;"),
+        keymap_c.contains(
+            "if (!record->event.pressed && LQMK_RIPPLE_TRIGGER_ON_RELEASE) should_trigger = true;"
+        ),
         "Release-only trigger path must be generated"
     );
     assert!(
@@ -1504,8 +1507,13 @@ fn test_rgb_overlay_ripple_codegen_rejects_zero_duration_band_width_and_speed() 
     let mut band_width_layout = test_layout_basic(2, 3);
     band_width_layout.rgb_overlay_ripple.enabled = true;
     band_width_layout.rgb_overlay_ripple.band_width = 0;
-    let band_width_generator =
-        FirmwareGenerator::new(&band_width_layout, &geometry, &mapping, &config, &keycode_db);
+    let band_width_generator = FirmwareGenerator::new(
+        &band_width_layout,
+        &geometry,
+        &mapping,
+        &config,
+        &keycode_db,
+    );
     assert!(band_width_generator.generate_keymap_c().is_err());
     assert!(band_width_generator.generate_merged_config_h().is_err());
 

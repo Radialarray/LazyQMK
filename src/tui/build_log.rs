@@ -28,9 +28,7 @@ impl BuildLogState {
     /// Creates a new build log state.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            scroll_offset: 0,
-        }
+        Self { scroll_offset: 0 }
     }
 
     /// Scrolls the log view up by one line.

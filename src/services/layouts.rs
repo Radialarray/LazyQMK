@@ -57,14 +57,13 @@ impl LayoutService {
         let ext = path.extension().and_then(|e| e.to_str());
 
         match ext {
-            Some("json") => {
-                parser::parse_json_layout(path)
-                    .with_context(|| format!("Failed to load layout from {}", path.display()))
-            }
+            Some("json") => parser::parse_json_layout(path)
+                .with_context(|| format!("Failed to load layout from {}", path.display())),
             Some("md") => {
                 // Legacy .md → load with markdown parser, then migrate to .json
-                let layout = parser::parse_markdown_layout(path)
-                    .with_context(|| format!("Failed to load legacy .md layout from {}", path.display()))?;
+                let layout = parser::parse_markdown_layout(path).with_context(|| {
+                    format!("Failed to load legacy .md layout from {}", path.display())
+                })?;
 
                 // Auto-migrate: write .json, rename .md → .md.bak
                 Self::migrate_md_to_json(path, &layout)?;
@@ -137,8 +136,9 @@ impl LayoutService {
         let bak_path = md_path.with_extension("md.bak");
 
         // Step 1: Write .json
-        parser::save_json_layout(layout, &json_path)
-            .with_context(|| format!("Migration failed: could not write {}", json_path.display()))?;
+        parser::save_json_layout(layout, &json_path).with_context(|| {
+            format!("Migration failed: could not write {}", json_path.display())
+        })?;
 
         // Step 2: Rename .md → .md.bak (silently skip if .md no longer exists)
         if md_path.exists() {
@@ -349,8 +349,14 @@ version: '1.0'
         assert_eq!(loaded.metadata.name, "legacy_layout");
 
         // After loading, the .json should exist (migration) and .md should be .md.bak
-        assert!(tmp.path().join("legacy.json").exists(), "Expected migrated .json");
-        assert!(tmp.path().join("legacy.md.bak").exists(), "Expected .md.bak backup");
+        assert!(
+            tmp.path().join("legacy.json").exists(),
+            "Expected migrated .json"
+        );
+        assert!(
+            tmp.path().join("legacy.md.bak").exists(),
+            "Expected .md.bak backup"
+        );
 
         Ok(())
     }
@@ -365,7 +371,10 @@ version: '1.0'
         LayoutService::save(&layout, &md_path)?;
 
         assert!(!md_path.exists(), "Should NOT write .md file");
-        assert!(tmp.path().join("test.json").exists(), "Should write .json instead");
+        assert!(
+            tmp.path().join("test.json").exists(),
+            "Should write .json instead"
+        );
 
         Ok(())
     }

@@ -178,7 +178,6 @@ fn test_tap_dance_add_two_way() {
     );
 }
 
-
 #[test]
 fn test_tap_dance_add_three_way() {
     let layout = test_layout_basic(2, 3);

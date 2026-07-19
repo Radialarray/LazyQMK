@@ -1,0 +1,37 @@
+{
+  "runId": "692403a7",
+  "agent": "pi-orchestrator.reviewer-minimax",
+  "task": "Read-only analysis: For each of the 16 `#[allow(dead_code)]` annotations in /Users/svenlochner/dev/LazyQMK/src/models/layout.rs, determine if the annotated method/field is actually used elsewhere in the codebase.\n\nThe 16 sites (line numbers):\n- 194: RgbMatrixEffect::all() const fn -> &'static [Self]\n- 614: PaletteFxEffect::all() const fn -> &'static [Self]\n- 628: PaletteFxEffect::display_name() const fn -> &'static str\n- 741: PaletteFxPalette::all() const fn -> &'static [Self]\n- 765: PaletteFxPalette::display_name() const fn -> &'static str\n- 878: PaletteFxSettings::has_custom_settings()\n- 912: RgbOverlayRippleSettings::validate(&self) -> Result<()>\n- 934: RgbOverlayRippleSettings::has_custom_settings()\n- 1042: ComboDefinition::validate(&self) -> Result<()>\n- 1082: ComboSettings::...some pub const fn\n- 1092: ComboSettings::...some pub method\n- 1121: TapDanceAction::...some pub method\n- 1132: TapDanceAction::...some pub method\n- 1171: <on TapHoldPreset or HoldDecisionMode>\n- 1599: <some const fn in HoldDecisionMode or TapHoldPreset>\n- 1779: <some const fn in LayoutMetadata>\n\nTHE TASK:\n\nFor each line N with #[allow(dead_code)]:\n1. Read 5-10 lines around it to get the actual function/field name + signature.\n2. Run `rg '<FunctionName>' src/ tests/ --type rust` from /Users/svenlochner/dev/LazyQMK.\n3. Determine: USED (callers exist) or DEAD (only the definition exists; tests don't use it).\n4. For DEAD ones: also note any related helpers nearby that might also be dead (cascade).\n\nOutput a table:\n```\n| Line | Function/Field | Decision | Reason |\n| 194  | RgbMatrixEffect::all | KEEP | used in web/mod.rs:2986, settings_manager.rs:1011, ... |\n| 628  | PaletteFxEffect::display_name | DELETE | no callers |\n| ...\n```\n\nBe exhaustive. Check every line. The output will be consumed by another agent that will edit the file to delete the dead items + remove the dead_code allows on the kept ones.\n\nIf a function has callers in test code only (#[cfg(test)] mod tests or tests/ directory), it's still USED — those tests are part of the public API surface.\n\nIf you find blocks of related dead code (e.g. a `display_name` AND a private table nearby both unused), flag them in a \"cascade deletes\" section.\n\nOutput as a markdown report. Don't modify any files.\n\n---\n**Output:**\nWrite your findings to exactly this path: /tmp/dead-code-audit.md\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 0,
+  "usage": {
+    "input": 78194,
+    "output": 20031,
+    "cacheRead": 1126784,
+    "cacheWrite": 0,
+    "cost": 0.23020488,
+    "turns": 26
+  },
+  "model": "minimax/MiniMax-M3:medium",
+  "attemptedModels": [
+    "minimax/MiniMax-M3:medium"
+  ],
+  "modelAttempts": [
+    {
+      "model": "minimax/MiniMax-M3:medium",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 78194,
+        "output": 20031,
+        "cacheRead": 1126784,
+        "cacheWrite": 0,
+        "cost": 0.23020488,
+        "turns": 26
+      }
+    }
+  ],
+  "durationMs": 210368,
+  "toolCount": 89,
+  "transcriptPath": "/Users/svenlochner/dev/LazyQMK/.pi-subagents/artifacts/692403a7_pi-orchestrator.reviewer-minimax_0_transcript.jsonl",
+  "timestamp": 1784403195195
+}

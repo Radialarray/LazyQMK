@@ -7,9 +7,7 @@ use crate::models::visual_layout_mapping::VisualLayoutMapping;
 use anyhow::Result;
 use std::collections::HashSet;
 
-use super::report::{
-    ValidationError, ValidationErrorKind, ValidationReport, ValidationWarning,
-};
+use super::report::{ValidationError, ValidationErrorKind, ValidationReport, ValidationWarning};
 
 /// Firmware validator.
 pub struct FirmwareValidator<'a> {

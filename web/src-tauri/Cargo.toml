@@ -16,7 +16,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-shell = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "process", "io-util", "net", "time", "sync", "macros"] }
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "process",
+  "io-util",
+  "net",
+  "time",
+  "sync",
+  "macros",
+] }
 anyhow = "1.0"
 which = "7"
 
