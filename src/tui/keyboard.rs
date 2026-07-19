@@ -6,10 +6,6 @@
 //! - Color type indicators in border (i=individual, k=category, L=layer, d=default)
 //! - RGB color borders based on the color priority system
 
-// Allow intentional type casts for terminal rendering
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},

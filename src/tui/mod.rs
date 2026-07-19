@@ -9,10 +9,6 @@
 #![allow(clippy::unnecessary_wraps)]
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
-// Allow intentional type casts for terminal coordinates
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_lossless)]
 
 pub mod build_log;
 pub mod category_manager;

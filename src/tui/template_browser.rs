@@ -3,11 +3,6 @@
 //! This module provides UI components for browsing, searching, and loading
 //! reusable layout templates stored in ~/.`config/LazyQMK/templates`/
 
-// Allow intentional type casts for layout rendering
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-
 use anyhow::{Context, Result};
 use ratatui::{
     layout::{Constraint, Direction, Layout as RatatuiLayout, Rect},
