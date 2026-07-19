@@ -3933,7 +3933,7 @@
     "ignore_layer_switch": false
   },
   "palette_fx": {
-    "enabled": true,
+    "enabled": false,
     "default_effect": "flow",
     "default_palette": "synthwave",
     "enable_all_effects": true,

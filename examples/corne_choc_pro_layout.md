@@ -16,6 +16,7 @@ output_format: uf2
 # corne_choc_pro_layout
 
 ## Layer 0: Base
+
 **ID**: 2d4174f6-9e41-48a8-9514-fd982fe660b5
 **Color**: #D4D4D4
 
@@ -27,8 +28,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_BSPC@delete |  | KC_ENT{#F472B6} |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | LT(@30dd998f-feb2-494d-a68c-23bb141830d7, KC_TAB)@space |  |  |  | KC_SPC@space | KC_NO |  |  |  |  |
 
-
 ## Layer 1: Symbols
+
 **ID**: f85996a8-8dbd-403d-a804-fac1f2bc751d
 **Color**: #6B7280
 
@@ -40,8 +41,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_TRNS |  |  |  |  |
 
-
 ## Layer 2: Navigation
+
 **ID**: 9f534cd5-4dd1-4c28-84a6-a73272b0949f
 **Color**: #808080
 
@@ -53,8 +54,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_TRNS |  |  |  |  |
 
-
 ## Layer 3: Numbers
+
 **ID**: 5f74eeab-9b83-4c1f-b6d5-56aac8592ff2
 **Color**: #808080
 
@@ -66,8 +67,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_0{#16A34A} |  |  |  |  |
 
-
 ## Layer 4: Code
+
 **ID**: 30dd998f-feb2-494d-a68c-23bb141830d7
 **Color**: #808080
 
@@ -79,8 +80,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_TRNS |  |  |  |  |
 
-
 ## Layer 5: Mouse
+
 **ID**: a794001c-9dfc-4c37-a696-c6b549b6785d
 **Color**: #808080
 
@@ -92,8 +93,8 @@ output_format: uf2
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_TRNS |  |  |  |  |
 
-
 ## Layer 6: Globals
+
 **ID**: 6f9af2ee-80b1-417c-addc-5eadc2ad95ad
 **Color**: #808080
 
@@ -104,7 +105,6 @@ output_format: uf2
 | KC_TRNS | KC_TRNS | KC_TRNS | KC_TRNS | KC_TRNS | KC_TRNS | KC_TRNS |  | KC_TRNS | KC_MUTE{#DB2777} | KC_VOLD{#DB2777} | KC_VOLU{#DB2777} | KC_TRNS | KC_TRNS | KC_TRNS |
 |  |  |  |  |  |  | KC_TRNS |  | KC_TRNS |  |  |  |  |  |  |
 |  |  |  |  | KC_TRNS | KC_TRNS |  |  |  | KC_TRNS | KC_TRNS |  |  |  |  |
-
 
 ---
 
@@ -124,7 +124,7 @@ output_format: uf2
 **RGB Saturation**: 200%
 **Uncolored Key Brightness**: 40%
 **RGB Timeout**: 1 min
-**PaletteFX**: On
+**PaletteFX**: Off
 **PaletteFX Default Effect**: Flow
 **PaletteFX Default Palette**: Synthwave
 **PaletteFX All Effects**: On
