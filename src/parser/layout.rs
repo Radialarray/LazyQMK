@@ -4,10 +4,6 @@
 //! and generating them back for saving. The format uses YAML frontmatter for metadata
 //! and Markdown tables for key assignments.
 
-// Allow intentional type casts for parsing
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-
 use crate::constants::APP_BINARY_NAME;
 use crate::models::{Category, KeyDefinition, Layer, Layout, LayoutMetadata, Position, RgbColor};
 use anyhow::{Context, Result};

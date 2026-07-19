@@ -3,10 +3,6 @@
 //! This module handles parsing QMK's info.json files to extract keyboard metadata,
 //! layout definitions, and physical key positions for building coordinate mappings.
 
-// Allow intentional type casts for QMK coordinate parsing
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::doc_link_with_quotes)]
-
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -527,7 +523,7 @@ pub struct LayoutVariant {
 ///
 /// # Returns
 ///
-/// Vector of layout names (e.g., ["LAYOUT", "`LAYOUT_split_3x6_3`"])
+/// Vector of layout names (e.g., `["LAYOUT", "LAYOUT_split_3x6_3"]`)
 #[must_use]
 pub fn extract_layout_names(info: &QmkInfoJson) -> Vec<String> {
     let mut names: Vec<String> = info.layouts.keys().cloned().collect();

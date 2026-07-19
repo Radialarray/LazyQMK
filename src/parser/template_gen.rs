@@ -5,8 +5,6 @@
 
 // Allow format! appended to String - more readable for template generation
 #![allow(clippy::format_push_string)]
-// Allow intentional type casts
-#![allow(clippy::cast_possible_truncation)]
 // Functions kept for migration support (markdown output → JSON)
 #![allow(dead_code)]
 
