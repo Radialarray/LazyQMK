@@ -2,10 +2,6 @@
 
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
-// Allow intentional type casts for color math
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_lossless)]
 // Allow float comparisons in HSV conversion (standard algorithms)
 #![allow(clippy::float_cmp)]
 
