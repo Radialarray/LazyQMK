@@ -251,7 +251,7 @@ impl ModifierPickerState {
     }
 }
 
-/// Events emitted by the ModifierPicker component
+/// Events emitted by the `ModifierPicker` component
 #[derive(Debug, Clone)]
 pub enum ModifierPickerEvent {
     /// User selected modifiers and wants to apply them
@@ -260,7 +260,7 @@ pub enum ModifierPickerEvent {
     Cancelled,
 }
 
-/// ModifierPicker component that implements the Component trait
+/// `ModifierPicker` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct ModifierPicker {
     /// Internal state of the modifier picker
@@ -268,7 +268,7 @@ pub struct ModifierPicker {
 }
 
 impl ModifierPicker {
-    /// Create a new ModifierPicker with empty selection
+    /// Create a new `ModifierPicker` with empty selection
     #[must_use]
     pub fn new() -> Self {
         Self {

@@ -182,7 +182,7 @@ impl Default for LayoutPickerState {
     }
 }
 
-/// LayoutPicker component that implements the Component trait
+/// `LayoutPicker` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct LayoutPicker {
     /// Internal state of the layout picker
@@ -190,7 +190,7 @@ pub struct LayoutPicker {
 }
 
 impl LayoutPicker {
-    /// Create a new LayoutPicker
+    /// Create a new `LayoutPicker`
     #[must_use]
     pub fn new() -> Self {
         let mut state = LayoutPickerState::new();
@@ -395,7 +395,7 @@ fn render_layout_picker_component(
     f.render_widget(paragraph, vertical_chunks[2]);
 }
 
-/// Events emitted by the LayoutPicker component
+/// Events emitted by the `LayoutPicker` component
 #[derive(Debug, Clone)]
 pub enum LayoutPickerEvent {
     /// User chose to create a new layout

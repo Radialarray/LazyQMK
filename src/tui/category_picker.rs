@@ -15,7 +15,7 @@ use ratatui::{
 use crate::tui::component::ContextualComponent;
 use crate::tui::Theme;
 
-/// Events emitted by the CategoryPicker component
+/// Events emitted by the `CategoryPicker` component
 #[derive(Debug, Clone)]
 pub enum CategoryPickerEvent {
     /// User selected a category
@@ -77,7 +77,7 @@ impl Default for CategoryPickerState {
     }
 }
 
-/// CategoryPicker component that implements the Component trait
+/// `CategoryPicker` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct CategoryPicker {
     /// Internal state of the category picker
@@ -85,7 +85,7 @@ pub struct CategoryPicker {
 }
 
 impl CategoryPicker {
-    /// Create a new CategoryPicker
+    /// Create a new `CategoryPicker`
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -141,7 +141,7 @@ impl ContextualComponent for CategoryPicker {
     }
 }
 
-/// Render the category picker component (using ContextualComponent pattern)
+/// Render the category picker component (using `ContextualComponent` pattern)
 pub fn render_category_picker_component(
     f: &mut Frame,
     picker: &CategoryPicker,

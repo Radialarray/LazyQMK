@@ -144,7 +144,7 @@ impl From<u8> for RgbSaturation {
 
 /// Standard RGB Matrix effect modes available in QMK.
 ///
-/// These correspond to QMK's RGB_MATRIX_* modes and are used for idle effects.
+/// These correspond to QMK's `RGB_MATRIX`_* modes and are used for idle effects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum RgbMatrixEffect {
     /// Solid color (no animation)
@@ -218,9 +218,9 @@ impl RgbMatrixEffect {
         }
     }
 
-    /// Returns the QMK RGB_MATRIX_* mode identifier for code generation.
+    /// Returns the QMK `RGB_MATRIX`_* mode identifier for code generation.
     ///
-    /// These map to the RGB_MATRIX_* enum values defined in QMK's rgb_matrix_types.h.
+    /// These map to the `RGB_MATRIX`_* enum values defined in QMK's `rgb_matrix_types.h`.
     /// The mode IDs are used in firmware to set the RGB effect mode.
     #[must_use]
     pub const fn qmk_mode_name(&self) -> &'static str {
@@ -418,11 +418,11 @@ pub struct RgbOverlayRippleSettings {
     #[serde(default)]
     pub color_mode: RippleColorMode,
 
-    /// Fixed color (used when color_mode = Fixed)
+    /// Fixed color (used when `color_mode` = Fixed)
     #[serde(default = "default_ripple_fixed_color")]
     pub fixed_color: RgbColor,
 
-    /// Hue shift in degrees (used when color_mode = HueShift)
+    /// Hue shift in degrees (used when `color_mode` = `HueShift`)
     /// Default: 60 (complementary color)
     #[serde(default = "default_ripple_hue_shift")]
     pub hue_shift_deg: i16,
@@ -435,7 +435,7 @@ pub struct RgbOverlayRippleSettings {
     #[serde(default)]
     pub trigger_on_release: bool,
 
-    /// Ignore transparent keys (KC_TRNS)
+    /// Ignore transparent keys (`KC_TRNS`)
     #[serde(default = "default_true")]
     pub ignore_transparent: bool,
 
@@ -447,7 +447,7 @@ pub struct RgbOverlayRippleSettings {
     #[serde(default)]
     pub ignore_layer_switch: bool,
 
-    /// PaletteFX palette to use for key-action reactive bursts.
+    /// `PaletteFX` palette to use for key-action reactive bursts.
     /// When `Some`, overrides the current palette with a specific one.
     /// Only effective when `palette_fx.enabled` is true.
     /// Default: `None` (use the current active palette).
@@ -577,7 +577,7 @@ impl RgbOverlayRippleSettings {
 // PaletteFX Settings
 // ============================================================================
 
-/// PaletteFX effect types (community module by getreuer).
+/// `PaletteFX` effect types (community module by getreuer).
 ///
 /// These replace our custom ripple overlay with professional-quality
 /// palette-based RGB matrix effects.
@@ -673,7 +673,7 @@ impl PaletteFxEffect {
     }
 }
 
-/// PaletteFX palette options.
+/// `PaletteFX` palette options.
 ///
 /// Palettes are color gradients sampled from 16 HSV color stops.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -825,13 +825,13 @@ impl PaletteFxPalette {
     }
 }
 
-/// Configuration for PaletteFX module integration.
+/// Configuration for `PaletteFX` module integration.
 ///
-/// When enabled, replaces the custom ripple overlay with the PaletteFX
+/// When enabled, replaces the custom ripple overlay with the `PaletteFX`
 /// community module's professional-quality effects.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PaletteFxSettings {
-    /// Master switch for PaletteFX integration
+    /// Master switch for `PaletteFX` integration
     #[serde(default)]
     pub enabled: bool,
 
@@ -1097,7 +1097,7 @@ impl ComboSettings {
 /// The hold action activates when the key is held past the tapping term.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TapDanceAction {
-    /// Unique name for this tap dance (used in TD() references)
+    /// Unique name for this tap dance (used in `TD()` references)
     /// Must be a valid C identifier (alphanumeric + underscore)
     pub name: String,
     /// Keycode sent on single tap
@@ -1529,7 +1529,7 @@ pub struct LayoutMetadata {
     /// QMK keyboard path (e.g., "splitkb/halcyon/corne")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keyboard: Option<String>,
-    /// QMK keymap name (e.g., "my_custom_keymap")
+    /// QMK keymap name (e.g., "`my_custom_keymap`")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keymap_name: Option<String>,
     /// Firmware output format: "uf2", "hex", or "bin"
@@ -1681,7 +1681,7 @@ pub struct Layout {
     pub rgb_overlay_ripple: RgbOverlayRippleSettings,
 
     // === PaletteFX Settings ===
-    /// PaletteFX community module configuration
+    /// `PaletteFX` community module configuration
     #[serde(default)]
     pub palette_fx: PaletteFxSettings,
 
@@ -1701,7 +1701,7 @@ pub struct Layout {
     pub tap_dances: Vec<TapDanceAction>,
 }
 
-/// Default for rgb_enabled is true
+/// Default for `rgb_enabled` is true
 const fn default_rgb_enabled() -> bool {
     true
 }
@@ -1988,7 +1988,7 @@ impl Layout {
 
     /// Applies global RGB settings (master switch, saturation, brightness) to a color.
     ///
-    /// This should be called after resolve_display_color to apply the global
+    /// This should be called after `resolve_display_color` to apply the global
     /// RGB saturation and brightness multipliers, and respect the master switch.
     ///
     /// The order of operations is:
@@ -2065,12 +2065,12 @@ impl Layout {
         }
     }
 
-    /// Auto-creates missing tap dance definitions for all TD() references in the layout.
+    /// Auto-creates missing tap dance definitions for all `TD()` references in the layout.
     ///
     /// Scans all keycodes for TD(name) patterns and creates placeholder tap dance
     /// definitions for any referenced names that don't have definitions yet.
     ///
-    /// Placeholder tap dances use KC_NO (no-op) keycodes that users can edit later.
+    /// Placeholder tap dances use `KC_NO` (no-op) keycodes that users can edit later.
     pub fn auto_create_tap_dances(&mut self) {
         // Collect all TD() references from keys
         let mut referenced_names = std::collections::HashSet::new();

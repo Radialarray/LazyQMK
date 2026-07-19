@@ -75,7 +75,7 @@ pub struct DeleteArgs {
     #[arg(short, long)]
     pub name: String,
 
-    /// Force deletion even if referenced in layers (replaces with KC_TRNS)
+    /// Force deletion even if referenced in layers (replaces with `KC_TRNS`)
     #[arg(short, long)]
     pub force: bool,
 }
@@ -342,7 +342,7 @@ fn execute_validate(args: &ValidateArgs) -> CliResult<()> {
 }
 
 /// Finds all references to a specific tap dance in the layout.
-/// Returns a list of (layer_idx, key_idx) tuples.
+/// Returns a list of (`layer_idx`, `key_idx`) tuples.
 fn find_tap_dance_references(layout: &Layout, name: &str) -> Vec<(usize, usize)> {
     let td_pattern = format!("TD({name})");
     let mut references = Vec::new();
@@ -358,7 +358,7 @@ fn find_tap_dance_references(layout: &Layout, name: &str) -> Vec<(usize, usize)>
     references
 }
 
-/// Removes all references to a specific tap dance by replacing them with KC_TRNS.
+/// Removes all references to a specific tap dance by replacing them with `KC_TRNS`.
 fn remove_tap_dance_references(layout: &mut Layout, name: &str) {
     let td_pattern = format!("TD({name})");
 

@@ -16,7 +16,7 @@ use crate::models::{Category, RgbColor};
 use crate::tui::component::Component;
 use crate::tui::Theme;
 
-/// Events emitted by the CategoryManager component
+/// Events emitted by the `CategoryManager` component
 #[derive(Debug, Clone)]
 pub enum CategoryManagerEvent {
     /// User deleted a category
@@ -143,7 +143,7 @@ impl Default for CategoryManagerState {
     }
 }
 
-/// CategoryManager component that implements the Component trait
+/// `CategoryManager` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct CategoryManager {
     /// Internal state of the category manager
@@ -154,7 +154,7 @@ pub struct CategoryManager {
 }
 
 impl CategoryManager {
-    /// Create a new CategoryManager with initial categories
+    /// Create a new `CategoryManager` with initial categories
     #[must_use]
     pub fn new(categories: Vec<Category>) -> Self {
         Self {

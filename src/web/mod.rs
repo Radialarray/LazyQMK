@@ -1,6 +1,6 @@
-//! Web API module for LazyQMK.
+//! Web API module for `LazyQMK`.
 //!
-//! This module provides a REST API for the LazyQMK layout editor,
+//! This module provides a REST API for the `LazyQMK` layout editor,
 //! enabling a web-based frontend to interact with layout files,
 //! keycodes, and QMK firmware configuration.
 //!
@@ -300,7 +300,7 @@ pub struct KeycodeListResponse {
 /// Keycode information for API response.
 #[derive(Debug, Serialize)]
 pub struct KeycodeInfo {
-    /// Keycode string (e.g., "KC_A").
+    /// Keycode string (e.g., "`KC_A`").
     pub code: String,
     /// Human-readable name.
     pub name: String,
@@ -589,7 +589,7 @@ impl From<crate::keycode_db::ActionKind> for ActionKindDto {
 pub struct KeyDetailActionDto {
     /// Type of action
     pub kind: ActionKindDto,
-    /// Raw keycode or parameter (e.g., "KC_A", "1", "MOD_LCTL")
+    /// Raw keycode or parameter (e.g., "`KC_A`", "1", "`MOD_LCTL`")
     pub code: String,
     /// Human-readable description
     pub description: String,
@@ -611,7 +611,7 @@ pub struct KeyRenderMetadata {
 pub struct RenderMetadataResponse {
     /// Layout filename
     pub filename: String,
-    /// Layer-indexed key metadata (layer_index -> list of key metadata)
+    /// Layer-indexed key metadata (`layer_index` -> list of key metadata)
     pub layers: Vec<LayerRenderMetadata>,
 }
 
@@ -659,10 +659,10 @@ impl From<&IdleEffectSettings> for IdleEffectSettingsDto {
     }
 }
 
-/// PaletteFX settings for API.
+/// `PaletteFX` settings for API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaletteFxSettingsDto {
-    /// Master switch for PaletteFX effects.
+    /// Master switch for `PaletteFX` effects.
     pub enabled: bool,
     /// Default effect name.
     pub default_effect: String,
@@ -744,21 +744,21 @@ pub struct RgbOverlayRippleSettingsDto {
     pub wave_delay_ms: u16,
     /// Color mode for ripples.
     pub color_mode: String,
-    /// Fixed color (used when color_mode = Fixed).
+    /// Fixed color (used when `color_mode` = Fixed).
     pub fixed_color: RgbColor,
-    /// Hue shift in degrees (used when color_mode = HueShift).
+    /// Hue shift in degrees (used when `color_mode` = `HueShift`).
     pub hue_shift_deg: i16,
     /// Trigger on key press.
     pub trigger_on_press: bool,
     /// Trigger on key release.
     pub trigger_on_release: bool,
-    /// Ignore transparent keys (KC_TRNS).
+    /// Ignore transparent keys (`KC_TRNS`).
     pub ignore_transparent: bool,
     /// Ignore modifier keys.
     pub ignore_modifiers: bool,
     /// Ignore layer switch keys.
     pub ignore_layer_switch: bool,
-    /// PaletteFX palette for key-action reactive bursts (display name or empty).
+    /// `PaletteFX` palette for key-action reactive bursts (display name or empty).
     /// Empty string means use the current palette.
     #[serde(default)]
     pub key_action_palette: String,
@@ -926,7 +926,7 @@ impl From<&TapDanceAction> for TapDanceDto {
 /// `matrix_position`, and `led_index` for rendering and interaction).
 #[derive(Debug, Clone, Serialize)]
 pub struct KeyAssignmentDto {
-    /// QMK keycode (e.g., "KC_A", "KC_TRNS", "MO(1)")
+    /// QMK keycode (e.g., "`KC_A`", "`KC_TRNS`", "MO(1)")
     pub keycode: String,
     /// Matrix position [row, col] derived from geometry
     pub matrix_position: [u8; 2],
@@ -988,7 +988,7 @@ pub struct LayoutDto {
     pub idle_effect_settings: IdleEffectSettingsDto,
     /// RGB overlay ripple settings
     pub rgb_overlay_ripple: RgbOverlayRippleSettingsDto,
-    /// PaletteFX settings
+    /// `PaletteFX` settings
     pub palette_fx: PaletteFxSettingsDto,
     /// Tap-hold settings
     pub tap_hold_settings: TapHoldSettingsDto,
@@ -1000,7 +1000,7 @@ pub struct LayoutDto {
 
 /// Layout DTO for save requests (accepts optional fields from frontend).
 ///
-/// The frontend sends back the LayoutDto it received from GET, but we need to be
+/// The frontend sends back the `LayoutDto` it received from GET, but we need to be
 /// flexible about which fields are required since the TypeScript interface has many
 /// optional fields.
 #[derive(Debug, Clone, Deserialize)]
@@ -1036,7 +1036,7 @@ pub struct LayoutSaveDto {
     /// RGB overlay ripple settings
     #[serde(default)]
     pub rgb_overlay_ripple: Option<RgbOverlayRippleSettingsDto>,
-    /// PaletteFX settings
+    /// `PaletteFX` settings
     #[serde(default)]
     pub palette_fx: Option<PaletteFxSettingsDto>,
     /// Tap-hold settings
@@ -1091,7 +1091,7 @@ fn default_layer_colors_true() -> bool {
 /// Key assignment DTO for save requests (accepts optional fields from frontend).
 #[derive(Debug, Clone, Deserialize)]
 pub struct KeyAssignmentSaveDto {
-    /// QMK keycode (e.g., "KC_A", "KC_TRNS", "MO(1)")
+    /// QMK keycode (e.g., "`KC_A`", "`KC_TRNS`", "MO(1)")
     pub keycode: String,
     /// Matrix position [row, col] - enriched field from GET response
     #[serde(default)]
@@ -1397,7 +1397,7 @@ async fn get_layout(
     Ok(Json(layout_dto))
 }
 
-/// Parses a RippleColorMode from its display name.
+/// Parses a `RippleColorMode` from its display name.
 fn parse_ripple_color_mode(name: &str) -> crate::models::RippleColorMode {
     use crate::models::RippleColorMode;
     match name {
@@ -1408,7 +1408,7 @@ fn parse_ripple_color_mode(name: &str) -> crate::models::RippleColorMode {
     }
 }
 
-/// Parses a HoldDecisionMode from its display name.
+/// Parses a `HoldDecisionMode` from its display name.
 fn parse_hold_decision_mode(name: &str) -> crate::models::HoldDecisionMode {
     use crate::models::HoldDecisionMode;
     match name {
@@ -1419,7 +1419,7 @@ fn parse_hold_decision_mode(name: &str) -> crate::models::HoldDecisionMode {
     }
 }
 
-/// Parses a TapHoldPreset from its display name.
+/// Parses a `TapHoldPreset` from its display name.
 fn parse_tap_hold_preset(name: &str) -> crate::models::TapHoldPreset {
     use crate::models::TapHoldPreset;
     match name {
@@ -1432,23 +1432,23 @@ fn parse_tap_hold_preset(name: &str) -> crate::models::TapHoldPreset {
     }
 }
 
-/// Parses a PaletteFxEffect from its display name.
+/// Parses a `PaletteFxEffect` from its display name.
 fn parse_palette_fx_effect(name: &str) -> crate::models::PaletteFxEffect {
     use crate::models::PaletteFxEffect;
     PaletteFxEffect::from_name(name).unwrap_or_default()
 }
 
-/// Parses a PaletteFxPalette from its display name.
+/// Parses a `PaletteFxPalette` from its display name.
 fn parse_palette_fx_palette(name: &str) -> crate::models::PaletteFxPalette {
     use crate::models::PaletteFxPalette;
     PaletteFxPalette::from_name(name).unwrap_or_default()
 }
 
-/// Converts a LayoutSaveDto (from frontend) back to the internal Layout model.
+/// Converts a `LayoutSaveDto` (from frontend) back to the internal Layout model.
 ///
-/// This strips the enriched fields (visual_index, matrix_position, led_index)
+/// This strips the enriched fields (`visual_index`, `matrix_position`, `led_index`)
 /// that were added during the GET response and keeps only the core data needed
-/// for persistence (position, keycode, color_override, etc.).
+/// for persistence (position, keycode, `color_override`, etc.).
 fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
     use crate::models::layer::{KeyDefinition, Layer, Position};
 
@@ -1936,7 +1936,7 @@ async fn get_preflight(State(state): State<AppState>) -> Json<PreflightResponse>
 pub struct GeometryResponse {
     /// Keyboard name/path (e.g., "crkbd" or "splitkb/halcyon/corne").
     pub keyboard: String,
-    /// Layout variant name (e.g., "LAYOUT_split_3x6_3").
+    /// Layout variant name (e.g., "`LAYOUT_split_3x6_3`").
     pub layout: String,
     /// List of key geometries.
     pub keys: Vec<KeyGeometryInfo>,
@@ -1946,8 +1946,8 @@ pub struct GeometryResponse {
     pub matrix_cols: u8,
     /// Number of rotary encoders.
     pub encoder_count: u8,
-    /// Mapping from visual position ("row,col") to visual_index (layout array index).
-    /// This allows the frontend to look up the visual_index for keys that only have
+    /// Mapping from visual position ("row,col") to `visual_index` (layout array index).
+    /// This allows the frontend to look up the `visual_index` for keys that only have
     /// position data, avoiding brittle coordinate inference logic.
     pub position_to_visual_index: std::collections::HashMap<String, u8>,
 }
@@ -1973,13 +1973,13 @@ pub struct KeyGeometryInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub led_index: Option<u8>,
     /// Visual index (layout array index from info.json).
-    /// This matches the visual_index in KeyAssignment and should be used for mapping keycodes.
+    /// This matches the `visual_index` in `KeyAssignment` and should be used for mapping keycodes.
     pub visual_index: u8,
 }
 
 /// GET /api/keyboards/{keyboard}/geometry/{layout} - Get keyboard geometry.
 ///
-/// The keyboard path can contain slashes (e.g., "keebart/corne_choc_pro").
+/// The keyboard path can contain slashes (e.g., "`keebart/corne_choc_pro`").
 async fn get_geometry(
     State(state): State<AppState>,
     Path((keyboard, layout)): Path<(String, String)>,
@@ -2693,7 +2693,7 @@ async fn list_build_jobs(State(state): State<AppState>) -> Json<Vec<build_jobs::
     Json(state.build_manager.list_jobs())
 }
 
-/// GET /api/build/jobs/{job_id} - Get build job status.
+/// GET /`api/build/jobs/{job_id`} - Get build job status.
 async fn get_build_job(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2708,7 +2708,7 @@ async fn get_build_job(
     Ok(Json(build_jobs::JobStatusResponse { job }))
 }
 
-/// GET /api/build/jobs/{job_id}/logs - Get build job logs.
+/// GET /`api/build/jobs/{job_id}/logs` - Get build job logs.
 async fn get_build_logs(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2727,7 +2727,7 @@ async fn get_build_logs(
     Ok(Json(logs))
 }
 
-/// POST /api/build/jobs/{job_id}/cancel - Cancel a build job.
+/// POST /`api/build/jobs/{job_id}/cancel` - Cancel a build job.
 async fn cancel_build_job(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2744,7 +2744,7 @@ pub struct BuildArtifactsResponse {
     pub artifacts: Vec<build_jobs::BuildArtifact>,
 }
 
-/// GET /api/build/jobs/{job_id}/artifacts - List artifacts for a build job.
+/// GET /`api/build/jobs/{job_id}/artifacts` - List artifacts for a build job.
 async fn get_build_artifacts(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2759,7 +2759,7 @@ async fn get_build_artifacts(
     Ok(Json(BuildArtifactsResponse { job_id, artifacts }))
 }
 
-/// GET /api/build/jobs/{job_id}/artifacts/{artifact_id}/download - Download a build artifact.
+/// GET /`api/build/jobs/{job_id}/artifacts/{artifact_id}/download` - Download a build artifact.
 async fn download_build_artifact(
     State(state): State<AppState>,
     Path((job_id, artifact_id)): Path<(String, String)>,
@@ -2852,7 +2852,7 @@ async fn list_generate_jobs(
     Json(state.generate_manager.list_jobs())
 }
 
-/// GET /api/generate/jobs/{job_id} - Get generate job status.
+/// GET /`api/generate/jobs/{job_id`} - Get generate job status.
 async fn get_generate_job(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2867,7 +2867,7 @@ async fn get_generate_job(
     Ok(Json(generate_jobs::GenerateJobStatusResponse { job }))
 }
 
-/// GET /api/generate/jobs/{job_id}/logs - Get generate job logs.
+/// GET /`api/generate/jobs/{job_id}/logs` - Get generate job logs.
 async fn get_generate_logs(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2886,7 +2886,7 @@ async fn get_generate_logs(
     Ok(Json(logs))
 }
 
-/// POST /api/generate/jobs/{job_id}/cancel - Cancel a generate job.
+/// POST /`api/generate/jobs/{job_id}/cancel` - Cancel a generate job.
 async fn cancel_generate_job(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -2894,7 +2894,7 @@ async fn cancel_generate_job(
     Json(state.generate_manager.cancel_job(&job_id))
 }
 
-/// GET /api/generate/jobs/{job_id}/download - Download the generated zip file.
+/// GET /`api/generate/jobs/{job_id}/download` - Download the generated zip file.
 async fn download_generate_zip(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
@@ -3418,7 +3418,7 @@ pub struct KeyboardListResponse {
 /// Layout variant info.
 #[derive(Debug, Serialize)]
 pub struct LayoutVariantInfo {
-    /// Layout name (e.g., "LAYOUT_split_3x6_3").
+    /// Layout name (e.g., "`LAYOUT_split_3x6_3`").
     pub name: String,
     /// Number of keys in this layout.
     pub key_count: usize,
@@ -3804,7 +3804,7 @@ async fn create_layout(
 /// POST /api/layouts/{filename}/switch-variant - Switch layout to a different variant.
 ///
 /// This endpoint performs an authoritative transformation:
-/// - Updates metadata.layout_variant
+/// - Updates `metadata.layout_variant`
 /// - Rebuilds geometry based on new variant
 /// - Adjusts all layers to new key count (preserves existing keys where possible)
 async fn switch_layout_variant(

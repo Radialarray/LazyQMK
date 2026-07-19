@@ -89,7 +89,7 @@ pub fn extract_base_keyboard(keyboard_path: &str) -> String {
 /// # Arguments
 ///
 /// * `context` - Geometry context with config and metadata
-/// * `layout_name` - Name of the layout variant (e.g., "LAYOUT_split_3x6_3")
+/// * `layout_name` - Name of the layout variant (e.g., "`LAYOUT_split_3x6_3`")
 ///
 /// # Returns
 ///

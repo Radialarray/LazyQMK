@@ -14,7 +14,7 @@ use ratatui::{
 use super::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
 use crate::keycode_db::KeycodeDb;
 
-/// Events emitted by the KeycodePicker component
+/// Events emitted by the `KeycodePicker` component
 #[derive(Debug, Clone)]
 pub enum KeycodePickerEvent {
     /// User selected a keycode
@@ -118,7 +118,7 @@ impl KeycodePickerState {
     }
 }
 
-/// KeycodePicker component that implements the ContextualComponent trait
+/// `KeycodePicker` component that implements the `ContextualComponent` trait
 #[derive(Debug, Clone)]
 pub struct KeycodePicker {
     /// Internal state of the keycode picker
@@ -135,7 +135,7 @@ struct KeycodeFlowContext {
 }
 
 impl KeycodePicker {
-    /// Create a new KeycodePicker with default state
+    /// Create a new `KeycodePicker` with default state
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -144,7 +144,7 @@ impl KeycodePicker {
         }
     }
 
-    /// Create a new KeycodePicker with an initial language selection
+    /// Create a new `KeycodePicker` with an initial language selection
     ///
     /// If `last_language` is Some, automatically sets the category to Languages
     /// and positions to show that language's keycodes.

@@ -19,7 +19,7 @@ use crate::models::Layer;
 
 use super::Theme;
 
-/// Events emitted by the LayerPicker component
+/// Events emitted by the `LayerPicker` component
 #[derive(Debug, Clone)]
 pub enum LayerPickerEvent {
     /// User selected a layer
@@ -94,7 +94,7 @@ impl LayerPickerState {
     }
 }
 
-/// LayerPicker component that implements the Component trait
+/// `LayerPicker` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct LayerPicker {
     /// Internal state of the layer picker
@@ -102,7 +102,7 @@ pub struct LayerPicker {
 }
 
 impl LayerPicker {
-    /// Create a new LayerPicker with a given keycode prefix
+    /// Create a new `LayerPicker` with a given keycode prefix
     #[must_use]
     pub fn new(prefix: impl Into<String>) -> Self {
         Self {

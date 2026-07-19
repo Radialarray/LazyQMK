@@ -118,7 +118,7 @@ pub enum CategoryPickerContext {
 /// State for building parameterized keycodes through multi-stage picker flow
 #[derive(Debug, Clone, Default)]
 pub struct PendingKeycodeState {
-    /// The original keycode template (e.g., "LT()", "MT()", "LCTL_T()")
+    /// The original keycode template (e.g., "`LT()`", "`MT()`", "`LCTL_T()`")
     pub keycode_template: Option<String>,
     /// Collected parameters in order (e.g., `["@layer-id", "KC_SPC"]` for LT)
     pub params: Vec<String>,
@@ -405,7 +405,7 @@ pub enum SelectionMode {
 
 /// Active component - holds the currently active popup component
 ///
-/// This enum wraps all component types that implement the Component or ContextualComponent trait.
+/// This enum wraps all component types that implement the Component or `ContextualComponent` trait.
 /// Only one component can be active at a time.
 #[derive(Debug)]
 pub enum ActiveComponent {

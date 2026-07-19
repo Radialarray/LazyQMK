@@ -17,7 +17,7 @@ use super::component::Component;
 use super::Theme;
 use crate::models::LayoutMetadata;
 
-/// Events emitted by the MetadataEditor component
+/// Events emitted by the `MetadataEditor` component
 #[derive(Debug, Clone)]
 pub enum MetadataEditorEvent {
     /// User saved metadata changes
@@ -208,7 +208,7 @@ impl Default for MetadataEditorState {
     }
 }
 
-/// MetadataEditor component that implements the Component trait
+/// `MetadataEditor` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct MetadataEditor {
     /// Internal state of the metadata editor
@@ -216,7 +216,7 @@ pub struct MetadataEditor {
 }
 
 impl MetadataEditor {
-    /// Create a new MetadataEditor from layout metadata
+    /// Create a new `MetadataEditor` from layout metadata
     #[must_use]
     pub fn new(metadata: &LayoutMetadata) -> Self {
         Self {

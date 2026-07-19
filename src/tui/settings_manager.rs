@@ -142,7 +142,7 @@ pub enum SettingItem {
     OverlayRippleBandWidth,
     /// Ripple amplitude as percentage (0-100%)
     OverlayRippleAmplitude,
-    /// Ripple color mode (Fixed, KeyBased, HueShift)
+    /// Ripple color mode (Fixed, `KeyBased`, `HueShift`)
     OverlayRippleColorMode,
     /// Fixed color for ripples
     OverlayRippleFixedColor,
@@ -158,7 +158,7 @@ pub enum SettingItem {
     OverlayRippleIgnoreModifiers,
     /// Ignore layer switch keys
     OverlayRippleIgnoreLayerSwitch,
-    /// PaletteFX palette for key-action reactive bursts
+    /// `PaletteFX` palette for key-action reactive bursts
     OverlayRippleKeyActionPalette,
     /// Number of waves per keypress (1-5)
     OverlayRippleWaveCount,
@@ -166,15 +166,15 @@ pub enum SettingItem {
     OverlayRippleWaveDelay,
 
     // === PaletteFX Settings (Per-Layout) ===
-    /// PaletteFX master switch
+    /// `PaletteFX` master switch
     PaletteFxEnabled,
-    /// PaletteFX default effect
+    /// `PaletteFX` default effect
     PaletteFxDefaultEffect,
-    /// PaletteFX default palette
+    /// `PaletteFX` default palette
     PaletteFxDefaultPalette,
-    /// Enable all PaletteFX effects at compile time
+    /// Enable all `PaletteFX` effects at compile time
     PaletteFxEnableAllEffects,
-    /// Enable all PaletteFX palettes at compile time
+    /// Enable all `PaletteFX` palettes at compile time
     PaletteFxEnableAllPalettes,
 
     // === Tap-Hold Settings (Per-Layout) ===
@@ -647,12 +647,12 @@ pub enum ManagerMode {
         /// Instruction message to show
         instruction: String,
     },
-    /// Selecting PaletteFX effect
+    /// Selecting `PaletteFX` effect
     SelectingPaletteFxEffect {
         /// Currently highlighted option index
         selected_option: usize,
     },
-    /// Selecting PaletteFX palette
+    /// Selecting `PaletteFX` palette
     SelectingPaletteFxPalette {
         /// Currently highlighted option index
         selected_option: usize,
@@ -1020,7 +1020,7 @@ impl SettingsManagerState {
         self.mode = ManagerMode::SelectingRippleColorMode { selected_option };
     }
 
-    /// Start selecting PaletteFX effect
+    /// Start selecting `PaletteFX` effect
     pub fn start_selecting_palette_fx_effect(&mut self, current: PaletteFxEffect) {
         let selected_option = PaletteFxEffect::all()
             .iter()
@@ -1029,7 +1029,7 @@ impl SettingsManagerState {
         self.mode = ManagerMode::SelectingPaletteFxEffect { selected_option };
     }
 
-    /// Start selecting PaletteFX palette
+    /// Start selecting `PaletteFX` palette
     pub fn start_selecting_palette_fx_palette(&mut self, current: PaletteFxPalette) {
         let selected_option = PaletteFxPalette::all()
             .iter()
@@ -1112,7 +1112,7 @@ impl Default for SettingsManagerState {
     }
 }
 
-/// Events emitted by the SettingsManager component
+/// Events emitted by the `SettingsManager` component
 #[derive(Debug, Clone)]
 pub enum SettingsManagerEvent {
     /// Settings were updated (settings applied and dialog should close)
@@ -1124,7 +1124,7 @@ pub enum SettingsManagerEvent {
     Closed,
 }
 
-/// Context data needed for SettingsManager to render and handle input
+/// Context data needed for `SettingsManager` to render and handle input
 #[derive(Debug, Clone)]
 pub struct SettingsManagerContext {
     /// RGB enabled flag
@@ -1147,12 +1147,12 @@ pub struct SettingsManagerContext {
     pub layout: crate::models::Layout,
 }
 
-/// SettingsManager component that implements the Component trait
+/// `SettingsManager` component that implements the Component trait
 ///
 /// This wraps `SettingsManagerState` to provide a self-contained component
 /// that handles its own input and rendering. Due to the complexity of settings
 /// (needing access to both config and layout data), this component needs context
-/// passed through render and handle_input methods.
+/// passed through render and `handle_input` methods.
 #[derive(Debug, Clone)]
 pub struct SettingsManager {
     /// Internal state
@@ -1160,7 +1160,7 @@ pub struct SettingsManager {
 }
 
 impl SettingsManager {
-    /// Create a new SettingsManager
+    /// Create a new `SettingsManager`
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -2858,7 +2858,7 @@ fn render_ripple_color_mode_selector(f: &mut Frame, area: Rect, selected: usize,
     );
 }
 
-/// Render PaletteFX effect selector
+/// Render `PaletteFX` effect selector
 fn render_palette_fx_effect_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
     let options = PaletteFxEffect::all();
     render_enum_selector(
@@ -2875,7 +2875,7 @@ fn render_palette_fx_effect_selector(f: &mut Frame, area: Rect, selected: usize,
     );
 }
 
-/// Render PaletteFX palette selector
+/// Render `PaletteFX` palette selector
 fn render_palette_fx_palette_selector(f: &mut Frame, area: Rect, selected: usize, theme: &Theme) {
     let options = PaletteFxPalette::all();
     render_enum_selector(

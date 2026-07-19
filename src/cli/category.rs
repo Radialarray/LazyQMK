@@ -221,7 +221,7 @@ impl DeleteCategoryArgs {
     }
 }
 
-/// Validates hex color format (#RRGGBB or #RGB) and returns RgbColor
+/// Validates hex color format (#RRGGBB or #RGB) and returns `RgbColor`
 fn validate_and_parse_hex(color: &str) -> Result<RgbColor, String> {
     // Match #RRGGBB or #RGB format
     let hex_regex = Regex::new(r"^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$")

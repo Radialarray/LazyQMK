@@ -20,7 +20,7 @@ pub struct GeometryArgs {
     #[arg(long, value_name = "NAME")]
     pub keyboard: String,
 
-    /// Layout variant name (e.g., "LAYOUT", "LAYOUT_split_3x6_3")
+    /// Layout variant name (e.g., "LAYOUT", "`LAYOUT_split_3x6_3`")
     #[arg(long, value_name = "NAME")]
     pub layout_name: String,
 

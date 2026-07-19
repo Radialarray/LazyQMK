@@ -127,7 +127,7 @@ pub enum Action {
 ///
 /// This is the central source of truth for all keyboard shortcuts in the application.
 pub struct ShortcutRegistry {
-    /// Maps (context, key_binding) to Action
+    /// Maps (context, `key_binding`) to Action
     bindings: HashMap<(String, KeyBinding), Action>,
 }
 
@@ -147,7 +147,7 @@ impl KeyBinding {
         Self { code, modifiers }
     }
 
-    /// Create a key binding from a KeyEvent.
+    /// Create a key binding from a `KeyEvent`.
     #[must_use]
     pub const fn from_event(event: KeyEvent) -> Self {
         Self {

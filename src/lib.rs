@@ -1,6 +1,6 @@
-//! LazyQMK Library
+//! `LazyQMK` Library
 //!
-//! This library provides core functionality for the LazyQMK application,
+//! This library provides core functionality for the `LazyQMK` application,
 //! including parsing QMK info.json files, managing keyboard layouts, and
 //! generating firmware code.
 

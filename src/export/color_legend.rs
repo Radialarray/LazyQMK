@@ -87,7 +87,7 @@ pub fn generate_color_legend(layout: &Layout) -> String {
 
 /// Collects all unique colors and their sources from a layout.
 ///
-/// Returns a BTreeMap of colors to their sources, ordered by color value (for consistency).
+/// Returns a `BTreeMap` of colors to their sources, ordered by color value (for consistency).
 /// Each source describes where the color comes from (category ID or "layer default").
 fn collect_color_sources(layout: &Layout) -> BTreeMap<RgbColor, Vec<String>> {
     let mut sources: BTreeMap<RgbColor, Vec<String>> = BTreeMap::new();

@@ -58,7 +58,7 @@ pub enum ActionKind {
 pub struct KeyDetailAction {
     /// Type of action
     pub kind: ActionKind,
-    /// Raw keycode or parameter (e.g., "KC_A", "1", "MOD_LCTL")
+    /// Raw keycode or parameter (e.g., "`KC_A`", "1", "`MOD_LCTL`")
     pub code: String,
     /// Human-readable description
     pub description: String,
@@ -571,7 +571,7 @@ pub struct TapDanceDisplayInfo {
 /// Resolves a layer reference (which may be a UUID with @ prefix or a numeric string) to a numeric layer number.
 ///
 /// # Examples
-/// - "@uuid-123" → looks up in layer_id_to_number map, returns "0" if found for layer 0
+/// - "@uuid-123" → looks up in `layer_id_to_number` map, returns "0" if found for layer 0
 /// - "1" → returns "1" (already numeric)
 /// - "invalid" → returns "invalid" (fallback)
 fn resolve_layer_reference(

@@ -1,4 +1,4 @@
-//! LazyQMK - Terminal-based keyboard layout editor
+//! `LazyQMK` - Terminal-based keyboard layout editor
 //!
 //! This application provides a visual editor for mechanical keyboard layouts,
 //! allowing users to design layouts, assign keycodes, and generate QMK firmware.
@@ -39,7 +39,7 @@ use clap::{Parser, Subcommand};
 use constants::{APP_BINARY_NAME, APP_DESCRIPTION, APP_NAME};
 use std::path::PathBuf;
 
-/// LazyQMK - Keyboard layout editor for QMK firmware
+/// `LazyQMK` - Keyboard layout editor for QMK firmware
 #[derive(Parser, Debug)]
 #[command(
     author,

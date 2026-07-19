@@ -17,10 +17,10 @@ use uuid::Uuid;
 #[allow(dead_code)] // bin/lib split: re-exported via models::mod; consumed by lib tests
 pub const DEFAULT_QMK_LAYER_LIMIT: u8 = 8;
 
-/// Maximum QMK layer limit (with LAYER_STATE_32BIT configuration).
+/// Maximum QMK layer limit (with `LAYER_STATE_32BIT` configuration).
 ///
-/// Used as the default validation limit in Layer::new() to be permissive while
-/// still preventing invalid layer numbers. Users can use Layer::new() to create
+/// Used as the default validation limit in `Layer::new()` to be permissive while
+/// still preventing invalid layer numbers. Users can use `Layer::new()` to create
 /// layers up to index 31 (0-based), but their QMK firmware configuration will
 /// determine the actual supported limit (8, 16, or 32 layers).
 pub const MAX_QMK_LAYER_LIMIT: u8 = 32;
@@ -32,7 +32,7 @@ pub const MAX_QMK_LAYER_LIMIT: u8 = 32;
 /// * `max_layers` - The maximum number of layers supported (8, 16, or 32)
 ///
 /// # Errors
-/// Returns an error if the layer number is >= max_layers.
+/// Returns an error if the layer number is >= `max_layers`.
 ///
 /// # Examples
 /// ```
@@ -216,7 +216,7 @@ impl Layer {
     /// Creates a new Layer with the given number and name.
     ///
     /// # Arguments
-    /// * `number` - Layer number (0-based). Validated against MAX_QMK_LAYER_LIMIT (32).
+    /// * `number` - Layer number (0-based). Validated against `MAX_QMK_LAYER_LIMIT` (32).
     /// * `name` - Human-readable layer name (must be non-empty, max 50 characters)
     /// * `default_color` - Base color for this layer
     ///

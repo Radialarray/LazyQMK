@@ -35,7 +35,7 @@ use super::Theme;
 const MIN_MODAL_WIDTH: u16 = 40;
 const MIN_MODAL_HEIGHT: u16 = 10;
 
-/// Events emitted by the HelpOverlay component
+/// Events emitted by the `HelpOverlay` component
 #[derive(Debug, Clone)]
 pub enum HelpOverlayEvent {
     /// User closed the help overlay
@@ -64,7 +64,7 @@ impl HelpOverlayState {
     ///
     /// The maximum scroll position is the point where the last line of content
     /// aligns with the bottom of the viewport:
-    ///     max_scroll = total_lines - visible_height
+    ///     `max_scroll` = `total_lines` - `visible_height`
     ///
     /// Returns 0 if content fits within viewport (no scrolling needed).
     #[inline]
@@ -688,7 +688,7 @@ impl Default for HelpOverlayState {
     }
 }
 
-/// HelpOverlay component that implements the Component trait
+/// `HelpOverlay` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct HelpOverlay {
     /// Internal state of the help overlay
@@ -696,7 +696,7 @@ pub struct HelpOverlay {
 }
 
 impl HelpOverlay {
-    /// Create a new HelpOverlay
+    /// Create a new `HelpOverlay`
     #[must_use]
     pub fn new() -> Self {
         Self {

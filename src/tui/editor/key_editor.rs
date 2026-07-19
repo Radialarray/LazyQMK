@@ -20,7 +20,7 @@ use ratatui::{
 use super::AppState;
 
 /// Extracts the tap dance name from a TD(name) keycode.
-/// Returns None if the keycode is not a valid TD() pattern.
+/// Returns None if the keycode is not a valid `TD()` pattern.
 fn extract_td_name(keycode: &str) -> Option<String> {
     if let Some(stripped) = keycode.strip_prefix("TD(") {
         if let Some(name) = stripped.strip_suffix(')') {

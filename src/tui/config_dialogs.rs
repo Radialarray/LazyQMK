@@ -84,7 +84,7 @@ impl Default for LayoutPickerState {
     }
 }
 
-/// Events emitted by the LayoutPicker component (keyboard layout variant picker)
+/// Events emitted by the `LayoutPicker` component (keyboard layout variant picker)
 #[derive(Debug, Clone)]
 pub enum LayoutPickerEvent {
     /// User selected a layout variant
@@ -93,7 +93,7 @@ pub enum LayoutPickerEvent {
     Cancelled,
 }
 
-/// LayoutPicker component that implements the Component trait (for keyboard layout variants)
+/// `LayoutPicker` component that implements the Component trait (for keyboard layout variants)
 #[derive(Debug, Clone)]
 pub struct LayoutPicker {
     /// Internal state of the layout picker
@@ -103,7 +103,7 @@ pub struct LayoutPicker {
 }
 
 impl LayoutPicker {
-    /// Create a new LayoutPicker with layouts pre-loaded
+    /// Create a new `LayoutPicker` with layouts pre-loaded
     #[must_use]
     pub fn new(qmk_path: &PathBuf, keyboard: &str) -> Self {
         let mut state = LayoutPickerState::new();

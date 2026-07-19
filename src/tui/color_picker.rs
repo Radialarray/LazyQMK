@@ -20,7 +20,7 @@ use crate::models::{ColorPalette, RgbColor};
 use crate::tui::component::{ColorPickerContext, Component};
 use crate::tui::Theme;
 
-/// Events emitted by the ColorPicker component
+/// Events emitted by the `ColorPicker` component
 #[derive(Debug, Clone)]
 pub enum ColorPickerEvent {
     /// User selected a color
@@ -257,7 +257,7 @@ impl Default for ColorPickerState {
     }
 }
 
-/// ColorPicker component that implements the Component trait
+/// `ColorPicker` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct ColorPicker {
     /// Internal state of the color picker
@@ -267,7 +267,7 @@ pub struct ColorPicker {
 }
 
 impl ColorPicker {
-    /// Create a new ColorPicker with default white color
+    /// Create a new `ColorPicker` with default white color
     #[must_use]
     pub fn new(context: ColorPickerContext, color: RgbColor) -> Self {
         Self {
@@ -282,7 +282,7 @@ impl ColorPicker {
         self.context
     }
 
-    /// Get the current picker mode (Palette or CustomRgb)
+    /// Get the current picker mode (Palette or `CustomRgb`)
     #[must_use]
     pub const fn get_mode(&self) -> ColorPickerMode {
         self.state.mode

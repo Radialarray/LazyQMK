@@ -7,7 +7,7 @@
 use crate::models::layout::Layout;
 use std::collections::HashMap;
 
-/// Returns a HashMap mapping RGB color to reference number (1-based).
+/// Returns a `HashMap` mapping RGB color to reference number (1-based).
 pub(super) fn build_color_reference_map(layout: &Layout, layer_idx: usize) -> HashMap<String, usize> {
     let mut color_map = HashMap::new();
     let mut next_ref = 1;

@@ -27,7 +27,7 @@ pub struct TemplateInfo {
     pub metadata: LayoutMetadata,
 }
 
-/// Events emitted by the TemplateBrowser component
+/// Events emitted by the `TemplateBrowser` component
 #[derive(Debug, Clone)]
 pub enum TemplateBrowserEvent {
     /// User selected a template to load
@@ -220,7 +220,7 @@ impl Default for TemplateBrowserState {
     }
 }
 
-/// TemplateBrowser component that implements the Component trait
+/// `TemplateBrowser` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct TemplateBrowser {
     /// Internal state of the template browser
@@ -228,7 +228,7 @@ pub struct TemplateBrowser {
 }
 
 impl TemplateBrowser {
-    /// Create a new TemplateBrowser
+    /// Create a new `TemplateBrowser`
     #[must_use]
     pub fn new() -> Self {
         let mut state = TemplateBrowserState::new();

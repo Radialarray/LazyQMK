@@ -1,6 +1,6 @@
-//! CLI command handlers for LazyQMK.
+//! CLI command handlers for `LazyQMK`.
 //!
-//! This module provides headless, scriptable access to LazyQMK's core functionality
+//! This module provides headless, scriptable access to `LazyQMK`'s core functionality
 //! for automation, testing, and CI/CD integration.
 
 pub mod category;

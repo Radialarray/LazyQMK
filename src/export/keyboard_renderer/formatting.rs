@@ -5,7 +5,7 @@
 //! - `strip_kc_prefix` — drops the `KC_` prefix from simple keycodes.
 //! - `format_modifier` — `MOD_LCTL` → `Ctrl`, etc.
 
-/// Handles tap-hold keys with split display (e.g., "LT(1, KC_A)" -> "L1 / A")
+/// Handles tap-hold keys with split display (e.g., "LT(1, `KC_A`)" -> "L1 / A")
 pub(super) fn format_keycode(keycode: &str) -> String {
     // Handle Layer Tap: LT(layer, keycode)
     if let Some(inner) = keycode.strip_prefix("LT(") {

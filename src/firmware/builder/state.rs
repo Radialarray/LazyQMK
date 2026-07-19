@@ -83,7 +83,7 @@ impl LogLevel {
     /// Returns the terminal color for this log level.
     #[must_use]
     #[allow(dead_code)] // Display helper for tests; bin target doesn't link
-    pub const fn color(&self) -> ratatui::style::Color {
+    pub const fn color(self) -> ratatui::style::Color {
         match self {
             Self::Info => ratatui::style::Color::Gray,
             Self::Ok => ratatui::style::Color::Green,

@@ -104,7 +104,7 @@ pub fn generate_layer_navigation(layout: &Layout) -> String {
 
 /// Builds a map of outbound layer references.
 ///
-/// Returns a map from source layer index to a list of (target_layer, keycode, position)
+/// Returns a map from source layer index to a list of (`target_layer`, keycode, position)
 /// tuples representing all layer-switching keycodes on that layer.
 fn build_outbound_references(
     layout: &Layout,

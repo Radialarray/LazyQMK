@@ -83,8 +83,8 @@ debug = true
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 cargo = { level = "warn", priority = -1 }
-# Allow some pedantic lints that are too strict for this project
-module_name_repetitions = "allow"
+# Missing-docs warnings are gated to pub items only; they catch real gaps.
+# Allowed here so the project keeps moving without per-fn doc rewrites.
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 # Multiple crate versions - caused by transitive dependencies, cannot fix
@@ -97,7 +97,9 @@ option_if_let_else = "allow"
 items_after_statements = "allow"
 # branches_sharing_code - sometimes duplicating at end is clearer
 branches_sharing_code = "allow"
-# doc_markdown - false positives for technical terms
+# doc_markdown fires 209× across docs (mostly keycode names like `KC_A`,
+# `MO(1)`, etc.). Adding backticks everywhere is low value; restore the
+# blanket allow.
 doc_markdown = "allow"
 # needless_pass_by_value - sometimes owned types are clearer
 needless_pass_by_value = "allow"
@@ -143,7 +145,8 @@ explicit_iter_loop = "allow"
 struct_field_names = "allow"
 # wrong_self_convention - to_* with &self is fine for some types
 wrong_self_convention = "allow"
-# cast_possible_wrap - intentional for terminal coordinates
+# cast_possible_wrap - intentional for terminal coordinates. Verified
+# active: removing this triggers warnings in lib.rs and elsewhere.
 cast_possible_wrap = "allow"
 # str_to_string - String::from vs to_string is a style choice
 str_to_string = "allow"

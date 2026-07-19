@@ -14,7 +14,7 @@ pub struct KeycodeArgs {
     #[arg(short, long, value_name = "FILE")]
     pub layout: PathBuf,
 
-    /// Keycode expression to resolve (e.g., "LT(@uuid, KC_SPC)")
+    /// Keycode expression to resolve (e.g., "LT(@uuid, `KC_SPC`)")
     #[arg(short, long, value_name = "EXPR")]
     pub expr: String,
 

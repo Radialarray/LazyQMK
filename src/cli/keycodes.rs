@@ -19,7 +19,7 @@ pub struct KeycodesArgs {
 
 #[derive(Debug, Serialize)]
 struct KeycodeOutput {
-    /// QMK keycode (e.g., "KC_A")
+    /// QMK keycode (e.g., "`KC_A`")
     code: String,
     /// Display name (e.g., "A")
     label: String,

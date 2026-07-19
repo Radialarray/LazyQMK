@@ -551,7 +551,7 @@ impl GenerateJobManager {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    /// Locks the qmk_path setter.
+    /// Locks the `qmk_path` setter.
     fn qmk_path_write(&self) -> std::sync::RwLockWriteGuard<'_, Option<PathBuf>> {
         self.qmk_path
             .write()

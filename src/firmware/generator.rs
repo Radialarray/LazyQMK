@@ -54,7 +54,7 @@ impl<'a> FirmwareGenerator<'a> {
     /// 2. QMK keymap directory (for building)
     ///
     /// Returns paths to the generated files in the timestamped directory:
-    /// (keymap_path, config_h_path)
+    /// (`keymap_path`, `config_h_path`)
     pub fn generate(&self) -> Result<(String, String)> {
         // Create timestamped output directory
         let timestamp_dir = self.create_timestamped_output_dir()?;
@@ -234,9 +234,9 @@ impl<'a> FirmwareGenerator<'a> {
     /// header files that need to be included for language-specific keycodes.
     ///
     /// This detects keycodes like `DE_Y`, `DE_UDIA` that require language-specific
-    /// headers from QMK's keymap_extras directory.
+    /// headers from QMK's `keymap_extras` directory.
     ///
-    /// Language prefix-to-header mappings are loaded dynamically from the KeycodeDb,
+    /// Language prefix-to-header mappings are loaded dynamically from the `KeycodeDb`,
     /// supporting all languages defined in the keycode database.
     fn detect_required_headers(&self) -> Vec<String> {
         let mut headers = HashSet::new();
@@ -610,8 +610,8 @@ impl<'a> FirmwareGenerator<'a> {
 
     /// Generates idle effect state machine code if enabled.
     ///
-    /// Emits C code to manage idle timeout and transition between ACTIVE, IDLE_EFFECT, and OFF states.
-    /// The code tracks activity using timer_read/timer_elapsed and switches RGB effects accordingly.
+    /// Emits C code to manage idle timeout and transition between ACTIVE, `IDLE_EFFECT`, and OFF states.
+    /// The code tracks activity using `timer_read/timer_elapsed` and switches RGB effects accordingly.
     #[allow(clippy::unnecessary_wraps)]
     fn generate_idle_effect_code(&self) -> Result<String> {
         // Only generate if idle effect is enabled and keyboard has RGB
@@ -801,7 +801,7 @@ impl<'a> FirmwareGenerator<'a> {
     /// Emits C code to manage ripple effects triggered by keypresses using
     /// `rgb_matrix_indicators_advanced_user` for overlay on top of TUI layer colors.
     ///
-    /// NOTE: Ripple overlay works independently of PaletteFX — PaletteFX is
+    /// NOTE: Ripple overlay works independently of `PaletteFX` — `PaletteFX` is
     /// only used as an idle screensaver effect.
     #[allow(clippy::too_many_lines)]
     fn generate_ripple_overlay_code(&self) -> Result<String> {
@@ -1230,7 +1230,7 @@ impl<'a> FirmwareGenerator<'a> {
 
     /// Generates combo code if enabled.
     ///
-    /// Emits QMK combo arrays and process_combo_event handler for two-key hold actions.
+    /// Emits QMK combo arrays and `process_combo_event` handler for two-key hold actions.
     /// Combos are base-layer only and require holding both keys for the configured duration.
     #[allow(clippy::unnecessary_wraps)]
     fn generate_combo_code(&self) -> Result<String> {
@@ -1485,7 +1485,7 @@ impl<'a> FirmwareGenerator<'a> {
     /// Generates tap dance actions array.
     ///
     /// Creates `tap_dance_action_t tap_dance_actions[] = { ... };`
-    /// Uses ACTION_TAP_DANCE_DOUBLE for 2-way, ACTION_TAP_DANCE_FN_ADVANCED for 3-way.
+    /// Uses `ACTION_TAP_DANCE_DOUBLE` for 2-way, `ACTION_TAP_DANCE_FN_ADVANCED` for 3-way.
     fn generate_tap_dance_actions(&self) -> String {
         if self.layout.tap_dances.is_empty() {
             return String::new();
@@ -1529,7 +1529,7 @@ impl<'a> FirmwareGenerator<'a> {
         code
     }
 
-    /// Processes a keycode, converting TD(name) references to TD(TD_NAME_UPPER).
+    /// Processes a keycode, converting TD(name) references to `TD(TD_NAME_UPPER)`.
     ///
     /// Validates that the referenced tap dance exists in the layout.
     fn process_keycode_for_tap_dance(&self, keycode: &str) -> String {
@@ -1593,7 +1593,7 @@ impl<'a> FirmwareGenerator<'a> {
 
     /// Generates keymap.json for QMK community module support.
     ///
-    /// Currently only generates module references when PaletteFX is enabled.
+    /// Currently only generates module references when `PaletteFX` is enabled.
     /// Returns an empty string if no modules are needed.
     pub fn generate_keymap_json(&self) -> String {
         if !self.layout.palette_fx.enabled {

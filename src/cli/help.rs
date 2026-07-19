@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 /// Display help topics and keybindings from help.toml
 #[derive(Args, Debug)]
 pub struct HelpArgs {
-    /// Help topic name to display (e.g., "main", "keycode_picker", "settings_manager")
+    /// Help topic name to display (e.g., "main", "`keycode_picker`", "`settings_manager`")
     #[arg(value_name = "TOPIC")]
     topic: Option<String>,
 }

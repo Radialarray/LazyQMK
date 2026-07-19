@@ -44,7 +44,7 @@ fn open_tap_dance_picker_with_context(
 }
 
 /// Extracts the tap dance name from a TD(name) keycode.
-/// Returns None if the keycode is not a valid TD() pattern.
+/// Returns None if the keycode is not a valid `TD()` pattern.
 fn extract_td_name(keycode: &str) -> Option<String> {
     if let Some(stripped) = keycode.strip_prefix("TD(") {
         if let Some(name) = stripped.strip_suffix(')') {
@@ -56,7 +56,7 @@ fn extract_td_name(keycode: &str) -> Option<String> {
     None
 }
 
-/// Start a parameterized keycode flow using KeycodeDb param metadata (data-driven approach)
+/// Start a parameterized keycode flow using `KeycodeDb` param metadata (data-driven approach)
 /// Returns true if the keycode was handled as parameterized.
 fn start_parameterized_keycode_flow(state: &mut AppState, keycode: &str) -> bool {
     // Reset any previous state
@@ -709,7 +709,7 @@ pub fn handle_build_log_input(state: &mut AppState, key: event::KeyEvent) -> Res
     Ok(false)
 }
 
-/// Handle events from BuildLog component
+/// Handle events from `BuildLog` component
 fn handle_build_log_event(state: &mut AppState, event: BuildLogEvent) -> Result<bool> {
     match event {
         BuildLogEvent::Closed => {
@@ -918,7 +918,7 @@ pub fn handle_layer_picker_input(state: &mut AppState, key: event::KeyEvent) -> 
     Ok(false)
 }
 
-/// Handle events from the LayerPicker component
+/// Handle events from the `LayerPicker` component
 fn handle_layer_picker_event(
     state: &mut AppState,
     event: crate::tui::layer_picker::LayerPickerEvent,
@@ -1120,8 +1120,8 @@ fn is_basic_keycode(code: &str) -> bool {
 }
 
 /// Check if a keycode is a basic keycode OR a simple layer keycode (MO, TG, TO, etc.)
-/// Allows: KC_A, MO(1), TG(2), TO(3), TT(1), OSL(2)
-/// Rejects: LT(1, KC_A), MT(MOD_LCTL, KC_A), MO(@layer_id), etc.
+/// Allows: `KC_A`, MO(1), TG(2), TO(3), TT(1), OSL(2)
+/// Rejects: LT(1, `KC_A`), `MT(MOD_LCTL`, `KC_A`), `MO(@layer_id)`, etc.
 fn is_basic_or_layer_keycode(code: &str) -> bool {
     // Basic keycodes are always allowed
     if is_basic_keycode(code) {

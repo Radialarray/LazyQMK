@@ -121,7 +121,7 @@ pub struct LanguageDefinition {
     pub description: Option<String>,
     /// Keycode prefix (e.g., "DE_", "FR_")
     pub prefix: String,
-    /// QMK header file path (e.g., "keymap_extras/keymap_german.h")
+    /// QMK header file path (e.g., "`keymap_extras/keymap_german.h`")
     pub header: String,
 }
 

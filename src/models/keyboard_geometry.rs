@@ -21,10 +21,10 @@ pub mod terminal_scale {
 ///
 /// # Coordinate Conversion (to terminal)
 ///
-/// - Terminal X = `visual_x` * X_SCALE characters per keyboard unit
-/// - Terminal Y = `visual_y` * Y_SCALE lines per keyboard unit
-/// - Width chars = width * X_SCALE (minimum MIN_WIDTH)
-/// - Height lines = height * Y_SCALE (minimum MIN_HEIGHT)
+/// - Terminal X = `visual_x` * `X_SCALE` characters per keyboard unit
+/// - Terminal Y = `visual_y` * `Y_SCALE` lines per keyboard unit
+/// - Width chars = width * `X_SCALE` (minimum `MIN_WIDTH`)
+/// - Height lines = height * `Y_SCALE` (minimum `MIN_HEIGHT`)
 ///
 /// Default scale factors are 7.0 for X and 2.5 for Y, but these can be
 /// customized via the `with_scale` methods for different terminal sizes.

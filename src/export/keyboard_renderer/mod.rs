@@ -35,13 +35,17 @@ pub struct GridKey {
 
 /// Collection of keys arranged in a 2D grid.
 pub struct KeyGrid {
+    /// All keys in the grid
     pub keys: Vec<GridKey>,
+    /// Maximum row index used
     pub max_row: usize,
+    /// Maximum column index used
     pub max_col: usize,
     /// Gap between split halves (column index where right half starts)
     pub split_gap: Option<usize>,
 }
 
+/// Renders a single layer as an ASCII/Unicode keyboard diagram.
 pub fn render_layer_diagram(
     layout: &Layout,
     layer_idx: usize,

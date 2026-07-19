@@ -10,7 +10,7 @@ use ratatui::{
 
 use crate::firmware::BuildState;
 
-/// Events emitted by the BuildLog component
+/// Events emitted by the `BuildLog` component
 #[derive(Debug, Clone)]
 pub enum BuildLogEvent {
     /// User closed the build log
@@ -70,7 +70,7 @@ impl Default for BuildLogState {
 
 use super::Theme;
 
-/// BuildLog component that implements the ContextualComponent trait
+/// `BuildLog` component that implements the `ContextualComponent` trait
 #[derive(Debug, Clone)]
 pub struct BuildLog {
     /// Internal state of the build log
@@ -78,7 +78,7 @@ pub struct BuildLog {
 }
 
 impl BuildLog {
-    /// Create a new BuildLog
+    /// Create a new `BuildLog`
     #[must_use]
     pub const fn new() -> Self {
         Self {

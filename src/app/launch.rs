@@ -76,7 +76,7 @@ pub fn launch_editor_with_default_layout(
     Ok(())
 }
 
-/// Creates a default layer with KC_TRNS for all key positions
+/// Creates a default layer with `KC_TRNS` for all key positions
 pub fn create_default_layer(
     number: u8,
     name: &str,

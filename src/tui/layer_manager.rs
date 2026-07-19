@@ -16,7 +16,7 @@ use crate::models::{Layer, Position, RgbColor};
 use crate::tui::component::Component;
 use crate::tui::Theme;
 
-/// Events emitted by the LayerManager component
+/// Events emitted by the `LayerManager` component
 #[derive(Debug, Clone)]
 pub enum LayerManagerEvent {
     /// User created a new layer
@@ -321,7 +321,7 @@ impl Default for LayerManagerState {
     }
 }
 
-/// LayerManager component that implements the Component trait
+/// `LayerManager` component that implements the Component trait
 #[derive(Debug, Clone)]
 pub struct LayerManager {
     /// Internal state of the layer manager
@@ -331,7 +331,7 @@ pub struct LayerManager {
 }
 
 impl LayerManager {
-    /// Create a new LayerManager with initial layers
+    /// Create a new `LayerManager` with initial layers
     #[must_use]
     pub fn new(layers: Vec<Layer>, current_layer: usize) -> Self {
         let mut state = LayerManagerState::new();

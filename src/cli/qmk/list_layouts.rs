@@ -38,7 +38,7 @@ struct ListLayoutsResponse {
 /// Layout information including name and key count
 #[derive(Debug, Clone, Serialize)]
 struct LayoutInfo {
-    /// Layout name (e.g., "LAYOUT", "LAYOUT_split_3x6_3")
+    /// Layout name (e.g., "LAYOUT", "`LAYOUT_split_3x6_3`")
     name: String,
     /// Number of keys in this layout
     key_count: usize,

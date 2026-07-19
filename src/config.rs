@@ -29,7 +29,7 @@ pub struct PathConfig {
 
 /// Firmware build configuration.
 ///
-/// Note: keyboard, layout_variant, keymap_name, and output_format have been moved
+/// Note: keyboard, `layout_variant`, `keymap_name`, and `output_format` have been moved
 /// to per-layout .md file metadata. Only global build settings remain here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildConfig {
@@ -342,8 +342,8 @@ impl Config {
     /// Attempts to fix a stale QMK firmware path.
     ///
     /// If the path doesn't exist, looks for a directory with similar naming
-    /// in the parent directory (e.g., if old_project/qmk_firmware doesn't exist,
-    /// looks for LazyQMK/qmk_firmware).
+    /// in the parent directory (e.g., if `old_project/qmk_firmware` doesn't exist,
+    /// looks for `LazyQMK/qmk_firmware`).
     fn try_fix_qmk_path(old_path: &std::path::Path) -> Option<PathBuf> {
         // If the path exists, no fix needed
         if old_path.exists() {

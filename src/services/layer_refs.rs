@@ -82,7 +82,7 @@ pub struct LayerRef {
     pub position: Position,
     /// Type of layer reference
     pub kind: LayerRefKind,
-    /// The full keycode string (e.g., "MO(1)", "LT(2, KC_SPC)")
+    /// The full keycode string (e.g., "MO(1)", "LT(2, `KC_SPC`)")
     pub keycode: String,
 }
 
