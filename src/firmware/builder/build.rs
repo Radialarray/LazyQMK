@@ -1,239 +1,14 @@
-//! Background firmware compilation with progress tracking.
-//!
-//! This module handles spawning background threads to compile QMK firmware
-//! and reporting progress via message channels.
-
-// Allow small types passed by reference for API consistency
-#![allow(clippy::trivially_copy_pass_by_ref)]
+//! Low-level build helpers: `run_build`, `find_firmware_file`,
+//! `enhance_qmk_error`.
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread;
+use std::sync::mpsc::Sender;
 
-/// Build status tracking.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)] // All variants exercised in tests; bin doesn't link
-pub enum BuildStatus {
-    /// Build not started
-    Idle,
-    /// Validating layout before generation
-    Validating,
-    /// Generating firmware files
-    Generating,
-    /// Compiling QMK firmware
-    Compiling,
-    /// Build completed successfully
-    Success,
-    /// Build failed with error
-    Failed,
-}
+use super::state::{BuildMessage, BuildStatus, LogLevel};
 
-impl std::fmt::Display for BuildStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Idle => write!(f, "Idle"),
-            Self::Validating => write!(f, "Validating..."),
-            Self::Generating => write!(f, "Generating..."),
-            Self::Compiling => write!(f, "Compiling..."),
-            Self::Success => write!(f, "✓ Success"),
-            Self::Failed => write!(f, "✗ Failed"),
-        }
-    }
-}
-
-/// Build message types sent from background thread to main thread.
-#[derive(Debug, Clone)]
-pub enum BuildMessage {
-    /// Build progress update
-    Progress {
-        /// Current build status
-        status: BuildStatus,
-        /// Progress message
-        message: String,
-    },
-    /// Build log output
-    Log {
-        /// Log level (Info, Ok, Error)
-        level: LogLevel,
-        /// Log message content
-        message: String,
-    },
-    /// Build completed (success or failure)
-    Complete {
-        /// Whether the build succeeded
-        success: bool,
-        /// Path to generated firmware file
-        firmware_path: Option<PathBuf>,
-        /// Error message if build failed
-        error: Option<String>,
-    },
-}
-
-/// Log level for build output.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LogLevel {
-    /// Informational message
-    Info,
-    /// Success message
-    Ok,
-    /// Error message
-    Error,
-}
-
-impl LogLevel {
-    /// Returns the terminal color for this log level.
-    #[must_use]
-    #[allow(dead_code)] // Display helper for tests; bin target doesn't link
-    pub const fn color(&self) -> ratatui::style::Color {
-        match self {
-            Self::Info => ratatui::style::Color::Gray,
-            Self::Ok => ratatui::style::Color::Green,
-            Self::Error => ratatui::style::Color::Red,
-        }
-    }
-}
-
-/// Build state for tracking background compilation.
-pub struct BuildState {
-    /// Current build status
-    pub status: BuildStatus,
-    /// Message channel receiver
-    pub receiver: Option<Receiver<BuildMessage>>,
-    /// Accumulated build log
-    pub log_lines: Vec<(LogLevel, String)>,
-    /// Last status message
-    pub last_message: String,
-}
-
-impl BuildState {
-    /// Creates a new idle build state.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            status: BuildStatus::Idle,
-            receiver: None,
-            log_lines: Vec::new(),
-            last_message: String::new(),
-        }
-    }
-
-    /// Checks if a build is currently running.
-    #[must_use]
-    pub const fn is_building(&self) -> bool {
-        matches!(
-            self.status,
-            BuildStatus::Validating | BuildStatus::Generating | BuildStatus::Compiling
-        )
-    }
-
-    /// Polls the message channel for new messages.
-    ///
-    /// Returns true if a message was received.
-    pub fn poll(&mut self) -> bool {
-        if let Some(receiver) = &self.receiver {
-            match receiver.try_recv() {
-                Ok(message) => {
-                    self.handle_message(message);
-                    true
-                }
-                Err(std::sync::mpsc::TryRecvError::Empty) => false,
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                    // Thread finished
-                    self.receiver = None;
-                    false
-                }
-            }
-        } else {
-            false
-        }
-    }
-
-    /// Handles a build message.
-    fn handle_message(&mut self, message: BuildMessage) {
-        match message {
-            BuildMessage::Progress { status, message } => {
-                self.status = status.clone();
-                self.last_message.clone_from(&message);
-                self.log_lines
-                    .push((LogLevel::Info, format!("[{status}] {message}")));
-            }
-            BuildMessage::Log { level, message } => {
-                self.log_lines.push((level, message));
-            }
-            BuildMessage::Complete {
-                success,
-                firmware_path,
-                error,
-            } => {
-                self.status = if success {
-                    BuildStatus::Success
-                } else {
-                    BuildStatus::Failed
-                };
-
-                if let Some(path) = firmware_path {
-                    self.last_message = format!("Firmware written to {}", path.display());
-                    self.log_lines
-                        .push((LogLevel::Ok, self.last_message.clone()));
-                }
-
-                if let Some(err) = error {
-                    self.last_message.clone_from(&err);
-                    self.log_lines.push((LogLevel::Error, err));
-                }
-
-                self.receiver = None;
-            }
-        }
-    }
-
-    /// Starts a build in the background.
-    ///
-    /// Returns a receiver for build messages.
-    pub fn start_build(
-        &mut self,
-        qmk_path: PathBuf,
-        keyboard: String,
-        keymap: String,
-    ) -> Result<()> {
-        if self.is_building() {
-            anyhow::bail!("Build already in progress");
-        }
-
-        let (sender, receiver) = channel();
-        self.receiver = Some(receiver);
-        self.status = BuildStatus::Compiling;
-        self.log_lines.clear();
-        self.last_message = "Starting build...".to_string();
-
-        // Spawn background thread
-        thread::spawn(move || {
-            if let Err(e) = run_build(sender.clone(), qmk_path, keyboard, keymap) {
-                let _ = sender.send(BuildMessage::Complete {
-                    success: false,
-                    firmware_path: None,
-                    error: Some(format!("Build failed: {e}")),
-                });
-            }
-        });
-
-        Ok(())
-    }
-}
-
-impl Default for BuildState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Detects setup-related errors and appends helpful diagnostic suggestions.
-///
-/// Looks for patterns like "command not found", "no such file", etc. and suggests
-/// running `lazyqmk doctor` to diagnose the issue.
-fn enhance_qmk_error(error_str: &str) -> String {
+pub(super) fn enhance_qmk_error(error_str: &str) -> String {
     let error_lower = error_str.to_lowercase();
 
     // Check for command not found patterns across platforms
@@ -260,7 +35,7 @@ fn enhance_qmk_error(error_str: &str) -> String {
 /// QMK's build system will use the variant-specific keyboard.json for configuration.
 ///
 /// Uses `qmk compile` CLI command which is the standard way to build QMK firmware.
-fn run_build(
+pub(super) fn run_build(
     sender: Sender<BuildMessage>,
     qmk_path: PathBuf,
     keyboard: String,
@@ -374,7 +149,7 @@ fn run_build(
 /// Finds the compiled firmware file.
 ///
 /// QMK typically outputs to .build/{keyboard}_{keymap}.{ext}
-fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Result<PathBuf> {
+pub(super) fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Result<PathBuf> {
     // Clean keyboard path (replace / with _)
     let keyboard_clean = keyboard.replace('/', "_");
 
@@ -396,6 +171,7 @@ fn find_firmware_file(qmk_path: &PathBuf, keyboard: &str, keymap: &str) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::state::{BuildMessage, BuildState, BuildStatus, LogLevel};
 
     #[test]
     fn test_build_status_display() {
