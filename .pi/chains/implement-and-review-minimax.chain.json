@@ -1,0 +1,67 @@
+{
+  "name": "implement-and-review-minimax",
+  "package": "pi-orchestrator",
+  "description": "Implement a task via coder-mid-minimax, then review from three angles (also minimax) and apply fixes with coder-mid-minimax. All stages use the minimax provider only.",
+  "chain": [
+    {
+      "agent": "pi-orchestrator.coder-mid-minimax",
+      "phase": "Implement",
+      "label": "Implement task (MiniMax M3)",
+      "task": "{task}",
+      "acceptance": {
+        "level": "attested",
+        "criteria": [
+          "Implementation is complete per the requirements",
+          "All gates (cargo test --tests --lib, cargo clippy --all-features -- -D warnings, cargo fmt --check) pass",
+          "Files touched stay under the 500-line cap",
+          "No widening of scope",
+          "No reformatting whole files (reformat-noise guard)",
+          "No new #[allow(clippy::*)] suppressions — fix the underlying issue"
+        ],
+        "evidence": ["changed-files", "commands-run", "validation-output", "residual-risks"],
+        "stopRules": [
+          "Do not edit unrelated files",
+          "Do not widen scope",
+          "Do not commit .pi-subagents/, .opencode/, .pi/, node_modules/, or scratch files",
+          "Do not run cargo fmt on the whole repo — surgical edits only"
+        ],
+        "verify": [
+          { "id": "tests", "command": "cargo test --tests --lib" },
+          { "id": "clippy", "command": "cargo clippy --all-features -- -D warnings" },
+          { "id": "fmt", "command": "cargo fmt --check" }
+        ],
+        "maxFinalizationTurns": 3
+      }
+    },
+    {
+      "phase": "Review",
+      "parallel": [
+        {
+          "agent": "pi-orchestrator.reviewer-minimax",
+          "label": "Correctness & regressions",
+          "task": "Review the current git diff for correctness, regressions, and bugs. Inspect changed files directly with read. Do not modify project/source files. Use the project-specific rubric from the reviewer-minimax agent (reformat noise, line-limit 500, verify-gate, unrelated-file, untracked artifacts). Report findings by severity (Critical, Warning, Suggestion, Positive). Output a single markdown block with a final verdict: 'lgtm' or 'fix-required: <list>'.",
+          "context": "fresh"
+        },
+        {
+          "agent": "pi-orchestrator.reviewer-minimax",
+          "label": "Tests & validation",
+          "task": "Review the current git diff for test coverage and validation quality. Are there tests for the new code? Did existing tests still pass (cargo test --tests --lib → 1446 passed)? Are the tests meaningful or do they only test trivial cases? Are golden fixtures (firmware_gen_tests, layer_navigation_tests) still byte-identical if the generator or layer navigation was touched? Inspect changed files directly. Do not modify project/source files. Use the project-specific rubric. Output a single markdown block with a final verdict: 'lgtm' or 'fix-required: <list>'.",
+          "context": "fresh"
+        },
+        {
+          "agent": "pi-orchestrator.reviewer-minimax",
+          "label": "Simplicity & maintainability",
+          "task": "Review the current git diff for simplicity, maintainability, and code cleanliness. Are there unnecessary indirection, over-abstraction, or dead code? Are public APIs well-designed? Could a future contributor understand this code without context? Is documentation in sync with the implementation? Inspect changed files directly. Do not modify project/source files. Use the project-specific rubric. Output a single markdown block with a final verdict: 'lgtm' or 'fix-required: <list>'.",
+          "context": "fresh"
+        }
+      ],
+      "concurrency": 3
+    },
+    {
+      "agent": "pi-orchestrator.coder-mid-minimax",
+      "phase": "Fix",
+      "label": "Apply accepted fixes (MiniMax M3)",
+      "task": "Synthesize the reviewer findings from the previous phase. Apply only fixes worth doing now (high-value, low-risk). Do not widen scope. Re-run quality gates after fixes:\n  cargo test --tests --lib\n  cargo clippy --all-features -- -D warnings\n  cargo fmt --check\nIf a fix would require a separate session (large refactor, new epic, breaking API change), record it as a follow-up in the parent epic instead of attempting it here. Report what was applied vs. deferred."
+    }
+  ]
+}
