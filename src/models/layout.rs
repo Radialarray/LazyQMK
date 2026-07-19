@@ -2,9 +2,6 @@
 
 // Allow small types passed by reference for API consistency
 #![allow(clippy::trivially_copy_pass_by_ref)]
-// Allow intentional type casts
-#![allow(clippy::cast_lossless)]
-#![allow(clippy::cast_possible_truncation)]
 
 use crate::keycode_db::KeycodeDb;
 use crate::models::layer::{KeyDefinition, Layer, Position};
