@@ -6,12 +6,6 @@
 
 // Input handlers use Result<bool> for consistency even when they never fail
 #![allow(clippy::unnecessary_wraps)]
-// Allow intentional type casts for color math
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_abs_to_unsigned)]
-#![allow(clippy::cast_lossless)]
-#![allow(clippy::as_conversions)]
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
@@ -137,9 +131,9 @@ impl ColorPickerState {
 
         for (ci, palette_color) in self.palette.colors.iter().enumerate() {
             for (si, shade) in palette_color.shades.iter().enumerate() {
-                let dr = (i32::from(shade.r) - i32::from(target.r)).abs() as u32;
-                let dg = (i32::from(shade.g) - i32::from(target.g)).abs() as u32;
-                let db = (i32::from(shade.b) - i32::from(target.b)).abs() as u32;
+                let dr = (i32::from(shade.r) - i32::from(target.r)).unsigned_abs();
+                let dg = (i32::from(shade.g) - i32::from(target.g)).unsigned_abs();
+                let db = (i32::from(shade.b) - i32::from(target.b)).unsigned_abs();
                 let distance = dr * dr + dg * dg + db * db;
 
                 if distance < best_distance {
