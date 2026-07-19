@@ -244,7 +244,7 @@ impl KeyboardWidget {
                 ]
             } else {
                 // Simple keycode: center vertically with two lines
-                let display = Self::format_simple_keycode(&key.keycode);
+                let display = crate::keycode_db::format::strip_kc_prefix(&key.keycode);
                 vec![
                     Line::from(""), // Empty first line for vertical centering
                     Line::from(vec![Span::styled(
@@ -323,7 +323,7 @@ impl KeyboardWidget {
                     state.current_layer,
                     state.selected_position.row,
                     state.selected_position.col,
-                    Self::format_simple_keycode(&key.keycode)
+                    crate::keycode_db::format::strip_kc_prefix(&key.keycode)
                 )
             },
         );
@@ -576,7 +576,7 @@ impl KeyboardWidget {
             TapHoldType::LayerTap => {
                 // LT(layer, keycode) - Layer Tap
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
-                let tap_display = Self::format_simple_keycode(info.arg2.as_deref().unwrap_or(""));
+                let tap_display = crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}"),
                     tap: tap_display,
@@ -584,8 +584,8 @@ impl KeyboardWidget {
             }
             TapHoldType::ModTap => {
                 // MT(mod, keycode) - Custom Mod Tap
-                let mod_display = Self::format_modifier(&info.arg1);
-                let tap_display = Self::format_simple_keycode(info.arg2.as_deref().unwrap_or(""));
+                let mod_display = crate::keycode_db::format::format_modifier(&info.arg1);
+                let tap_display = crate::keycode_db::format::strip_kc_prefix(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
@@ -599,7 +599,7 @@ impl KeyboardWidget {
                     .get_mod_tap_display(&info.prefix)
                     .unwrap_or("MOD")
                     .to_string();
-                let tap_display = Self::format_simple_keycode(&info.arg1);
+                let tap_display = crate::keycode_db::format::strip_kc_prefix(&info.arg1);
                 Some(TapHoldKeycode {
                     hold: mod_display,
                     tap: tap_display,
@@ -608,7 +608,7 @@ impl KeyboardWidget {
             TapHoldType::LayerMod => {
                 // LM(layer, mod) - Layer Mod
                 let layer_display = Self::resolve_layer_display(&info.arg1, state);
-                let mod_display = Self::format_modifier(info.arg2.as_deref().unwrap_or(""));
+                let mod_display = crate::keycode_db::format::format_modifier(info.arg2.as_deref().unwrap_or(""));
                 Some(TapHoldKeycode {
                     hold: format!("L{layer_display}+"),
                     tap: mod_display,
@@ -616,7 +616,7 @@ impl KeyboardWidget {
             }
             TapHoldType::SwapHands => {
                 // SH_T(keycode) - Swap Hands Tap
-                let tap_display = Self::format_simple_keycode(&info.arg1);
+                let tap_display = crate::keycode_db::format::strip_kc_prefix(&info.arg1);
                 Some(TapHoldKeycode {
                     hold: "SWAP".to_string(),
                     tap: tap_display,
@@ -639,39 +639,6 @@ impl KeyboardWidget {
         layer_ref.to_string()
     }
 
-    /// Format modifier for compact display
-    fn format_modifier(mod_str: &str) -> String {
-        // Handle combined modifiers like "MOD_LCTL | MOD_LSFT"
-        let mut result = String::new();
-
-        if mod_str.contains("LCTL") || mod_str.contains("RCTL") {
-            result.push('C');
-        }
-        if mod_str.contains("LSFT") || mod_str.contains("RSFT") {
-            result.push('S');
-        }
-        if mod_str.contains("LALT") || mod_str.contains("RALT") {
-            result.push('A');
-        }
-        if mod_str.contains("LGUI") || mod_str.contains("RGUI") {
-            result.push('G');
-        }
-
-        if result.is_empty() {
-            // Fallback: take first 3 chars
-            mod_str.chars().take(3).collect()
-        } else {
-            result
-        }
-    }
-
-    /// Format a simple keycode for compact display (removes KC_ prefix)
-    fn format_simple_keycode(keycode: &str) -> String {
-        // Remove KC_ prefix if present
-        let display = keycode.strip_prefix("KC_").unwrap_or(keycode);
-        display.to_string()
-    }
-
     /// Truncate a string to a maximum length
     fn truncate(s: &str, max_len: usize) -> String {
         if s.len() <= max_len {
@@ -688,25 +655,25 @@ mod tests {
 
     #[test]
     fn test_format_simple_keycode() {
-        assert_eq!(KeyboardWidget::format_simple_keycode("KC_A"), "A");
-        assert_eq!(KeyboardWidget::format_simple_keycode("KC_SPC"), "SPC");
-        assert_eq!(KeyboardWidget::format_simple_keycode("KC_ENTER"), "ENTER");
-        assert_eq!(KeyboardWidget::format_simple_keycode("MO(1)"), "MO(1)");
+        assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_A"), "A");
+        assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_SPC"), "SPC");
+        assert_eq!(crate::keycode_db::format::strip_kc_prefix("KC_ENTER"), "ENTER");
+        assert_eq!(crate::keycode_db::format::strip_kc_prefix("MO(1)"), "MO(1)");
     }
 
     #[test]
     fn test_format_modifier() {
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL"), "C");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LSFT"), "S");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LALT"), "A");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LGUI"), "G");
-        assert_eq!(KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT"), "CS");
+        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LCTL"), "C");
+        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LSFT"), "S");
+        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LALT"), "A");
+        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LGUI"), "G");
+        assert_eq!(crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT"), "CS");
         assert_eq!(
-            KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"),
+            crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT"),
             "CSA"
         );
         assert_eq!(
-            KeyboardWidget::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"),
+            crate::keycode_db::format::format_modifier("MOD_LCTL | MOD_LSFT | MOD_LALT | MOD_LGUI"),
             "CSAG"
         );
     }

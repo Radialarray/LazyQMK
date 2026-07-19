@@ -6,10 +6,14 @@
 //! Sub-modules:
 //! - [`db`] — `KeycodeDb` struct and its large impl block (load, search,
 //!   param/prefix/parse helpers, language accessors).
+//! - [`format`] — short-form keycode display helpers (`strip_kc_prefix`,
+//!   `format_modifier`) shared with TUI and export rendering.
 //! - [`display`] — display metadata for the web Key Details panel
 //!   (cfg-gated on `web` feature).
 
 #![allow(clippy::doc_link_with_quotes)]
+
+pub mod format;
 
 mod db;
 

@@ -13,7 +13,7 @@ pub(super) fn format_keycode(keycode: &str) -> String {
             let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
                 let layer = parts[0].trim_start_matches('@'); // Remove @ prefix
-                let tap = strip_kc_prefix(parts[1]);
+                let tap = crate::keycode_db::format::strip_kc_prefix(parts[1]);
                 return format!("L{} / {}", layer, tap);
             }
         }
@@ -24,8 +24,8 @@ pub(super) fn format_keycode(keycode: &str) -> String {
         if let Some(args) = inner.strip_suffix(')') {
             let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
-                let mod_display = format_modifier(parts[0]);
-                let tap = strip_kc_prefix(parts[1]);
+                let mod_display = crate::keycode_db::format::format_modifier(parts[0]);
+                let tap = crate::keycode_db::format::strip_kc_prefix(parts[1]);
                 return format!("{} / {}", mod_display, tap);
             }
         }
@@ -44,7 +44,7 @@ pub(super) fn format_keycode(keycode: &str) -> String {
     ] {
         if let Some(inner) = keycode.strip_prefix(prefix) {
             if let Some(tap) = inner.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
-                return format!("{} / {}", mod_name, strip_kc_prefix(tap));
+                return format!("{} / {}", mod_name, crate::keycode_db::format::strip_kc_prefix(tap));
             }
         }
     }
@@ -55,7 +55,7 @@ pub(super) fn format_keycode(keycode: &str) -> String {
             let parts: Vec<&str> = args.split(',').map(str::trim).collect();
             if parts.len() == 2 {
                 let layer = parts[0].trim_start_matches('@');
-                let mod_display = format_modifier(parts[1]);
+                let mod_display = crate::keycode_db::format::format_modifier(parts[1]);
                 return format!("L{}+{}", layer, mod_display);
             }
         }
@@ -85,35 +85,5 @@ pub(super) fn format_keycode(keycode: &str) -> String {
     }
 
     // Simple keycode: strip KC_ prefix
-    strip_kc_prefix(keycode)
-}
-
-/// Strips the "KC_" prefix from a keycode.
-pub(super) fn strip_kc_prefix(keycode: &str) -> String {
-    keycode.strip_prefix("KC_").unwrap_or(keycode).to_string()
-}
-
-/// Formats a modifier string for compact display.
-pub(super) fn format_modifier(mod_str: &str) -> String {
-    let mut result = String::new();
-
-    if mod_str.contains("LCTL") || mod_str.contains("RCTL") {
-        result.push('C');
-    }
-    if mod_str.contains("LSFT") || mod_str.contains("RSFT") {
-        result.push('S');
-    }
-    if mod_str.contains("LALT") || mod_str.contains("RALT") {
-        result.push('A');
-    }
-    if mod_str.contains("LGUI") || mod_str.contains("RGUI") {
-        result.push('G');
-    }
-
-    if result.is_empty() {
-        // Fallback: take first 3 chars
-        mod_str.chars().take(3).collect()
-    } else {
-        result
-    }
+    crate::keycode_db::format::strip_kc_prefix(keycode)
 }

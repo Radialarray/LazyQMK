@@ -75,7 +75,8 @@ pub fn render_layer_diagram(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::formatting::{format_keycode, format_modifier, strip_kc_prefix};
+    use super::formatting::format_keycode;
+    use crate::keycode_db::format::{format_modifier, strip_kc_prefix};
     use super::rendering::detect_split_gap;
     use crate::models::{
         keyboard_geometry::KeyGeometry,
