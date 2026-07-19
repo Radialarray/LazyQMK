@@ -3,7 +3,14 @@
 //! This application provides a visual editor for mechanical keyboard layouts,
 //! allowing users to design layouts, assign keycodes, and generate QMK firmware.
 
-// Allow intentional type casts for terminal coordinates and QMK data structures
+// Crate-wide clippy allows for numeric casts in the binary entry point.
+//
+// Justification: the lazyqmk binary re-exports the same cast allow set
+// declared in src/lib.rs at the binary level. This is needed because
+// the `main` function (and surrounding CLI glue) does not include the
+// lib crate's module allow, so terminal-coordinate and QMK-data casts
+// used directly in main.rs would otherwise trigger warnings. The lib
+// crate comment explains the full rationale.
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_precision_loss)]
