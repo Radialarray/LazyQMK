@@ -1,4 +1,13 @@
-// Key operations action handlers
+//! Key operations action handlers.
+//!
+//! Contains 6 action handlers for direct key manipulation: clear, copy, cut,
+//! paste, fill, and swap. Total file size ~315 lines — well under the
+//! AGENTS.md 500-line threshold, so no module split is warranted.
+//!
+//! The largest handler (`handle_paste_key`, ~178 lines) covers multi-key
+//! paste across selections and clipboard modes, which is intrinsically
+//! complex. Extracting sub-steps would not improve readability. See
+//! `LazyQMK-hdz1` / `LazyQMK-mu47.1` (closed-as-no-op, 2026-07-19).
 
 use crate::models::Position;
 use crate::tui::{clipboard, AppState};
