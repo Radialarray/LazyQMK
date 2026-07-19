@@ -66,6 +66,9 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
+# Abort on panic instead of unwinding — drops ~15% off the binary by
+# removing the unwind tables. Safe here: no catch_unwind usage in the crate.
+panic = "abort"
 
 [profile.dist]
 inherits = "release"
