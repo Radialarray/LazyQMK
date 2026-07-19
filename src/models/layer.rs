@@ -76,7 +76,7 @@ impl Position {
     /// Creates a new `Position` in **visual** coordinates (user's view in Markdown tables and the UI).
     ///
     /// Both `row` and `col` are 0-based grid indices, not electrical matrix positions.
-    /// Use [`VisualLayoutMapping`] to convert to/from matrix or LED coordinates.
+    /// Use [`crate::models::VisualLayoutMapping`] to convert to/from matrix or LED coordinates.
     #[must_use]
     pub const fn new(row: u8, col: u8) -> Self {
         Self { row, col }
@@ -116,7 +116,7 @@ impl KeyDefinition {
     /// Creates a new `KeyDefinition` at the given **visual** position with the given keycode.
     ///
     /// `position` must be a visual-grid coordinate (see [`Position`]). Do not pass a raw
-    /// matrix position here; use [`VisualLayoutMapping::matrix_to_visual_pos`] to convert first.
+    /// matrix position here; use [`crate::models::VisualLayoutMapping::matrix_to_visual_pos`] to convert first.
     pub fn new(position: Position, keycode: impl Into<String>) -> Self {
         Self {
             position,
@@ -275,7 +275,7 @@ impl Layer {
     ///
     /// `position` is a visual-grid coordinate. All keys in this layer are stored by their
     /// visual position, so this performs a linear search by `key.position == position`.
-    /// To look up by matrix position, convert first via [`VisualLayoutMapping::matrix_to_visual_pos`].
+    /// To look up by matrix position, convert first via [`crate::models::VisualLayoutMapping::matrix_to_visual_pos`].
     #[must_use]
     pub fn get_key(&self, position: Position) -> Option<&KeyDefinition> {
         self.keys.iter().find(|k| k.position == position)

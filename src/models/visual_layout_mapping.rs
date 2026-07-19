@@ -22,13 +22,13 @@ use std::collections::HashMap;
 ///
 /// 1. Iterate through KeyboardGeometry.keys
 /// 2. For each `KeyGeometry`:
-///    - `led_to_matrix`[`led_index`] = `matrix_position`
-///    - `matrix_to_led`[`matrix_position`] = `led_index`
-///    - `layout_to_matrix`[`layout_index`] = `matrix_position`
-///    - `matrix_to_layout`[`matrix_position`] = `layout_index`
+///    - `led_to_matrix\[led_index\]` = `matrix_position`
+///    - `matrix_to_led\[matrix_position\]` = `led_index`
+///    - `layout_to_matrix\[layout_index\]` = `matrix_position`
+///    - `matrix_to_layout\[matrix_position\]` = `layout_index`
 ///    - Compute `visual_position` from `visual_x/visual_y` (quantize to grid)
-///    - `matrix_to_visual`[`matrix_position`] = `visual_position`
-///    - `visual_to_matrix`[`visual_position`] = `matrix_position`
+///    - `matrix_to_visual\[matrix_position\]` = `visual_position`
+///    - `visual_to_matrix\[visual_position\]` = `matrix_position`
 ///
 /// # Special Handling
 ///

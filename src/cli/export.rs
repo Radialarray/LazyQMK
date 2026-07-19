@@ -22,7 +22,7 @@ pub struct ExportArgs {
     #[arg(long, value_name = "PATH")]
     pub qmk_path: PathBuf,
 
-    /// Output path for markdown file (defaults to [layout_name]_export_[date].md)
+    /// Output path for markdown file (defaults to `{layout_name}_export_{date}.md`)
     #[arg(short, long, value_name = "FILE")]
     pub output: Option<PathBuf>,
 
