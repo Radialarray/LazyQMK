@@ -1,57 +1,16 @@
-//! Background build job system for firmware generation.
+//! Build job manager — coordinates background firmware builds.
 //!
-//! This module provides a thread-safe job queue for running firmware builds
-//! in the background. Jobs can be started, monitored, cancelled, and their
-//! logs retrieved.
-//!
-//! ## Design
-//!
-//! - Jobs are identified by UUIDs
-//! - Concurrency limit of 1 (single build at a time)
-//! - Logs are persisted to disk for durability
-//! - Uses mpsc channels for thread communication
-//! - Firmware artifacts (.uf2/.bin/.hex) are copied to job-specific directories
-//!
-//! ## Artifact Management
-//!
-//! After a successful build, firmware artifacts are discovered in QMK's `.build`
-//! directory and copied to `.lazyqmk/build_output/<job_id>/`. Each artifact gets
-//! a stable ID based on its extension (e.g., "uf2", "bin", "hex") for easy reference.
-//!
-//! ## Artifact Cleanup Policy
-//!
-//! To prevent disk bloat, old artifacts are automatically cleaned up when new builds
-//! are started:
-//! - Artifacts older than 7 days (168 hours) are removed
-//! - If more than 50 completed builds exist, oldest are removed first
-//! - Active (pending/running) jobs are never cleaned up
-//! - Both artifact files and log files are removed during cleanup
-//!
-//! ## Cancellation Support
-//!
-//! Running builds can be cancelled via the `cancel_job()` method. When a build is
-//! cancelled:
-//! - The underlying `qmk compile` process is killed immediately
-//! - The job status is updated to `Cancelled`
-//! - Build logs reflect the cancellation event
-//! - Partial artifacts are preserved (not automatically cleaned)
-//!
-//! ## Mock Support
-//!
-//! For testing, a mock builder can be injected that simulates builds without
-//! invoking real QMK CLI commands.
+//! Contains [`BuildJobManager`], its companion types ([`BuildCommand`],
+//! [`DeployResult`]), and the full `impl` block with all public and
+//! private methods.
 
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::{BufRead, BufReader, Write};
+use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
-
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use uuid::Uuid;
 
 use crate::config::Config;
 use crate::firmware::generator::FirmwareGenerator;
@@ -60,167 +19,17 @@ use crate::keycode_db::KeycodeDb;
 use crate::services::geometry::{self, GeometryContext};
 use crate::services::LayoutService;
 
-/// Maximum number of concurrent builds.
-const MAX_CONCURRENT_BUILDS: usize = 1;
+use super::CancelJobResponse;
+use super::JobLogsResponse;
+use super::MAX_CONCURRENT_BUILDS;
+use super::{is_valid_artifact_id, parse_log_line};
+use super::{BuildArtifact, BuildJob, FirmwareBuilder, JobStatus, LogEntry};
 
-/// Supported firmware artifact extensions.
-const ARTIFACT_EXTENSIONS: &[&str] = &["uf2", "bin", "hex"];
-
-/// A firmware artifact produced by a build job.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BuildArtifact {
-    /// Stable artifact identifier (based on extension, e.g., "uf2", "bin", "hex").
-    pub id: String,
-    /// Original filename of the artifact.
-    pub filename: String,
-    /// File extension/type (e.g., "uf2", "bin", "hex").
-    pub artifact_type: String,
-    /// Size of the artifact in bytes.
-    pub size: u64,
-    /// SHA256 hash of the artifact content.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sha256: Option<String>,
-    /// Download URL for this artifact.
-    pub download_url: String,
-}
-
-/// Build job status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum JobStatus {
-    /// Job is queued, waiting to start.
-    Pending,
-    /// Job is currently running.
-    Running,
-    /// Job completed successfully.
-    Completed,
-    /// Job failed.
-    Failed,
-    /// Job was cancelled by user.
-    Cancelled,
-}
-
-impl std::fmt::Display for JobStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Pending => write!(f, "pending"),
-            Self::Running => write!(f, "running"),
-            Self::Completed => write!(f, "completed"),
-            Self::Failed => write!(f, "failed"),
-            Self::Cancelled => write!(f, "cancelled"),
-        }
-    }
-}
-
-/// Build job information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BuildJob {
-    /// Unique job identifier.
-    pub id: String,
-    /// Current job status.
-    pub status: JobStatus,
-    /// Layout filename being built.
-    pub layout_filename: String,
-    /// Keyboard name.
-    pub keyboard: String,
-    /// Keymap name.
-    pub keymap: String,
-    /// Time when job was created.
-    pub created_at: String,
-    /// Time when job started running (if started).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub started_at: Option<String>,
-    /// Time when job completed (if finished).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub completed_at: Option<String>,
-    /// Error message if job failed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-    /// Path to generated firmware file (if successful).
-    /// Deprecated: Use `artifacts` field instead for new integrations.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub firmware_path: Option<String>,
-    /// Progress percentage (0-100).
-    pub progress: u8,
-    /// List of firmware artifacts produced by this build.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub artifacts: Vec<BuildArtifact>,
-}
-
-impl BuildJob {
-    /// Creates a new pending build job.
-    fn new(layout_filename: String, keyboard: String, keymap: String) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            status: JobStatus::Pending,
-            layout_filename,
-            keyboard,
-            keymap,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            started_at: None,
-            completed_at: None,
-            error: None,
-            firmware_path: None,
-            progress: 0,
-            artifacts: Vec::new(),
-        }
-    }
-}
-
-/// Log entry for a build job.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogEntry {
-    /// Timestamp of the log entry.
-    pub timestamp: String,
-    /// Log level (info, error, warn).
-    pub level: String,
-    /// Log message.
-    pub message: String,
-}
-
-/// Request to start a new build job.
-#[derive(Debug, Deserialize)]
-pub struct StartBuildRequest {
-    /// Layout filename to build.
-    pub layout_filename: String,
-}
-
-/// Response for starting a build job.
-#[derive(Debug, Serialize)]
-pub struct StartBuildResponse {
-    /// The created job.
-    pub job: BuildJob,
-}
-
-/// Response for job status.
-#[derive(Debug, Serialize)]
-pub struct JobStatusResponse {
-    /// The job information.
-    pub job: BuildJob,
-}
-
-/// Response for job logs.
-#[derive(Debug, Serialize)]
-pub struct JobLogsResponse {
-    /// Job ID.
-    pub job_id: String,
-    /// Log entries.
-    pub logs: Vec<LogEntry>,
-    /// Whether there are more logs to fetch.
-    pub has_more: bool,
-}
-
-/// Response for cancelling a job.
-#[derive(Debug, Serialize)]
-pub struct CancelJobResponse {
-    /// Whether cancellation was successful.
-    pub success: bool,
-    /// Message describing result.
-    pub message: String,
-}
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
 
 /// Result of deploying keymap files to the QMK tree.
-#[derive(Debug)]
 enum DeployResult {
     /// We created the keymap directory and all files — safe to remove the entire directory.
     CreatedDirectory(PathBuf),
@@ -246,415 +55,9 @@ struct BuildCommand {
     keycode_db: Arc<KeycodeDb>,
 }
 
-/// Result of a successful firmware build.
-#[derive(Debug, Clone)]
-pub struct BuildResult {
-    /// Primary firmware path (first discovered artifact).
-    pub firmware_path: PathBuf,
-    /// All discovered artifacts with their metadata.
-    pub artifacts: Vec<BuildArtifact>,
-}
-
-/// Trait for firmware builders, allowing mock injection for tests.
-pub trait FirmwareBuilder: Send + Sync {
-    /// Runs the firmware build.
-    ///
-    /// # Arguments
-    /// * `qmk_path` - Path to QMK firmware directory
-    /// * `keyboard` - Keyboard identifier
-    /// * `keymap` - Keymap name
-    /// * `output_dir` - Directory to copy artifacts into
-    /// * `job_id` - Job identifier (for generating download URLs)
-    /// * `log_writer` - Writer for build log output
-    /// * `is_cancelled` - Function to check if build has been cancelled
-    ///
-    /// Returns `Ok(BuildResult)` on success or `Err(error_message)` on failure.
-    fn build(
-        &self,
-        qmk_path: &PathBuf,
-        keyboard: &str,
-        keymap: &str,
-        output_dir: &Path,
-        job_id: &str,
-        log_writer: &mut dyn Write,
-        is_cancelled: &dyn Fn() -> bool,
-    ) -> Result<BuildResult, String>;
-}
-
-/// Real firmware builder using QMK CLI.
-pub struct RealFirmwareBuilder;
-
-impl FirmwareBuilder for RealFirmwareBuilder {
-    fn build(
-        &self,
-        qmk_path: &PathBuf,
-        keyboard: &str,
-        keymap: &str,
-        output_dir: &Path,
-        job_id: &str,
-        log_writer: &mut dyn Write,
-        is_cancelled: &dyn Fn() -> bool,
-    ) -> Result<BuildResult, String> {
-        use std::io::{BufRead, BufReader};
-        use std::process::{Command, Stdio};
-
-        let _ = writeln!(log_writer, "[INFO] Starting QMK compile...");
-        let _ = writeln!(
-            log_writer,
-            "[INFO] Running: qmk compile -kb {} -km {}",
-            keyboard, keymap
-        );
-
-        // Check for cancellation before starting
-        if is_cancelled() {
-            let _ = writeln!(log_writer, "[INFO] Build cancelled before starting");
-            return Err("Build cancelled".to_string());
-        }
-
-        let mut cmd = Command::new("qmk");
-        cmd.arg("compile")
-            .arg("-kb")
-            .arg(keyboard)
-            .arg("-km")
-            .arg(keymap)
-            .current_dir(qmk_path)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        // Spawn the process instead of waiting for output
-        let mut child = cmd
-            .spawn()
-            .map_err(|e| format!("Failed to execute qmk: {e}"))?;
-
-        // Get handles for stdout/stderr
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| "Failed to capture stdout".to_string())?;
-        let stderr = child
-            .stderr
-            .take()
-            .ok_or_else(|| "Failed to capture stderr".to_string())?;
-
-        // Stream stdout in background
-        let stdout_reader = BufReader::new(stdout);
-        for line in stdout_reader.lines() {
-            // Check for cancellation periodically
-            if is_cancelled() {
-                let _ = writeln!(log_writer, "[INFO] Build cancelled, killing process...");
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err("Build cancelled".to_string());
-            }
-
-            if let Ok(line) = line {
-                let level = if line.contains("error") || line.contains("Error") {
-                    "ERROR"
-                } else {
-                    "INFO"
-                };
-                let _ = writeln!(log_writer, "[{level}] {line}");
-            }
-        }
-
-        // Stream stderr
-        let stderr_reader = BufReader::new(stderr);
-        for line in stderr_reader.lines() {
-            if is_cancelled() {
-                let _ = writeln!(log_writer, "[INFO] Build cancelled, killing process...");
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err("Build cancelled".to_string());
-            }
-
-            if let Ok(line) = line {
-                if !line.trim().is_empty() {
-                    let _ = writeln!(log_writer, "[ERROR] {line}");
-                }
-            }
-        }
-
-        // Wait for process to complete
-        let status = child
-            .wait()
-            .map_err(|e| format!("Failed to wait for process: {e}"))?;
-
-        // Final cancellation check
-        if is_cancelled() {
-            let _ = writeln!(log_writer, "[INFO] Build cancelled");
-            return Err("Build cancelled".to_string());
-        }
-
-        if !status.success() {
-            return Err("QMK compile failed. Check build log for details.".to_string());
-        }
-
-        // Discover and copy artifacts
-        let _ = writeln!(log_writer, "[INFO] Discovering firmware artifacts...");
-        let artifacts = discover_and_copy_artifacts(
-            qmk_path, keyboard, keymap, output_dir, job_id, log_writer,
-        )?;
-
-        if artifacts.is_empty() {
-            return Err(format!(
-                "Could not find any firmware files for {keyboard} {keymap}"
-            ));
-        }
-
-        // Use first artifact as primary firmware path (for backward compatibility)
-        let primary_path = output_dir.join(&artifacts[0].filename);
-
-        Ok(BuildResult {
-            firmware_path: primary_path,
-            artifacts,
-        })
-    }
-}
-
-/// Discovers firmware artifacts in QMK's `.build` directory and copies them to the output directory.
-///
-/// Looks for files matching the pattern `<keyboard_clean>_<keymap>.<ext>` where keyboard slashes
-/// are replaced with underscores. Supports multiple file extensions (uf2, bin, hex) and handles
-/// variant suffixes via glob matching.
-///
-/// # Arguments
-/// * `qmk_path` - Path to QMK firmware directory
-/// * `keyboard` - Keyboard identifier (may contain slashes)
-/// * `keymap` - Keymap name
-/// * `output_dir` - Directory to copy artifacts into
-/// * `job_id` - Job identifier for generating download URLs
-/// * `log_writer` - Writer for log output
-///
-/// # Returns
-/// Vector of `BuildArtifact` metadata for all discovered and copied artifacts.
-fn discover_and_copy_artifacts(
-    qmk_path: &Path,
-    keyboard: &str,
-    keymap: &str,
-    output_dir: &Path,
-    job_id: &str,
-    log_writer: &mut dyn Write,
-) -> Result<Vec<BuildArtifact>, String> {
-    let build_dir = qmk_path.join(".build");
-    if !build_dir.exists() {
-        return Err("QMK .build directory not found".to_string());
-    }
-
-    // Create output directory
-    fs::create_dir_all(output_dir)
-        .map_err(|e| format!("Failed to create output directory: {e}"))?;
-
-    let keyboard_clean = keyboard.replace('/', "_");
-    let base_prefix = format!("{keyboard_clean}_{keymap}");
-
-    let mut artifacts = Vec::new();
-
-    // First pass: look for exact matches
-    for ext in ARTIFACT_EXTENSIONS {
-        let exact_filename = format!("{base_prefix}.{ext}");
-        let source_path = build_dir.join(&exact_filename);
-
-        if source_path.exists() {
-            if let Some(artifact) =
-                copy_artifact(&source_path, output_dir, ext, job_id, log_writer)?
-            {
-                artifacts.push(artifact);
-            }
-        }
-    }
-
-    // Second pass: glob for variant suffixes (e.g., keyboard_keymap_avr.hex)
-    // Only if we haven't found exact matches for all extensions
-    if let Ok(entries) = fs::read_dir(&build_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let filename = match path.file_name().and_then(|n| n.to_str()) {
-                Some(name) => name.to_string(),
-                None => continue,
-            };
-
-            // Check if this file starts with our prefix and has a supported extension
-            if !filename.starts_with(&base_prefix) {
-                continue;
-            }
-
-            for ext in ARTIFACT_EXTENSIONS {
-                if filename.ends_with(&format!(".{ext}")) {
-                    // Skip if we already have an artifact with this extension
-                    if artifacts.iter().any(|a| a.artifact_type == *ext) {
-                        continue;
-                    }
-
-                    if let Some(artifact) =
-                        copy_artifact(&path, output_dir, ext, job_id, log_writer)?
-                    {
-                        artifacts.push(artifact);
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(artifacts)
-}
-
-/// Copies a single artifact file to the output directory and creates metadata.
-fn copy_artifact(
-    source_path: &Path,
-    output_dir: &Path,
-    ext: &str,
-    job_id: &str,
-    log_writer: &mut dyn Write,
-) -> Result<Option<BuildArtifact>, String> {
-    let filename = source_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .ok_or_else(|| "Invalid source filename".to_string())?;
-
-    let dest_path = output_dir.join(filename);
-
-    // Copy the file
-    fs::copy(source_path, &dest_path).map_err(|e| format!("Failed to copy artifact: {e}"))?;
-
-    // Get file metadata
-    let metadata = fs::metadata(&dest_path).map_err(|e| format!("Failed to read metadata: {e}"))?;
-    let size = metadata.len();
-
-    // Calculate SHA256 hash
-    let sha256 = calculate_sha256(&dest_path).ok();
-
-    let _ = writeln!(
-        log_writer,
-        "[INFO] Copied artifact: {} ({} bytes)",
-        filename, size
-    );
-
-    // Use extension as stable artifact ID
-    let artifact_id = ext.to_string();
-    let download_url = format!("/api/build/jobs/{job_id}/artifacts/{artifact_id}/download");
-
-    Ok(Some(BuildArtifact {
-        id: artifact_id,
-        filename: filename.to_string(),
-        artifact_type: ext.to_string(),
-        size,
-        sha256,
-        download_url,
-    }))
-}
-
-/// Calculates the SHA256 hash of a file.
-fn calculate_sha256(path: &Path) -> Result<String, std::io::Error> {
-    let mut file = File::open(path)?;
-    let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 8192];
-
-    loop {
-        let bytes_read = file.read(&mut buffer)?;
-        if bytes_read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..bytes_read]);
-    }
-
-    Ok(format!("{:x}", hasher.finalize()))
-}
-
-/// Mock firmware builder for testing.
-pub struct MockFirmwareBuilder {
-    /// Simulated build duration in milliseconds.
-    pub build_duration_ms: u64,
-    /// Whether the build should succeed.
-    pub should_succeed: bool,
-    /// Error message if build should fail.
-    pub error_message: Option<String>,
-}
-
-impl Default for MockFirmwareBuilder {
-    fn default() -> Self {
-        Self {
-            build_duration_ms: 100,
-            should_succeed: true,
-            error_message: None,
-        }
-    }
-}
-
-impl FirmwareBuilder for MockFirmwareBuilder {
-    fn build(
-        &self,
-        _qmk_path: &PathBuf,
-        keyboard: &str,
-        keymap: &str,
-        output_dir: &Path,
-        job_id: &str,
-        log_writer: &mut dyn Write,
-        is_cancelled: &dyn Fn() -> bool,
-    ) -> Result<BuildResult, String> {
-        let _ = writeln!(log_writer, "[INFO] Mock build starting...");
-        let _ = writeln!(
-            log_writer,
-            "[INFO] Building {} keymap for {}",
-            keymap, keyboard
-        );
-
-        // Simulate build progress with cancellation checks
-        let steps = 5;
-        let step_duration = self.build_duration_ms / steps;
-
-        for i in 1..=steps {
-            // Check for cancellation
-            if is_cancelled() {
-                let _ = writeln!(log_writer, "[INFO] Mock build cancelled");
-                return Err("Build cancelled".to_string());
-            }
-
-            thread::sleep(Duration::from_millis(step_duration));
-            let _ = writeln!(log_writer, "[INFO] Build progress: {}%", i * 20);
-        }
-
-        if self.should_succeed {
-            let keyboard_clean = keyboard.replace('/', "_");
-            let filename = format!("{keyboard_clean}_{keymap}.uf2");
-
-            // Create the output directory and mock firmware file
-            let _ = fs::create_dir_all(output_dir);
-            let firmware_path = output_dir.join(&filename);
-            let _ = fs::write(&firmware_path, b"mock firmware content");
-
-            let _ = writeln!(
-                log_writer,
-                "[INFO] Mock firmware generated: {}",
-                firmware_path.display()
-            );
-
-            // Create mock artifact metadata
-            let artifact_id = "uf2".to_string();
-            let download_url = format!("/api/build/jobs/{job_id}/artifacts/{artifact_id}/download");
-
-            let artifacts = vec![BuildArtifact {
-                id: artifact_id,
-                filename,
-                artifact_type: "uf2".to_string(),
-                size: 21, // "mock firmware content".len()
-                sha256: None,
-                download_url,
-            }];
-
-            Ok(BuildResult {
-                firmware_path,
-                artifacts,
-            })
-        } else {
-            let err = self
-                .error_message
-                .clone()
-                .unwrap_or_else(|| "Mock build failed".to_string());
-            let _ = writeln!(log_writer, "[ERROR] {}", err);
-            Err(err)
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// BuildJobManager
+// ---------------------------------------------------------------------------
 
 /// Build job manager that coordinates background builds.
 pub struct BuildJobManager {
@@ -667,9 +70,9 @@ pub struct BuildJobManager {
     /// Channel sender for build commands.
     command_tx: Mutex<Option<mpsc::Sender<BuildCommand>>>,
     /// Directory for storing job logs.
-    logs_dir: PathBuf,
+    pub(crate) logs_dir: PathBuf,
     /// Directory for storing build artifacts.
-    output_dir: PathBuf,
+    pub(crate) output_dir: PathBuf,
     /// QMK firmware path from config.
     qmk_path: RwLock<Option<PathBuf>>,
     /// Firmware builder (real or mock).
@@ -747,7 +150,7 @@ impl BuildJobManager {
             logs_dir,
             output_dir,
             qmk_path,
-            Arc::new(RealFirmwareBuilder),
+            Arc::new(super::RealFirmwareBuilder),
             keycode_db,
         )
     }
@@ -1104,7 +507,7 @@ impl BuildJobManager {
     /// 2. Exceeding `max_total_artifacts` count (oldest first)
     ///
     /// Active (pending/running) jobs are never cleaned.
-    fn cleanup_old_artifacts(&self) {
+    pub(crate) fn cleanup_old_artifacts(&self) {
         use std::time::SystemTime;
 
         // Get list of completed/failed/cancelled jobs with their completion times
@@ -1171,7 +574,7 @@ impl BuildJobManager {
     }
 
     /// Removes artifacts and logs for a specific job.
-    fn remove_job_artifacts(&self, job_id: &str) {
+    pub(crate) fn remove_job_artifacts(&self, job_id: &str) {
         // Remove artifact directory
         let job_dir = self.output_dir.join(job_id);
         if job_dir.exists() {
@@ -1426,31 +829,3 @@ impl BuildJobManager {
         }
     }
 }
-
-/// Validates an artifact ID to prevent path traversal.
-///
-/// Valid artifact IDs are lowercase alphanumeric strings (matching file extensions).
-fn is_valid_artifact_id(id: &str) -> bool {
-    if id.is_empty() || id.len() > 10 {
-        return false;
-    }
-    id.chars()
-        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
-}
-
-/// Parses a log line into (level, message).
-fn parse_log_line(line: &str) -> (String, String) {
-    // Format: [LEVEL] message
-    if let Some(rest) = line.strip_prefix('[') {
-        if let Some(end_bracket) = rest.find(']') {
-            let level = rest[..end_bracket].to_string();
-            let message = rest[end_bracket + 1..].trim().to_string();
-            return (level, message);
-        }
-    }
-    ("INFO".to_string(), line.to_string())
-}
-
-#[cfg(test)]
-mod tests;
-
