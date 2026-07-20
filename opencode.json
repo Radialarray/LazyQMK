@@ -1,0 +1,6 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": ["minimax"],
+  "model": "minimax/minimax-m3",
+  "small_model": "minimax/minimax-m3"
+}
