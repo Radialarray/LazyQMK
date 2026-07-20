@@ -591,7 +591,6 @@ impl Default for OnboardingWizardState {
 /// Renders the onboarding wizard — lives in `onboarding_wizard_render` to keep this file under 1000 lines.
 pub use super::onboarding_wizard_render::render;
 
-
 /// Handles keyboard input for the onboarding wizard
 #[allow(clippy::too_many_lines)]
 pub fn handle_input(state: &mut OnboardingWizardState, key: KeyEvent) -> Result<bool> {

@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use super::RgbMatrixEffect;
 
-
 /// Configuration for idle effect behavior.
 ///
 /// When the keyboard is idle (no key presses for `idle_timeout_ms`), it can

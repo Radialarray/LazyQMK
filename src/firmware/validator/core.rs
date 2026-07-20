@@ -272,4 +272,3 @@ impl<'a> FirmwareValidator<'a> {
 
 #[cfg(test)]
 mod tests;
-

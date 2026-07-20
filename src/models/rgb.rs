@@ -265,4 +265,3 @@ impl Default for RgbColor {
 
 #[cfg(test)]
 mod tests;
-

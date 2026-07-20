@@ -227,4 +227,3 @@ fn output_human_readable(config: &Config) {
 
 #[cfg(test)]
 mod tests;
-

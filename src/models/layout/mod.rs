@@ -27,7 +27,7 @@ pub use palette_fx::{PaletteFxEffect, PaletteFxPalette, PaletteFxSettings};
 pub use rgb_brightness::RgbBrightness;
 pub use rgb_matrix_effect::RgbMatrixEffect;
 pub use rgb_saturation::RgbSaturation;
-pub use ripple::{RippleColorMode, RgbOverlayRippleSettings};
+pub use ripple::{RgbOverlayRippleSettings, RippleColorMode};
 pub use tap_dance::TapDanceAction;
 pub use tap_hold::{HoldDecisionMode, TapHoldPreset, TapHoldSettings};
 pub use uncolored_key_behavior::UncoloredKeyBehavior;

@@ -133,7 +133,9 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
         match combo.action {
             crate::models::ComboAction::DisableEffects => {
                 code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
-                code.push_str("                        // Disable RGB effects, revert to TUI layer colors\n");
+                code.push_str(
+                    "                        // Disable RGB effects, revert to TUI layer colors\n",
+                );
                 if gen.layout_has_custom_colors() {
                     code.push_str("                        rgb_matrix_mode_noeeprom(RGB_MATRIX_TUI_LAYER_COLORS);\n");
                 } else {

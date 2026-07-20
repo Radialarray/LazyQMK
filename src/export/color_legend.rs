@@ -127,4 +127,3 @@ fn collect_color_sources(layout: &Layout) -> BTreeMap<RgbColor, Vec<String>> {
 
 #[cfg(test)]
 mod tests;
-

@@ -178,4 +178,3 @@ fn format_key_position(position: crate::models::Position) -> String {
 
 #[cfg(test)]
 mod tests;
-

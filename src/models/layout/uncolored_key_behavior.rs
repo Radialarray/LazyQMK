@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
 /// Brightness level for keys without an individual or category color assignment.
 ///
 /// This controls how keys are displayed when they only have layer-level colors
@@ -46,4 +45,3 @@ impl From<u8> for UncoloredKeyBehavior {
         Self::new(value.min(100))
     }
 }
-

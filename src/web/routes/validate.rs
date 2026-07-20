@@ -28,8 +28,13 @@ pub(super) async fn validate_layout(
         )));
     }
 
-    let layout = LayoutService::load(&path)
-        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
+    let layout = LayoutService::load(&path).map_err(|e| {
+        AppError::with_details(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load layout",
+            Some(e.to_string()),
+        )
+    })?;
 
     let mut warnings = Vec::new();
     for name in &layout.get_orphaned_tap_dances() {

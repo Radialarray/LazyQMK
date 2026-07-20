@@ -460,4 +460,3 @@ fn render_template_browser_component(
 
 #[cfg(test)]
 mod tests;
-

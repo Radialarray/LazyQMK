@@ -78,8 +78,7 @@ pub(super) fn sanitize_template_filename(name: &str) -> String {
 }
 
 /// GET /api/templates - List all available templates.
-pub(super) async fn list_templates(
-) -> Result<Json<TemplateListResponse>, AppError> {
+pub(super) async fn list_templates() -> Result<Json<TemplateListResponse>, AppError> {
     let template_dir = get_template_dir()?;
 
     if !template_dir.exists() {
@@ -136,9 +135,7 @@ pub(super) async fn list_templates(
 }
 
 /// GET /api/templates/{filename} - Get a specific template.
-pub(super) async fn get_template(
-    Path(filename): Path<String>,
-) -> Result<Json<Layout>, AppError> {
+pub(super) async fn get_template(Path(filename): Path<String>) -> Result<Json<Layout>, AppError> {
     let filename = validate_filename(&filename)?;
     let template_dir = get_template_dir()?;
 

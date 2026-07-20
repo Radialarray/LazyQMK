@@ -114,4 +114,3 @@ fn format_keycode(keycode: &str, keycode_db: &KeycodeDb) -> String {
 
 #[cfg(test)]
 mod tests;
-

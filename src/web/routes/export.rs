@@ -74,8 +74,13 @@ pub(super) async fn export_layout(
         )));
     }
 
-    let layout = LayoutService::load(&path)
-        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
+    let layout = LayoutService::load(&path).map_err(|e| {
+        AppError::with_details(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load layout",
+            Some(e.to_string()),
+        )
+    })?;
 
     let geometry = if let (Some(keyboard), Some(layout_variant)) = (
         layout.metadata.keyboard.as_ref(),
@@ -108,8 +113,13 @@ pub(super) async fn export_layout(
     };
 
     let markdown = if let Some(geom) = geometry {
-        export::export_to_markdown(&layout, &geom, &state.keycode_db)
-            .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to export layout", Some(e.to_string())))?
+        export::export_to_markdown(&layout, &geom, &state.keycode_db).map_err(|e| {
+            AppError::with_details(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to export layout",
+                Some(e.to_string()),
+            )
+        })?
     } else {
         generate_simple_markdown(&layout)
     };

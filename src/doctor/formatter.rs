@@ -400,4 +400,3 @@ impl Default for DoctorFormatter {
 
 #[cfg(test)]
 mod tests;
-

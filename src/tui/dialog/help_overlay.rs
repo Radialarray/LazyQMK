@@ -831,4 +831,3 @@ impl crate::tui::component::Component for HelpOverlay {
 
 #[cfg(test)]
 mod tests;
-

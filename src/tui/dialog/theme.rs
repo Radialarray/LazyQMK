@@ -149,4 +149,3 @@ impl Default for Theme {
 
 #[cfg(test)]
 mod tests;
-

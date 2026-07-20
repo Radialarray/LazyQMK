@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
 /// Standard RGB Matrix effect modes available in QMK.
 ///
 /// These correspond to QMK's `RGB_MATRIX`_* modes and are used for idle effects.

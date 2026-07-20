@@ -205,4 +205,3 @@ pub fn build_minimal_geometry() -> GeometryResult {
 
 #[cfg(test)]
 mod tests;
-

@@ -31,8 +31,13 @@ pub(super) async fn inspect_layout(
         )));
     }
 
-    let layout = LayoutService::load(&path)
-        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
+    let layout = LayoutService::load(&path).map_err(|e| {
+        AppError::with_details(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load layout",
+            Some(e.to_string()),
+        )
+    })?;
 
     let key_count = layout.layers.first().map_or(0, |l| l.keys.len());
 

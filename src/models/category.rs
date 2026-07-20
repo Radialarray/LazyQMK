@@ -110,4 +110,3 @@ impl Category {
 
 #[cfg(test)]
 mod tests;
-

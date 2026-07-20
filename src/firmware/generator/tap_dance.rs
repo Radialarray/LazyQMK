@@ -142,4 +142,3 @@ pub fn generate_actions(gen: &FirmwareGenerator) -> String {
     code.push_str("};\n");
     code
 }
-

@@ -978,4 +978,3 @@ pub fn handle_input(state: &mut AppState, key: crossterm::event::KeyEvent) -> an
 
 #[cfg(test)]
 mod tests;
-

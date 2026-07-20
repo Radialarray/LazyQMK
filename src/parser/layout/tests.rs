@@ -98,7 +98,6 @@ version: "1.0"
 
 #[test]
 fn test_parse_split_keyboard_with_gap() {
-    
     // Test that split keyboards with empty gap columns preserve correct key positions
     // This is critical: the gap between left and right halves must not shift columns
     let content = r#"---

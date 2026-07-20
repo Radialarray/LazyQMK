@@ -658,4 +658,3 @@ fn atomic_write(path: &Path, content: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
-

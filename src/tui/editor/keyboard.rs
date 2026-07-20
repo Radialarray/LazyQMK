@@ -14,8 +14,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::tui::AppState;
 use crate::keycode_db::TapHoldType;
+use crate::tui::AppState;
 
 /// Keyboard widget renders the visual keyboard layout
 pub struct KeyboardWidget;
@@ -654,4 +654,3 @@ impl KeyboardWidget {
 
 #[cfg(test)]
 mod tests;
-

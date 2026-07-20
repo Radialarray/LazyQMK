@@ -300,4 +300,3 @@ fn clear_category_references(layout: &mut crate::models::Layout, category_id: &s
 
 #[cfg(test)]
 mod tests;
-

@@ -150,4 +150,3 @@ fn format_timeout_ms(ms: u32) -> String {
 
 #[cfg(test)]
 mod tests;
-

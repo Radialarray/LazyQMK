@@ -286,4 +286,3 @@ impl Default for ShortcutRegistry {
 
 #[cfg(test)]
 mod tests;
-

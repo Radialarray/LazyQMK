@@ -174,4 +174,3 @@ pub(super) fn find_firmware_file(
 
 #[cfg(test)]
 mod tests;
-

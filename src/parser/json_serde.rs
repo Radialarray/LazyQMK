@@ -75,4 +75,3 @@ pub fn save_json_layout(layout: &Layout, path: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
-

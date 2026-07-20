@@ -676,4 +676,3 @@ pub fn build_keyboard_geometry_with_rgb(
 
 #[cfg(test)]
 mod tests;
-

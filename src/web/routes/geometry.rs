@@ -95,14 +95,11 @@ pub(super) async fn get_geometry(
             )
         })?;
 
-    let _layout_def = keyboard_info
-        .layouts
-        .get(&layout)
-        .ok_or_else(|| {
-            AppError::not_found(format!(
-                "Layout '{layout}' not found in keyboard '{keyboard}'"
-            ))
-        })?;
+    let _layout_def = keyboard_info.layouts.get(&layout).ok_or_else(|| {
+        AppError::not_found(format!(
+            "Layout '{layout}' not found in keyboard '{keyboard}'"
+        ))
+    })?;
 
     let geometry = parser::keyboard_json::build_keyboard_geometry_with_rgb(
         &keyboard_info,

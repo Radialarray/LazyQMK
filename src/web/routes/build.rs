@@ -55,8 +55,13 @@ pub(super) async fn start_build(
         )));
     }
 
-    let layout = LayoutService::load(&path)
-        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
+    let layout = LayoutService::load(&path).map_err(|e| {
+        AppError::with_details(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load layout",
+            Some(e.to_string()),
+        )
+    })?;
 
     let keyboard = layout.metadata.keyboard.clone().ok_or_else(|| {
         AppError::bad_request("Layout has no keyboard defined - cannot build firmware")

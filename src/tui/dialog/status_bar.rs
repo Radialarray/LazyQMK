@@ -109,7 +109,10 @@ impl StatusBar {
             },
         );
 
-        let mode_label = if matches!(state.active_popup, Some(crate::tui::PopupType::SettingsManager)) {
+        let mode_label = if matches!(
+            state.active_popup,
+            Some(crate::tui::PopupType::SettingsManager)
+        ) {
             "Settings"
         } else if matches!(state.active_popup, Some(crate::tui::PopupType::SetupWizard)) {
             "Onboarding"
@@ -236,7 +239,9 @@ impl StatusBar {
             }
             Some(PopupType::ColorPicker) => {
                 // Check color picker mode
-                if let Some(crate::tui::ActiveComponent::ColorPicker(picker)) = &state.active_component {
+                if let Some(crate::tui::ActiveComponent::ColorPicker(picker)) =
+                    &state.active_component
+                {
                     if picker.get_mode() == crate::tui::color_picker::ColorPickerMode::Palette {
                         help_registry::contexts::COLOR_PICKER_PALETTE
                     } else {

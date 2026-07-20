@@ -11,9 +11,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::tui::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
-use crate::keycode_db::KeycodeDb;
 use super::keycode_picker_helpers::centered_rect;
+use crate::keycode_db::KeycodeDb;
+use crate::tui::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
 
 /// Events emitted by the `KeycodePicker` component
 #[derive(Debug, Clone)]
@@ -196,7 +196,13 @@ impl ContextualComponent for KeycodePicker {
         }
     }
 
-    fn render(&self, f: &mut Frame, _area: Rect, theme: &crate::tui::Theme, context: &Self::Context) {
+    fn render(
+        &self,
+        f: &mut Frame,
+        _area: Rect,
+        theme: &crate::tui::Theme,
+        context: &Self::Context,
+    ) {
         render_keycode_picker_component(f, self, context, theme);
     }
 }
@@ -991,5 +997,3 @@ fn render_sidebar(
 
     f.render_stateful_widget(list, area, &mut list_state);
 }
-
-

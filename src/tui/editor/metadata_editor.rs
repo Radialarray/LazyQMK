@@ -13,9 +13,9 @@ use ratatui::{
     Frame,
 };
 
+use crate::models::LayoutMetadata;
 use crate::tui::component::Component;
 use crate::tui::Theme;
-use crate::models::LayoutMetadata;
 
 /// Events emitted by the `MetadataEditor` component
 #[derive(Debug, Clone)]

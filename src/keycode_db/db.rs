@@ -638,4 +638,3 @@ impl KeycodeDb {
 
 #[cfg(test)]
 mod tests;
-

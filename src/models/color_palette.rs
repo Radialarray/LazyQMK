@@ -150,4 +150,3 @@ impl Default for ColorPalette {
 
 #[cfg(test)]
 mod tests;
-

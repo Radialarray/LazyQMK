@@ -161,7 +161,6 @@ pub struct PreflightResponse {
     pub qmk_firmware_path: Option<String>,
 }
 
-
 // ============================================================================
 // Validate/Inspect Response Types
 // ============================================================================
