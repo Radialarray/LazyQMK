@@ -40,6 +40,7 @@
 pub mod app_state;
 pub mod build_jobs;
 pub mod error;
+pub mod validation;
 pub mod generate_jobs;
 
 use std::net::SocketAddr;
@@ -71,6 +72,10 @@ use crate::services::LayoutService;
 
 pub use app_state::AppState;
 pub use error::ApiError;
+
+use validation::{
+    validate_filename, validate_keyboard_path, with_json_ext,
+};
 
 
 // ============================================================================
@@ -985,75 +990,6 @@ pub struct KeyAssignmentSaveDto {
 
 // ============================================================================
 // Path Validation (Security)
-// ============================================================================
-
-/// Validates a filename to prevent path traversal attacks.
-///
-/// Returns the sanitized filename or an error if the filename is invalid.
-fn validate_filename(filename: &str) -> Result<&str, ApiError> {
-    // Reject empty filenames
-    if filename.is_empty() {
-        return Err(ApiError::new("Filename cannot be empty"));
-    }
-
-    // Reject path traversal attempts
-    if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
-        return Err(ApiError::new(
-            "Invalid filename: path traversal not allowed",
-        ));
-    }
-
-    // Reject absolute paths
-    if filename.starts_with('/') || filename.starts_with('\\') {
-        return Err(ApiError::new(
-            "Invalid filename: absolute paths not allowed",
-        ));
-    }
-
-    // Reject hidden files
-    if filename.starts_with('.') {
-        return Err(ApiError::new("Invalid filename: hidden files not allowed"));
-    }
-
-    Ok(filename)
-}
-
-/// Appends or changes the filename extension to `.json`.
-fn with_json_ext(filename: &str) -> String {
-    let path = std::path::Path::new(filename);
-    if path
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
-    {
-        filename.to_string()
-    } else {
-        format!("{filename}.json")
-    }
-}
-
-/// Validates a keyboard path to prevent path traversal attacks.
-fn validate_keyboard_path(keyboard: &str) -> Result<(), ApiError> {
-    if keyboard.is_empty() {
-        return Err(ApiError::new("Keyboard path cannot be empty"));
-    }
-
-    // Reject path traversal attempts
-    if keyboard.contains("..") {
-        return Err(ApiError::new(
-            "Invalid keyboard path: path traversal not allowed",
-        ));
-    }
-
-    // Reject absolute paths
-    if keyboard.starts_with('/') || keyboard.starts_with('\\') {
-        return Err(ApiError::new(
-            "Invalid keyboard path: absolute paths not allowed",
-        ));
-    }
-
-    Ok(())
-}
-
 // ============================================================================
 // Route Handlers
 // ============================================================================
