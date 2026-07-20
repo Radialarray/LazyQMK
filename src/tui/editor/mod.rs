@@ -1,4 +1,4 @@
-// Editor module: key and metadata editing UI components.
+//! Editor module: key and metadata editing UI components.
 
 pub mod key_editor;
 pub mod keyboard;

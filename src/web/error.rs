@@ -32,7 +32,9 @@ impl ApiError {
 /// `Result<Json<T>, AppError>`.
 #[derive(Debug)]
 pub struct AppError {
+    /// HTTP status code for the error response.
     pub status: StatusCode,
+    /// JSON-serializable error body.
     pub error: ApiError,
 }
 

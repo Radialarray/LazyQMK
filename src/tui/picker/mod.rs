@@ -3,7 +3,7 @@
 pub mod category_picker;
 pub mod color_picker;
 pub mod keycode_picker;
-pub(crate) mod keycode_picker_helpers;
+pub mod keycode_picker_helpers;
 pub mod layer_picker;
 pub mod layout_picker;
 pub mod modifier_picker;

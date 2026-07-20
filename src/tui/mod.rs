@@ -46,7 +46,7 @@ pub use config_dialogs::LayoutPickerEvent as LayoutVariantPickerEvent;
 pub use dialog::{
     config_dialogs, help_overlay, help_registry, onboarding_wizard, status_bar, theme,
 };
-pub use editor::{key_editor, keyboard, metadata_editor};
+pub use editor::{keyboard, metadata_editor};
 pub use manager::{build_log, category_manager, clipboard, layer_manager};
 
 pub use picker::{
