@@ -66,7 +66,7 @@ impl Default for BuildLogState {
     }
 }
 
-use super::Theme;
+use crate::tui::Theme;
 
 /// `BuildLog` component that implements the `ContextualComponent` trait
 #[derive(Debug, Clone)]

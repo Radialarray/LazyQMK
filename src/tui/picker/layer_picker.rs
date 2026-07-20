@@ -17,7 +17,7 @@ use ratatui::{
 
 use crate::models::Layer;
 
-use super::Theme;
+use crate::tui::Theme;
 
 /// Events emitted by the `LayerPicker` component
 #[derive(Debug, Clone)]

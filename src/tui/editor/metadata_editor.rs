@@ -13,8 +13,8 @@ use ratatui::{
     Frame,
 };
 
-use super::component::Component;
-use super::Theme;
+use crate::tui::component::Component;
+use crate::tui::Theme;
 use crate::models::LayoutMetadata;
 
 /// Events emitted by the `MetadataEditor` component

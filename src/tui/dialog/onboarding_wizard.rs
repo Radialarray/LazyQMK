@@ -9,13 +9,6 @@
 
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
-    Frame,
-};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -23,7 +16,6 @@ use crate::config::Config;
 use crate::parser::keyboard_json::{
     extract_layout_names, parse_keyboard_info_json, scan_keyboards,
 };
-use crate::tui::help_registry::HelpRegistry;
 use crate::tui::layout_picker::LayoutPickerState;
 
 /// Onboarding wizard steps
@@ -290,7 +282,7 @@ impl OnboardingWizardState {
     }
 
     /// Gets the filtered list of keyboards based on current filter
-    fn get_filtered_keyboards(&self) -> Vec<String> {
+    pub(super) fn get_filtered_keyboards(&self) -> Vec<String> {
         if self.keyboard_filter.is_empty() {
             self.available_keyboards.clone()
         } else {
@@ -547,8 +539,21 @@ impl OnboardingWizardState {
         wizard
     }
 
+    /// Gets the available welcome screen options (used by rendering code)
+    pub(super) fn get_welcome_options(&self) -> Vec<WelcomeChoice> {
+        if self.existing_layouts.is_empty() {
+            vec![WelcomeChoice::FromScratch, WelcomeChoice::FromTemplate]
+        } else {
+            vec![
+                WelcomeChoice::LoadExisting,
+                WelcomeChoice::FromScratch,
+                WelcomeChoice::FromTemplate,
+            ]
+        }
+    }
+
     /// Gets the number of welcome screen options based on whether existing layouts are found
-    fn get_welcome_options_count(&self) -> usize {
+    pub(super) fn get_welcome_options_count(&self) -> usize {
         if self.existing_layouts.is_empty() {
             2 // FromScratch, FromTemplate
         } else {
@@ -557,7 +562,7 @@ impl OnboardingWizardState {
     }
 
     /// Gets the welcome choice for a given index
-    fn get_welcome_choice_for_index(&self, index: usize) -> Option<WelcomeChoice> {
+    pub(super) fn get_welcome_choice_for_index(&self, index: usize) -> Option<WelcomeChoice> {
         if !self.existing_layouts.is_empty() {
             // If existing layouts found: LoadExisting, FromScratch, FromTemplate
             match index {
@@ -583,514 +588,9 @@ impl Default for OnboardingWizardState {
     }
 }
 
-/// Renders the onboarding wizard
-pub fn render(f: &mut Frame, state: &OnboardingWizardState, theme: &crate::tui::theme::Theme) {
-    let size = f.area();
+/// Renders the onboarding wizard — lives in `onboarding_wizard_render` to keep this file under 1000 lines.
+pub use super::onboarding_wizard_render::render;
 
-    // Clear the background area first
-    f.render_widget(Clear, size);
-
-    // Render opaque background for entire wizard
-    let background = Block::default().style(Style::default().bg(theme.background));
-    f.render_widget(background, size);
-
-    // Create centered layout
-    let vertical_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(2)
-        .constraints([
-            Constraint::Length(3), // Title
-            Constraint::Min(10),   // Content
-            Constraint::Length(3), // Instructions
-            Constraint::Length(2), // Error message
-        ])
-        .split(size);
-
-    // Render title
-    let title = Paragraph::new(state.current_step.title())
-        .style(
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().bg(theme.background)),
-        );
-    f.render_widget(title, vertical_chunks[0]);
-
-    // Render content based on current step
-    match state.current_step {
-        WizardStep::Welcome => render_welcome(f, state, vertical_chunks[1], theme),
-        WizardStep::QmkPath => render_qmk_path_input(f, state, vertical_chunks[1], theme),
-        WizardStep::KeyboardSelection => {
-            render_keyboard_selection(f, state, vertical_chunks[1], theme);
-        }
-        WizardStep::LayoutSelection => render_layout_selection(f, state, vertical_chunks[1], theme),
-        WizardStep::LayoutName => render_layout_name_input(f, state, vertical_chunks[1], theme),
-        WizardStep::OutputPath => render_output_path_input(f, state, vertical_chunks[1], theme),
-        WizardStep::Confirmation => render_confirmation(f, state, vertical_chunks[1], theme),
-    }
-
-    // Render instructions
-    render_instructions(f, state, vertical_chunks[2], theme);
-
-    // Render error message if any
-    if let Some(error) = &state.error_message {
-        let error_widget = Paragraph::new(error.as_str())
-            .style(Style::default().fg(theme.error))
-            .alignment(Alignment::Center);
-        f.render_widget(error_widget, vertical_chunks[3]);
-    }
-}
-
-fn render_welcome(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let app_name = HelpRegistry::default().app_name().to_string();
-    let mut text = vec![
-        Line::from(""),
-        Line::from(Span::styled(
-            format!("Welcome to {app_name}"),
-            Style::default()
-                .fg(theme.primary)
-                .add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "You can start safely with defaults and change everything later.",
-            Style::default().fg(theme.text),
-        )),
-        Line::from(Span::styled(
-            "Pick quickest path to first working layout:",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(""),
-    ];
-
-    // Add options based on whether existing layouts exist
-    if !state.existing_layouts.is_empty() {
-        let load_existing_style = if state.welcome_selected_index == 0 {
-            Style::default()
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(theme.text)
-        };
-        text.push(Line::from(Span::styled(
-            format!(
-                "  [1] Open existing layout ({} found)",
-                state.existing_layouts.len()
-            ),
-            load_existing_style,
-        )));
-        text.push(Line::from(Span::styled(
-            format!("      Fastest option if you already saved layout with {app_name}."),
-            Style::default().fg(theme.text_muted),
-        )));
-        text.push(Line::from(""));
-    }
-
-    let from_scratch_index = usize::from(!state.existing_layouts.is_empty());
-    let from_scratch_style = if state.welcome_selected_index == from_scratch_index {
-        Style::default()
-            .fg(theme.accent)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(theme.text)
-    };
-    text.push(Line::from(Span::styled(
-        "  [2] Start with guided setup",
-        from_scratch_style,
-    )));
-    text.push(Line::from(Span::styled(
-        "      Recommended for first run. We help with keyboard, layout, and build output.",
-        Style::default().fg(theme.text_muted),
-    )));
-    text.push(Line::from(""));
-
-    let from_template_index = if state.existing_layouts.is_empty() {
-        1
-    } else {
-        2
-    };
-    let from_template_style = if state.welcome_selected_index == from_template_index {
-        Style::default()
-            .fg(theme.accent)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(theme.text)
-    };
-    text.push(Line::from(Span::styled(
-        "  [3] Start from template",
-        from_template_style,
-    )));
-    text.push(Line::from(Span::styled(
-        "      Good when you want a strong starting point instead of empty layout.",
-        Style::default().fg(theme.text_muted),
-    )));
-
-    text.push(Line::from(""));
-    text.push(Line::from(Span::styled(
-        "Use ↑↓ to move, Enter to continue. Esc exits setup.",
-        Style::default().fg(theme.text_muted),
-    )));
-
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
-
-fn render_qmk_path_input(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let app_name = HelpRegistry::default().app_name().to_string();
-    let text = vec![
-        Line::from(""),
-        Line::from(format!(
-            "{app_name} needs your local QMK firmware folder for keyboard info and builds."
-        )),
-        Line::from("If you already use QMK, paste that folder path here."),
-        Line::from(""),
-        Line::from(Span::styled(
-            format!("> {}_", state.input_buffer),
-            Style::default().fg(theme.accent),
-        )),
-        Line::from(""),
-        Line::from("Common folder names: qmk_firmware or qmk."),
-        Line::from("Example: /home/user/qmk_firmware"),
-        Line::from("         C:\\Users\\user\\qmk_firmware"),
-    ];
-
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Left)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" QMK firmware folder ")
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
-
-fn render_keyboard_selection(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    // Split area into filter input and list
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Filter input
-            Constraint::Min(5),    // Keyboard list
-            Constraint::Length(2), // Help text
-        ])
-        .split(area);
-
-    // Render filter input with focus indicator
-    let filter_focused = state.keyboard_selection_focus == KeyboardSelectionFocus::FilterInput;
-    let filter_title = if filter_focused {
-        "Search [FOCUSED - Type to filter]"
-    } else {
-        "Search"
-    };
-    let filter_border_style = if filter_focused {
-        Style::default().fg(theme.accent)
-    } else {
-        Style::default().fg(theme.primary)
-    };
-
-    let filter_input = Paragraph::new(format!("Filter: {}_", state.keyboard_filter))
-        .style(Style::default().fg(if filter_focused {
-            theme.accent
-        } else {
-            theme.text
-        }))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(filter_title)
-                .style(filter_border_style.bg(theme.background)),
-        );
-    f.render_widget(filter_input, chunks[0]);
-
-    // Get filtered keyboards
-    let filtered_keyboards = state.get_filtered_keyboards();
-
-    let keyboards: Vec<ListItem> = filtered_keyboards
-        .iter()
-        .enumerate()
-        .map(|(i, kb)| {
-            let style = if i == state.keyboard_selected_index {
-                Style::default()
-                    .fg(theme.accent)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(theme.text)
-            };
-            ListItem::new(kb.as_str()).style(style)
-        })
-        .collect();
-
-    // List with focus indicator
-    let list_focused = state.keyboard_selection_focus == KeyboardSelectionFocus::List;
-    let list_title = if list_focused {
-        format!(
-            "Keyboards [FOCUSED] ({} of {} total)",
-            filtered_keyboards.len(),
-            state.available_keyboards.len()
-        )
-    } else {
-        format!(
-            "Available Keyboards ({} of {} total)",
-            filtered_keyboards.len(),
-            state.available_keyboards.len()
-        )
-    };
-    let list_border_style = if list_focused {
-        Style::default().fg(theme.accent)
-    } else {
-        Style::default().fg(theme.primary)
-    };
-
-    let list = List::new(keyboards)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(list_title)
-                .style(list_border_style.bg(theme.background)),
-        )
-        .highlight_style(
-            Style::default()
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD),
-        );
-
-    f.render_widget(list, chunks[1]);
-
-    // Help text
-    let help_text = if filter_focused {
-        "Tab: Next focus | Shift+Tab: Stay here | Enter: Select (if 1 result) | Esc: Clear filter or back"
-    } else {
-        "↑↓/jk: Navigate | Tab/Shift+Tab: Filter | Enter: Select | Esc: Back to filter"
-    };
-    let help = Paragraph::new(help_text)
-        .style(Style::default().fg(theme.text_muted))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[2]);
-}
-
-fn render_layout_selection(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let layouts: Vec<ListItem> = state
-        .available_layouts
-        .iter()
-        .enumerate()
-        .map(|(i, layout)| {
-            let style = if i == state.layout_selected_index {
-                Style::default()
-                    .fg(theme.accent)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(theme.text)
-            };
-            ListItem::new(layout.as_str()).style(style)
-        })
-        .collect();
-
-    let keyboard = state.inputs.get("keyboard").unwrap();
-    let list = List::new(layouts)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!(
-                    "Layouts for {} ({} available)",
-                    keyboard,
-                    state.available_layouts.len()
-                ))
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        )
-        .highlight_style(
-            Style::default()
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD),
-        );
-
-    f.render_widget(list, area);
-}
-
-fn render_layout_name_input(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let text = vec![
-        Line::from(""),
-        Line::from("Enter a name for your layout file:"),
-        Line::from(""),
-        Line::from(Span::styled(
-            format!("> {}_", state.input_buffer),
-            Style::default().fg(theme.accent),
-        )),
-        Line::from(""),
-        Line::from("This will be used as the filename (e.g., my_layout.json)"),
-        Line::from("The file will be saved in your layouts directory."),
-    ];
-
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Left)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Layout Name")
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
-
-fn render_output_path_input(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let text = vec![
-        Line::from(""),
-        Line::from("Enter the path where firmware files should be copied:"),
-        Line::from(""),
-        Line::from(Span::styled(
-            format!("> {}_", state.input_buffer),
-            Style::default().fg(theme.accent),
-        )),
-        Line::from(""),
-        Line::from("After building, firmware files (.uf2, .hex) will be copied here."),
-        Line::from("This makes it easy to flash your keyboard."),
-    ];
-
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Left)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Firmware Output Path")
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
-
-fn render_confirmation(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let default_value = "<not set>".to_string();
-    let qmk_path = state.inputs.get("qmk_path").unwrap_or(&default_value);
-    let keyboard = state.inputs.get("keyboard").unwrap_or(&default_value);
-    let layout = state.inputs.get("layout").unwrap_or(&default_value);
-    let layout_name = state.inputs.get("layout_name").unwrap_or(&default_value);
-    let output_path = state.inputs.get("output_path").unwrap_or(&default_value);
-
-    let text = vec![
-        Line::from(""),
-        Line::from("Please confirm your configuration:"),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("QMK Path:     ", Style::default().fg(theme.primary)),
-            Span::raw(qmk_path),
-        ]),
-        Line::from(vec![
-            Span::styled("Keyboard:     ", Style::default().fg(theme.primary)),
-            Span::raw(keyboard),
-        ]),
-        Line::from(vec![
-            Span::styled("Layout:       ", Style::default().fg(theme.primary)),
-            Span::raw(layout),
-        ]),
-        Line::from(vec![
-            Span::styled("Layout Name:  ", Style::default().fg(theme.primary)),
-            Span::raw(layout_name),
-        ]),
-        Line::from(vec![
-            Span::styled("Output Path:  ", Style::default().fg(theme.primary)),
-            Span::raw(output_path),
-        ]),
-        Line::from(""),
-        Line::from("Press Enter to save configuration, or Esc to go back."),
-    ];
-
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Left)
-        .style(Style::default().fg(theme.text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Confirmation")
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
-
-fn render_instructions(
-    f: &mut Frame,
-    state: &OnboardingWizardState,
-    area: Rect,
-    theme: &crate::tui::theme::Theme,
-) {
-    let step_info = format!(
-        "Step {} of {}",
-        state.current_step.step_number(),
-        WizardStep::total_steps()
-    );
-
-    let instructions = match state.current_step {
-        WizardStep::Welcome => "↑↓: Choose path  |  Enter: Continue  |  Esc: Exit",
-        WizardStep::QmkPath | WizardStep::LayoutName | WizardStep::OutputPath => {
-            "Enter: Continue  |  Backspace: Delete  |  Esc: Back"
-        }
-        WizardStep::KeyboardSelection => {
-            "Tab/Shift+Tab: Move focus  |  Type: Filter  |  ↑↓: Navigate  |  Enter: Select"
-        }
-        WizardStep::LayoutSelection => "↑↓: Navigate  |  Enter: Select  |  Esc: Back",
-        WizardStep::Confirmation => "Enter: Save & Exit  |  Esc: Back",
-    };
-
-    let text = vec![Line::from(step_info), Line::from(instructions)];
-
-    let paragraph = Paragraph::new(text)
-        .style(Style::default().fg(theme.text_muted))
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(theme.primary).bg(theme.background)),
-        );
-    f.render_widget(paragraph, area);
-}
 
 /// Handles keyboard input for the onboarding wizard
 #[allow(clippy::too_many_lines)]

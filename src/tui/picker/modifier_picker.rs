@@ -18,8 +18,8 @@ use ratatui::{
     Frame,
 };
 
-use super::component::Component;
-use super::theme::Theme;
+use crate::tui::component::Component;
+use crate::tui::theme::Theme;
 
 /// QMK modifier bit flags
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

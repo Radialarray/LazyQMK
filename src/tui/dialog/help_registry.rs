@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 /// Embedded help definitions TOML file
-const HELP_TOML: &str = include_str!("../data/help.toml");
+const HELP_TOML: &str = include_str!("../../data/help.toml");
 
 /// A single keybinding definition
 #[derive(Debug, Clone, Deserialize)]

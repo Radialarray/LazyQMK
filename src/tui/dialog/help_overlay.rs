@@ -29,7 +29,7 @@ use ratatui::{
 };
 
 use super::help_registry::{contexts, HelpRegistry};
-use super::Theme;
+use crate::tui::Theme;
 
 /// Minimum modal dimensions to ensure content is always visible
 const MIN_MODAL_WIDTH: u16 = 40;

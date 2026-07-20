@@ -14,7 +14,7 @@ use ratatui::{
     Frame,
 };
 
-use super::AppState;
+use crate::tui::AppState;
 use crate::keycode_db::TapHoldType;
 
 /// Keyboard widget renders the visual keyboard layout
@@ -170,7 +170,7 @@ impl KeyboardWidget {
 
             // Check if this key is the first key in swap mode (not the current cursor position)
             let is_swap_first =
-                if let Some(super::SelectionMode::Swap { first }) = &state.selection_mode {
+                if let Some(crate::tui::SelectionMode::Swap { first }) = &state.selection_mode {
                     key.position == *first && !is_selected
                 } else {
                     false
@@ -367,7 +367,7 @@ impl KeyboardWidget {
         is_swap_first: bool,
         is_flashing: bool,
         has_hold_like_inbound: bool,
-        theme: &super::Theme,
+        theme: &crate::tui::Theme,
     ) {
         // Determine colors based on selection, cut state, multi-selection, swap, flash, and inbound holds
         let (border_style, content_bg, content_fg, overlay_border_color) = if is_flashing {

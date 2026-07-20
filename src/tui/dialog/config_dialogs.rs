@@ -200,7 +200,7 @@ fn render_layout_picker_component(f: &mut Frame, picker: &LayoutPicker, theme: &
     f.render_widget(instructions, chunks[1]);
 }
 
-use super::Theme;
+use crate::tui::Theme;
 
 /// Helper to create a centered rect
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

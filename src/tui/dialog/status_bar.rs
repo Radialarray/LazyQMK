@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 use super::help_registry::{self, HelpRegistry};
-use super::{AppState, Theme};
+use crate::tui::{AppState, Theme};
 
 /// Status bar widget
 pub struct StatusBar;
@@ -109,17 +109,17 @@ impl StatusBar {
             },
         );
 
-        let mode_label = if matches!(state.active_popup, Some(super::PopupType::SettingsManager)) {
+        let mode_label = if matches!(state.active_popup, Some(crate::tui::PopupType::SettingsManager)) {
             "Settings"
-        } else if matches!(state.active_popup, Some(super::PopupType::SetupWizard)) {
+        } else if matches!(state.active_popup, Some(crate::tui::PopupType::SetupWizard)) {
             "Onboarding"
         } else if state.active_popup.is_some() {
             "Popup"
         } else if let Some(selection_mode) = &state.selection_mode {
             match selection_mode {
-                super::SelectionMode::Normal => "Selection",
-                super::SelectionMode::Rectangle { .. } => "Rectangle select",
-                super::SelectionMode::Swap { .. } => "Swap",
+                crate::tui::SelectionMode::Normal => "Selection",
+                crate::tui::SelectionMode::Rectangle { .. } => "Rectangle select",
+                crate::tui::SelectionMode::Swap { .. } => "Swap",
             }
         } else {
             "Edit"
@@ -228,7 +228,7 @@ impl StatusBar {
 
     /// Get the current context name based on application state
     fn get_current_context(state: &AppState) -> &'static str {
-        use super::PopupType;
+        use crate::tui::PopupType;
 
         match &state.active_popup {
             Some(PopupType::KeycodePicker | PopupType::TapKeycodePicker) => {
@@ -236,8 +236,8 @@ impl StatusBar {
             }
             Some(PopupType::ColorPicker) => {
                 // Check color picker mode
-                if let Some(super::ActiveComponent::ColorPicker(picker)) = &state.active_component {
-                    if picker.get_mode() == super::color_picker::ColorPickerMode::Palette {
+                if let Some(crate::tui::ActiveComponent::ColorPicker(picker)) = &state.active_component {
+                    if picker.get_mode() == crate::tui::color_picker::ColorPickerMode::Palette {
                         help_registry::contexts::COLOR_PICKER_PALETTE
                     } else {
                         help_registry::contexts::COLOR_PICKER_RGB

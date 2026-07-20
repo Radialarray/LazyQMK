@@ -11,8 +11,9 @@ use ratatui::{
     Frame,
 };
 
-use super::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
+use crate::tui::{component::ContextualComponent, popup_border_style, popup_title, PopupType};
 use crate::keycode_db::KeycodeDb;
+use super::keycode_picker_helpers::centered_rect;
 
 /// Events emitted by the `KeycodePicker` component
 #[derive(Debug, Clone)]
@@ -195,7 +196,7 @@ impl ContextualComponent for KeycodePicker {
         }
     }
 
-    fn render(&self, f: &mut Frame, _area: Rect, theme: &super::Theme, context: &Self::Context) {
+    fn render(&self, f: &mut Frame, _area: Rect, theme: &crate::tui::Theme, context: &Self::Context) {
         render_keycode_picker_component(f, self, context, theme);
     }
 }
@@ -461,7 +462,7 @@ fn render_keycode_picker_component(
     f: &mut Frame,
     picker: &KeycodePicker,
     context: &KeycodeDb,
-    theme: &super::Theme,
+    theme: &crate::tui::Theme,
 ) {
     render_keycode_picker_internal(
         f,
@@ -478,7 +479,7 @@ fn render_keycode_picker_internal(
     f: &mut Frame,
     picker_state: &KeycodePickerState,
     context: &KeycodeDb,
-    theme: &super::Theme,
+    theme: &crate::tui::Theme,
     flow_context: Option<&KeycodeFlowContext>,
 ) {
     let area = centered_rect(80, 85, f.area());
@@ -847,7 +848,7 @@ fn render_language_selector(
     context: &KeycodeDb,
     selected_index: usize,
     focus: PickerFocus,
-    theme: &super::Theme,
+    theme: &crate::tui::Theme,
 ) {
     let languages = context.languages();
 
@@ -991,23 +992,4 @@ fn render_sidebar(
     f.render_stateful_widget(list, area, &mut list_state);
 }
 
-/// Helper to create centered rectangle
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
 
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
-}

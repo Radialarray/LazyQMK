@@ -1,6 +1,7 @@
-// Editor module: key editing UI components.
+// Editor module: key and metadata editing UI components.
 
 pub mod key_editor;
+pub mod keyboard;
+pub mod metadata_editor;
 
-// Re-export AppState so the moved key_editor module keeps its `use super::AppState;`.
 pub use crate::tui::AppState;
