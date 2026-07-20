@@ -9,6 +9,8 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 pub use uncolored_key_behavior::UncoloredKeyBehavior;
+pub use rgb_brightness::RgbBrightness;
+pub use rgb_saturation::RgbSaturation;
 
 use crate::keycode_db::KeycodeDb;
 use crate::models::layer::{KeyDefinition, Layer, Position};
@@ -18,90 +20,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 pub mod uncolored_key_behavior;
+pub mod rgb_brightness;
+pub mod rgb_saturation;
 
 // ============================================================================
 // RGB Settings
 // ============================================================================
-
-/// RGB brightness level (0-100%).
-///
-/// Controls the global brightness multiplier for all RGB LEDs.
-/// 0 = LEDs off, 100 = full brightness.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RgbBrightness(u8);
-
-impl RgbBrightness {
-    /// Creates a new brightness value (0-100).
-    ///
-    /// # Panics
-    /// Panics if value > 100
-    #[must_use]
-    pub const fn new(value: u8) -> Self {
-        assert!(value <= 100, "Brightness must be 0-100");
-        Self(value)
-    }
-
-    /// Returns the brightness as a percentage (0-100).
-    #[must_use]
-    pub const fn as_percent(&self) -> u8 {
-        self.0
-    }
-
-    /// Full brightness (100%).
-    pub const FULL: Self = Self(100);
-}
-
-impl Default for RgbBrightness {
-    fn default() -> Self {
-        Self::FULL
-    }
-}
-
-impl From<u8> for RgbBrightness {
-    fn from(value: u8) -> Self {
-        Self::new(value.min(100))
-    }
-}
-
-/// RGB saturation level (0-200%).
-///
-/// Controls the global saturation multiplier for all RGB LEDs.
-/// 0 = fully desaturated (grayscale), 100 = original colors, 200 = maximum saturation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RgbSaturation(u8);
-
-impl RgbSaturation {
-    /// Creates a new saturation value (0-200).
-    ///
-    /// # Panics
-    /// Panics if value > 200
-    #[must_use]
-    pub const fn new(value: u8) -> Self {
-        assert!(value <= 200, "Saturation must be 0-200");
-        Self(value)
-    }
-
-    /// Returns the saturation as a percentage (0-200).
-    #[must_use]
-    pub const fn as_percent(&self) -> u8 {
-        self.0
-    }
-
-    /// Neutral saturation (100%) - no change to colors.
-    pub const NEUTRAL: Self = Self(100);
-}
-
-impl Default for RgbSaturation {
-    fn default() -> Self {
-        Self::NEUTRAL
-    }
-}
-
-impl From<u8> for RgbSaturation {
-    fn from(value: u8) -> Self {
-        Self::new(value.min(200))
-    }
-}
 
 // ============================================================================
 // RGB Matrix Effects
