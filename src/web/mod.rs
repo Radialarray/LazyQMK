@@ -55,7 +55,7 @@ use tracing::info;
 use crate::config::Config;
 
 pub use app_state::AppState;
-pub use error::ApiError;
+pub use error::{ApiError, AppError};
 
 pub use crate::web::dto::*;
 

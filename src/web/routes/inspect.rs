@@ -12,7 +12,7 @@ use crate::services::LayoutService;
 use super::super::dto::{
     InspectLayer, InspectMetadata, InspectResponse, InspectSettings, InspectTapDance,
 };
-use super::super::error::ApiError;
+use super::super::error::AppError;
 use super::super::validation::{validate_filename, with_json_ext};
 use super::super::AppState;
 
@@ -20,33 +20,20 @@ use super::super::AppState;
 pub(super) async fn inspect_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<InspectResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<InspectResponse>, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
-    let layout = LayoutService::load(&path).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
-        )
-    })?;
+    let layout = LayoutService::load(&path)
+        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
 
-    // Build inspect response
     let key_count = layout.layers.first().map_or(0, |l| l.keys.len());
 
     let metadata = InspectMetadata {
@@ -78,7 +65,6 @@ pub(super) async fn inspect_layout(
         })
         .collect();
 
-    // Build tap dance info with usage
     let td_pattern = Regex::new(r"TD\(([^)]+)\)").unwrap();
     let tap_dances: Vec<InspectTapDance> = layout
         .tap_dances

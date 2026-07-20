@@ -30,14 +30,13 @@ use super::super::dto::{
     LayerRenderMetadata, LayoutDto, LayoutListResponse, LayoutSaveDto, LayoutSummary,
     RenderMetadataResponse,
 };
-use super::super::error::ApiError;
+use super::super::error::AppError;
 use super::super::validation::{validate_filename, with_json_ext};
 use super::super::AppState;
 use super::templates::{
     get_template_dir, sanitize_template_filename, SaveTemplateRequest, TemplateInfo,
 };
 
-/// Parses a `RippleColorMode` from its display name.
 fn parse_ripple_color_mode(name: &str) -> RippleColorMode {
     match name {
         "Fixed Color" | "Fixed" | "fixed" => RippleColorMode::Fixed,
@@ -47,7 +46,6 @@ fn parse_ripple_color_mode(name: &str) -> RippleColorMode {
     }
 }
 
-/// Parses a `HoldDecisionMode` from its display name.
 fn parse_hold_decision_mode(name: &str) -> HoldDecisionMode {
     match name {
         "Default (Timing Only)" | "Default" | "default" => HoldDecisionMode::Default,
@@ -57,7 +55,6 @@ fn parse_hold_decision_mode(name: &str) -> HoldDecisionMode {
     }
 }
 
-/// Parses a `TapHoldPreset` from its display name.
 fn parse_tap_hold_preset(name: &str) -> TapHoldPreset {
     match name {
         "Default" | "default" => TapHoldPreset::Default,
@@ -69,19 +66,15 @@ fn parse_tap_hold_preset(name: &str) -> TapHoldPreset {
     }
 }
 
-/// Parses a `PaletteFxEffect` from its display name.
 fn parse_palette_fx_effect(name: &str) -> PaletteFxEffect {
     PaletteFxEffect::from_name(name).unwrap_or_default()
 }
 
-/// Parses a `PaletteFxPalette` from its display name.
 fn parse_palette_fx_palette(name: &str) -> PaletteFxPalette {
     PaletteFxPalette::from_name(name).unwrap_or_default()
 }
 
-/// Converts a `LayoutSaveDto` (from frontend) back to the internal Layout model.
 fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
-    // Convert DTOs back to internal models
     let layers: Vec<Layer> = dto
         .layers
         .into_iter()
@@ -91,8 +84,6 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
                 .keys
                 .into_iter()
                 .map(|key_dto| {
-                    // Extract position - use the position field if present,
-                    // otherwise infer from matrix_position
                     let position = key_dto.position.unwrap_or_else(|| Position {
                         row: key_dto.matrix_position[0],
                         col: key_dto.matrix_position[1],
@@ -101,10 +92,10 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
                     KeyDefinition {
                         position,
                         keycode: key_dto.keycode,
-                        label: None, // Not exposed in DTO
+                        label: None,
                         color_override: key_dto.color_override,
                         category_id: key_dto.category_id,
-                        combo_participant: false, // Not exposed in DTO
+                        combo_participant: false,
                         description: key_dto.description,
                     }
                 })
@@ -126,7 +117,6 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         })
         .collect();
 
-    // Convert idle effect settings
     let idle_effect_settings = if let Some(settings_dto) = dto.idle_effect_settings {
         IdleEffectSettings {
             enabled: settings_dto.enabled,
@@ -139,9 +129,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         IdleEffectSettings::default()
     };
 
-    // Convert RGB overlay ripple settings
     let rgb_overlay_ripple = if let Some(ripple_dto) = dto.rgb_overlay_ripple {
-        // Parse color mode from display name
         let color_mode = parse_ripple_color_mode(&ripple_dto.color_mode);
 
         RgbOverlayRippleSettings {
@@ -171,9 +159,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         RgbOverlayRippleSettings::default()
     };
 
-    // Convert tap-hold settings
     let tap_hold_settings = if let Some(th_dto) = dto.tap_hold_settings {
-        // Parse hold mode and preset from display names
         let hold_mode = parse_hold_decision_mode(&th_dto.hold_mode);
         let preset = parse_tap_hold_preset(&th_dto.preset);
 
@@ -191,7 +177,6 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         TapHoldSettings::default()
     };
 
-    // Convert tap dances
     let tap_dances: Vec<TapDanceAction> = dto
         .tap_dances
         .into_iter()
@@ -203,7 +188,6 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         })
         .collect();
 
-    // Convert combo settings
     let combo_settings = if let Some(combo_dto) = dto.combo_settings {
         let combos = combo_dto
             .combos
@@ -231,7 +215,6 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
         ComboSettings::default()
     };
 
-    // Convert PaletteFX settings
     let palette_fx = if let Some(pf_dto) = dto.palette_fx {
         PaletteFxSettings {
             enabled: pf_dto.enabled,
@@ -266,17 +249,14 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
 /// GET /api/layouts - List all layout files in the workspace.
 pub(super) async fn list_layouts(
     State(state): State<AppState>,
-) -> Result<Json<LayoutListResponse>, (StatusCode, Json<ApiError>)> {
+) -> Result<Json<LayoutListResponse>, AppError> {
     let mut layouts = Vec::new();
 
-    // Read directory entries
     let entries = std::fs::read_dir(&state.workspace_root).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to read workspace directory",
-                e.to_string(),
-            )),
+            "Failed to read workspace directory",
+            Some(e.to_string()),
         )
     })?;
 
@@ -288,7 +268,6 @@ pub(super) async fn list_layouts(
 
         let path = entry.path();
 
-        // Process both .json and legacy .md files
         if path
             .extension()
             .is_some_and(|ext| ext == "json" || ext == "md")
@@ -298,7 +277,6 @@ pub(super) async fn list_layouts(
                 None => continue,
             };
 
-            // Try to parse the layout to get metadata
             if let Ok(layout) = LayoutService::load(&path) {
                 layouts.push(LayoutSummary {
                     filename,
@@ -307,11 +285,9 @@ pub(super) async fn list_layouts(
                     modified: layout.metadata.modified.to_rfc3339(),
                 });
             }
-            // Skip files that can't be parsed as layouts
         }
     }
 
-    // Sort by modification time (newest first)
     layouts.sort_by(|a, b| b.modified.cmp(&a.modified));
 
     Ok(Json(LayoutListResponse { layouts }))
@@ -321,36 +297,25 @@ pub(super) async fn list_layouts(
 pub(super) async fn get_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<LayoutDto>, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<LayoutDto>, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
-    // Check if file exists
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
-    // Load and parse the layout
     let layout = LayoutService::load(&path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
+            "Failed to load layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Build position_to_geometry mapping from keyboard geometry (if available)
-    // This provides the authoritative mapping from visual position to geometry data
     let qmk_path = state
         .config
         .read()
@@ -362,14 +327,12 @@ pub(super) async fn get_layout(
         if let (Some(keyboard), Some(qmk_path)) =
             (layout.metadata.keyboard.as_ref(), qmk_path.as_ref())
         {
-            // Determine layout variant (fall back to "LAYOUT" if not specified)
             let layout_variant = layout
                 .metadata
                 .layout_variant
                 .clone()
                 .unwrap_or_else(|| "LAYOUT".to_string());
 
-            // Try to load geometry - if it fails, we'll fall back to array index
             parser::keyboard_json::parse_keyboard_info_json(qmk_path, keyboard)
                 .ok()
                 .and_then(|keyboard_info| {
@@ -382,7 +345,6 @@ pub(super) async fn get_layout(
                     .ok()
                 })
                 .map(|geometry| {
-                    // Build mapping from position (row,col) to (visual_index, matrix_position, led_index)
                     geometry
                         .keys
                         .iter()
@@ -406,7 +368,6 @@ pub(super) async fn get_layout(
             HashMap::new()
         };
 
-    // Convert Layout to LayoutDto with enriched key data
     let layers: Vec<LayerDto> = layout
         .layers
         .iter()
@@ -416,13 +377,11 @@ pub(super) async fn get_layout(
                 .iter()
                 .enumerate()
                 .map(|(idx, key)| {
-                    // Look up geometry data from position mapping, fall back to array index
                     let pos_key = format!("{},{}", key.position.row, key.position.col);
                     let (visual_index, matrix_position, led_index) = position_to_geometry
                         .get(&pos_key)
                         .copied()
                         .unwrap_or_else(|| {
-                            // Fallback: use array index for all fields
                             let idx_u8 = idx as u8;
                             (idx_u8, [idx_u8, 0], idx_u8)
                         });
@@ -476,34 +435,26 @@ pub(super) async fn save_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
     Json(layout_dto): Json<LayoutSaveDto>,
-) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<StatusCode, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
-    // Convert LayoutDto back to Layout model
     let layout = convert_dto_to_layout(layout_dto);
 
-    // Validate the layout
     layout.validate().map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::BAD_REQUEST,
-            Json(ApiError::with_details("Invalid layout", e.to_string())),
+            "Invalid layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Save the layout
     LayoutService::save(&layout, &path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to save layout",
-                e.to_string(),
-            )),
+            "Failed to save layout",
+            Some(e.to_string()),
         )
     })?;
 
@@ -515,59 +466,40 @@ pub(super) async fn swap_keys(
     State(state): State<AppState>,
     Path(filename): Path<String>,
     Json(request): Json<crate::web::dto::SwapKeysRequest>,
-) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<StatusCode, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
-    // Check if file exists
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
-    // Load the layout
     let mut layout = LayoutService::load(&path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
+            "Failed to load layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Validate layer number
     if request.layer as usize >= layout.layers.len() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new(format!(
-                "Invalid layer number: {}",
-                request.layer
-            ))),
-        ));
+        return Err(AppError::bad_request(format!(
+            "Invalid layer number: {}",
+            request.layer
+        )));
     }
 
-    // Check if trying to swap a key with itself
     if request.first_position.row == request.second_position.row
         && request.first_position.col == request.second_position.col
     {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new("Cannot swap a key with itself")),
-        ));
+        return Err(AppError::bad_request("Cannot swap a key with itself"));
     }
 
-    // Get the layer
     let layer = &mut layout.layers[request.layer as usize];
 
-    // Find indices of both keys by position
     let first_idx = layer.keys.iter().position(|k| {
         k.position.row == request.first_position.row && k.position.col == request.first_position.col
     });
@@ -580,23 +512,17 @@ pub(super) async fn swap_keys(
         (Some(idx1), Some(idx2)) => {
             layer.keys.swap(idx1, idx2);
 
-            // Save the layout
             LayoutService::save(&layout, &path).map_err(|e| {
-                (
+                AppError::with_details(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiError::with_details(
-                        "Failed to save layout after swap",
-                        e.to_string(),
-                    )),
+                    "Failed to save layout after swap",
+                    Some(e.to_string()),
                 )
             })?;
 
             Ok(StatusCode::NO_CONTENT)
         }
-        _ => Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new("One or both key positions not found")),
-        )),
+        _ => Err(AppError::bad_request("One or both key positions not found")),
     }
 }
 
@@ -604,33 +530,25 @@ pub(super) async fn swap_keys(
 pub(super) async fn get_render_metadata(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<RenderMetadataResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<RenderMetadataResponse>, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
     let layout = LayoutService::load(&path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
+            "Failed to load layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Build position_to_visual_index mapping from geometry (if keyboard info is available)
     let qmk_path = state
         .config
         .read()
@@ -675,21 +593,18 @@ pub(super) async fn get_render_metadata(
         HashMap::new()
     };
 
-    // Build tap dance lookup for display info
     let tap_dance_map: HashMap<String, &TapDanceAction> = layout
         .tap_dances
         .iter()
         .map(|td| (td.name.clone(), td))
         .collect();
 
-    // Build layer ID to number mapping for resolving @uuid references
     let layer_id_to_number: HashMap<String, u8> = layout
         .layers
         .iter()
         .map(|layer| (layer.id.clone(), layer.number))
         .collect();
 
-    // Build render metadata for each layer
     let layers: Vec<LayerRenderMetadata> = layout
         .layers
         .iter()
@@ -757,114 +672,81 @@ pub(super) async fn save_as_template(
     State(state): State<AppState>,
     Path(filename): Path<String>,
     Json(request): Json<SaveTemplateRequest>,
-) -> Result<Json<TemplateInfo>, (StatusCode, Json<ApiError>)> {
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+) -> Result<Json<TemplateInfo>, AppError> {
+    let filename = validate_filename(&filename)?;
     let template_dir = get_template_dir()?;
 
-    // Create template directory if it doesn't exist
     if !template_dir.exists() {
         std::fs::create_dir_all(&template_dir).map_err(|e| {
-            (
+            AppError::with_details(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::with_details(
-                    "Failed to create template directory",
-                    e.to_string(),
-                )),
+                "Failed to create template directory",
+                Some(e.to_string()),
             )
         })?;
     }
 
-    // Ensure .json extension
     let filename = with_json_ext(filename);
-
-    // Load the source layout from workspace
     let source_path = state.workspace_root.join(&filename);
 
     if !source_path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!(
-                "Source layout not found: {filename}"
-            ))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Source layout not found: {filename}"
+        )));
     }
 
     let mut layout = LayoutService::load(&source_path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load source layout",
-                e.to_string(),
-            )),
+            "Failed to load source layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Update metadata with validation
     if request.name.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new("Template name cannot be empty")),
-        ));
+        return Err(AppError::bad_request("Template name cannot be empty"));
     }
     if request.name.len() > 100 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new(format!(
-                "Template name exceeds maximum length of 100 bytes (got {})",
-                request.name.len()
-            ))),
-        ));
+        return Err(AppError::bad_request(format!(
+            "Template name exceeds maximum length of 100 bytes (got {})",
+            request.name.len()
+        )));
     }
     layout.metadata.name.clone_from(&request.name);
 
-    // Validate and set tags
     for tag in &request.tags {
         if tag.is_empty() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("Tag cannot be empty")),
-            ));
+            return Err(AppError::bad_request("Tag cannot be empty"));
         }
         if !tag
             .chars()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
         {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new(format!(
-                    "Invalid tag '{}': must be lowercase ASCII letters, digits, and hyphens only",
-                    tag
-                ))),
-            ));
+            return Err(AppError::bad_request(format!(
+                "Invalid tag '{tag}': must be lowercase ASCII letters, digits, and hyphens only"
+            )));
         }
     }
     layout.metadata.tags = request.tags;
     layout.metadata.is_template = true;
     layout.metadata.modified = chrono::Utc::now();
 
-    // Generate safe filename
     let template_filename = sanitize_template_filename(&request.name);
     let template_path = template_dir.join(format!("{template_filename}.json"));
 
-    // Check if template already exists
     if template_path.exists() {
-        return Err((
+        return Err(AppError::with_details(
             StatusCode::CONFLICT,
-            Json(ApiError::new(format!(
-                "Template '{}' already exists",
-                request.name
-            ))),
+            "Template already exists",
+            Some(format!("Template '{}' already exists", request.name)),
         ));
     }
 
-    // Save the template
     LayoutService::save(&layout, &template_path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to save template",
-                e.to_string(),
-            )),
+            "Failed to save template",
+            Some(e.to_string()),
         )
     })?;
 

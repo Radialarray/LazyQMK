@@ -12,7 +12,7 @@ use crate::parser;
 use crate::services::LayoutService;
 
 use super::super::dto::ExportResponse;
-use super::super::error::ApiError;
+use super::super::error::AppError;
 use super::super::validation::validate_filename;
 use super::super::AppState;
 
@@ -54,9 +54,8 @@ fn generate_simple_markdown(layout: &Layout) -> String {
 pub(super) async fn export_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<ExportResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate filename
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+) -> Result<Json<ExportResponse>, AppError> {
+    let filename = validate_filename(&filename)?;
 
     let filename = if std::path::Path::new(filename)
         .extension()
@@ -70,23 +69,14 @@ pub(super) async fn export_layout(
     let path = state.workspace_root.join(&filename);
 
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
-    let layout = LayoutService::load(&path).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
-        )
-    })?;
+    let layout = LayoutService::load(&path)
+        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
 
-    // Get keyboard geometry for export
     let geometry = if let (Some(keyboard), Some(layout_variant)) = (
         layout.metadata.keyboard.as_ref(),
         layout.metadata.layout_variant.as_ref(),
@@ -117,23 +107,13 @@ pub(super) async fn export_layout(
         None
     };
 
-    // Generate markdown (with or without geometry)
     let markdown = if let Some(geom) = geometry {
-        export::export_to_markdown(&layout, &geom, &state.keycode_db).map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError::with_details(
-                    "Failed to export layout",
-                    e.to_string(),
-                )),
-            )
-        })?
+        export::export_to_markdown(&layout, &geom, &state.keycode_db)
+            .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to export layout", Some(e.to_string())))?
     } else {
-        // Generate simpler markdown without geometry
         generate_simple_markdown(&layout)
     };
 
-    // Generate suggested filename
     let layout_name = layout
         .metadata
         .name

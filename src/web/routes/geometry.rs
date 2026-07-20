@@ -7,9 +7,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::Serialize;
-
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::models::PaletteFxSettings;
 use crate::models::{
@@ -20,101 +18,65 @@ use crate::models::{
 use crate::parser;
 use crate::services::LayoutService;
 
-use super::super::error::ApiError;
+use super::super::error::AppError;
 use super::super::validation::{validate_filename, validate_keyboard_path, with_json_ext};
 use super::super::AppState;
 
-/// Keyboard geometry response.
 #[derive(Debug, Serialize)]
 pub(super) struct GeometryResponse {
-    /// Keyboard name/path (e.g., "crkbd" or "splitkb/halcyon/corne").
     pub keyboard: String,
-    /// Layout variant name (e.g., "`LAYOUT_split_3x6_3`").
     pub layout: String,
-    /// List of key geometries.
     pub keys: Vec<KeyGeometryInfo>,
-    /// Number of matrix rows.
     pub matrix_rows: u8,
-    /// Number of matrix columns.
     pub matrix_cols: u8,
-    /// Number of rotary encoders.
     pub encoder_count: u8,
-    /// Mapping from visual position ("row,col") to `visual_index` (layout array index).
-    /// This allows the frontend to look up the `visual_index` for keys that only have
-    /// position data, avoiding brittle coordinate inference logic.
     pub position_to_visual_index: HashMap<String, u8>,
 }
 
-/// Key geometry information for API response.
 #[derive(Debug, Serialize)]
 pub(super) struct KeyGeometryInfo {
-    /// Matrix row position.
     pub matrix_row: u8,
-    /// Matrix column position.
     pub matrix_col: u8,
-    /// Visual X position (in key units).
     pub x: f32,
-    /// Visual Y position (in key units).
     pub y: f32,
-    /// Key width (in key units, typically 1.0).
     pub width: f32,
-    /// Key height (in key units, typically 1.0).
     pub height: f32,
-    /// Key rotation angle in degrees.
     pub rotation: f32,
-    /// RGB LED index for this key.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub led_index: Option<u8>,
-    /// Visual index (layout array index from info.json).
-    /// This matches the `visual_index` in `KeyAssignment` and should be used for mapping keycodes.
     pub visual_index: u8,
 }
 
-/// Keyboard summary for listing.
 #[derive(Debug, Serialize)]
 pub(super) struct KeyboardInfo {
-    /// Keyboard path (e.g., "crkbd", "splitkb/halcyon/corne").
     pub path: String,
-    /// Number of available layout variants.
     pub layout_count: usize,
 }
 
-/// Keyboard list response.
 #[derive(Debug, Serialize)]
 pub(super) struct KeyboardListResponse {
-    /// List of keyboards.
     pub keyboards: Vec<KeyboardInfo>,
 }
 
-/// Layout variant info.
 #[derive(Debug, Serialize)]
 pub(super) struct LayoutVariantInfo {
-    /// Layout name (e.g., "`LAYOUT_split_3x6_3`").
     pub name: String,
-    /// Number of keys in this layout.
     pub key_count: usize,
 }
 
-/// Layout variants response.
 #[derive(Debug, Serialize)]
 pub(super) struct LayoutVariantsResponse {
-    /// Keyboard path.
     pub keyboard: String,
-    /// Available layout variants.
     pub variants: Vec<LayoutVariantInfo>,
 }
 
 /// GET /api/keyboards/{keyboard}/geometry/{layout} - Get keyboard geometry.
-///
-/// The keyboard path can contain slashes (e.g., "`keebart/corne_choc_pro`").
 pub(super) async fn get_geometry(
     State(state): State<AppState>,
     Path((keyboard, layout)): Path<(String, String)>,
-) -> Result<Json<GeometryResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate keyboard path
-    validate_keyboard_path(&keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+) -> Result<Json<GeometryResponse>, AppError> {
+    validate_keyboard_path(&keyboard)?;
 
-    // Get QMK path from config
     let qmk_path = state
         .config
         .read()
@@ -122,36 +84,26 @@ pub(super) async fn get_geometry(
         .paths
         .qmk_firmware
         .clone()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("QMK firmware path not configured")),
-            )
-        })?;
+        .ok_or_else(|| AppError::bad_request("QMK firmware path not configured"))?;
 
-    // Parse keyboard info.json
     let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(&qmk_path, &keyboard)
         .map_err(|e| {
-            (
+            AppError::with_details(
                 StatusCode::NOT_FOUND,
-                Json(ApiError::with_details(
-                    format!("Failed to parse keyboard info for '{keyboard}'"),
-                    e.to_string(),
-                )),
+                format!("Failed to parse keyboard info for '{keyboard}'"),
+                Some(e.to_string()),
             )
         })?;
 
-    // Validate that the layout exists
-    let _layout_def = keyboard_info.layouts.get(&layout).ok_or_else(|| {
-        (
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!(
+    let _layout_def = keyboard_info
+        .layouts
+        .get(&layout)
+        .ok_or_else(|| {
+            AppError::not_found(format!(
                 "Layout '{layout}' not found in keyboard '{keyboard}'"
-            ))),
-        )
-    })?;
+            ))
+        })?;
 
-    // Build geometry from the layout
     let geometry = parser::keyboard_json::build_keyboard_geometry_with_rgb(
         &keyboard_info,
         &keyboard,
@@ -159,16 +111,13 @@ pub(super) async fn get_geometry(
         None,
     )
     .map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to build keyboard geometry",
-                e.to_string(),
-            )),
+            "Failed to build keyboard geometry",
+            Some(e.to_string()),
         )
     })?;
 
-    // Convert to API response
     let keys: Vec<KeyGeometryInfo> = geometry
         .keys
         .iter()
@@ -185,14 +134,10 @@ pub(super) async fn get_geometry(
         })
         .collect();
 
-    // Build position_to_visual_index mapping from geometry
-    // This provides the authoritative mapping from visual position to layout array index,
-    // so the frontend doesn't need to infer it from coordinates.
     let position_to_visual_index: HashMap<String, u8> = geometry
         .keys
         .iter()
         .map(|k| {
-            // Quantize visual coordinates to grid position (same logic as VisualLayoutMapping::build)
             let row = k.visual_y.round() as u8;
             let col = k.visual_x.round() as u8;
             let pos_key = format!("{row},{col}");
@@ -211,7 +156,6 @@ pub(super) async fn get_geometry(
     }))
 }
 
-/// Recursively scans keyboard directory for valid keyboards.
 fn scan_keyboard_directory(
     base_dir: &std::path::Path,
     current_dir: &std::path::Path,
@@ -227,24 +171,18 @@ fn scan_keyboard_directory(
             continue;
         }
 
-        // Skip hidden directories
         let dir_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if dir_name.starts_with('.') || dir_name == "keymaps" {
             continue;
         }
 
-        // Check if this directory has keyboard config files
         let info_json = path.join("info.json");
         let keyboard_json = path.join("keyboard.json");
 
         if info_json.exists() || keyboard_json.exists() {
-            // Get relative path from keyboards directory
             if let Ok(rel_path) = path.strip_prefix(base_dir) {
                 let keyboard_path = rel_path.to_string_lossy().replace('\\', "/");
-
-                // Try to get layout count
                 let layout_count = get_keyboard_layout_count(&path);
-
                 if layout_count > 0 {
                     keyboards.push(KeyboardInfo {
                         path: keyboard_path,
@@ -254,7 +192,6 @@ fn scan_keyboard_directory(
             }
         }
 
-        // Recurse into subdirectories (but not too deep)
         let depth = current_dir
             .strip_prefix(base_dir)
             .map(|p| p.components().count())
@@ -265,9 +202,7 @@ fn scan_keyboard_directory(
     }
 }
 
-/// Gets the number of layouts defined for a keyboard.
 fn get_keyboard_layout_count(keyboard_dir: &std::path::Path) -> usize {
-    // Try info.json first
     let info_json = keyboard_dir.join("info.json");
     if info_json.exists() {
         if let Ok(content) = std::fs::read_to_string(&info_json) {
@@ -279,7 +214,6 @@ fn get_keyboard_layout_count(keyboard_dir: &std::path::Path) -> usize {
         }
     }
 
-    // Try keyboard.json
     let keyboard_json = keyboard_dir.join("keyboard.json");
     if keyboard_json.exists() {
         if let Ok(content) = std::fs::read_to_string(&keyboard_json) {
@@ -299,8 +233,7 @@ fn get_keyboard_layout_count(keyboard_dir: &std::path::Path) -> usize {
 /// GET /api/keyboards - List available keyboards by scanning QMK keyboards directory.
 pub(super) async fn list_keyboards(
     State(state): State<AppState>,
-) -> Result<Json<KeyboardListResponse>, (StatusCode, Json<ApiError>)> {
-    // Get QMK path from config
+) -> Result<Json<KeyboardListResponse>, AppError> {
     let qmk_path = state
         .config
         .read()
@@ -308,26 +241,15 @@ pub(super) async fn list_keyboards(
         .paths
         .qmk_firmware
         .clone()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("QMK firmware path not configured")),
-            )
-        })?;
+        .ok_or_else(|| AppError::bad_request("QMK firmware path not configured"))?;
 
     let keyboards_dir = qmk_path.join("keyboards");
     if !keyboards_dir.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new("QMK keyboards directory not found")),
-        ));
+        return Err(AppError::not_found("QMK keyboards directory not found"));
     }
 
-    // Scan for keyboards with layout definitions
     let mut keyboards = Vec::new();
     scan_keyboard_directory(&keyboards_dir, &keyboards_dir, &mut keyboards);
-
-    // Sort by path
     keyboards.sort_by(|a, b| a.path.cmp(&b.path));
 
     Ok(Json(KeyboardListResponse { keyboards }))
@@ -337,11 +259,9 @@ pub(super) async fn list_keyboards(
 pub(super) async fn list_keyboard_layouts(
     State(state): State<AppState>,
     Path(keyboard): Path<String>,
-) -> Result<Json<LayoutVariantsResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate keyboard path
-    validate_keyboard_path(&keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
+) -> Result<Json<LayoutVariantsResponse>, AppError> {
+    validate_keyboard_path(&keyboard)?;
 
-    // Get QMK path from config
     let qmk_path = state
         .config
         .read()
@@ -349,26 +269,17 @@ pub(super) async fn list_keyboard_layouts(
         .paths
         .qmk_firmware
         .clone()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("QMK firmware path not configured")),
-            )
-        })?;
+        .ok_or_else(|| AppError::bad_request("QMK firmware path not configured"))?;
 
-    // Parse keyboard info.json
     let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(&qmk_path, &keyboard)
         .map_err(|e| {
-            (
+            AppError::with_details(
                 StatusCode::NOT_FOUND,
-                Json(ApiError::with_details(
-                    format!("Failed to parse keyboard info for '{keyboard}'"),
-                    e.to_string(),
-                )),
+                format!("Failed to parse keyboard info for '{keyboard}'"),
+                Some(e.to_string()),
             )
         })?;
 
-    // Extract layout variants
     let variants: Vec<LayoutVariantInfo> =
         parser::keyboard_json::extract_layout_variants(&keyboard_info)
             .into_iter()
@@ -381,42 +292,28 @@ pub(super) async fn list_keyboard_layouts(
     Ok(Json(LayoutVariantsResponse { keyboard, variants }))
 }
 
-/// Create layout request.
 #[derive(Debug, Deserialize)]
 pub(super) struct CreateLayoutRequest {
-    /// Filename for the new layout (without path).
     pub filename: String,
-    /// Layout name (display name).
     pub name: String,
-    /// Keyboard path.
     pub keyboard: String,
-    /// Layout variant name.
     pub layout_variant: String,
-    /// Optional description.
     #[serde(default)]
     pub description: String,
-    /// Optional author.
     #[serde(default)]
     pub author: String,
 }
 
-/// Switch variant request.
 #[derive(Debug, Deserialize)]
 pub(super) struct SwitchVariantRequest {
-    /// New layout variant name.
     pub layout_variant: String,
 }
 
-/// Switch variant response.
 #[derive(Debug, Serialize)]
 pub(super) struct SwitchVariantResponse {
-    /// Updated layout.
     pub layout: Layout,
-    /// Number of keys added (if new variant has more keys).
     pub keys_added: usize,
-    /// Number of keys removed (if new variant has fewer keys).
     pub keys_removed: usize,
-    /// Warning message if any.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warning: Option<String>,
 }
@@ -425,29 +322,20 @@ pub(super) struct SwitchVariantResponse {
 pub(super) async fn create_layout(
     State(state): State<AppState>,
     Json(request): Json<CreateLayoutRequest>,
-) -> Result<Json<Layout>, (StatusCode, Json<ApiError>)> {
-    // Validate filename
-    let filename =
-        validate_filename(&request.filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<Layout>, AppError> {
+    let filename = validate_filename(&request.filename)?;
     let filename = with_json_ext(filename);
+    validate_keyboard_path(&request.keyboard)?;
 
-    // Validate keyboard path
-    validate_keyboard_path(&request.keyboard).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Check if file already exists
     let target_path = state.workspace_root.join(&filename);
     if target_path.exists() {
-        return Err((
+        return Err(AppError::with_details(
             StatusCode::CONFLICT,
-            Json(ApiError::new(format!(
-                "Layout file already exists: {filename}"
-            ))),
+            "Layout file already exists",
+            Some(format!("Layout file already exists: {filename}")),
         ));
     }
 
-    // Get QMK path from config
     let qmk_path = state
         .config
         .read()
@@ -455,46 +343,32 @@ pub(super) async fn create_layout(
         .paths
         .qmk_firmware
         .clone()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("QMK firmware path not configured")),
-            )
-        })?;
+        .ok_or_else(|| AppError::bad_request("QMK firmware path not configured"))?;
 
-    // Parse keyboard info to get geometry
     let keyboard_info =
         parser::keyboard_json::parse_keyboard_info_json(&qmk_path, &request.keyboard).map_err(
             |e| {
-                (
+                AppError::with_details(
                     StatusCode::NOT_FOUND,
-                    Json(ApiError::with_details(
-                        format!("Failed to parse keyboard info for '{}'", request.keyboard),
-                        e.to_string(),
-                    )),
+                    format!("Failed to parse keyboard info for '{}'", request.keyboard),
+                    Some(e.to_string()),
                 )
             },
         )?;
 
-    // Validate layout variant exists
     let layout_def = keyboard_info
         .layouts
         .get(&request.layout_variant)
         .ok_or_else(|| {
-            (
-                StatusCode::NOT_FOUND,
-                Json(ApiError::new(format!(
-                    "Layout variant '{}' not found in keyboard '{}'",
-                    request.layout_variant, request.keyboard
-                ))),
-            )
+            AppError::not_found(format!(
+                "Layout variant '{}' not found in keyboard '{}'",
+                request.layout_variant, request.keyboard
+            ))
         })?;
 
-    // Create layout with proper geometry
     let key_count = layout_def.layout.len();
     let now = chrono::Utc::now();
 
-    // Build key definitions from geometry
     let mut base_keys = Vec::with_capacity(key_count);
     for key_pos in layout_def.layout.iter() {
         let matrix = key_pos.matrix.unwrap_or([0, 0]);
@@ -512,7 +386,6 @@ pub(super) async fn create_layout(
         });
     }
 
-    // Create base layer
     let base_layer = Layer {
         number: 0,
         name: "Base".to_string(),
@@ -556,14 +429,11 @@ pub(super) async fn create_layout(
         tap_dances: vec![],
     };
 
-    // Save the layout
     LayoutService::save(&layout, &target_path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to save layout",
-                e.to_string(),
-            )),
+            "Failed to save layout",
+            Some(e.to_string()),
         )
     })?;
 
@@ -575,44 +445,29 @@ pub(super) async fn switch_layout_variant(
     State(state): State<AppState>,
     Path(filename): Path<String>,
     Json(request): Json<SwitchVariantRequest>,
-) -> Result<Json<SwitchVariantResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate filename
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<SwitchVariantResponse>, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
-    // Load existing layout
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
     let mut layout = LayoutService::load(&path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
+            "Failed to load layout",
+            Some(e.to_string()),
         )
     })?;
 
-    // Get keyboard from layout metadata
     let keyboard = layout.metadata.keyboard.clone().ok_or_else(|| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError::new(
-                "Layout has no keyboard defined - cannot switch variant",
-            )),
-        )
+        AppError::bad_request("Layout has no keyboard defined - cannot switch variant")
     })?;
 
-    // Get QMK path from config
     let qmk_path = state
         .config
         .read()
@@ -620,47 +475,33 @@ pub(super) async fn switch_layout_variant(
         .paths
         .qmk_firmware
         .clone()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiError::new("QMK firmware path not configured")),
-            )
-        })?;
+        .ok_or_else(|| AppError::bad_request("QMK firmware path not configured"))?;
 
-    // Parse keyboard info.json
     let keyboard_info = parser::keyboard_json::parse_keyboard_info_json(&qmk_path, &keyboard)
         .map_err(|e| {
-            (
+            AppError::with_details(
                 StatusCode::NOT_FOUND,
-                Json(ApiError::with_details(
-                    format!("Failed to parse keyboard info for '{keyboard}'"),
-                    e.to_string(),
-                )),
+                format!("Failed to parse keyboard info for '{keyboard}'"),
+                Some(e.to_string()),
             )
         })?;
 
-    // Validate new layout variant exists
     let new_layout_def = keyboard_info
         .layouts
         .get(&request.layout_variant)
         .ok_or_else(|| {
-            (
-                StatusCode::NOT_FOUND,
-                Json(ApiError::new(format!(
-                    "Layout variant '{}' not found in keyboard '{keyboard}'",
-                    request.layout_variant
-                ))),
-            )
+            AppError::not_found(format!(
+                "Layout variant '{}' not found in keyboard '{keyboard}'",
+                request.layout_variant
+            ))
         })?;
 
     let new_key_count = new_layout_def.layout.len();
     let old_key_count = layout.layers.first().map_or(0, |l| l.keys.len());
 
-    // Calculate keys added/removed
     let keys_added = new_key_count.saturating_sub(old_key_count);
     let keys_removed = old_key_count.saturating_sub(new_key_count);
 
-    // Build warning message if keys are being lost
     let warning = if keys_removed > 0 {
         Some(format!(
             "Layout variant has fewer keys ({new_key_count} vs {old_key_count}). \
@@ -670,14 +511,11 @@ pub(super) async fn switch_layout_variant(
         None
     };
 
-    // Update metadata
     layout.metadata.layout_variant = Some(request.layout_variant.clone());
     layout.metadata.modified = chrono::Utc::now();
 
-    // Adjust each layer to new key count
     for layer in &mut layout.layers {
         if new_key_count > layer.keys.len() {
-            // Add new keys with default keycodes
             for idx in layer.keys.len()..new_key_count {
                 let key_pos = &new_layout_def.layout[idx];
                 let matrix = key_pos.matrix.unwrap_or([0, 0]);
@@ -695,11 +533,9 @@ pub(super) async fn switch_layout_variant(
                 });
             }
         } else if new_key_count < layer.keys.len() {
-            // Truncate keys (preserves first N keys)
             layer.keys.truncate(new_key_count);
         }
 
-        // Update matrix positions based on new layout geometry
         for (idx, key) in layer.keys.iter_mut().enumerate() {
             if idx < new_layout_def.layout.len() {
                 let key_pos = &new_layout_def.layout[idx];
@@ -711,14 +547,11 @@ pub(super) async fn switch_layout_variant(
         }
     }
 
-    // Save the updated layout
     LayoutService::save(&layout, &path).map_err(|e| {
-        (
+        AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to save layout",
-                e.to_string(),
-            )),
+            "Failed to save layout",
+            Some(e.to_string()),
         )
     })?;
 

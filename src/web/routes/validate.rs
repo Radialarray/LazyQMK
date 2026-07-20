@@ -9,7 +9,7 @@ use axum::{
 use crate::services::LayoutService;
 
 use super::super::dto::ValidationResponse;
-use super::super::error::ApiError;
+use super::super::error::AppError;
 use super::super::validation::{validate_filename, with_json_ext};
 use super::super::AppState;
 
@@ -17,44 +17,25 @@ use super::super::AppState;
 pub(super) async fn validate_layout(
     State(state): State<AppState>,
     Path(filename): Path<String>,
-) -> Result<Json<ValidationResponse>, (StatusCode, Json<ApiError>)> {
-    // Validate filename to prevent path traversal
-    let filename = validate_filename(&filename).map_err(|e| (StatusCode::BAD_REQUEST, Json(e)))?;
-
-    // Ensure .json extension
+) -> Result<Json<ValidationResponse>, AppError> {
+    let filename = validate_filename(&filename)?;
     let filename = with_json_ext(filename);
-
     let path = state.workspace_root.join(&filename);
 
-    // Check if file exists
     if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ApiError::new(format!("Layout file not found: {filename}"))),
-        ));
+        return Err(AppError::not_found(format!(
+            "Layout file not found: {filename}"
+        )));
     }
 
-    // Load and parse the layout
-    let layout = LayoutService::load(&path).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError::with_details(
-                "Failed to load layout",
-                e.to_string(),
-            )),
-        )
-    })?;
+    let layout = LayoutService::load(&path)
+        .map_err(|e| AppError::with_details(StatusCode::INTERNAL_SERVER_ERROR, "Failed to load layout", Some(e.to_string())))?;
 
-    // Collect warnings
     let mut warnings = Vec::new();
-
-    // Check for orphaned tap dances
-    let orphaned = layout.get_orphaned_tap_dances();
-    for name in &orphaned {
+    for name in &layout.get_orphaned_tap_dances() {
         warnings.push(format!("Tap dance '{name}' is defined but not used"));
     }
 
-    // Validate the layout
     match layout.validate() {
         Ok(()) => Ok(Json(ValidationResponse {
             valid: true,
