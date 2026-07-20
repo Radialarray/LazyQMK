@@ -1,145 +1,73 @@
-//! Static file serving for LazyQMK Web UI.
+//! Static file serving and SPA fallback for the web API.
 //!
-//! This module provides embedded static file serving with SPA fallback support.
-//! In release builds, static files are embedded directly in the binary for
-//! easy distribution. In development, files can be served from disk.
+//! Extracted from src/web/mod.rs as part of LazyQMK-2rf6.2.
 
 use axum::{
-    body::Body,
-    extract::Request,
     http::{header, StatusCode},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
 };
-use rust_embed::Embed;
-use std::path::PathBuf;
 
 /// Embedded static files from the web frontend build.
+#[derive(rust_embed::RustEmbed)]
+#[folder = "web/build/"]
+struct Assets;
+
+/// Serves static files from the embedded assets.
 ///
-/// The files are embedded at compile time from the `web/build` directory.
-/// If the directory doesn't exist at compile time, the struct will be empty
-/// and static serving will return 404 for all requests.
-#[derive(Embed)]
-#[folder = "web/build"]
-#[include = "*.html"]
-#[include = "*.js"]
-#[include = "*.css"]
-#[include = "*.json"]
-#[include = "*.png"]
-#[include = "*.ico"]
-#[include = "*.svg"]
-#[include = "*.woff"]
-#[include = "*.woff2"]
-#[include = "*.ttf"]
-#[include = "_app/*"]
-#[include = "_app/**/*"]
-pub struct StaticAssets;
+/// Returns the file content with appropriate MIME type headers,
+/// or None if the file is not found.
+fn serve_static(uri: &str) -> Option<Response> {
+    // Remove leading slash
+    let path = uri.trim_start_matches('/');
 
-/// Serves static files with SPA fallback.
-///
-/// This handler:
-/// 1. First tries to serve the exact requested path
-/// 2. If not found, tries adding `.html` extension
-/// 3. If still not found and path doesn't look like a file, serves `index.html` (SPA fallback)
-///
-/// # Arguments
-///
-/// * `request` - The incoming HTTP request
-///
-/// # Returns
-///
-/// The static file content or appropriate error response.
-pub async fn serve_static(request: Request) -> Response {
-    let path = request.uri().path();
+    // Try to get the file from embedded assets
+    let file = Assets::get(path)?;
 
-    // Remove leading slash for embed lookup
-    let path = path.trim_start_matches('/');
+    // Guess MIME type from file extension
+    let mime_type = mime_guess::from_path(path)
+        .first_or_octet_stream()
+        .as_ref()
+        .to_string();
 
-    // If path is empty or root, serve index.html
-    if path.is_empty() {
-        return serve_file("index.html");
-    }
-
-    // Try to serve the exact path first
-    if let Some(content) = StaticAssets::get(path) {
-        return file_response(path, content.data.as_ref());
-    }
-
-    // Try with .html extension for clean URLs
-    let html_path = format!("{path}.html");
-    if let Some(content) = StaticAssets::get(&html_path) {
-        return file_response(&html_path, content.data.as_ref());
-    }
-
-    // Check if this looks like a file request (has extension)
-    let looks_like_file = PathBuf::from(path)
-        .extension()
-        .is_some_and(|ext| !ext.is_empty());
-
-    // If it looks like a file but wasn't found, return 404
-    if looks_like_file {
-        return (StatusCode::NOT_FOUND, "File not found").into_response();
-    }
-
-    // SPA fallback: serve index.html for all other routes
-    serve_file("index.html")
+    // Build response with appropriate headers
+    Some(([(header::CONTENT_TYPE, mime_type)], file.data).into_response())
 }
 
-/// Serves a specific file from embedded assets.
-fn serve_file(path: &str) -> Response {
-    match StaticAssets::get(path) {
-        Some(content) => file_response(path, content.data.as_ref()),
-        None => (StatusCode::NOT_FOUND, "File not found").into_response(),
-    }
-}
-
-/// Creates an HTTP response for a file with appropriate content type.
-fn file_response(path: &str, content: &[u8]) -> Response {
-    let mime = mime_guess::from_path(path).first_or_octet_stream();
-
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, mime.as_ref())
-        .header(header::CACHE_CONTROL, cache_control_for_path(path))
-        .body(Body::from(content.to_vec()))
-        .unwrap_or_else(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create response",
-            )
-                .into_response()
-        })
-}
-
-/// Returns appropriate Cache-Control header based on file path.
+/// Fallback handler for SPA routing.
 ///
-/// - Immutable assets (with content hash in filename): long cache (1 year)
-/// - HTML files: no cache (always revalidate)
-/// - Other files: short cache (1 hour)
-fn cache_control_for_path(path: &str) -> &'static str {
-    // SvelteKit generates immutable assets with hashes in _app directory
-    if path.starts_with("_app/") {
-        "public, max-age=31536000, immutable"
-    } else if std::path::Path::new(path)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("html"))
-    {
-        "no-cache, must-revalidate"
+/// Serves index.html for any non-API routes that don't match static files.
+/// This enables client-side routing in the SPA.
+fn spa_fallback() -> Response {
+    // Try to get index.html from embedded assets
+    if let Some(index) = Assets::get("index.html") {
+        Html(index.data).into_response()
     } else {
-        "public, max-age=3600"
+        // If index.html is not embedded (dev mode), return 404
+        (
+            StatusCode::NOT_FOUND,
+            "Frontend not embedded - use Vite dev server",
+        )
+            .into_response()
     }
 }
 
-/// Returns true if embedded assets are available.
+/// Handles static file requests and SPA fallback.
 ///
-/// This can be used to check if the web UI was built and embedded
-/// before attempting to serve it.
-#[must_use]
-pub fn has_embedded_assets() -> bool {
-    // Check if we have at least the index.html file
-    StaticAssets::get("index.html").is_some()
+/// First tries to serve the requested file from embedded assets.
+/// If not found and it's not an API route, serves index.html for SPA routing.
+pub async fn static_handler(uri: axum::http::Uri) -> Response {
+    let path = uri.path();
+
+    // Try to serve the static file first
+    if let Some(response) = serve_static(path) {
+        return response;
+    }
+
+    // If file not found and path doesn't start with /api, serve index.html (SPA fallback)
+    if !path.starts_with("/api") {
+        return spa_fallback();
+    }
+
+    // For API routes that don't match, return 404
+    (StatusCode::NOT_FOUND, "Not found").into_response()
 }
-
-/// Lists all embedded asset paths for debugging.
-#[cfg(test)]
-mod tests;
-
