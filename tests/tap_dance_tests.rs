@@ -383,7 +383,7 @@ fn test_lt_flow_regression() {
 #[test]
 fn test_pending_keycode_build_formats_correctly() {
     // Test that build_keycode produces correct format
-    use lazyqmk::tui::PendingKeycodeState;
+    use lazyqmk::tui::app_state::PendingKeycodeState;
 
     let mut pending = PendingKeycodeState::new();
 
