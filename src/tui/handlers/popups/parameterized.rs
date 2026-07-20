@@ -199,7 +199,10 @@ pub fn handle_parameter_collected(state: &mut AppState, param_value: String) {
 }
 
 /// Handle keycode picker events
-pub fn handle_keycode_picker_event(state: &mut AppState, event: KeycodePickerEvent) -> Result<bool> {
+pub fn handle_keycode_picker_event(
+    state: &mut AppState,
+    event: KeycodePickerEvent,
+) -> Result<bool> {
     // Save last-used language to config if changed
     // Get the selected language from the active component (not the legacy state)
     let selected_language =

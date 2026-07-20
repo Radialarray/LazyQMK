@@ -349,5 +349,4 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
         }
         _ => Ok(false),
     }
-
 }

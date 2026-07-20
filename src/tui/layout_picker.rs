@@ -159,7 +159,7 @@ impl LayoutPickerState {
 
         // Sort layouts by modified date (most recent first)
         self.layouts
-            .sort_by(|a, b| b.metadata.modified.cmp(&a.metadata.modified));
+            .sort_by_key(|b| std::cmp::Reverse(b.metadata.modified));
 
         // Reset selection
         self.selected = 0;

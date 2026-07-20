@@ -126,13 +126,12 @@ pub fn parse_layer_keycode(keycode: &str) -> Option<(LayerRefTarget, LayerRefKin
         let inner = inner.strip_suffix(')')?;
         let (layer_part, _) = inner.split_once(',')?;
         ("LT", layer_part.trim())
-    } else if let Some(inner) = keycode.strip_prefix("LM(") {
+    } else {
+        let inner = keycode.strip_prefix("LM(")?;
         // LM(layer, mod) - extract just the layer part
         let inner = inner.strip_suffix(')')?;
         let (layer_part, _) = inner.split_once(',')?;
         ("LM", layer_part.trim())
-    } else {
-        return None;
     };
 
     // Determine target: UUID (prefixed with '@') or numeric

@@ -485,7 +485,9 @@ fn handle_layer_picker_event(
 
                 // Data-driven parameterized keycode flow
                 if state.pending_keycode.keycode_template.is_some() {
-                    crate::tui::handlers::popups::parameterized::handle_parameter_collected(state, layer_ref);
+                    crate::tui::handlers::popups::parameterized::handle_parameter_collected(
+                        state, layer_ref,
+                    );
                     return Ok(());
                 }
 
@@ -553,7 +555,10 @@ pub fn handle_tap_keycode_picker_input(state: &mut AppState, key: event::KeyEven
                     // Only allow basic keycodes for tap action (no parameterized keycodes)
                     if is_basic_keycode(&kc.code) {
                         // Data-driven approach: collect the parameter and continue the flow
-                        crate::tui::handlers::popups::parameterized::handle_parameter_collected(state, kc.code.clone());
+                        crate::tui::handlers::popups::parameterized::handle_parameter_collected(
+                            state,
+                            kc.code.clone(),
+                        );
                         return Ok(false);
                     }
                     state.set_error("Only basic keycodes allowed for tap action");
@@ -616,7 +621,9 @@ fn handle_modifier_picker_event(
 
             // Data-driven parameterized keycode flow
             if state.pending_keycode.keycode_template.is_some() {
-                crate::tui::handlers::popups::parameterized::handle_parameter_collected(state, mod_string);
+                crate::tui::handlers::popups::parameterized::handle_parameter_collected(
+                    state, mod_string,
+                );
             } else {
                 // No parameterized flow - unexpected state
                 state.pending_keycode.reset();
@@ -677,4 +684,3 @@ pub fn is_basic_or_layer_keycode(code: &str) -> bool {
         false
     }
 }
-

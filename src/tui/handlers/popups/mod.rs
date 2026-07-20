@@ -23,8 +23,8 @@ use crate::tui::editor::key_editor;
 use crate::tui::{ActiveComponent, AppState, PopupType};
 
 pub use dialogs::{
-    handle_export_filename_dialog_input, handle_setup_wizard_input,
-    handle_tap_dance_form_input, handle_unsaved_prompt_input,
+    handle_export_filename_dialog_input, handle_setup_wizard_input, handle_tap_dance_form_input,
+    handle_unsaved_prompt_input,
 };
 pub use parameterized::{
     handle_category_picker_event, handle_keycode_picker_event,

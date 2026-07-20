@@ -164,9 +164,8 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
     if palette_fx.enabled && gen.geometry.has_rgb_matrix() {
         content.push_str("\n// PaletteFX Community Module Configuration\n");
         content.push_str("// Note: PaletteFX runs as idle screensaver, not as default mode.\n");
-        content.push_str(
-            "// The idle effect state machine uses LQMK_IDLE_EFFECT_MODE (see above)\n",
-        );
+        content
+            .push_str("// The idle effect state machine uses LQMK_IDLE_EFFECT_MODE (see above)\n");
         content.push_str("// which is set to the PaletteFX default effect at compile time.\n");
         content.push_str("#ifdef RGB_MATRIX_ENABLE\n");
 
@@ -246,11 +245,14 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
         // Gives a triangular 0→255→0 ramp over the ripple duration.
         // Pre-computed so the integer math doesn't collapse to zero.
         let half_duration = u32::from(ripple_settings.duration_ms / 2);
-        let amp_scale = if half_duration > 0 {
-            ((255u32 * 256) / half_duration).min(255) as u8
-        } else {
-            255
-        };
+        // amp_scale: pre-computed divisor so `(effective_elapsed * 2) * amp_scale`
+        // produces a 0→255→0 triangle over the ripple duration without collapsing
+        // to zero for very small durations. Default to 255 if half_duration is 0
+        // (which validate() above should have rejected, but we guard here).
+        let amp_scale = half_duration
+            .checked_div(255u32 * 256)
+            .map(|v| v.min(255) as u8)
+            .unwrap_or(255);
         content.push_str(&format!("#define LQMK_RIPPLE_AMP_SCALE {amp_scale}\n"));
         content.push_str(&format!(
             "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",

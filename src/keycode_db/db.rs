@@ -258,7 +258,7 @@ impl KeycodeDb {
             .collect();
 
         // Sort by relevance (descending)
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         results.into_iter().map(|(keycode, _)| keycode).collect()
     }
@@ -391,7 +391,7 @@ impl KeycodeDb {
             .collect();
 
         // Sort by relevance (descending)
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         results.into_iter().map(|(keycode, _)| keycode).collect()
     }
