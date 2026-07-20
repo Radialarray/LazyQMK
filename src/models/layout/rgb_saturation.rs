@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+/// RGB saturation level (0-200%).
+///
 /// Controls the global saturation multiplier for all RGB LEDs.
 /// 0 = fully desaturated (grayscale), 100 = original colors, 200 = maximum saturation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
 /// RGB brightness level (0-100%).
 ///
 /// Controls the global brightness multiplier for all RGB LEDs.
