@@ -26,9 +26,11 @@ pub use dialogs::{
     handle_export_filename_dialog_input, handle_setup_wizard_input, handle_tap_dance_form_input,
     handle_unsaved_prompt_input,
 };
-pub use parameterized::{
-    handle_category_picker_event, handle_keycode_picker_event,
-};
+#[cfg(test)]
+pub use parameterized::extract_td_name;
+pub use parameterized::{handle_category_picker_event, handle_keycode_picker_event};
+#[cfg(test)]
+pub use pickers::is_basic_or_layer_keycode;
 pub use pickers::{
     handle_build_log_input, handle_color_picker_event, handle_help_overlay_input,
     handle_layer_picker_input, handle_layout_picker_input, handle_metadata_editor_input,
