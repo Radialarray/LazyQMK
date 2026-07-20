@@ -34,6 +34,9 @@ Thumbs.db
 # Application runtime
 .build/
 build/
+# Allow source-tree test modules named `build/`
+!/src/**/build/
+!/src/**/build/tests.rs
 
 # User configuration (tracked separately if needed)
 # config.toml
