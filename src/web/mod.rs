@@ -39,6 +39,7 @@
 
 pub mod app_state;
 pub mod build_jobs;
+pub mod error;
 pub mod generate_jobs;
 
 use std::net::SocketAddr;
@@ -69,6 +70,7 @@ use crate::services::LayoutService;
 
 
 pub use app_state::AppState;
+pub use error::ApiError;
 
 
 // ============================================================================
@@ -295,31 +297,6 @@ pub struct PreflightResponse {
     pub qmk_firmware_path: Option<String>,
 }
 
-/// API error response.
-#[derive(Debug, Serialize)]
-pub struct ApiError {
-    /// Error message.
-    pub error: String,
-    /// Optional additional details.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub details: Option<String>,
-}
-
-impl ApiError {
-    fn new(error: impl Into<String>) -> Self {
-        Self {
-            error: error.into(),
-            details: None,
-        }
-    }
-
-    fn with_details(error: impl Into<String>, details: impl Into<String>) -> Self {
-        Self {
-            error: error.into(),
-            details: Some(details.into()),
-        }
-    }
-}
 
 // ============================================================================
 // Validate/Inspect Response Types
