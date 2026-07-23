@@ -4,6 +4,11 @@
 > **Module:** [getreuer/palettefx](https://github.com/getreuer/qmk-modules/tree/main/palettefx) (Apache 2.0)
 > **Requires:** QMK 0.28+, community modules support
 
+> **Vendored:** This feature depends on `getreuer/palettefx`, which lazyqmk
+> vendors in-tree at `qmk_firmware/modules/getreuer/palettefx/` (Apache 2.0).
+> See the root `NOTICE` file for attribution and pinned version.
+> No internet access or external `qmk module update` is required to build.
+
 ## Concept
 
 PaletteFX provides 6 animated RGB effects driven by 16 curated color palettes. LazyQMK integrates it as an **idle screensaver** — it plays a PaletteFX animation when the keyboard sits idle, then restores your normal per-key layer colors when you press a key.

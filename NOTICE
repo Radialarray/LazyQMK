@@ -1,0 +1,30 @@
+LazyQMK third-party notices
+
+This project includes third-party software components. The corresponding
+license texts and (where applicable) source code attributions are listed
+below.
+
+================================================================================
+
+1. getreuer/palettefx (vendored)
+
+Source:  https://github.com/getreuer/qmk-modules/tree/main/palettefx
+Pinned:  362fab399e87e02656b1a7327a7f8ff33d3f31ef
+License: Apache License, Version 2.0
+Path:    qmk_firmware/modules/getreuer/palettefx/
+
+This component implements the `palettefx_*()` symbols referenced by lazyqmk's
+generated RGB matrix idle-screensaver code (see `docs/PALETTEFX.md`). It is
+unmodified from upstream SHA 362fab399e87e02656b1a7327a7f8ff33d3f31ef.
+
+The full license text is preserved at:
+  qmk_firmware/modules/getreuer/palettefx/LICENSE.txt
+
+Copyright 2025 Pascal Getreuer.
+
+LazyQMK is in no way affiliated with, endorsed by, or sponsored by Pascal
+Getreuer. LazyQMK simply vendors a frozen copy of this upstream module
+inside its QMK firmware submodule to enable the PaletteFX feature without
+requiring internet access at build time.
+
+================================================================================
