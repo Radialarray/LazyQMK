@@ -243,16 +243,18 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
         ));
         // Amplitude envelope scale factor for scale16by8.
         // Gives a triangular 0→255→0 ramp over the ripple duration.
-        // Pre-computed so the integer math doesn't collapse to zero.
+        // scale16by8(t, n) = (t * n) / 256, so for peak amp == 255 with
+        // peak input == duration_ms, we need amp_scale = (255 * 256) / duration_ms.
         let half_duration = u32::from(ripple_settings.duration_ms / 2);
-        // amp_scale: pre-computed divisor so `(effective_elapsed * 2) * amp_scale`
-        // produces a 0→255→0 triangle over the ripple duration without collapsing
-        // to zero for very small durations. Default to 255 if half_duration is 0
-        // (which validate() above should have rejected, but we guard here).
-        let amp_scale = half_duration
-            .checked_div(255u32 * 256)
-            .map(|v| v.min(255) as u8)
-            .unwrap_or(255);
+        let amp_scale = if half_duration == 0 {
+            255
+        } else {
+            // Peak input over the triangle is duration_ms (at the midpoint, both
+            // branches compute ~duration_ms). Guard the divisor and clamp.
+            let peak_input = u32::from(ripple_settings.duration_ms);
+            let scale = (255u32 * 256) / peak_input;
+            scale.min(255) as u8
+        };
         content.push_str(&format!("#define LQMK_RIPPLE_AMP_SCALE {amp_scale}\n"));
         content.push_str(&format!(
             "#define LQMK_RIPPLE_TRIGGER_ON_PRESS {}\n",
