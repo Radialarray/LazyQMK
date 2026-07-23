@@ -259,8 +259,39 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
     code.push_str("        if (bump == 0) continue;\n");
     code.push('\n');
     // For each ripple in range, accumulate ITS color contribution.
+    // The ripple's source color depends on the configured `color_mode`,
+    // even in the background-lighting additive path. Previously Branch A
+    // always used `lazyqmk_ripple_base_color(ripples[i].led_index)`, which
+    // ignored the user's `color_mode` setting (always produced key-based
+    // tint). Honor the mode here too.
     code.push_str("        {\n");
-    code.push_str("            RGB c = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
+    match color_mode {
+        crate::models::layout::RippleColorMode::Fixed => {
+            let color = &settings.fixed_color;
+            code.push_str(&format!(
+                "            RGB c = {{ {}, {}, {} }};  // fixed color\n",
+                color.r, color.g, color.b
+            ));
+        }
+        crate::models::layout::RippleColorMode::KeyBased => {
+            code.push_str(
+                "            RGB c = lazyqmk_ripple_base_color(ripples[i].led_index);\n",
+            );
+        }
+        crate::models::layout::RippleColorMode::HueShift => {
+            let hue_shift_steps = (i32::from(settings.hue_shift_deg) * 256) / 360;
+            code.push_str("            RGB __base = lazyqmk_ripple_base_color(ripples[i].led_index);\n");
+            code.push_str("            hsv_t __hsv = rgb_to_hsv(__base);\n");
+            code.push_str(&format!(
+                "            int16_t shifted_hue = (int16_t)__hsv.h + {hue_shift_steps};\n"
+            ));
+            code.push_str("            while (shifted_hue < 0) shifted_hue += 256;\n");
+            code.push_str("            while (shifted_hue >= 256) shifted_hue -= 256;\n");
+            code.push_str("            __hsv.h = (uint8_t)shifted_hue;\n");
+            code.push_str("            rgb_t shifted_rgb = hsv_to_rgb(__hsv);\n");
+            code.push_str("            RGB c = { shifted_rgb.r, shifted_rgb.g, shifted_rgb.b };\n");
+        }
+    }
     code.push_str("            contrib_r = qadd8(contrib_r, scale8(c.r, bump));\n");
     code.push_str("            contrib_g = qadd8(contrib_g, scale8(c.g, bump));\n");
     code.push_str("            contrib_b = qadd8(contrib_b, scale8(c.b, bump));\n");

@@ -583,6 +583,56 @@ fn test_rgb_overlay_ripple_hue_shift_generation() {
 }
 
 #[test]
+fn test_rgb_overlay_ripple_color_mode_honored_in_background_lighting_path() {
+    // Regression guard: previously the additive-on-TUI path always emitted
+    // `lazyqmk_ripple_base_color(ripples[i].led_index)` regardless of the
+    // configured `color_mode`, so `fixed` and `hue_shift` were silently
+    // ignored when background lighting was enabled (the default). Honor
+    // the mode in this path too.
+    let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
+    let geometry = test_geometry_basic(2, 3);
+    let mapping = VisualLayoutMapping::build(&geometry);
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let config = create_test_config(&temp_dir);
+
+    // --- Fixed mode in the additive path ---
+    let mut fixed_layout = test_layout_basic(2, 3);
+    // Custom layer colors force `layout_has_custom_colors` -> additive path.
+    fixed_layout.layers[0].default_color = lazyqmk::models::RgbColor::new(120, 120, 120);
+    fixed_layout.rgb_overlay_ripple.enabled = true;
+    fixed_layout.rgb_overlay_ripple.color_mode = lazyqmk::models::RippleColorMode::Fixed;
+    fixed_layout.rgb_overlay_ripple.fixed_color = lazyqmk::models::RgbColor::new(255, 0, 255);
+    let fixed_generator =
+        FirmwareGenerator::new(&fixed_layout, &geometry, &mapping, &config, &keycode_db);
+    let fixed_keymap = fixed_generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+    assert!(
+        fixed_keymap.contains("RGB c = { 255, 0, 255 };  // fixed color"),
+        "Fixed color mode must emit the configured RGB literal in the additive path"
+    );
+
+    // --- HueShift mode in the additive path ---
+    let mut hs_layout = test_layout_basic(2, 3);
+    hs_layout.layers[0].default_color = lazyqmk::models::RgbColor::new(120, 120, 120);
+    hs_layout.rgb_overlay_ripple.enabled = true;
+    hs_layout.rgb_overlay_ripple.color_mode = lazyqmk::models::RippleColorMode::HueShift;
+    hs_layout.rgb_overlay_ripple.hue_shift_deg = 60;
+    let hs_generator = FirmwareGenerator::new(&hs_layout, &geometry, &mapping, &config, &keycode_db);
+    let hs_keymap = hs_generator
+        .generate_keymap_c()
+        .expect("Should generate keymap.c");
+    assert!(
+        hs_keymap.contains("hsv_t __hsv = rgb_to_hsv(__base);"),
+        "HueShift mode must convert to HSV in the additive path"
+    );
+    assert!(
+        hs_keymap.contains("int16_t shifted_hue = (int16_t)__hsv.h + 42;"),
+        "HueShift steps must be computed from hue_shift_deg (60 deg = 42 steps)"
+    );
+}
+
+#[test]
 fn test_rgb_overlay_ripple_release_trigger_resets_idle_state() {
     let keycode_db = KeycodeDb::load().expect("Failed to load keycode database");
     let mut layout = test_layout_basic(2, 3);
