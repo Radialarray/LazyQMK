@@ -122,7 +122,7 @@ Ask user to test:
 4. **Test tap dance** (if configured) — single tap, double tap, hold — each produces correct keycode?
 5. **Test combo** (if configured) — hold both keys for `hold_duration_ms`, then release — action fires on release (not while held)
 6. **Test RGB** — do layer colors display correctly? Idle effect plays after timeout?
-7. **Test bootloader combo** (if configured) — hold both keys for 800ms, then release — keyboard enters bootloader. (Note: even with `combo_settings.enabled = false`, LazyQMK's idle code hardcodes a Q+R / U+P bootloader chord — see `src/firmware/generator/idle.rs`. Both chords work; tell user about both.)
+7. **Test bootloader combo** (if configured) — hold both keys for 800ms, then release — keyboard enters bootloader. There is no longer a built-in fallback chord — if the user wants a bootloader shortcut they must configure it as a combo with action `bootloader`.
 
 Report results back. If anything is wrong, debug.
 

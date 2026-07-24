@@ -266,6 +266,53 @@ jq '.layers[0].keys | map({pos: .position, kc: .keycode}) | .[0:10]' ~/.../my.js
 
 For example, `W` key on a Corne (visual left half, top row, 2nd column) = `{row: 0, col: 2}`.
 
+### Multi-combo layouts (mix actions freely)
+
+You can have up to 32 combos per layout and each picks its own action. Mix
+them — there is no longer a "Combo 1 must be Disable Effects" rule.
+
+```bash
+# 4 combos: 2× DisableEffects, 1× DisableLighting, 1× Bootloader
+jq '.combo_settings = {
+  enabled: true,
+  combos: [
+    { key1: {row:0,col:0}, key2: {row:0,col:1}, action: {type:"disable_effects"},  hold_duration_ms: 500 },
+    { key1: {row:0,col:2}, key2: {row:0,col:3}, action: {type:"disable_effects"},  hold_duration_ms: 750 },
+    { key1: {row:1,col:0}, key2: {row:1,col:1}, action: {type:"disable_lighting"}, hold_duration_ms: 500 },
+    { key1: {row:1,col:2}, key2: {row:1,col:3}, action: {type:"bootloader"},        hold_duration_ms: 1000 }
+  ]
+}' ~/.../my.json > ~/.../my.new.json
+mv ~/.../my.new.json ~/.../my.json
+```
+
+(`placeholder` is `#[serde(skip)]` and never appears in persisted JSON. Gaps in slot
+numbers are tolerated — non-contiguous numbers parse into a slot-ordered vector
+with no phantom combos emitted.)
+
+### Visualization on the keyboard (TUI + WebUI)
+
+Both the TUI keyboard canvas and the WebUI keyboard preview render combo keys
+in a way that's visible at a glance:
+
+| Action              | Border color | Badge letter |
+|---------------------|--------------|--------------|
+| `disable_effects`   | yellow       | `E`          |
+| `disable_lighting`  | gray         | `L`          |
+| `bootloader`        | red          | `B`          |
+
+- TUI: `KeyboardWidget::render_key_with_indicator` draws a colored overlay
+  ring and a 1-char badge in the top-left state-marker slot of each combo key.
+  A footer legend reads `[B] Bootloader [E] Disable Effects [L] Disable Lighting`
+  when combos are enabled and non-empty.
+- WebUI: `KeyboardPreview.svelte` adds per-action classes
+  `combo-bootloader` / `combo-disable-effects` / `combo-disable-lighting`
+  on `key-bg` and `key-top`, plus a `<text>` badge. A small legend row is
+  rendered below the preview.
+
+The visualization is read from `state.layout.combo_settings.combos` (TUI) or
+`layout.combo_settings.combos` (WebUI) — no extra config needed. Disabled
+combos or empty `combos[]` arrays hide the markers and legend.
+
 ## Tips for Polished Tap-Hold Setup
 
 1. **Start with Default preset** — get a feel for LT/MT first

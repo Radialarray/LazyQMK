@@ -63,6 +63,8 @@ SLUG=$(jq -r '.metadata.keyboard // "untitled"' "$LAYOUT_FILE" | tr '/' '-' | tr
 | Add PaletteFX | `references/0005-ripple-and-palettefx.md` + `lessons/0007-configure-features.md` |
 | Add tap dance | `references/0007-tap-dance.md` + `lessons/0007-configure-features.md` |
 | Add combo | `references/0006-tap-hold-and-combos.md` + `lessons/0007-configure-features.md` |
+| Add multiple combos (any actions) | `references/0006-tap-hold-and-combos.md` "Multi-combo layouts" + `lessons/0007-configure-features.md` |
+| Visualize combo keys on keyboard preview | `references/0006-tap-hold-and-combos.md` "Visualization on the keyboard" |
 | Configure tap-hold (HRM etc.) | `references/0006-tap-hold-and-combos.md` + `lessons/0007-configure-features.md` |
 | Generate keymap only (don't compile) | `lessons/0008-validate-and-generate.md` with `--format keymap` |
 | Build UF2 / flash | `lessons/0009-build-uf2.md` then `lessons/0010-flash-and-verify.md` |
@@ -164,7 +166,7 @@ If MISSION.md exists, read it and proceed directly to the phase ladder.
 - `references/0003-color-system.md` — 4-level priority + categories + semantic palette
 - `references/0004-rgb-and-idle.md` — RGB master + 9 idle modes (incl. PaletteFX)
 - `references/0005-ripple-and-palettefx.md` — ripple knobs + PaletteFX 6×16 matrix
-- `references/0006-tap-hold-and-combos.md` — 5 tap-hold presets + combos (up to 32, 3 hardcoded actions)
+- `references/0006-tap-hold-and-combos.md` — 5 tap-hold presets + combos (up to 32 per layout, 3 hardcoded actions: DisableEffects / DisableLighting / Bootloader). Per-combo action choice (not slot-bound). Combo keys are visualized on both TUI and WebUI keyboard previews with red/yellow/gray borders and B/E/L badges.
 - `references/0007-tap-dance.md` — 2-way vs 3-way TD(name), auto-create, validation
 
 ## Lesson Index (numbered CLI flows)

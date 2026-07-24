@@ -156,7 +156,13 @@ mv "$LAYOUT.new" "$LAYOUT"
 
 Other presets: `Default`, `Responsive`, `Deliberate`, `Custom`.
 
-### Feature 5: Combos (up to 32, 3 hardcoded actions)
+### Feature 5: Combos (up to 32, per-action)
+
+Up to 32 combos per layout. Each combo picks its own action independently
+(`disable_effects`, `disable_lighting`, `bootloader`) — there is no longer
+a slot-bound mapping. Both keys (key1, key2) and `hold_duration_ms` are
+configurable per combo. Combo keys are rendered on the TUI and WebUI
+keyboard previews with per-action color and 1-char badge.
 
 Find visual coordinates of two keys the user wants to use:
 
@@ -171,7 +177,7 @@ jq --arg kc "KC_W" '.layers[0].keys | map(select(.keycode == $kc)) | .[0].positi
 # Returns: {row: 0, col: 2} for a Corne
 ```
 
-Add a bootloader combo (W+E held 800ms):
+Add a single bootloader combo (W+E held 800ms):
 
 ```bash
 LAYOUT=~/.../my.json
@@ -192,9 +198,38 @@ jq '
 mv "$LAYOUT.new" "$LAYOUT"
 ```
 
-`action` is internally tagged (snake_case): `{"type": "disable_effects"}`, `{"type": "disable_lighting"}`, or `{"type": "bootloader"}`. Don't include `placeholder` — it's `#[serde(skip)]` and never appears in JSON. Up to 32 combos per layout.
+Add multiple combos of mixed actions (any combo action can appear in any
+slot; up to 32 total):
 
-Note: the action fires on key RELEASE after the elapsed duration (not while keys remain held). User instruction: hold both keys for `hold_duration_ms` then release.
+```bash
+LAYOUT=~/.../my.json
+
+jq '
+  .combo_settings = {
+    enabled: true,
+    combos: [
+      { key1: {row:0,col:0}, key2: {row:0,col:1}, action: {type:"disable_effects"},  hold_duration_ms: 500 },
+      { key1: {row:1,col:0}, key2: {row:1,col:1}, action: {type:"disable_lighting"}, hold_duration_ms: 500 },
+      { key1: {row:0,col:2}, key2: {row:0,col:3}, action: {type:"bootloader"},        hold_duration_ms: 1000 }
+    ]
+  }
+' "$LAYOUT" > "$LAYOUT.new"
+mv "$LAYOUT.new" "$LAYOUT"
+```
+
+`action` is internally tagged (snake_case): `{"type": "disable_effects"}`,
+`{"type": "disable_lighting"}`, or `{"type": "bootloader"}`. Don't include
+`placeholder` — it's `#[serde(skip)]` and never appears in JSON. Slot numbers
+on disk (`**Combo N**`) are 1-indexed; parser gaps are tolerated and don't
+emit phantom combos.
+
+Note: the action fires on key RELEASE after the elapsed duration (not while
+keys remain held). User instruction: hold both keys for `hold_duration_ms`
+then release.
+
+**Bootloader fallback removed**: there is no longer a hidden `Q+R`/`U+P`
+1500ms bootloader combo tied to idle effect. If the user wants a bootloader
+shortcut, add it as a normal combo with action `bootloader`.
 
 ### Feature 6: Tap Dance
 
@@ -283,8 +318,6 @@ Add to NOTES.md:
 - **Combo keys must differ** — `key1 == key2` rejected
 - **Tap dance name must be valid C identifier** — alphanumeric + underscore only
 - **Tap dance `single_tap = KC_NO`** — auto-created placeholder; define explicitly before generating
-- **Idle-disabled compile bug**: LazyQMK's `idle.rs` always emits `housekeeping_task_user()` referencing `bootloader_combo_active/timer` globals, but those globals are only emitted when idle effect code is included. If `idle_effect_settings.enabled = false` AND the keyboard has RGB, the generated `keymap.c` may fail to compile with `undefined reference to bootloader_combo_active`. Workaround: either enable idle effect (`idle_effect_settings.enabled = true`) or remove RGB matrix from the keyboard entirely. Tracked in upstream LazyQMK.
-- **Hidden bootloader chord**: regardless of `combo_settings`, the idle effect code hardcodes a Q+R (left) or U+P (right) held-for-1500ms bootloader chord (`src/firmware/generator/idle.rs:107-152`). User-configured combos are independent of this.
 - **RGB master switch doesn't gate idle/PaletteFX/ripple** — setting `rgb_enabled: false` only blacks base layer colors. Idle/PaletteFX/ripple generation is gated on `geometry.has_rgb_matrix()`, NOT on `rgb_enabled`. To fully disable RGB behavior, set all four (`rgb_enabled`, `idle_effect_settings.enabled`, `palette_fx.enabled`, `rgb_overlay_ripple.enabled`) to false.
 
 ## Next Lesson

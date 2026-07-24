@@ -502,7 +502,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 
    ```bash
    git pull --rebase
-   bd dolt push
+   bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -521,7 +521,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+This project uses **bd (beads)** for issue tracking in **in-repo JSONL mode** (no external Dolt server, no `bd dolt push` — the JSONL file `.beads/issues.jsonl` is committed alongside the code). Run `bd prime` to see full workflow context and commands.
 
 ### Quick Reference
 
@@ -551,7 +551,7 @@ bd close <id>         # Complete work
 
    ```bash
    git pull --rebase
-   bd dolt push
+   bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
    git push
    git status  # MUST show "up to date with origin"
    ```
