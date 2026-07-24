@@ -1,5 +1,12 @@
 <script lang="ts">
-	import type { KeyGeometryInfo, KeyAssignment, Layer, Category, KeyRenderMetadata } from '$api/types';
+	import type {
+		KeyGeometryInfo,
+		KeyAssignment,
+		Layer,
+		Category,
+		KeyRenderMetadata,
+		ComboMarker
+	} from '$api/types';
 	import {
 		transformGeometry,
 		getKeyTransform,
@@ -45,6 +52,8 @@
 		class?: string;
 		/** Position to visual index mapping from backend (optional, for fallback lookups) */
 		positionToVisualIndexMap?: Record<string, number>;
+		/** Combo markers keyed by visual index */
+		comboMarkers?: ComboMarker[];
 	}
 
 	let {
@@ -61,7 +70,8 @@
 		onNavigate,
 		onKeyHover,
 		class: className = '',
-		positionToVisualIndexMap
+		positionToVisualIndexMap,
+		comboMarkers = []
 	}: Props = $props();
 	
 	let containerElement: HTMLDivElement;
@@ -149,6 +159,14 @@
 		const map = new Map<number, KeyRenderMetadata>();
 		for (const metadata of renderMetadata) {
 			map.set(metadata.visual_index, metadata);
+		}
+		return map;
+	});
+
+	const comboMarkerMap = $derived.by(() => {
+		const map = new Map<number, ComboMarker>();
+		for (const marker of comboMarkers ?? []) {
+			map.set(marker.visualIndex, marker);
 		}
 		return map;
 	});
@@ -290,6 +308,9 @@
 				{@const transform = getKeyTransform(key)}
 				{@const fontSize = getFontSize(label)}
 				{@const resolvedColor = colorMap.get(key.visualIndex)}
+				{@const comboMarker = comboMarkerMap.get(key.visualIndex)}
+				{@const comboClass = comboMarker ? `combo-${comboMarker.action.replace(/_/g, '-')}` : ''}
+				{@const comboLetter = comboMarker?.action === 'bootloader' ? 'B' : comboMarker?.action === 'disable_effects' ? 'E' : comboMarker?.action === 'disable_lighting' ? 'L' : ''}
 
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -337,8 +358,8 @@
 						height={key.height}
 						rx={KEY_BORDER_RADIUS}
 						ry={KEY_BORDER_RADIUS}
-						class="key-bg {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
-						style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}` : ''}
+						class="key-bg {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''} {comboClass}"
+						style={resolvedColor && !isSelected && !isSwapFirst && !comboMarker ? `fill: ${resolvedColor}` : ''}
 						filter={resolvedColor ? `url(#glow-${key.visualIndex})` : 'url(#key-shadow)'}
 					/>
 
@@ -364,8 +385,8 @@
 					height={key.height - 4}
 					rx={KEY_BORDER_RADIUS - 1}
 					ry={KEY_BORDER_RADIUS - 1}
-					class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''}"
-					style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
+					class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''} {comboClass}"
+					style={resolvedColor && !isSelected && !isSwapFirst && !comboMarker ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
 					pointer-events="none"
 				/>
 
@@ -467,6 +488,16 @@
 							{/if}
 						{/if}
 					</g>
+					{#if comboMarker}
+						<text
+							x={key.x + 6}
+							y={key.y + 10}
+							text-anchor="start"
+							class="combo-badge"
+							font-size="9"
+							fill="white"
+						>{comboLetter}</text>
+					{/if}
 				</g>
 			{/each}
 		</svg>
@@ -558,12 +589,38 @@
 		font-size: 8px;
 	}
 
+	/* === Combo markers (per-action color + 1-char badge) === */
+	.key-bg.combo-bootloader {
+		stroke: hsl(0 84% 50%);  /* red */
+		stroke-width: 2;
+	}
+	.key-bg.combo-disable-effects {
+		stroke: hsl(48 96% 53%);  /* yellow */
+		stroke-width: 2;
+	}
+	.key-bg.combo-disable-lighting {
+		stroke: hsl(220 9% 46%);  /* mid gray */
+		stroke-width: 2;
+	}
+	.key-top.combo-bootloader { fill: hsl(0 84% 50% / 0.2); }
+	.key-top.combo-disable-effects { fill: hsl(48 96% 53% / 0.2); }
+	.key-top.combo-disable-lighting { fill: hsl(220 9% 46% / 0.2); }
+	.combo-badge {
+		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+		font-weight: 700;
+		fill: white;
+		pointer-events: none;
+		paint-order: stroke;
+		stroke: black;
+		stroke-width: 2;
+	}
+
 	/* Hover effect */
-	.key-group:hover .key-bg:not(.selected):not(.swap-first) {
+	.key-group:hover .key-bg:not(.selected):not(.swap-first):not(.combo-bootloader):not(.combo-disable-effects):not(.combo-disable-lighting) {
 		fill: hsl(var(--accent));
 	}
 
-	.key-group:hover .key-top:not(.selected):not(.swap-first) {
+	.key-group:hover .key-top:not(.selected):not(.swap-first):not(.combo-bootloader):not(.combo-disable-effects):not(.combo-disable-lighting) {
 		fill: hsl(var(--accent) / 0.9);
 	}
 </style>
