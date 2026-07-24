@@ -595,7 +595,8 @@ fn generate_settings(layout: &Layout) -> Option<String> {
             output.push_str("**Combos**: On\n");
         }
 
-        // Write individual combo definitions
+        // Write individual combo definitions. The 1-indexed display number is
+        // derived from the position in the list (no fixed slot limit).
         for (idx, combo) in cs.combos.iter().enumerate() {
             let combo_num = idx + 1;
             let action_name = combo.action.display_name();

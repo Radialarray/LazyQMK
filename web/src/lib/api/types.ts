@@ -20,7 +20,6 @@ export interface Layout {
 	metadata: LayoutMetadata;
 	layers: Layer[];
 	tap_dances?: TapDance[];
-	combos?: Combo[];
 	// RGB settings
 	rgb_enabled?: boolean;
 	rgb_brightness?: number;
@@ -153,14 +152,13 @@ export interface TapDance {
 	tap_hold?: string;
 }
 
-export interface Combo {
-	id: string;
-	name: string;
-	keys: string[];
-	output: string;
-}
-
 export type ComboAction = 'disable_effects' | 'disable_lighting' | 'bootloader';
+
+export interface ComboMarker {
+	visualIndex: number;
+	action: ComboAction;
+	holdDurationMs: number;
+}
 
 export interface ComboDefinition {
 	key1: { row: number; col: number };

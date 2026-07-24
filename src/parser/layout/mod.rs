@@ -327,11 +327,15 @@ mod combo_parsing_tests {
         let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
         layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_A"));
         layer.add_key(KeyDefinition::new(Position::new(0, 1), "KC_B"));
-        layer.add_key(KeyDefinition::new(Position::new(1, 0), "KC_C"));
-        layer.add_key(KeyDefinition::new(Position::new(1, 1), "KC_D"));
+        layer.add_key(KeyDefinition::new(Position::new(0, 2), "KC_C"));
+        layer.add_key(KeyDefinition::new(Position::new(0, 3), "KC_D"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 0), "KC_E"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 1), "KC_F"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 2), "KC_G"));
+        layer.add_key(KeyDefinition::new(Position::new(1, 3), "KC_H"));
         layout.add_layer(layer).unwrap();
 
-        // Add combo settings
+        // Add combo settings — four combos of mixed actions.
         layout.combo_settings.enabled = true;
         layout
             .combo_settings
@@ -343,11 +347,28 @@ mod combo_parsing_tests {
             .unwrap();
         layout
             .combo_settings
+            .add_combo(ComboDefinition::new(
+                Position::new(0, 2),
+                Position::new(0, 3),
+                ComboAction::DisableLighting,
+            ))
+            .unwrap();
+        layout
+            .combo_settings
             .add_combo(ComboDefinition::with_duration(
                 Position::new(1, 0),
                 Position::new(1, 1),
                 ComboAction::Bootloader,
                 750,
+            ))
+            .unwrap();
+        layout
+            .combo_settings
+            .add_combo(ComboDefinition::with_duration(
+                Position::new(1, 2),
+                Position::new(1, 3),
+                ComboAction::DisableEffects,
+                600,
             ))
             .unwrap();
 
@@ -368,8 +389,16 @@ mod combo_parsing_tests {
             "Combo 1 definition missing"
         );
         assert!(
-            markdown.contains("**Combo 2**: (1,0)+(1,1) → Bootloader [750ms]"),
+            markdown.contains("**Combo 2**: (0,2)+(0,3) → Disable Lighting [500ms]"),
             "Combo 2 definition missing"
+        );
+        assert!(
+            markdown.contains("**Combo 3**: (1,0)+(1,1) → Bootloader [750ms]"),
+            "Combo 3 definition missing"
+        );
+        assert!(
+            markdown.contains("**Combo 4**: (1,2)+(1,3) → Disable Effects [600ms]"),
+            "Combo 4 definition missing"
         );
 
         // Parse it back
@@ -382,7 +411,7 @@ mod combo_parsing_tests {
         );
         assert_eq!(
             parsed_layout.combo_settings.combos.len(),
-            2,
+            4,
             "Combo count mismatch"
         );
 
@@ -393,10 +422,60 @@ mod combo_parsing_tests {
         assert_eq!(combo1.hold_duration_ms, 500);
 
         let combo2 = &parsed_layout.combo_settings.combos[1];
-        assert_eq!(combo2.key1, Position::new(1, 0));
-        assert_eq!(combo2.key2, Position::new(1, 1));
-        assert_eq!(combo2.action, ComboAction::Bootloader);
-        assert_eq!(combo2.hold_duration_ms, 750);
+        assert_eq!(combo2.key1, Position::new(0, 2));
+        assert_eq!(combo2.key2, Position::new(0, 3));
+        assert_eq!(combo2.action, ComboAction::DisableLighting);
+        assert_eq!(combo2.hold_duration_ms, 500);
+
+        let combo3 = &parsed_layout.combo_settings.combos[2];
+        assert_eq!(combo3.key1, Position::new(1, 0));
+        assert_eq!(combo3.key2, Position::new(1, 1));
+        assert_eq!(combo3.action, ComboAction::Bootloader);
+        assert_eq!(combo3.hold_duration_ms, 750);
+
+        let combo4 = &parsed_layout.combo_settings.combos[3];
+        assert_eq!(combo4.key1, Position::new(1, 2));
+        assert_eq!(combo4.key2, Position::new(1, 3));
+        assert_eq!(combo4.action, ComboAction::DisableEffects);
+        assert_eq!(combo4.hold_duration_ms, 600);
+    }
+
+    #[test]
+    fn test_parse_combos_with_gaps() {
+        let markdown = r#"---
+name: "Combo Gap Test"
+description: "Tests non-contiguous combo slots"
+author: "test"
+created: "2024-01-15T10:30:00Z"
+modified: "2024-01-20T15:45:00Z"
+tags: ["test"]
+is_template: false
+version: "1.0"
+---
+
+# Combo Gap Test
+
+## Layer 0: Base
+**Color**: #808080
+
+| C0   | C1   |
+|------|------|
+| KC_A | KC_B |
+| KC_C | KC_D |
+
+## Settings
+
+**Combos**: On
+**Combo 2**: (0,0)+(0,1) → Disable Lighting [500ms]
+**Combo 4**: (1,0)+(1,1) → Bootloader [750ms]
+"#;
+
+        let parsed_layout = parse_markdown_layout_str(markdown).expect("Parse failed");
+        let combos = &parsed_layout.combo_settings.combos;
+
+        assert_eq!(combos.len(), 2);
+        assert_eq!(combos[0].action, ComboAction::DisableLighting);
+        assert_eq!(combos[1].action, ComboAction::Bootloader);
     }
 
     #[test]

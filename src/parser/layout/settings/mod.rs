@@ -20,7 +20,9 @@ mod rgb;
 mod ripple;
 mod tap_hold;
 
-use crate::models::{Layout, TapHoldPreset};
+use std::collections::BTreeMap;
+
+use crate::models::{ComboDefinition, Layout, TapHoldPreset};
 use anyhow::Result;
 
 /// Parses the settings section.
@@ -34,6 +36,11 @@ pub(super) fn parse_settings(
 
     // Track if a preset was explicitly specified in the file
     let mut explicit_preset: Option<TapHoldPreset> = None;
+
+    // Buffer of combo definitions keyed by their 1-indexed slot number.
+    // Collapsed into a slot-ordered Vec after the loop so gaps (e.g. legacy
+    // files with Combo 2/3 but no Combo 1) are silently dropped.
+    let mut combo_buffer: BTreeMap<usize, ComboDefinition> = BTreeMap::new();
 
     while line_num < lines.len() {
         let line = lines[line_num].trim();
@@ -134,12 +141,15 @@ pub(super) fn parse_settings(
             // handled
         } else if combos::try_parse_combos_enabled(line, layout) {
             // handled
-        } else if combos::try_parse_combo_definition(line, layout) {
+        } else if combos::try_parse_combo_definition(line, &mut combo_buffer) {
             // handled
         }
 
         line_num += 1;
     }
+
+    // Flush buffered combos into the layout in slot order, skipping gaps.
+    layout.combo_settings.combos = combos::combo_buffer_into_vec(combo_buffer);
 
     // If an explicit preset was specified, ensure it's preserved
     // (individual setting parsing may have changed it via mark_custom in older code)

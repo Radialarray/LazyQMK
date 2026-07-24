@@ -524,19 +524,6 @@ impl From<&RgbOverlayRippleSettings> for RgbOverlayRippleSettingsDto {
     }
 }
 
-/// Combo definition for API (legacy, unused).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComboDto {
-    /// Unique combo identifier.
-    pub id: String,
-    /// Combo name.
-    pub name: String,
-    /// Trigger keys.
-    pub keys: Vec<String>,
-    /// Output keycode.
-    pub output: String,
-}
-
 /// Combo action for two-key hold combos.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -589,7 +576,7 @@ pub struct ComboSettingsDto {
     /// Whether combo feature is enabled.
     #[serde(default)]
     pub enabled: bool,
-    /// List of combo definitions (max 3).
+    /// List of combo definitions (max [`crate::models::layout::MAX_COMBOS`]).
     #[serde(default)]
     pub combos: Vec<ComboDefinitionDto>,
 }
