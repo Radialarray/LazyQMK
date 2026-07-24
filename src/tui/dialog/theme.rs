@@ -44,6 +44,14 @@ pub struct Theme {
     pub active: Color,
     /// Inactive/disabled element color
     pub inactive: Color,
+
+    // Combo overlay colors
+    /// Overlay color for combo keys that trigger bootloader mode
+    pub combo_bootloader: Color,
+    /// Overlay color for combo keys that disable RGB effects
+    pub combo_disable_effects: Color,
+    /// Overlay color for combo keys that disable all lighting
+    pub combo_disable_lighting: Color,
 }
 
 impl Theme {
@@ -93,6 +101,10 @@ impl Theme {
 
             active: Color::Yellow,
             inactive: Color::Gray,
+
+            combo_bootloader: Color::Red,
+            combo_disable_effects: Color::Yellow,
+            combo_disable_lighting: Color::DarkGray,
         }
     }
 
@@ -123,6 +135,10 @@ impl Theme {
 
             active: Color::Rgb(180, 100, 0),
             inactive: Color::Rgb(180, 180, 180),
+
+            combo_bootloader: Color::Red,
+            combo_disable_effects: Color::Rgb(180, 100, 0),
+            combo_disable_lighting: Color::Rgb(140, 140, 140),
         }
     }
 

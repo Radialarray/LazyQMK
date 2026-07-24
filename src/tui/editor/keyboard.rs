@@ -15,7 +15,17 @@ use ratatui::{
 };
 
 use crate::keycode_db::TapHoldType;
+use crate::models::{ComboAction, ComboDefinition, Position};
 use crate::tui::AppState;
+
+/// Returns the combo action triggered when this key position participates in
+/// a non-placeholder combo, or `None` if the key is not part of any combo.
+fn combo_action_at(combos: &[ComboDefinition], pos: Position) -> Option<ComboAction> {
+    combos
+        .iter()
+        .find(|c| !c.placeholder && (c.key1 == pos || c.key2 == pos))
+        .map(|c| c.action.clone())
+}
 
 /// Keyboard widget renders the visual keyboard layout
 pub struct KeyboardWidget;
@@ -265,7 +275,29 @@ impl KeyboardWidget {
                 })
                 .unwrap_or(false);
 
-            let state_marker = if is_flashing {
+            // Determine combo participation (only meaningful when combos are enabled).
+            let combo_action = if state.layout.combo_settings.enabled {
+                combo_action_at(&state.layout.combo_settings.combos, key.position)
+            } else {
+                None
+            };
+            let (combo_overlay_color, combo_letter) = match combo_action {
+                Some(ComboAction::Bootloader) => (Some(theme.combo_bootloader), Some('B')),
+                Some(ComboAction::DisableEffects) => {
+                    (Some(theme.combo_disable_effects), Some('E'))
+                }
+                Some(ComboAction::DisableLighting) => {
+                    (Some(theme.combo_disable_lighting), Some('L'))
+                }
+                None => (None, None),
+            };
+
+            // Combo letter takes precedence over every other top-left marker so
+            // the user can always see which keys participate in a combo even when
+            // the key is also selected, cut, flashing, etc.
+            let state_marker = if let Some(letter) = combo_letter {
+                letter
+            } else if is_flashing {
                 '*'
             } else if is_selected {
                 '@'
@@ -294,6 +326,7 @@ impl KeyboardWidget {
                 is_swap_first,
                 is_flashing,
                 has_hold_like_inbound,
+                combo_overlay_color,
                 theme,
             );
         }
@@ -330,10 +363,20 @@ impl KeyboardWidget {
 
         let actions =
             "Actions: Enter key actions  Ctrl+S save  Ctrl+B build  Shift+Y layout variant  ? help";
-        let legend = format!(
+        let mut legend = format!(
             "Legend: @ selected  + multi  x cut  s swap  ! inbound hold  * flash  • {}  • red outer border = inbound hold target",
             Self::color_indicator_legend()
         );
+
+        // Only show the combo legend when combos are enabled and at least one
+        // combo is defined; otherwise the row would be noise.
+        if state.layout.combo_settings.enabled
+            && !state.layout.combo_settings.combos.is_empty()
+        {
+            legend.push_str(
+                "  • B Bootloader combo  E Disable-Effects combo  L Disable-Lighting combo",
+            );
+        }
 
         let footer = Paragraph::new(vec![
             Line::from(Span::styled(
@@ -367,10 +410,17 @@ impl KeyboardWidget {
         is_swap_first: bool,
         is_flashing: bool,
         has_hold_like_inbound: bool,
+        combo_overlay_color: Option<Color>,
         theme: &crate::tui::Theme,
     ) {
         // Determine colors based on selection, cut state, multi-selection, swap, flash, and inbound holds
-        let (border_style, content_bg, content_fg, overlay_border_color) = if is_flashing {
+        let (
+            border_style,
+            content_bg,
+            content_fg,
+            overlay_border_color,
+            combo_overlay_color,
+        ) = if is_flashing {
             // Flash highlight: bright accent background
             (
                 Style::default()
@@ -379,6 +429,7 @@ impl KeyboardWidget {
                 Some(theme.success),
                 theme.background,
                 None,
+                combo_overlay_color,
             )
         } else if is_selected {
             (
@@ -388,6 +439,7 @@ impl KeyboardWidget {
                 Some(theme.accent),
                 theme.background,
                 None,
+                combo_overlay_color,
             )
         } else if is_swap_first {
             // First key in swap mode: distinct yellow/warning border
@@ -398,6 +450,7 @@ impl KeyboardWidget {
                 Some(theme.surface),
                 theme.text,
                 None,
+                combo_overlay_color,
             )
         } else if is_in_selection {
             // Multi-selection: highlighted but not as prominent as primary selection
@@ -408,6 +461,7 @@ impl KeyboardWidget {
                 Some(theme.surface),
                 theme.text,
                 None,
+                combo_overlay_color,
             )
         } else if is_cut_source {
             // Cut source: dimmed appearance
@@ -418,6 +472,7 @@ impl KeyboardWidget {
                 None,
                 theme.text_muted,
                 None,
+                combo_overlay_color,
             )
         } else if has_hold_like_inbound {
             // Inbound hold-like reference: keep base border color, but add red overlay border
@@ -426,16 +481,28 @@ impl KeyboardWidget {
                 None,
                 theme.text,
                 Some(theme.error),
+                combo_overlay_color,
             )
         } else {
-            (Style::default().fg(border_color), None, theme.text, None)
+            (
+                Style::default().fg(border_color),
+                None,
+                theme.text,
+                None,
+                combo_overlay_color,
+            )
         };
 
         // Draw the custom border with indicator in top-right corner
         let buf = f.buffer_mut();
 
-        // If we need a secondary overlay border (red) to indicate hold-like inbound refs
-        if let Some(overlay_color) = overlay_border_color {
+        // Combo overlay takes precedence over the inbound-hold overlay because the
+        // combo action is the higher-priority signal for the user.
+        let overlay_color = combo_overlay_color.or(overlay_border_color);
+
+        // If we need a secondary overlay border to indicate hold-like inbound refs
+        // or a combo action, draw it on top of the existing border.
+        if let Some(overlay_color) = overlay_color {
             let top_y = area.y;
             let left_x = area.x;
             let right_x = area.x + area.width.saturating_sub(1);
