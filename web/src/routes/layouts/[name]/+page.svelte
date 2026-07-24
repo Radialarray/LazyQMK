@@ -18,7 +18,6 @@
 		GeometryResponse,
 		Layout,
 		TapDance,
-		Combo,
 		ValidationResponse,
 		InspectResponse,
 		ExportResponse,
@@ -32,7 +31,9 @@
 		RenderMetadataResponse,
 		BuildJob,
 		BuildArtifact,
-		PaletteFxSettings
+		PaletteFxSettings,
+		ComboAction,
+		ComboMarker
 	} from '$api/types';
 	import { ClipboardManager } from '$lib/utils/clipboard';
 	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
@@ -156,8 +157,6 @@
 	let generateLoading = $state(false);
 	let tapDancePickerIndex = $state<number | null>(null);
 	let tapDancePickerField = $state<'single_tap' | 'double_tap' | 'hold' | null>(null);
-	let comboPickerIndex = $state<number | null>(null);
-	let comboPickerField = $state<'output' | null>(null);
 
 	// Generate job polling state
 	let generateJob = $state<GenerateJob | null>(null);
@@ -979,12 +978,6 @@
 			return;
 		}
 
-		if (comboPickerIndex !== null && comboPickerField === 'output') {
-			updateCombo(comboPickerIndex, 'output', keycode);
-			handleKeycodePickerClose();
-			return;
-		}
-
 		if (editingKeyVisualIndex === null) return;
 		
 		// Find the key in the current layer and update its keycode
@@ -1008,19 +1001,11 @@
 		editingKeyVisualIndex = null;
 		tapDancePickerIndex = null;
 		tapDancePickerField = null;
-		comboPickerIndex = null;
-		comboPickerField = null;
 	}
 
 	function openTapDancePicker(index: number, field: 'single_tap' | 'double_tap' | 'hold') {
 		tapDancePickerIndex = index;
 		tapDancePickerField = field;
-		keycodePickerOpen = true;
-	}
-
-	function openComboPicker(index: number) {
-		comboPickerIndex = index;
-		comboPickerField = 'output';
 		keycodePickerOpen = true;
 	}
 
@@ -1072,6 +1057,30 @@
 
 	// Get key assignments for the current layer
 	const currentLayerKeys = $derived(layout?.layers[selectedLayerIndex]?.keys ?? []);
+
+	const comboMarkers = $derived.by(() => {
+		if (!layout.combo_settings?.enabled) return [];
+		const positionToVisualIndexMap = geometry?.position_to_visual_index;
+		if (!positionToVisualIndexMap) return [];
+		const map = new Map<string, string>();
+		for (const [key, value] of Object.entries(positionToVisualIndexMap)) {
+			map.set(key, String(value));
+		}
+		const markers: ComboMarker[] = [];
+		for (const combo of layout.combo_settings.combos ?? []) {
+			for (const pos of [combo.key1, combo.key2]) {
+				const visualIndexStr = map.get(`${pos.row},${pos.col}`);
+				if (visualIndexStr) {
+					markers.push({
+						visualIndex: parseInt(visualIndexStr, 10),
+						action: combo.action,
+						holdDurationMs: combo.hold_duration_ms
+					});
+				}
+			}
+		}
+		return markers;
+	});
 
 	// Get render metadata for the current layer
 	const currentLayerRenderMetadata = $derived.by(() => {
@@ -1199,41 +1208,6 @@
 		isDirty = true;
 	}
 
-	// Combo management
-	function addCombo() {
-		if (!layout) return;
-		const newCombo: Combo = {
-			id: `combo_${(layout.combos?.length ?? 0) + 1}`,
-			name: `Combo ${(layout.combos?.length ?? 0) + 1}`,
-			keys: ['KC_A', 'KC_B'],
-			output: 'KC_C'
-		};
-		layout.combos = [...(layout.combos ?? []), newCombo];
-		isDirty = true;
-	}
-
-	function updateCombo(index: number, field: keyof Combo, value: string | string[]) {
-		if (!layout?.combos) return;
-		const combo = layout.combos[index];
-		if (field === 'keys') {
-			combo.keys = Array.isArray(value) ? value : value.split(',').map((k) => k.trim());
-		} else if (field === 'id') {
-			combo.id = value as string;
-		} else if (field === 'name') {
-			combo.name = value as string;
-		} else if (field === 'output') {
-			combo.output = value as string;
-		}
-		layout.combos = [...layout.combos];
-		isDirty = true;
-	}
-
-	function removeCombo(index: number) {
-		if (!layout?.combos) return;
-		layout.combos = layout.combos.filter((_, i) => i !== index);
-		isDirty = true;
-	}
-
 	// Idle effect settings
 	function updateIdleEffect(field: string, value: boolean | number | string) {
 		if (!layout) return;
@@ -1330,7 +1304,6 @@
 
 	// Combo settings
 	type ComboPosition = { row: number; col: number };
-	import type { ComboAction } from '$api/types';
 	
 	function updateComboSettings(field: string, value: boolean | number | string | { row: number; col: number }, comboIndex?: number) {
 		if (!layout) return;
@@ -1345,7 +1318,7 @@
 			layout.combo_settings.enabled = value as boolean;
 		} else if (field === 'add_combo') {
 			// Add a new combo with default values
-			if (layout.combo_settings.combos.length < 3) {
+			if (layout.combo_settings.combos.length < 32) {
 				layout.combo_settings.combos.push({
 					key1: { row: 0, col: 0 },
 					key2: { row: 0, col: 1 },
@@ -2198,12 +2171,29 @@
 							layer={layout.layers[selectedLayerIndex]}
 							categories={layout.categories || []}
 							renderMetadata={currentLayerRenderMetadata}
+							comboMarkers={comboMarkers}
 							onKeyClick={handleKeyClick}
 							onNavigate={handleKeyboardNavigation}
 							onKeyHover={handleKeyHover}
 							positionToVisualIndexMap={geometry.position_to_visual_index}
 							class="max-w-4xl mx-auto"
 						/>
+						{#if layout.combo_settings?.enabled && (layout.combo_settings.combos ?? []).length > 0}
+							<div class="flex gap-4 mt-4 text-xs text-muted-foreground">
+								<span class="flex items-center gap-1">
+									<span class="inline-block w-3 h-3 rounded border-2" style="border-color: hsl(0 84% 50%);"></span>
+									Bootloader (B)
+								</span>
+								<span class="flex items-center gap-1">
+									<span class="inline-block w-3 h-3 rounded border-2" style="border-color: hsl(48 96% 53%);"></span>
+									Disable Effects (E)
+								</span>
+								<span class="flex items-center gap-1">
+									<span class="inline-block w-3 h-3 rounded border-2" style="border-color: hsl(220 9% 46%);"></span>
+									Disable Lighting (L)
+								</span>
+							</div>
+						{/if}
 					{:else}
 						<div class="flex items-center justify-center h-40 text-muted-foreground">
 							No geometry data available.
@@ -2509,72 +2499,6 @@
 											class="font-mono text-sm"
 										/>
 										<Button size="sm" variant="outline" onclick={() => openTapDancePicker(i, 'hold')}>Pick</Button>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</Card>
-		{:else if activeTab === 'combos'}
-			<!-- Combos Tab -->
-			<Card class="p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-semibold">Combos</h2>
-					<Button onclick={addCombo} size="sm">Add Combo</Button>
-				</div>
-				<p class="text-sm text-muted-foreground mb-4">
-					Use picker for output keycodes so combo results follow same validation path as single-key editing.
-				</p>
-
-				{#if !layout.combos?.length}
-					<p class="text-muted-foreground text-sm">
-						No combos defined. Combos trigger a keycode when multiple keys are pressed
-						simultaneously.
-					</p>
-				{:else}
-					<div class="space-y-4">
-						{#each layout.combos as combo, i}
-							<div class="border border-border rounded-lg p-4 space-y-3">
-								<div class="flex items-center justify-between">
-									<span class="font-medium">{combo.name}</span>
-									<Button onclick={() => removeCombo(i)} size="sm" variant="destructive">
-										Remove
-									</Button>
-								</div>
-								<div class="grid grid-cols-3 gap-3">
-									<div>
-										<label for="combo-name-{i}" class="block text-xs font-medium text-muted-foreground mb-1">Name</label>
-										<Input
-											id="combo-name-{i}"
-											value={combo.name}
-											oninput={(e) => updateCombo(i, 'name', e.currentTarget.value)}
-											placeholder="Combo Name"
-										/>
-									</div>
-									<div>
-										<label for="combo-keys-{i}" class="block text-xs font-medium text-muted-foreground mb-1"
-											>Trigger Keys (comma-separated)</label
-										>
-										<Input
-											id="combo-keys-{i}"
-											value={combo.keys.join(', ')}
-											oninput={(e) => updateCombo(i, 'keys', e.currentTarget.value)}
-											placeholder="KC_A, KC_B"
-											class="font-mono text-sm"
-										/>
-									</div>
-									<div>
-										<label for="combo-output-{i}" class="block text-xs font-medium text-muted-foreground mb-1">Output</label
-										>
-										<Input
-											id="combo-output-{i}"
-											value={combo.output}
-											oninput={(e) => updateCombo(i, 'output', e.currentTarget.value)}
-											placeholder="KC_ESC"
-											class="font-mono text-sm"
-										/>
-										<Button size="sm" variant="outline" onclick={() => openComboPicker(i)}>Pick</Button>
 									</div>
 								</div>
 							</div>
@@ -3133,7 +3057,7 @@
 							{/each}
 
 							<!-- Add Combo Button -->
-							{#if (layout.combo_settings?.combos?.length || 0) < 3}
+							{#if (layout.combo_settings?.combos?.length || 0) < 32}
 								<Button
 									variant="outline"
 									onclick={() => updateComboSettings('add_combo', true)}
@@ -3141,7 +3065,7 @@
 									Add Combo
 								</Button>
 							{:else}
-								<p class="text-sm text-muted-foreground">Maximum of 3 combos reached.</p>
+								<p class="text-sm text-muted-foreground">Combo limit reached.</p>
 							{/if}
 						</div>
 					{/if}
