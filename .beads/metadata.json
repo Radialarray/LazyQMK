@@ -1,0 +1,7 @@
+{
+  "database": "jsonl",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "LazyQMK",
+  "project_id": "83355769-bfa6-414c-847b-78f1a52cb642"
+}

@@ -63,11 +63,38 @@ tmp/
 .dolt/
 *.db
 
-# Beads runtime files
+# Beads: track config + JSONL in git for in-repo issue tracking.
+# Runtime/lock/log/credential/embeddeddolt state stays gitignored via
+# .beads/.gitignore.
+!.beads/
+!.beads/issues.jsonl
+!.beads/config.yaml
+!.beads/metadata.json
+!.beads/.local_version
+!.beads/AGENT_NOTE.md
+!.beads/README.md
+!.beads/migration-guide.md
+!.beads/last-touched
+
+# Beads runtime files (auto-managed, never commit)
 .beads/.beads-credential-key
 .beads/dolt/
-
-.beads/
+.beads/embeddeddolt/
+.beads/daemon.*
+.beads/interactions.jsonl
+.beads/last-touched
+.beads/sync-state.json
+.beads/push-state.json
+.beads/.sync.lock
+.beads/dolt-server.*
+.beads/.dolt_dropped_databases/
+.beads/dolt.pre-embedded-migration.*/
+.beads/backup/
+.beads/export-state/
+.beads/export-state.json
+.beads/*.corrupt.backup/
+.beads/*.db
+.beads/ephemeral.sqlite3*
 
 # Beads / Dolt files (added by bd init)
 .beads-credential-key
@@ -75,3 +102,6 @@ tmp/
 # Subagent pipeline artifacts
 .pi-handoff/
 .pi-subagents/
+
+# Beads / Dolt files (added by bd init)
+.beads/proxieddb/
