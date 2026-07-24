@@ -31,12 +31,6 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
 
     let mut code = String::new();
 
-    // Bootloader combo state (file scope, works regardless of idle/ripple)
-    code.push_str("// Bootloader combo: Q+R (left) or U+P (right) held for 1500ms\n");
-    code.push_str("static uint32_t bootloader_combo_timer = 0;\n");
-    code.push_str("static bool bootloader_combo_active = false;\n");
-    code.push('\n');
-
     code.push_str("#ifdef RGB_MATRIX_ENABLE\n");
     code.push_str("#ifdef LQMK_IDLE_TIMEOUT_MS\n");
     code.push('\n');
@@ -104,53 +98,7 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
         code.push('\n');
     }
 
-    // Bootloader combo detection: Q+R (left) or U+P (right) held for 1500ms
-    // Extracts the base keycode from QK_MODS, QK_LAYER_TAP, QK_MOD_TAP wrappers
-    // so combos work even when the physical keys are wrapped in LT/MT/MOD macros.
-    code.push_str("    // Bootloader combo: Q+R (left) or U+P (right) held for 1500ms\n");
-    code.push_str("    {\n");
-    code.push_str("        // Resolve the basic keycode (handle LT/MT/MOD wrappers)\n");
-    code.push_str("        uint16_t base_kc = keycode;\n");
-    code.push_str("        if (IS_QK_MODS(keycode)) {\n");
-    code.push_str("            base_kc = QK_MODS_GET_BASIC_KEYCODE(keycode);\n");
-    code.push_str("        } else if (IS_QK_LAYER_TAP(keycode)) {\n");
-    code.push_str("            base_kc = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);\n");
-    code.push_str("        } else if (IS_QK_MOD_TAP(keycode)) {\n");
-    code.push_str("            base_kc = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);\n");
-    code.push_str("        }\n");
-    code.push_str("        bool is_combo_key = (base_kc == KC_Q || base_kc == KC_R\n");
-    code.push_str("                          || base_kc == KC_U || base_kc == KC_P);\n");
-    code.push_str("        if (is_combo_key) {\n");
-    code.push_str("            static bool q_held = false;\n");
-    code.push_str("            static bool r_held = false;\n");
-    code.push_str("            static bool u_held = false;\n");
-    code.push_str("            static bool p_held = false;\n");
-    code.push('\n');
-    code.push_str("            if (record->event.pressed) {\n");
-    code.push_str("                if (base_kc == KC_Q) q_held = true;\n");
-    code.push_str("                if (base_kc == KC_R) r_held = true;\n");
-    code.push_str("                if (base_kc == KC_U) u_held = true;\n");
-    code.push_str("                if (base_kc == KC_P) p_held = true;\n");
-    code.push_str("            } else {\n");
-    code.push_str("                if (base_kc == KC_Q) q_held = false;\n");
-    code.push_str("                if (base_kc == KC_R) r_held = false;\n");
-    code.push_str("                if (base_kc == KC_U) u_held = false;\n");
-    code.push_str("                if (base_kc == KC_P) p_held = false;\n");
-    code.push_str("            }\n");
-    code.push('\n');
-    code.push_str("            // Check if either pair is complete\n");
-    code.push_str("            bool pair_active = (q_held && r_held) || (u_held && p_held);\n");
-    code.push_str("            if (pair_active) {\n");
-    code.push_str("                if (!bootloader_combo_active) {\n");
-    code.push_str("                    bootloader_combo_timer = timer_read32();\n");
-    code.push_str("                    bootloader_combo_active = true;\n");
-    code.push_str("                }\n");
-    code.push_str("            } else {\n");
-    code.push_str("                bootloader_combo_active = false;\n");
-    code.push_str("            }\n");
-    code.push_str("        }\n");
-    code.push_str("    }\n");
-    code.push('\n');
+    // Bootloader combo is handled by the general combo system (see src/firmware/generator/combo.rs).
 
     code.push_str("    if (record->event.pressed");
     if has_ripple {

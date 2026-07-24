@@ -12,7 +12,7 @@
 //! - `tap_dance`      — tap dance enum, helpers, actions
 //! - `config_h`       — merged config.h emission
 //! - `rules_mk`       — rules.mk + keymap.json
-//! - `tests`          — 47 inline tests for the generator
+//! - `tests`          — 47 inline tests for the generator (sub: `bootloader_combo`)
 
 // Allow format! appended to String - more readable than write! in code generation
 #![allow(clippy::format_push_string)]
@@ -236,15 +236,6 @@ impl<'a> FirmwareGenerator<'a> {
         // Add combo code if enabled
         code.push('\n');
         code.push_str(&self.generate_combo_code()?);
-
-        // Bootloader combo timer check (runs independently of idle/ripple)
-        code.push('\n');
-        code.push_str("// Bootloader combo: check timer in housekeeping task\n");
-        code.push_str("void housekeeping_task_user(void) {\n");
-        code.push_str("    if (bootloader_combo_active && timer_elapsed32(bootloader_combo_timer) > 1500) {\n");
-        code.push_str("        bootloader_jump();\n");
-        code.push_str("    }\n");
-        code.push_str("}\n");
 
         Ok(code)
     }

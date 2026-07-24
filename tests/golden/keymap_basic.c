@@ -43,10 +43,6 @@ const uint8_t PROGMEM layer_base_colors[2][6][3] = {
 const uint8_t PROGMEM layer_base_colors_layer_count = 2;
 #endif
 
-// Bootloader combo: Q+R (left) or U+P (right) held for 1500ms
-static uint32_t bootloader_combo_timer = 0;
-static bool bootloader_combo_active = false;
-
 #ifdef RGB_MATRIX_ENABLE
 #ifdef LQMK_IDLE_TIMEOUT_MS
 
@@ -87,50 +83,6 @@ void matrix_scan_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    // Bootloader combo: Q+R (left) or U+P (right) held for 1500ms
-    {
-        // Resolve the basic keycode (handle LT/MT/MOD wrappers)
-        uint16_t base_kc = keycode;
-        if (IS_QK_MODS(keycode)) {
-            base_kc = QK_MODS_GET_BASIC_KEYCODE(keycode);
-        } else if (IS_QK_LAYER_TAP(keycode)) {
-            base_kc = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
-        } else if (IS_QK_MOD_TAP(keycode)) {
-            base_kc = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-        }
-        bool is_combo_key = (base_kc == KC_Q || base_kc == KC_R
-                          || base_kc == KC_U || base_kc == KC_P);
-        if (is_combo_key) {
-            static bool q_held = false;
-            static bool r_held = false;
-            static bool u_held = false;
-            static bool p_held = false;
-
-            if (record->event.pressed) {
-                if (base_kc == KC_Q) q_held = true;
-                if (base_kc == KC_R) r_held = true;
-                if (base_kc == KC_U) u_held = true;
-                if (base_kc == KC_P) p_held = true;
-            } else {
-                if (base_kc == KC_Q) q_held = false;
-                if (base_kc == KC_R) r_held = false;
-                if (base_kc == KC_U) u_held = false;
-                if (base_kc == KC_P) p_held = false;
-            }
-
-            // Check if either pair is complete
-            bool pair_active = (q_held && r_held) || (u_held && p_held);
-            if (pair_active) {
-                if (!bootloader_combo_active) {
-                    bootloader_combo_timer = timer_read32();
-                    bootloader_combo_active = true;
-                }
-            } else {
-                bootloader_combo_active = false;
-            }
-        }
-    }
-
     if (record->event.pressed) {
         // Reset activity timer
         last_activity_time = timer_read32();
@@ -157,11 +109,3 @@ void keyboard_post_init_user(void) {
 #endif // LQMK_IDLE_TIMEOUT_MS
 #endif // RGB_MATRIX_ENABLE
 
-
-
-// Bootloader combo: check timer in housekeeping task
-void housekeeping_task_user(void) {
-    if (bootloader_combo_active && timer_elapsed32(bootloader_combo_timer) > 1500) {
-        bootloader_jump();
-    }
-}
