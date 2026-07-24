@@ -364,28 +364,26 @@ If yes, collect preferences for the settings below. Use the defaults as suggesti
 
 ## Phase 7 — Two-Key Hold Combos
 
-A combo fires a special action when two physical keys on **layer 0** are held simultaneously for a set duration.
+A combo fires a special action when two physical keys on **layer 0** are held simultaneously for a set duration. Each combo has its own action. You can configure up to 32 combos per layout. Each combo has key1 (visual), key2 (visual), action (DisableEffects / DisableLighting / Bootloader), and hold_duration_ms (50–2000, default 500).
 
-**Fixed action slots:**
-- **Combo 1** → Disable RGB Effects (revert to base layer colors)
-- **Combo 2** → Disable RGB Lighting entirely
-- **Combo 3** → Enter Bootloader (for flashing)
+The keyboard preview highlights each combo's keys so you can see which keys belong to which combo at a glance: red border + `B` badge for Bootloader, yellow border + `E` badge for DisableEffects, gray border + `L` badge for DisableLighting.
 
-> **Constraints**: Layer 0 only · Keys must differ · Max 3 combos · Hold duration: 50–2000ms · If no combos are defined, no combo code is generated even if combos are enabled.
+> **Constraints**: Layer 0 only · Keys must differ · Up to 32 combos per layout · Hold duration: 50–2000ms · If no combos are defined, no combo code is generated even if combos are enabled.
 
 **Ask the user:**
 ```
 Ask: "Would you like to set up two-key hold combos?
-      For example: hold two keys together for 500ms to enter bootloader mode."
+      For example: hold two keys together for 500ms to enter bootloader mode.
+      You can define up to 32 combos — each picks its own action."
 ```
 
 If yes, ask which combos they want and which keys to use for each:
 ```
-Ask: "Which combo actions do you want?
-        1 — Disable RGB Effects
-        2 — Disable RGB Lighting
-        3 — Bootloader (for flashing)
-      For each one, which two keys should trigger it?"
+Ask: "For each combo, pick an action and the two keys that should trigger it:
+        - Disable RGB Effects
+        - Disable RGB Lighting
+        - Bootloader (for flashing)
+      How many combos do you want, and which keys for each?"
 ```
 
 **Agent tip**: Before asking for key positions, look up the keyboard's matrix layout from `info.json` so you can describe keys by their visual labels (e.g. "the Q key" or "the spacebar") rather than raw coordinates.
@@ -404,19 +402,18 @@ Ask: "Which combo actions do you want?
 #### TUI — key position picking
 
 For each combo:
-1. Select **"Combo N Key 1 ([Action])"** → `Enter`  
+1. Select **"Combo N Key 1"** → `Enter`  
    → Key-selection mode activates. Navigate with arrow keys, press `Enter` to confirm.
-2. Select **"Combo N Key 2 ([Action])"** → same flow
-3. Select **"Combo N Hold Duration"** → type ms value, or `↑↓` adjusts by 10ms → `Enter`
+2. Select **"Combo N Key 2"** → same flow
+3. Select **"Combo N Action"** → cycles through `DisableEffects`, `DisableLighting`, `Bootloader`
+4. Select **"Combo N Hold Duration"** → type ms value, or `↑↓` adjusts by 10ms → `Enter`
 
-TUI setting names:
-- `Combo 1 Key 1 (Disable Effects)` / `Combo 1 Key 2 (Disable Effects)` / `Combo 1 Hold Duration`
-- `Combo 2 Key 1 (Disable Lighting)` / `Combo 2 Key 2 (Disable Lighting)` / `Combo 2 Hold Duration`
-- `Combo 3 Key 1 (Bootloader)` / `Combo 3 Key 2 (Bootloader)` / `Combo 3 Hold Duration`
+TUI setting names (per combo, up to 32):
+- `Combo N Key 1` / `Combo N Key 2` / `Combo N Action` / `Combo N Hold Duration`
 
 #### Web UI
 
-1. Click **"Add Combo"** (max 3)
+1. Click **"Add Combo"** (up to 32)
 2. Fill in per combo row:
    - **Key 1** `{row, col}` and **Key 2** `{row, col}` — matrix coordinates
    - **Action**: `DisableEffects` / `DisableLighting` / `Bootloader`
@@ -440,7 +437,7 @@ TUI setting names:
 COMBO_ENABLE = yes
 ```
 
-**`keymap.c`** (example with 2 combos):
+**`keymap.c`** (example with 2 combos of mixed actions):
 ```c
 #ifdef COMBO_ENABLE
 
@@ -464,12 +461,15 @@ void process_combo_event(uint16_t combo_index, bool pressed) {
         switch (combo_index) {
             case COMBO_0:
                 if (elapsed >= 500) {
-                    // Reverts to TUI layer colors, or solid color if no custom colors:
+                    // DisableEffects: revert to layer colors
                     rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
                 }
                 break;
             case COMBO_1:
-                if (elapsed >= 800) { rgb_matrix_disable_noeeprom(); }
+                if (elapsed >= 800) {
+                    // Bootloader
+                    bootloader_jump();
+                }
                 break;
         }
         combo_state[combo_index].active = false;
@@ -483,8 +483,21 @@ void process_combo_event(uint16_t combo_index, bool pressed) {
 ```markdown
 **Combos**: On
 **Combo 1**: (0,2)+(0,3) → Disable Effects [500ms]
-**Combo 3**: (1,0)+(1,11) → Bootloader [1000ms]
+**Combo 2**: (1,0)+(1,11) → Bootloader [1000ms]
 ```
+
+### Migration: bootloader Q+R/U+P fallback removed
+
+Previously, the idle effect generator emitted a hardcoded `Q+R` (left) / `U+P` (right) bootloader combo held for 1500ms. This fallback has been removed.
+
+If you relied on this shortcut:
+1. Open the Combos tab (TUI or WebUI).
+2. Enable combos.
+3. Add a new combo with your preferred two keys.
+4. Set action = Bootloader and hold duration to 750-1500 ms.
+5. Save the layout and regenerate the firmware.
+
+Visual feedback for combos: combo keys are highlighted on the keyboard preview with the matching action's color (red=Bootloader, yellow=DisableEffects, gray=DisableLighting) and a 1-char badge (B/E/L).
 
 ---
 
