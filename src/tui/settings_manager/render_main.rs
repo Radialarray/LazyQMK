@@ -21,7 +21,7 @@ use super::render_editor::{
     render_string_editor,
 };
 use super::render_selector::{
-    render_hold_mode_selector, render_idle_effect_mode_selector,
+    render_combo_action_selector, render_hold_mode_selector, render_idle_effect_mode_selector,
     render_key_action_palette_selector, render_key_position_selector,
     render_output_format_selector, render_palette_fx_effect_selector,
     render_palette_fx_palette_selector, render_ripple_color_mode_selector,
@@ -159,6 +159,9 @@ pub(super) fn render_settings_manager(
         } => {
             render_key_position_selector(f, inner_area, *setting, instruction, theme);
         }
+        ManagerMode::SelectingAction { idx, current } => {
+            render_combo_action_selector(f, inner_area, *idx, current, theme);
+        }
     }
 }
 
@@ -188,7 +191,7 @@ fn render_settings_list(
         ])
         .split(area);
 
-    let selected_setting = SettingItem::all().get(state.selected).copied();
+    let selected_setting = SettingItem::all(layout).get(state.selected).copied();
     let selected_group = selected_setting.map(|setting| setting.group());
     let subgroup_summary = selected_setting
         .and_then(SettingItem::rgb_subgroup)
@@ -218,7 +221,10 @@ fn render_settings_list(
     f.render_widget(summary_widget, chunks[0]);
 
     // Build settings list with group headers
-    let settings = SettingItem::all();
+    let settings = SettingItem::all(layout);
+    let selected_desc = settings
+        .get(state.selected)
+        .map_or_else(String::new, SettingItem::description);
     let mut items: Vec<ListItem> = Vec::new();
     let mut current_group: Option<SettingGroup> = None;
     let mut current_rgb_subgroup: Option<super::RgbSubgroup> = None;
@@ -272,7 +278,7 @@ fn render_settings_list(
 
         // Get current value for this setting
         let value = get_setting_value_display(
-            *setting,
+            setting,
             rgb_enabled,
             rgb_brightness,
             rgb_timeout_ms,
@@ -315,9 +321,8 @@ fn render_settings_list(
 
     f.render_widget(list, chunks[1]);
 
-    // Show description of selected setting
-    let selected_setting = settings.get(state.selected);
-    let description = selected_setting.map_or("", SettingItem::description);
+    // Show description of selected setting (computed before consuming settings)
+    let description = selected_desc;
 
     // Render help text
     let help_text = vec![
@@ -546,59 +551,36 @@ pub(super) fn get_setting_value_display(
                 "Off".to_string()
             }
         }
-        SettingItem::Combo1Key1 => layout
-            .and_then(|l| l.combo_settings.combos.first())
+        SettingItem::AddCombo => "<add new combo>".to_string(),
+        SettingItem::RemoveCombo(idx) => layout
+            .and_then(|l| l.combo_settings.combos.get(idx))
+            .map_or_else(
+                || "<not set>".to_string(),
+                |_| "<press Enter to remove>".to_string(),
+            ),
+        SettingItem::ComboKey1(idx) => layout
+            .and_then(|l| l.combo_settings.combos.get(idx))
             .map_or_else(
                 || "<not set>".to_string(),
                 |c| format!("({}, {})", c.key1.row, c.key1.col),
             ),
-        SettingItem::Combo1Key2 => layout
-            .and_then(|l| l.combo_settings.combos.first())
+        SettingItem::ComboKey2(idx) => layout
+            .and_then(|l| l.combo_settings.combos.get(idx))
             .map_or_else(
                 || "<not set>".to_string(),
                 |c| format!("({}, {})", c.key2.row, c.key2.col),
             ),
-        SettingItem::Combo1HoldDuration => layout
-            .and_then(|l| l.combo_settings.combos.first())
+        SettingItem::ComboHoldDuration(idx) => layout
+            .and_then(|l| l.combo_settings.combos.get(idx))
             .map_or_else(
                 || "500ms".to_string(),
                 |c| format!("{}ms", c.hold_duration_ms),
             ),
-        SettingItem::Combo2Key1 => layout
-            .and_then(|l| l.combo_settings.combos.get(1))
+        SettingItem::ComboAction(idx) => layout
+            .and_then(|l| l.combo_settings.combos.get(idx))
             .map_or_else(
                 || "<not set>".to_string(),
-                |c| format!("({}, {})", c.key1.row, c.key1.col),
-            ),
-        SettingItem::Combo2Key2 => layout
-            .and_then(|l| l.combo_settings.combos.get(1))
-            .map_or_else(
-                || "<not set>".to_string(),
-                |c| format!("({}, {})", c.key2.row, c.key2.col),
-            ),
-        SettingItem::Combo2HoldDuration => layout
-            .and_then(|l| l.combo_settings.combos.get(1))
-            .map_or_else(
-                || "500ms".to_string(),
-                |c| format!("{}ms", c.hold_duration_ms),
-            ),
-        SettingItem::Combo3Key1 => layout
-            .and_then(|l| l.combo_settings.combos.get(2))
-            .map_or_else(
-                || "<not set>".to_string(),
-                |c| format!("({}, {})", c.key1.row, c.key1.col),
-            ),
-        SettingItem::Combo3Key2 => layout
-            .and_then(|l| l.combo_settings.combos.get(2))
-            .map_or_else(
-                || "<not set>".to_string(),
-                |c| format!("({}, {})", c.key2.row, c.key2.col),
-            ),
-        SettingItem::Combo3HoldDuration => layout
-            .and_then(|l| l.combo_settings.combos.get(2))
-            .map_or_else(
-                || "500ms".to_string(),
-                |c| format!("{}ms", c.hold_duration_ms),
+                |c| c.action.display_name().to_string(),
             ),
         // Per-Layout: PaletteFX
         SettingItem::PaletteFxEnabled => layout

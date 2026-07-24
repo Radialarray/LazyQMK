@@ -119,3 +119,30 @@ fn handle_key_position_selection(state: &mut AppState, key: event::KeyEvent) -> 
         _ => Ok(false),
     }
 }
+
+/// Handle combo action selection mode (j/k navigate options, Enter applies, Esc cancels).
+///
+/// Mirrors `handle_key_position_selection` for arrow-key navigation but delegates
+/// navigation to the manager's action handlers (which know how to step through
+/// the [`crate::models::ComboAction`] enum).
+#[allow(dead_code)] // Exposed via the settings manager input dispatch
+pub fn handle_selecting_action_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
+    if let Some(ActiveComponent::SettingsManager(ref mut manager)) = state.active_component {
+        // Build context (needed by other handlers, kept for parity).
+        let context = SettingsManagerContext {
+            rgb_enabled: state.layout.rgb_enabled,
+            rgb_brightness: state.layout.rgb_brightness,
+            rgb_timeout_ms: state.layout.rgb_timeout_ms,
+            uncolored_key_behavior: state.layout.uncolored_key_behavior,
+            idle_effect_settings: state.layout.idle_effect_settings.clone(),
+            overlay_ripple_settings: state.layout.rgb_overlay_ripple.clone(),
+            tap_hold_settings: state.layout.tap_hold_settings.clone(),
+            config: state.config.clone(),
+            layout: state.layout.clone(),
+        };
+        if let Some(event) = manager.handle_input_with_context(key, &context) {
+            return super::event::handle_settings_manager_event(state, event);
+        }
+    }
+    Ok(false)
+}

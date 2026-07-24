@@ -41,7 +41,8 @@ fn test_start_editing_numeric_stores_default() {
 
 #[test]
 fn test_setting_item_all_includes_idle_effect_settings() {
-    let all_settings = SettingItem::all();
+    let layout = crate::models::Layout::new("test").unwrap();
+    let all_settings = SettingItem::all(&layout);
 
     // Verify idle effect settings are present
     assert!(all_settings.contains(&SettingItem::IdleEffectEnabled));

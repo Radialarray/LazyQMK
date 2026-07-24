@@ -1,8 +1,8 @@
 //! State methods for SettingsManagerState.
 
 use crate::models::{
-    HoldDecisionMode, PaletteFxEffect, PaletteFxPalette, RgbMatrixEffect, RippleColorMode,
-    TapHoldPreset,
+    ComboAction, HoldDecisionMode, PaletteFxEffect, PaletteFxPalette, RgbMatrixEffect,
+    RippleColorMode, TapHoldPreset,
 };
 
 use super::{ManagerMode, SettingItem, SettingsManagerState};
@@ -391,6 +391,40 @@ impl SettingsManagerState {
             setting,
             instruction,
         };
+    }
+
+    /// Start selecting a combo action (for combo configuration)
+    pub fn start_selecting_combo_action(&mut self, idx: usize, current: ComboAction) {
+        self.mode = ManagerMode::SelectingAction { idx, current };
+    }
+
+    /// Move the action selection backwards in the [`ComboAction`] list.
+    pub fn action_previous(&mut self) {
+        if let ManagerMode::SelectingAction { current, .. } = &mut self.mode {
+            let actions = ComboAction::all();
+            let pos = actions.iter().position(|a| a == current).unwrap_or(0);
+            let new_pos = if pos == 0 { actions.len() - 1 } else { pos - 1 };
+            *current = actions[new_pos].clone();
+        }
+    }
+
+    /// Move the action selection forwards in the [`ComboAction`] list.
+    pub fn action_next(&mut self) {
+        if let ManagerMode::SelectingAction { current, .. } = &mut self.mode {
+            let actions = ComboAction::all();
+            let pos = actions.iter().position(|a| a == current).unwrap_or(0);
+            let new_pos = (pos + 1) % actions.len();
+            *current = actions[new_pos].clone();
+        }
+    }
+
+    /// Get the currently selected combo action.
+    #[must_use]
+    pub fn get_combo_action(&self) -> Option<ComboAction> {
+        match &self.mode {
+            ManagerMode::SelectingAction { current, .. } => Some(current.clone()),
+            _ => None,
+        }
     }
 
     /// Handle character input for string/path editing

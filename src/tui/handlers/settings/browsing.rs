@@ -15,11 +15,11 @@ pub(super) fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
             return Ok(false);
         };
 
-    let settings = SettingItem::all();
+    let settings = SettingItem::all(&state.layout);
     if let Some(setting) = settings.get(selected_idx) {
         // Update the manager's state to start editing
         if let Some(ActiveComponent::SettingsManager(ref mut manager)) = state.active_component {
-            match setting {
+            match *setting {
                 SettingItem::UncoloredKeyBehavior => {
                     manager.state_mut().start_editing_numeric(
                         *setting,
@@ -425,12 +425,22 @@ pub(super) fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         .state_mut()
                         .start_toggling_boolean(*setting, state.layout.combo_settings.enabled);
                 }
-                SettingItem::Combo1Key1
-                | SettingItem::Combo1Key2
-                | SettingItem::Combo2Key1
-                | SettingItem::Combo2Key2
-                | SettingItem::Combo3Key1
-                | SettingItem::Combo3Key2 => {
+                SettingItem::AddCombo => {
+                    // Defer actual append to apply phase so we can validate
+                    // against the MAX_COMBOS limit and update the list afterwards.
+                    state.apply_add_combo();
+                    state.set_status(format!(
+                        "Added combo {} (configure keys, action, hold duration)",
+                        state.layout.combo_settings.combos.len()
+                    ));
+                    return Ok(false);
+                }
+                SettingItem::RemoveCombo(idx) => {
+                    state.apply_remove_combo(idx);
+                    state.set_status(format!("Removed combo {}", idx + 1));
+                    return Ok(false);
+                }
+                SettingItem::ComboKey1(_idx) | SettingItem::ComboKey2(_idx) => {
                     // Signal to parent to enter key selection mode
                     // The parent will handle the actual key navigation
                     manager.state_mut().start_selecting_key_position(
@@ -442,41 +452,30 @@ pub(super) fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                     );
                     state.set_status("Navigate to key position and press Enter to select");
                 }
-                SettingItem::Combo1HoldDuration => {
+                SettingItem::ComboHoldDuration(idx) => {
                     let current = state
                         .layout
                         .combo_settings
                         .combos
-                        .first()
+                        .get(idx)
                         .map(|c| c.hold_duration_ms)
                         .unwrap_or(500);
                     manager
                         .state_mut()
                         .start_editing_numeric(*setting, current, 50, 2000, 500);
                 }
-                SettingItem::Combo2HoldDuration => {
+                SettingItem::ComboAction(idx) => {
                     let current = state
                         .layout
                         .combo_settings
                         .combos
-                        .get(1)
-                        .map(|c| c.hold_duration_ms)
-                        .unwrap_or(500);
+                        .get(idx)
+                        .map(|c| c.action.clone())
+                        .unwrap_or(crate::models::ComboAction::DisableEffects);
                     manager
                         .state_mut()
-                        .start_editing_numeric(*setting, current, 50, 2000, 500);
-                }
-                SettingItem::Combo3HoldDuration => {
-                    let current = state
-                        .layout
-                        .combo_settings
-                        .combos
-                        .get(2)
-                        .map(|c| c.hold_duration_ms)
-                        .unwrap_or(500);
-                    manager
-                        .state_mut()
-                        .start_editing_numeric(*setting, current, 50, 2000, 500);
+                        .start_selecting_combo_action(idx, current);
+                    state.set_status("Select action - ↑↓ to choose, Enter to apply");
                 }
             }
             state.set_status("Select option with ↑↓, Enter to apply");

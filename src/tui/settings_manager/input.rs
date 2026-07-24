@@ -19,17 +19,17 @@ impl SettingsManager {
     pub(super) fn handle_browsing_input(
         &mut self,
         key: KeyEvent,
-        _context: &SettingsManagerContext,
+        context: &SettingsManagerContext,
     ) -> Option<SettingsManagerEvent> {
         match key.code {
             KeyCode::Esc => Some(SettingsManagerEvent::Cancelled),
             KeyCode::Up | KeyCode::Char('k') => {
-                let count = SettingItem::all().len();
+                let count = SettingItem::all(&context.layout).len();
                 self.state.select_previous(count);
                 None
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                let count = SettingItem::all().len();
+                let count = SettingItem::all(&context.layout).len();
                 self.state.select_next(count);
                 None
             }
@@ -388,6 +388,28 @@ impl SettingsManager {
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.state.option_next(count);
+                None
+            }
+            KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),
+            _ => None,
+        }
+    }
+
+    pub(super) fn handle_action_selection(
+        &mut self,
+        key: KeyEvent,
+    ) -> Option<SettingsManagerEvent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.state.cancel();
+                None
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.state.action_previous();
+                None
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.state.action_next();
                 None
             }
             KeyCode::Enter => Some(SettingsManagerEvent::SettingsUpdated),

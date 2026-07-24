@@ -3,8 +3,8 @@
 use anyhow::Result;
 
 use crate::models::{
-    HoldDecisionMode, PaletteFxEffect, PaletteFxPalette, RgbBrightness, RgbMatrixEffect,
-    RgbSaturation, RippleColorMode, TapHoldPreset, UncoloredKeyBehavior,
+    ComboAction, HoldDecisionMode, PaletteFxEffect, PaletteFxPalette, RgbBrightness,
+    RgbMatrixEffect, RgbSaturation, RippleColorMode, TapHoldPreset, UncoloredKeyBehavior,
 };
 use crate::tui::settings_manager::SettingItem;
 use crate::tui::{ActiveComponent, AppState};
@@ -164,6 +164,11 @@ pub(super) fn apply_settings(state: &mut AppState) -> Result<()> {
                     }
                 }
             }
+            crate::tui::settings_manager::ManagerMode::SelectingAction { idx, .. } => {
+                if let Some(action) = manager_state.get_combo_action() {
+                    apply_combo_action(state, *idx, action);
+                }
+            }
             crate::tui::settings_manager::ManagerMode::SelectingKeyPosition { setting, .. } => {
                 // Key position was selected - apply it to the appropriate combo
                 apply_combo_key_position(state, *setting);
@@ -313,14 +318,8 @@ fn apply_numeric_setting(state: &mut AppState, setting: SettingItem, value: u16)
             state.set_status(format!("Overlay ripple hue shift set to: {value}°"));
         }
         // Combo Settings - Hold Durations
-        SettingItem::Combo1HoldDuration => {
-            update_combo_hold_duration(state, 0, value);
-        }
-        SettingItem::Combo2HoldDuration => {
-            update_combo_hold_duration(state, 1, value);
-        }
-        SettingItem::Combo3HoldDuration => {
-            update_combo_hold_duration(state, 2, value);
+        SettingItem::ComboHoldDuration(idx) => {
+            update_combo_hold_duration(state, idx, value);
         }
         _ => {}
     }
@@ -512,24 +511,14 @@ pub(super) fn apply_combo_key_position(state: &mut AppState, setting: SettingIte
 
     // Determine which combo and which key
     let (combo_idx, is_key1) = match setting {
-        SettingItem::Combo1Key1 => (0, true),
-        SettingItem::Combo1Key2 => (0, false),
-        SettingItem::Combo2Key1 => (1, true),
-        SettingItem::Combo2Key2 => (1, false),
-        SettingItem::Combo3Key1 => (2, true),
-        SettingItem::Combo3Key2 => (2, false),
+        SettingItem::ComboKey1(idx) => (idx, true),
+        SettingItem::ComboKey2(idx) => (idx, false),
         _ => return,
     };
 
     // Ensure combo exists, create if needed
     while state.layout.combo_settings.combos.len() <= combo_idx {
-        let action = match combo_idx {
-            0 => ComboAction::DisableEffects,
-            1 => ComboAction::DisableLighting,
-            2 => ComboAction::Bootloader,
-            _ => ComboAction::DisableEffects,
-        };
-        // Create a new combo with placeholder position
+        let action = ComboAction::DisableEffects;
         let combo = ComboDefinition::new(
             Position { row: 0, col: 0 },
             Position { row: 0, col: 0 },
@@ -561,12 +550,7 @@ fn update_combo_hold_duration(state: &mut AppState, combo_idx: usize, duration_m
 
     // Ensure combo exists
     while state.layout.combo_settings.combos.len() <= combo_idx {
-        let action = match combo_idx {
-            0 => ComboAction::DisableEffects,
-            1 => ComboAction::DisableLighting,
-            2 => ComboAction::Bootloader,
-            _ => ComboAction::DisableEffects,
-        };
+        let action = ComboAction::DisableEffects;
         let combo = ComboDefinition::new(
             Position { row: 0, col: 0 },
             Position { row: 0, col: 0 },
@@ -581,6 +565,31 @@ fn update_combo_hold_duration(state: &mut AppState, combo_idx: usize, duration_m
             "Combo {} hold duration set to: {}ms",
             combo_idx + 1,
             duration_ms
+        ));
+    }
+}
+
+/// Apply a new action to the combo at the given index.
+pub(super) fn apply_combo_action(state: &mut AppState, combo_idx: usize, action: ComboAction) {
+    use crate::models::{ComboAction, ComboDefinition, Position};
+
+    // Ensure combo exists
+    while state.layout.combo_settings.combos.len() <= combo_idx {
+        let combo = ComboDefinition::new(
+            Position { row: 0, col: 0 },
+            Position { row: 0, col: 0 },
+            ComboAction::DisableEffects,
+        );
+        state.layout.combo_settings.combos.push(combo);
+    }
+
+    if let Some(combo) = state.layout.combo_settings.combos.get_mut(combo_idx) {
+        combo.action = action.clone();
+        state.mark_dirty();
+        state.set_status(format!(
+            "Combo {} action set to: {}",
+            combo_idx + 1,
+            action.display_name()
         ));
     }
 }

@@ -10,7 +10,9 @@ use std::path::PathBuf;
 use crate::config::Config;
 use crate::firmware::BuildState;
 use crate::keycode_db::KeycodeDb;
-use crate::models::{KeyboardGeometry, Layout, Position, VisualLayoutMapping};
+use crate::models::{
+    ComboAction, ComboDefinition, KeyboardGeometry, Layout, Position, VisualLayoutMapping,
+};
 use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
@@ -469,6 +471,34 @@ impl AppState {
     /// Clear dirty flag (after save)
     pub const fn mark_clean(&mut self) {
         self.dirty = false;
+    }
+
+    /// Append a new combo entry with default settings.
+    ///
+    /// Returns silently if the layout already has the maximum number of combos.
+    pub fn apply_add_combo(&mut self) {
+        use crate::models::layout::combo::MAX_COMBOS;
+        if self.layout.combo_settings.combos.len() >= MAX_COMBOS {
+            self.set_error(format!("Maximum of {MAX_COMBOS} combos allowed"));
+            return;
+        }
+        self.layout
+            .combo_settings
+            .combos
+            .push(ComboDefinition::new(
+                Position { row: 0, col: 0 },
+                Position { row: 0, col: 0 },
+                ComboAction::DisableEffects,
+            ));
+        self.mark_dirty();
+    }
+
+    /// Remove the combo entry at `idx` if it exists.
+    pub fn apply_remove_combo(&mut self, idx: usize) {
+        if idx < self.layout.combo_settings.combos.len() {
+            self.layout.combo_settings.combos.remove(idx);
+            self.mark_dirty();
+        }
     }
 
     /// Rebuild keyboard geometry and visual layout mapping for a new layout variant.

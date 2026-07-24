@@ -199,31 +199,26 @@ pub enum SettingItem {
     // === Combo Settings (Per-Layout) ===
     /// Master switch for combo feature
     CombosEnabled,
-    /// Configure Combo 1: Disable Effects - First key position
-    Combo1Key1,
-    /// Configure Combo 1: Disable Effects - Second key position
-    Combo1Key2,
-    /// Configure Combo 1: Disable Effects - Hold duration in milliseconds
-    Combo1HoldDuration,
-    /// Configure Combo 2: Disable Lighting - First key position
-    Combo2Key1,
-    /// Configure Combo 2: Disable Lighting - Second key position
-    Combo2Key2,
-    /// Configure Combo 2: Disable Lighting - Hold duration in milliseconds
-    Combo2HoldDuration,
-    /// Configure Combo 3: Bootloader - First key position
-    Combo3Key1,
-    /// Configure Combo 3: Bootloader - Second key position
-    Combo3Key2,
-    /// Configure Combo 3: Bootloader - Hold duration in milliseconds
-    Combo3HoldDuration,
+    /// Add a new combo entry to the layout
+    AddCombo,
+    /// Remove the combo at the given index (1-based display)
+    RemoveCombo(usize),
+    /// First key position for the combo at the given index
+    ComboKey1(usize),
+    /// Second key position for the combo at the given index
+    ComboKey2(usize),
+    /// Hold duration in milliseconds for the combo at the given index
+    ComboHoldDuration(usize),
+    /// Action performed by the combo at the given index
+    ComboAction(usize),
 }
 
 impl SettingItem {
-    /// Returns all settings in a single flat list.
+    /// Returns all settings in a single flat list, including dynamic combo entries
+    /// derived from the provided layout.
     #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
+    pub fn all(layout: &crate::models::Layout) -> Vec<Self> {
+        let mut items = vec![
             // Paths (Global)
             Self::QmkFirmwarePath,
             // Build (Global)
@@ -281,16 +276,19 @@ impl SettingItem {
             Self::ChordalHold,
             // Combos (Per-Layout)
             Self::CombosEnabled,
-            Self::Combo1Key1,
-            Self::Combo1Key2,
-            Self::Combo1HoldDuration,
-            Self::Combo2Key1,
-            Self::Combo2Key2,
-            Self::Combo2HoldDuration,
-            Self::Combo3Key1,
-            Self::Combo3Key2,
-            Self::Combo3HoldDuration,
-        ]
+            Self::AddCombo,
+        ];
+
+        // Append per-combo entries (one block per defined combo)
+        for idx in 0..layout.combo_settings.combos.len() {
+            items.push(Self::ComboKey1(idx));
+            items.push(Self::ComboKey2(idx));
+            items.push(Self::ComboAction(idx));
+            items.push(Self::ComboHoldDuration(idx));
+            items.push(Self::RemoveCombo(idx));
+        }
+
+        items
     }
 
     /// Returns which group this setting belongs to.
@@ -345,15 +343,12 @@ impl SettingItem {
             | Self::FlowTapTerm
             | Self::ChordalHold => SettingGroup::TapHold,
             Self::CombosEnabled
-            | Self::Combo1Key1
-            | Self::Combo1Key2
-            | Self::Combo1HoldDuration
-            | Self::Combo2Key1
-            | Self::Combo2Key2
-            | Self::Combo2HoldDuration
-            | Self::Combo3Key1
-            | Self::Combo3Key2
-            | Self::Combo3HoldDuration => SettingGroup::Combos,
+            | Self::AddCombo
+            | Self::RemoveCombo(_)
+            | Self::ComboKey1(_)
+            | Self::ComboKey2(_)
+            | Self::ComboHoldDuration(_)
+            | Self::ComboAction(_) => SettingGroup::Combos,
         }
     }
 
@@ -398,157 +393,196 @@ impl SettingItem {
 
     /// Returns a human-readable name for this setting.
     #[must_use]
-    pub const fn display_name(&self) -> &'static str {
-        match self {
-            Self::QmkFirmwarePath => "QMK Firmware Folder",
-            Self::Keyboard => "Keyboard",
-            Self::LayoutVariant => "Layout Variant",
-            Self::KeymapName => "Keymap Name",
-            Self::OutputFormat => "Output Format",
-            Self::OutputDir => "Build Output Folder",
-            Self::ShowHelpOnStartup => "Show Help on Startup",
-            Self::ThemeMode => "Theme Mode",
-            Self::KeyboardScale => "Keyboard Scale",
-            Self::RgbEnabled => "Lighting Enabled",
-            Self::RgbBrightness => "Lighting Brightness",
-            Self::RgbSaturation => "RGB Saturation",
-            Self::RgbMatrixSpeed => "RGB Matrix Speed",
-            Self::RgbTimeout => "Lighting Timeout",
-            Self::IdleEffectEnabled => "Idle Lighting Enabled",
-            Self::IdleTimeout => "Idle Wait Time",
-            Self::IdleEffectDuration => "Idle Effect Length",
-            Self::IdleEffectMode => "Idle Effect",
-            Self::UncoloredKeyBehavior => "Uncolored Key Brightness",
-            Self::OverlayRippleEnabled => "Press Ripple Enabled",
-            Self::OverlayRippleMaxRipples => "Max Concurrent Ripples",
-            Self::OverlayRippleDuration => "Ripple Duration",
-            Self::OverlayRippleSpeed => "Ripple Speed",
-            Self::OverlayRippleBandWidth => "Ripple Band Width",
-            Self::OverlayRippleAmplitude => "Ripple Amplitude",
-            Self::OverlayRippleColorMode => "Ripple Color Mode",
-            Self::OverlayRippleFixedColor => "Ripple Fixed Color",
-            Self::OverlayRippleHueShift => "Ripple Hue Shift",
-            Self::OverlayRippleTriggerPress => "Trigger on Press",
-            Self::OverlayRippleTriggerRelease => "Trigger on Release",
-            Self::OverlayRippleIgnoreTransparent => "Ignore Transparent Keys",
-            Self::OverlayRippleIgnoreModifiers => "Ignore Modifier Keys",
-            Self::OverlayRippleIgnoreLayerSwitch => "Ignore Layer Switch Keys",
-            Self::OverlayRippleKeyActionPalette => "Reactive Key Palette",
-            Self::OverlayRippleWaveCount => "Ripple Waves per Key",
-            Self::OverlayRippleWaveDelay => "Delay Between Waves",
-            Self::PaletteFxEnabled => "PaletteFX Effects",
-            Self::PaletteFxDefaultEffect => "PaletteFX Default Effect",
-            Self::PaletteFxDefaultPalette => "PaletteFX Default Palette",
-            Self::PaletteFxEnableAllEffects => "PaletteFX All Effects",
-            Self::PaletteFxEnableAllPalettes => "PaletteFX All Palettes",
-            Self::TapHoldPreset => "Preset",
-            Self::TappingTerm => "Tapping Term",
-            Self::QuickTapTerm => "Quick Tap Term",
-            Self::HoldMode => "Hold Mode",
-            Self::RetroTapping => "Retro Tapping",
-            Self::TappingToggle => "Tapping Toggle",
-            Self::FlowTapTerm => "Flow Tap Term",
-            Self::ChordalHold => "Chordal Hold",
+    pub fn display_name(&self) -> String {
+        match *self {
+            Self::QmkFirmwarePath => "QMK Firmware Folder".to_string(),
+            Self::Keyboard => "Keyboard".to_string(),
+            Self::LayoutVariant => "Layout Variant".to_string(),
+            Self::KeymapName => "Keymap Name".to_string(),
+            Self::OutputFormat => "Output Format".to_string(),
+            Self::OutputDir => "Build Output Folder".to_string(),
+            Self::ShowHelpOnStartup => "Show Help on Startup".to_string(),
+            Self::ThemeMode => "Theme Mode".to_string(),
+            Self::KeyboardScale => "Keyboard Scale".to_string(),
+            Self::RgbEnabled => "Lighting Enabled".to_string(),
+            Self::RgbBrightness => "Lighting Brightness".to_string(),
+            Self::RgbSaturation => "RGB Saturation".to_string(),
+            Self::RgbMatrixSpeed => "RGB Matrix Speed".to_string(),
+            Self::RgbTimeout => "Lighting Timeout".to_string(),
+            Self::IdleEffectEnabled => "Idle Lighting Enabled".to_string(),
+            Self::IdleTimeout => "Idle Wait Time".to_string(),
+            Self::IdleEffectDuration => "Idle Effect Length".to_string(),
+            Self::IdleEffectMode => "Idle Effect".to_string(),
+            Self::UncoloredKeyBehavior => "Uncolored Key Brightness".to_string(),
+            Self::OverlayRippleEnabled => "Press Ripple Enabled".to_string(),
+            Self::OverlayRippleMaxRipples => "Max Concurrent Ripples".to_string(),
+            Self::OverlayRippleDuration => "Ripple Duration".to_string(),
+            Self::OverlayRippleSpeed => "Ripple Speed".to_string(),
+            Self::OverlayRippleBandWidth => "Ripple Band Width".to_string(),
+            Self::OverlayRippleAmplitude => "Ripple Amplitude".to_string(),
+            Self::OverlayRippleColorMode => "Ripple Color Mode".to_string(),
+            Self::OverlayRippleFixedColor => "Ripple Fixed Color".to_string(),
+            Self::OverlayRippleHueShift => "Ripple Hue Shift".to_string(),
+            Self::OverlayRippleTriggerPress => "Trigger on Press".to_string(),
+            Self::OverlayRippleTriggerRelease => "Trigger on Release".to_string(),
+            Self::OverlayRippleIgnoreTransparent => "Ignore Transparent Keys".to_string(),
+            Self::OverlayRippleIgnoreModifiers => "Ignore Modifier Keys".to_string(),
+            Self::OverlayRippleIgnoreLayerSwitch => "Ignore Layer Switch Keys".to_string(),
+            Self::OverlayRippleKeyActionPalette => "Reactive Key Palette".to_string(),
+            Self::OverlayRippleWaveCount => "Ripple Waves per Key".to_string(),
+            Self::OverlayRippleWaveDelay => "Delay Between Waves".to_string(),
+            Self::PaletteFxEnabled => "PaletteFX Effects".to_string(),
+            Self::PaletteFxDefaultEffect => "PaletteFX Default Effect".to_string(),
+            Self::PaletteFxDefaultPalette => "PaletteFX Default Palette".to_string(),
+            Self::PaletteFxEnableAllEffects => "PaletteFX All Effects".to_string(),
+            Self::PaletteFxEnableAllPalettes => "PaletteFX All Palettes".to_string(),
+            Self::TapHoldPreset => "Preset".to_string(),
+            Self::TappingTerm => "Tapping Term".to_string(),
+            Self::QuickTapTerm => "Quick Tap Term".to_string(),
+            Self::HoldMode => "Hold Mode".to_string(),
+            Self::RetroTapping => "Retro Tapping".to_string(),
+            Self::TappingToggle => "Tapping Toggle".to_string(),
+            Self::FlowTapTerm => "Flow Tap Term".to_string(),
+            Self::ChordalHold => "Chordal Hold".to_string(),
             // Combo Settings
-            Self::CombosEnabled => "Combos Enabled",
-            Self::Combo1Key1 => "Combo 1 Key 1 (Disable Effects)",
-            Self::Combo1Key2 => "Combo 1 Key 2 (Disable Effects)",
-            Self::Combo1HoldDuration => "Combo 1 Hold Duration",
-            Self::Combo2Key1 => "Combo 2 Key 1 (Disable Lighting)",
-            Self::Combo2Key2 => "Combo 2 Key 2 (Disable Lighting)",
-            Self::Combo2HoldDuration => "Combo 2 Hold Duration",
-            Self::Combo3Key1 => "Combo 3 Key 1 (Bootloader)",
-            Self::Combo3Key2 => "Combo 3 Key 2 (Bootloader)",
-            Self::Combo3HoldDuration => "Combo 3 Hold Duration",
+            Self::CombosEnabled => "Combos Enabled".to_string(),
+            Self::AddCombo => "Add Combo".to_string(),
+            Self::RemoveCombo(idx) => format!("Remove Combo {}", idx + 1),
+            Self::ComboKey1(idx) => format!("Combo {} Key 1", idx + 1),
+            Self::ComboKey2(idx) => format!("Combo {} Key 2", idx + 1),
+            Self::ComboHoldDuration(idx) => format!("Combo {} Hold Duration", idx + 1),
+            Self::ComboAction(idx) => format!("Combo {} Action", idx + 1),
         }
     }
 
     /// Returns a description of this setting.
     #[must_use]
-    pub const fn description(&self) -> &'static str {
-        match self {
+    pub fn description(&self) -> String {
+        match *self {
             Self::QmkFirmwarePath => {
                 "Folder containing your local QMK checkout. Needed for keyboard info and builds."
+                    .to_string()
             }
-            Self::Keyboard => "Keyboard this layout targets when you generate or build firmware.",
+            Self::Keyboard => {
+                "Keyboard this layout targets when you generate or build firmware.".to_string()
+            }
             Self::LayoutVariant => {
                 "Physical layout variant used by this keyboard, such as LAYOUT_split_3x6_3."
+                    .to_string()
             }
-            Self::KeymapName => "Name used for generated keymap files, such as default or mymap.",
+            Self::KeymapName => {
+                "Name used for generated keymap files, such as default or mymap.".to_string()
+            }
             Self::OutputFormat => {
-                "Firmware file type to export after build, such as uf2, hex, or bin."
+                "Firmware file type to export after build, such as uf2, hex, or bin.".to_string()
             }
-            Self::OutputDir => "Folder where built firmware files should be written.",
-            Self::ShowHelpOnStartup => "Display help overlay when application starts",
-            Self::ThemeMode => "Color theme: Auto (follow OS), Dark, or Light",
-            Self::KeyboardScale => "Keyboard display size: 1.0 = default, 0.5 = half, 2.0 = double",
-            Self::RgbEnabled => "Turn all keyboard lighting on or off.",
-            Self::RgbBrightness => "Overall keyboard lighting brightness (0-100%).",
+            Self::OutputDir => "Folder where built firmware files should be written.".to_string(),
+            Self::ShowHelpOnStartup => "Display help overlay when application starts".to_string(),
+            Self::ThemeMode => "Color theme: Auto (follow OS), Dark, or Light".to_string(),
+            Self::KeyboardScale => {
+                "Keyboard display size: 1.0 = default, 0.5 = half, 2.0 = double".to_string()
+            }
+            Self::RgbEnabled => "Turn all keyboard lighting on or off.".to_string(),
+            Self::RgbBrightness => "Overall keyboard lighting brightness (0-100%).".to_string(),
             Self::RgbSaturation => {
                 "Saturation multiplier for all LEDs (0=Grayscale, 100=Normal, 200=Maximum)"
+                    .to_string()
             }
             Self::RgbMatrixSpeed => {
-                "Animation speed for RGB effects (0=Slowest, 127=Default, 255=Fastest)"
+                "Animation speed for RGB effects (0=Slowest, 127=Default, 255=Fastest)".to_string()
             }
-            Self::RgbTimeout => "Turn lighting off after inactivity. Use 0 to keep it on.",
-            Self::IdleEffectEnabled => "Play a temporary lighting effect before full idle timeout.",
-            Self::IdleTimeout => "How long to wait before idle lighting begins. Use 0 to disable.",
+            Self::RgbTimeout => "Turn lighting off after inactivity. Use 0 to keep it on.".to_string(),
+            Self::IdleEffectEnabled => {
+                "Play a temporary lighting effect before full idle timeout.".to_string()
+            }
+            Self::IdleTimeout => {
+                "How long to wait before idle lighting begins. Use 0 to disable.".to_string()
+            }
             Self::IdleEffectDuration => {
                 "How long idle lighting runs before lights turn off. Use 0 for immediate off."
+                    .to_string()
             }
-            Self::IdleEffectMode => "Lighting animation used while keyboard is idle.",
+            Self::IdleEffectMode => "Lighting animation used while keyboard is idle.".to_string(),
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
+                    .to_string()
             }
-            Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.",
-            Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)",
-            Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds",
+            Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.".to_string(),
+            Self::OverlayRippleMaxRipples => "Maximum number of concurrent ripples (1-8)".to_string(),
+            Self::OverlayRippleDuration => "How long each ripple lasts in milliseconds".to_string(),
             Self::OverlayRippleSpeed => {
                 "Expansion speed in physical LED coordinate space (1-255, higher = faster)"
+                    .to_string()
             }
-            Self::OverlayRippleBandWidth => "Width of ripple band in physical distance units",
-            Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)",
+            Self::OverlayRippleBandWidth => "Width of ripple band in physical distance units".to_string(),
+            Self::OverlayRippleAmplitude => "Brightness boost as percentage of base (0-100%)".to_string(),
             Self::OverlayRippleColorMode => {
-                "How to determine ripple colors (Fixed, Key Color, Hue Shift)"
+                "How to determine ripple colors (Fixed, Key Color, Hue Shift)".to_string()
             }
-            Self::OverlayRippleFixedColor => "Color to use when color mode is Fixed Color",
+            Self::OverlayRippleFixedColor => "Color to use when color mode is Fixed Color".to_string(),
             Self::OverlayRippleHueShift => {
-                "Hue shift in degrees when mode is Hue Shift (-180 to 180)"
+                "Hue shift in degrees when mode is Hue Shift (-180 to 180)".to_string()
             }
-            Self::OverlayRippleTriggerPress => "Trigger ripple effect on key press events",
-            Self::OverlayRippleTriggerRelease => "Trigger ripple effect on key release events",
+            Self::OverlayRippleTriggerPress => "Trigger ripple effect on key press events".to_string(),
+            Self::OverlayRippleTriggerRelease => "Trigger ripple effect on key release events".to_string(),
             Self::OverlayRippleIgnoreTransparent => {
-                "Don't trigger ripples on transparent keys (KC_TRNS)"
+                "Don't trigger ripples on transparent keys (KC_TRNS)".to_string()
             }
-            Self::OverlayRippleIgnoreModifiers => "Don't trigger ripples on modifier keys",
-            Self::OverlayRippleIgnoreLayerSwitch => "Don't trigger ripples on layer switch keys",
-            Self::OverlayRippleKeyActionPalette => "PaletteFX palette for key-action reactive bursts. Requires PaletteFX enabled.",
-            Self::OverlayRippleWaveCount => "Number of concentric waves per keypress (1-5). Higher = richer cascading effect.",
-            Self::OverlayRippleWaveDelay => "Delay between consecutive waves in milliseconds (50-500ms).",
-            Self::PaletteFxEnabled => "Enable PaletteFX community module effects instead of custom ripple overlay.",
-            Self::PaletteFxDefaultEffect => "Default PaletteFX effect shown on startup. User can cycle with RM_NEXT/RM_PREV.",
-            Self::PaletteFxDefaultPalette => "Color palette for PaletteFX effects (16 curated palettes available).",
-            Self::PaletteFxEnableAllEffects => "Include all 6 PaletteFX effects in firmware (Gradient, Flow, Ripple, Sparkle, Vortex, Reactive).",
-            Self::PaletteFxEnableAllPalettes => "Include all 16 PaletteFX palettes in firmware.",
-            Self::TapHoldPreset => "Quick configuration preset for common use cases",
-            Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)",
-            Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat",
-            Self::HoldMode => "How to decide tap vs hold when other keys are pressed",
-            Self::RetroTapping => "Send tap keycode even if held past tapping term",
-            Self::TappingToggle => "Number of taps to toggle layer with TT() keys (1-10)",
-            Self::FlowTapTerm => "Rapid typing window to prevent accidental modifiers",
-            Self::ChordalHold => "Use opposite-hand rule for tap-hold (great for HRM)",
+            Self::OverlayRippleIgnoreModifiers => "Don't trigger ripples on modifier keys".to_string(),
+            Self::OverlayRippleIgnoreLayerSwitch => {
+                "Don't trigger ripples on layer switch keys".to_string()
+            }
+            Self::OverlayRippleKeyActionPalette => {
+                "PaletteFX palette for key-action reactive bursts. Requires PaletteFX enabled."
+                    .to_string()
+            }
+            Self::OverlayRippleWaveCount => {
+                "Number of concentric waves per keypress (1-5). Higher = richer cascading effect."
+                    .to_string()
+            }
+            Self::OverlayRippleWaveDelay => {
+                "Delay between consecutive waves in milliseconds (50-500ms).".to_string()
+            }
+            Self::PaletteFxEnabled => {
+                "Enable PaletteFX community module effects instead of custom ripple overlay."
+                    .to_string()
+            }
+            Self::PaletteFxDefaultEffect => {
+                "Default PaletteFX effect shown on startup. User can cycle with RM_NEXT/RM_PREV."
+                    .to_string()
+            }
+            Self::PaletteFxDefaultPalette => {
+                "Color palette for PaletteFX effects (16 curated palettes available).".to_string()
+            }
+            Self::PaletteFxEnableAllEffects => {
+                "Include all 6 PaletteFX effects in firmware (Gradient, Flow, Ripple, Sparkle, Vortex, Reactive)."
+                    .to_string()
+            }
+            Self::PaletteFxEnableAllPalettes => {
+                "Include all 16 PaletteFX palettes in firmware.".to_string()
+            }
+            Self::TapHoldPreset => "Quick configuration preset for common use cases".to_string(),
+            Self::TappingTerm => "Milliseconds to distinguish tap from hold (100-500ms)".to_string(),
+            Self::QuickTapTerm => "Window for tap-then-hold to trigger auto-repeat".to_string(),
+            Self::HoldMode => "How to decide tap vs hold when other keys are pressed".to_string(),
+            Self::RetroTapping => "Send tap keycode even if held past tapping term".to_string(),
+            Self::TappingToggle => "Number of taps to toggle layer with TT() keys (1-10)".to_string(),
+            Self::FlowTapTerm => "Rapid typing window to prevent accidental modifiers".to_string(),
+            Self::ChordalHold => "Use opposite-hand rule for tap-hold (great for HRM)".to_string(),
             // Combo Settings
-            Self::CombosEnabled => "Master switch for combo feature (two-key hold actions)",
-            Self::Combo1Key1 => "First key position for Combo 1 (Disable RGB Effects)",
-            Self::Combo1Key2 => "Second key position for Combo 1 (Disable RGB Effects)",
-            Self::Combo1HoldDuration => "Hold duration in milliseconds for Combo 1 (50-2000ms)",
-            Self::Combo2Key1 => "First key position for Combo 2 (Disable All Lighting)",
-            Self::Combo2Key2 => "Second key position for Combo 2 (Disable All Lighting)",
-            Self::Combo2HoldDuration => "Hold duration in milliseconds for Combo 2 (50-2000ms)",
-            Self::Combo3Key1 => "First key position for Combo 3 (Enter Bootloader)",
-            Self::Combo3Key2 => "Second key position for Combo 3 (Enter Bootloader)",
-            Self::Combo3HoldDuration => "Hold duration in milliseconds for Combo 3 (50-2000ms)",
+            Self::CombosEnabled => {
+                "Master switch for combo feature (two-key hold actions)".to_string()
+            }
+            Self::AddCombo => {
+                "Add a new combo entry (up to 32 combos supported)".to_string()
+            }
+            Self::RemoveCombo(idx) => format!("Remove Combo {} from the layout", idx + 1),
+            Self::ComboKey1(idx) => format!("First key position for Combo {}", idx + 1),
+            Self::ComboKey2(idx) => format!("Second key position for Combo {}", idx + 1),
+            Self::ComboHoldDuration(idx) => {
+                format!("Hold duration in milliseconds for Combo {} (50-2000ms)", idx + 1)
+            }
+            Self::ComboAction(idx) => format!("Action performed by Combo {}", idx + 1),
         }
     }
 
@@ -662,6 +696,13 @@ pub enum ManagerMode {
     SelectingKeyActionPalette {
         /// Currently highlighted option index
         selected_option: usize,
+    },
+    /// Selecting the action for a combo entry
+    SelectingAction {
+        /// Index of the combo entry whose action is being configured
+        idx: usize,
+        /// Currently selected action
+        current: crate::models::ComboAction,
     },
 }
 
@@ -777,6 +818,7 @@ impl SettingsManager {
             ManagerMode::SelectingKeyActionPalette { .. } => {
                 self.handle_key_action_palette_selection(key)
             }
+            ManagerMode::SelectingAction { .. } => self.handle_action_selection(key),
             ManagerMode::SelectingKeyPosition { .. } => {
                 // Key position selection is handled by the parent (main app input handler)
                 // because it needs access to keyboard navigation state

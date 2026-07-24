@@ -8,7 +8,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::models::{PaletteFxEffect, PaletteFxPalette, RgbMatrixEffect, RippleColorMode};
+use crate::models::{
+    ComboAction, PaletteFxEffect, PaletteFxPalette, RgbMatrixEffect, RippleColorMode,
+};
 
 use super::SettingItem;
 use super::Theme;
@@ -454,6 +456,91 @@ pub(super) fn render_key_position_selector(
         Span::raw(": Navigate  "),
         Span::styled("Enter", Style::default().fg(theme.primary)),
         Span::raw(": Select Key  "),
+        Span::styled("Esc", Style::default().fg(theme.primary)),
+        Span::raw(": Cancel"),
+    ])])
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Controls")
+            .style(Style::default().bg(theme.background)),
+    );
+    f.render_widget(help, chunks[2]);
+}
+
+/// Render the combo action selector with the highlighted option matching `current`.
+pub(super) fn render_combo_action_selector(
+    f: &mut Frame,
+    area: Rect,
+    idx: usize,
+    current: &ComboAction,
+    theme: &Theme,
+) {
+    let actions = ComboAction::all();
+    let selected = actions.iter().position(|a| a == current).unwrap_or(0);
+    let options: Vec<(&str, &str)> = actions
+        .iter()
+        .map(|a| {
+            let desc = match a {
+                ComboAction::DisableEffects => "Disable RGB effects, fall back to static colors",
+                ComboAction::DisableLighting => "Turn off all keyboard lighting",
+                ComboAction::Bootloader => "Enter bootloader mode for firmware flashing",
+            };
+            (a.display_name(), desc)
+        })
+        .collect();
+
+    let chunks = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(2),
+            Constraint::Min(5),
+            Constraint::Length(4),
+        ])
+        .split(area);
+
+    let title = Paragraph::new(format!("Combo {} Action", idx + 1))
+        .alignment(Alignment::Center)
+        .style(
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        );
+    f.render_widget(title, chunks[0]);
+
+    let items: Vec<ListItem> = options
+        .iter()
+        .enumerate()
+        .map(|(i, (name, desc))| {
+            let is_selected = i == selected;
+            let style = if is_selected {
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(theme.text)
+            };
+            let marker = if is_selected { "▶ " } else { "  " };
+            ListItem::new(Line::from(vec![
+                Span::styled(marker, Style::default().fg(theme.primary)),
+                Span::styled(*name, style),
+                Span::styled(" - ", Style::default().fg(theme.text_muted)),
+                Span::styled(*desc, Style::default().fg(theme.text_muted)),
+            ]))
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title("Action"))
+        .highlight_style(Style::default().bg(theme.surface));
+    f.render_widget(list, chunks[1]);
+
+    let help = Paragraph::new(vec![Line::from(vec![
+        Span::styled("↑/↓", Style::default().fg(theme.primary)),
+        Span::raw(": Select  "),
+        Span::styled("Enter", Style::default().fg(theme.primary)),
+        Span::raw(": Apply  "),
         Span::styled("Esc", Style::default().fg(theme.primary)),
         Span::raw(": Cancel"),
     ])])
