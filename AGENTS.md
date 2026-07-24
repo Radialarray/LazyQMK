@@ -279,10 +279,10 @@ sed -i '' 's/version = "0.10.0"/version = "0.11.0"/' Cargo.toml
 git add Cargo.toml
 git commit -m "chore: bump version to 0.11.0"
 
-# 3. Create and push tag
+# 3. Create and push tag (goes to both GitHub + Gitea via the 'all' remote)
 git tag -a v0.11.0 -m "Release v0.11.0: Tap Dance Support"
-git push origin main
-git push origin v0.11.0
+git push        # main branch → both origins
+git push origin v0.11.0  # tag → GitHub for GitHub Actions release workflow
 
 # 4. GitHub Actions will automatically:
 #    - Run tests and clippy
@@ -498,14 +498,38 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **PUSH TO ALL ORIGINS** - This is MANDATORY. The repo is configured with
+   a multi-origin `all` remote that pushes to **both** GitHub (origin) and the
+   self-hosted Gitea at `192.168.1.12` (gitea) on every `git push`. Treat
+   them as one logical remote — work is not "done" until both are in sync.
 
    ```bash
    git pull --rebase
    bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
-   git push
-   git status  # MUST show "up to date with origin"
+   git push                           # pushes to both origin and gitea via the 'all' remote
+   git status                         # MUST show "up to date with origin/main"
+   git ls-remote origin main          # verify GitHub tip
+   git ls-remote gitea  main          # verify Gitea tip
    ```
+
+   If only one remote updated (network blip, gitea offline), retry just that one:
+
+   ```bash
+   git fetch gitea                    # refresh stale local refs
+   git push --force-with-lease gitea  # retry gitea only
+   ```
+
+   The "all" remote is wired via:
+
+   ```bash
+   git remote add all https://github.com/Radialarray/LazyQMK.git
+   git remote set-url --push --add all https://github.com/Radialarray/LazyQMK.git
+   git remote set-url --push --add all http://192.168.1.12/Radialarray/LazyQMK.git
+   git config remote.pushDefault all
+   ```
+
+   New agents: if you set up a new clone, run those four lines once before
+   your first push so `git push` reaches both hosts automatically.
 
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
@@ -547,14 +571,38 @@ bd close <id>         # Complete work
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **PUSH TO ALL ORIGINS** - This is MANDATORY. The repo is configured with
+   a multi-origin `all` remote that pushes to **both** GitHub (origin) and the
+   self-hosted Gitea at `192.168.1.12` (gitea) on every `git push`. Treat
+   them as one logical remote — work is not "done" until both are in sync.
 
    ```bash
    git pull --rebase
    bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
-   git push
-   git status  # MUST show "up to date with origin"
+   git push                           # pushes to both origin and gitea via the 'all' remote
+   git status                         # MUST show "up to date with origin/main"
+   git ls-remote origin main          # verify GitHub tip
+   git ls-remote gitea  main          # verify Gitea tip
    ```
+
+   If only one remote updated (network blip, gitea offline), retry just that one:
+
+   ```bash
+   git fetch gitea                    # refresh stale local refs
+   git push --force-with-lease gitea  # retry gitea only
+   ```
+
+   The "all" remote is wired via:
+
+   ```bash
+   git remote add all https://github.com/Radialarray/LazyQMK.git
+   git remote set-url --push --add all https://github.com/Radialarray/LazyQMK.git
+   git remote set-url --push --add all http://192.168.1.12/Radialarray/LazyQMK.git
+   git config remote.pushDefault all
+   ```
+
+   New agents: if you set up a new clone, run those four lines once before
+   your first push so `git push` reaches both hosts automatically.
 
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
