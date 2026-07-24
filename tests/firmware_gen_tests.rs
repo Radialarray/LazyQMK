@@ -8,6 +8,8 @@
 
 mod fixtures;
 
+#[path = "firmware_gen_tests/combo_32.rs"]
+mod combo_32;
 #[path = "firmware_gen_tests/generation.rs"]
 mod generation;
 #[path = "firmware_gen_tests/helpers.rs"]
