@@ -3,6 +3,9 @@
 use crate::models::layer::Position;
 use serde::{Deserialize, Serialize};
 
+/// Maximum number of combo definitions.
+pub const MAX_COMBOS: usize = 32;
+
 /// Action to perform when a combo is activated.
 ///
 /// Combos are two-key combinations that trigger special actions when held together.
@@ -74,9 +77,8 @@ pub struct ComboDefinition {
     /// Default: 500ms
     #[serde(default = "default_combo_hold_duration")]
     pub hold_duration_ms: u16,
-    /// Whether this is a gap-filler placeholder created when non-contiguous
-    /// combo indices are parsed (e.g. only Combo 2 and Combo 3 are defined).
-    /// Placeholders are never emitted to generated C code.
+    /// Compatibility marker for placeholder definitions.
+    /// Placeholder definitions are never emitted to generated C code.
     #[serde(skip)]
     pub placeholder: bool,
 }
@@ -103,6 +105,7 @@ impl ComboDefinition {
     /// Creates a gap-filler placeholder used when non-contiguous combo indices
     /// are parsed (e.g. only Combo 2 and Combo 3 defined, leaving index 0 empty).
     /// Placeholders are **never** emitted to generated C code.
+    #[allow(dead_code)] // Kept for parser back-compat; no longer emitted after Phase 2 refactor
     #[must_use]
     pub fn new_placeholder() -> Self {
         Self {
@@ -162,7 +165,7 @@ impl ComboDefinition {
 
 /// Configuration for two-key hold combos.
 ///
-/// Supports up to three custom combos that are active only on the base layer (layer 0).
+/// Supports up to 32 custom combos that are active only on the base layer (layer 0).
 /// Each combo triggers when two specific keys are held together for a minimum duration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ComboSettings {
@@ -170,7 +173,7 @@ pub struct ComboSettings {
     #[serde(default)]
     pub enabled: bool,
 
-    /// List of combo definitions (max 3)
+    /// List of combo definitions (max 32)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub combos: Vec<ComboDefinition>,
 }
@@ -190,8 +193,8 @@ impl ComboSettings {
     /// Adds a combo definition.
     #[allow(dead_code)] // Public API; tests are in lib target
     pub fn add_combo(&mut self, combo: ComboDefinition) -> Result<(), anyhow::Error> {
-        if self.combos.len() >= 3 {
-            anyhow::bail!("Maximum of 3 combos allowed");
+        if self.combos.len() >= MAX_COMBOS {
+            anyhow::bail!("Maximum of {} combos allowed", MAX_COMBOS);
         }
 
         combo.validate()?;

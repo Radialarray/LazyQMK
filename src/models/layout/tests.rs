@@ -1,6 +1,7 @@
 //! Tests for all layout types.
 
 use super::*;
+use super::combo::MAX_COMBOS;
 use crate::models::layer::{KeyDefinition, Layer, Position};
 use crate::models::{Category, RgbColor};
 
@@ -625,37 +626,30 @@ fn test_combo_settings_default() {
 fn test_combo_settings_add_combo() {
     let mut settings = ComboSettings::new(true);
 
-    let combo1 = ComboDefinition::new(
-        Position::new(0, 0),
-        Position::new(0, 1),
-        ComboAction::DisableEffects,
-    );
-    assert!(settings.add_combo(combo1).is_ok());
-    assert_eq!(settings.combos.len(), 1);
+    for index in 0..(MAX_COMBOS - 1) {
+        let combo = ComboDefinition::new(
+            Position::new(index as u8, 0),
+            Position::new(index as u8, 1),
+            ComboAction::DisableEffects,
+        );
+        assert!(settings.add_combo(combo).is_ok());
+    }
 
-    let combo2 = ComboDefinition::new(
-        Position::new(1, 0),
-        Position::new(1, 1),
-        ComboAction::DisableLighting,
-    );
-    assert!(settings.add_combo(combo2).is_ok());
-    assert_eq!(settings.combos.len(), 2);
-
-    let combo3 = ComboDefinition::new(
-        Position::new(2, 0),
-        Position::new(2, 1),
+    let combo_32 = ComboDefinition::new(
+        Position::new((MAX_COMBOS - 1) as u8, 0),
+        Position::new((MAX_COMBOS - 1) as u8, 1),
         ComboAction::Bootloader,
     );
-    assert!(settings.add_combo(combo3).is_ok());
-    assert_eq!(settings.combos.len(), 3);
+    assert!(settings.add_combo(combo_32).is_ok());
+    assert_eq!(settings.combos.len(), MAX_COMBOS);
 
-    // Fourth combo should fail (max 3)
-    let combo4 = ComboDefinition::new(
-        Position::new(3, 0),
-        Position::new(3, 1),
+    let combo_33 = ComboDefinition::new(
+        Position::new(MAX_COMBOS as u8, 0),
+        Position::new(MAX_COMBOS as u8, 1),
         ComboAction::DisableEffects,
     );
-    assert!(settings.add_combo(combo4).is_err());
+    let error = settings.add_combo(combo_33).unwrap_err();
+    assert!(error.to_string().contains("32"));
 }
 
 #[test]
