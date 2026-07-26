@@ -77,9 +77,16 @@
 			layoutSync.unsubscribe();
 		};
 	});
+	// Track the last `layoutSync.current` reference we have already
+	// applied to our local `layout`. This must be a plain (non-reactive)
+	// variable so the $effect below does not depend on it — otherwise the
+	// write to `layout` would re-trigger the effect, which would write
+	// `layout` again, etc. (effect_update_depth_exceeded).
+	let lastSyncedRef: Layout | null = null;
 	$effect(() => {
 		const synced = layoutSync.current;
-		if (synced && layout && synced !== layout) {
+		if (synced && synced !== lastSyncedRef) {
+			lastSyncedRef = synced;
 			// Replace the local copy so the editor sees the new
 			// on-disk content. We do a shallow copy so $state
 			// reactivity kicks in.
