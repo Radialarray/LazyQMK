@@ -17,7 +17,7 @@ pub(super) use lazyqmk::config::{BuildConfig, Config, PathConfig, UiConfig};
 pub(super) use lazyqmk::web::{create_router, AppState};
 
 // Re-export test_layout_basic from fixtures (needed by test_template_basic below)
-pub(super) use super::fixtures::{test_layout_basic, write_layout_file};
+pub(super) use super::fixtures::test_layout_basic;
 
 /// Creates a test layout marked as a template.
 pub(super) fn test_template_basic(rows: usize, cols: usize, name: &str) -> lazyqmk::models::Layout {

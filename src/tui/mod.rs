@@ -22,6 +22,7 @@ pub mod component;
 pub mod dialog;
 pub mod editor;
 pub mod event_loop;
+pub mod external_change_prompt;
 pub mod handlers;
 mod input;
 pub mod manager;

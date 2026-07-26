@@ -9,10 +9,12 @@ use crossterm::event::{self, KeyCode, KeyModifiers};
 
 use crate::services::LayoutService;
 use crate::tui::component::Component;
+use crate::tui::external_change_prompt::ExternalChangeEvent;
+use crate::tui::handlers::action_handlers::file_watcher::handle_external_change_event;
 use crate::tui::handlers::popups::parameterized::open_tap_dance_picker_with_context;
 use crate::tui::keycode_picker;
 use crate::tui::onboarding_wizard;
-use crate::tui::{AppState, PopupType};
+use crate::tui::{ActiveComponent, AppState, PopupType};
 
 /// Handle input for setup wizard
 pub fn handle_setup_wizard_input(state: &mut AppState, key: event::KeyEvent) -> Result<bool> {
@@ -327,7 +329,11 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
         {
             // Save and quit
             if let Some(path) = &state.source_path.clone() {
-                LayoutService::save(&state.layout, path)?;
+                LayoutService::save_with_epoch(
+                    &state.layout,
+                    path,
+                    Some(&state.self_write_epoch),
+                )?;
                 state.mark_clean();
                 state.set_status("Saved");
             }
@@ -348,5 +354,42 @@ pub fn handle_unsaved_prompt_input(state: &mut AppState, key: event::KeyEvent) -
             Ok(false)
         }
         _ => Ok(false),
+    }
+}
+
+/// Handle input for the hot-reload external-change prompt.
+///
+/// The prompt is a Component-trait modal living in
+/// `state.active_component`. We take it out, run `handle_input` on
+/// it, and dispatch the resulting event through
+/// [`handle_external_change_event`].
+pub fn handle_external_change_prompt_input(
+    state: &mut AppState,
+    key: event::KeyEvent,
+) -> Result<bool> {
+    let mut prompt = match state.active_component.take() {
+        Some(ActiveComponent::ExternalChangePrompt(p)) => p,
+        _ => {
+            state.active_popup = None;
+            return Ok(false);
+        }
+    };
+
+    if let Some(event) = prompt.handle_input(key) {
+        // The handler clears the popup state, so we don't need to
+        // restore the component.
+        match event {
+            ExternalChangeEvent::Reload
+            | ExternalChangeEvent::KeepMine
+            | ExternalChangeEvent::SaveThenReload
+            | ExternalChangeEvent::Cancel => {
+                handle_external_change_event(state, event);
+            }
+        }
+        Ok(false)
+    } else {
+        // No event - restore component.
+        state.active_component = Some(ActiveComponent::ExternalChangePrompt(prompt));
+        Ok(false)
     }
 }

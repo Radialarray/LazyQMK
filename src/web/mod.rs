@@ -41,10 +41,12 @@ pub mod app_state;
 pub mod build_jobs;
 pub mod dto;
 pub mod error;
+pub mod events;
 pub mod generate_jobs;
 pub mod routes;
 pub mod static_files;
 pub mod validation;
+pub mod watcher;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -87,7 +89,18 @@ pub async fn run_server(
     workspace_root: PathBuf,
     addr: SocketAddr,
 ) -> anyhow::Result<()> {
-    let state = AppState::new(config, workspace_root)?;
+    let mut state = AppState::new(config, workspace_root)?;
+
+    // Start the workspace watcher so the SSE endpoint can push
+    // hot-reload events to subscribed clients. If the watcher fails to
+    // start (e.g. permission denied on a directory), log and continue
+    // — the rest of the API still works without hot-reload.
+    if let Err(e) = state.start_workspace_watcher() {
+        tracing::warn!(
+            "Could not start workspace watcher; hot-reload events disabled: {e:#}"
+        );
+    }
+
     let app = create_router(state);
 
     info!("Starting LazyQMK web server on {}", addr);

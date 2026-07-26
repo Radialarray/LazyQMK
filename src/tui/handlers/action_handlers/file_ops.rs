@@ -9,6 +9,9 @@ use std::path::PathBuf;
 
 /// Handle quit action
 pub fn handle_quit(state: &mut AppState) -> Result<bool> {
+    // Stop the file watcher before exiting so the background thread
+    // releases the file handle promptly.
+    state.stop_file_watcher();
     if state.dirty {
         state.active_popup = Some(PopupType::UnsavedChangesPrompt);
         Ok(false)
@@ -20,7 +23,7 @@ pub fn handle_quit(state: &mut AppState) -> Result<bool> {
 /// Handle save action
 pub fn handle_save(state: &mut AppState) -> Result<bool> {
     if let Some(path) = &state.source_path.clone() {
-        LayoutService::save(&state.layout, path)?;
+        LayoutService::save_with_epoch(&state.layout, path, Some(&state.self_write_epoch))?;
         state.mark_clean();
         state.set_status("Saved");
     } else {

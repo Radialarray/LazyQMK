@@ -180,6 +180,12 @@ fn render_popup(f: &mut Frame, popup_type: &PopupType, state: &AppState) {
                 form.render(f, f.area(), &state.theme);
             }
         }
+        PopupType::ExternalChangePrompt => {
+            if let Some(ActiveComponent::ExternalChangePrompt(ref prompt)) = state.active_component
+            {
+                prompt.render(f, f.area(), &state.theme);
+            }
+        }
     }
 }
 

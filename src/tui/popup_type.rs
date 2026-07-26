@@ -84,6 +84,8 @@ pub enum PopupType {
     TapDanceEditor,
     /// Tap dance form dialog (create/edit)
     TapDanceForm,
+    /// External-change prompt (hot-reload conflict resolution)
+    ExternalChangePrompt,
 }
 
 impl PopupType {
@@ -110,7 +112,7 @@ impl PopupType {
             Self::SettingsManager => PopupVisualKind::Settings,
             Self::SetupWizard => PopupVisualKind::Wizard,
             Self::BuildLog | Self::HelpOverlay => PopupVisualKind::Feedback,
-            Self::UnsavedChangesPrompt => PopupVisualKind::Confirm,
+            Self::UnsavedChangesPrompt | Self::ExternalChangePrompt => PopupVisualKind::Confirm,
         }
     }
 }

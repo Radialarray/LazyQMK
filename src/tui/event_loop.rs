@@ -9,6 +9,7 @@ use std::io;
 use std::time::Duration;
 
 use crate::tui::app_state::AppState;
+use crate::tui::handlers::action_handlers::file_watcher::drain_file_watcher;
 use crate::tui::input::handle_key_event;
 use crate::tui::render::render;
 use crate::tui::theme::Theme;
@@ -56,6 +57,11 @@ pub fn run_tui(
                 // Build message received, will update on next render
             }
         }
+
+        // Poll the file watcher for external layout changes (hot-reload).
+        // Drains any pending events and either reloads silently (when
+        // clean) or opens the conflict prompt (when dirty).
+        drain_file_watcher(state);
 
         // Check if should quit
         if state.should_quit {

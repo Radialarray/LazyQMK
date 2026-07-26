@@ -3,6 +3,7 @@ export { default as Card } from './Card.svelte';
 export { default as AccessibleDialog } from './AccessibleDialog.svelte';
 export { default as CategoryManager } from './CategoryManager.svelte';
 export { default as ColorPicker } from './ColorPicker.svelte';
+export { default as ConflictReloadModal } from './ConflictReloadModal.svelte';
 export { default as Input } from './Input.svelte';
 export { default as KeyboardPreview } from './KeyboardPreview.svelte';
 export { default as KeycodePicker } from './KeycodePicker.svelte';

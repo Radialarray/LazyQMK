@@ -21,6 +21,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::services::file_watcher::{mark_self_write, SelfWriteEpoch};
 use crate::{models::Layout, parser};
 
 /// Service for managing layout file I/O operations.
@@ -118,6 +119,28 @@ impl LayoutService {
     /// # }
     /// ```
     pub fn save(layout: &Layout, path: &Path) -> Result<()> {
+        Self::save_with_epoch(layout, path, None)
+    }
+
+    /// Saves a layout as JSON, optionally marking a self-write epoch so
+    /// the hot-reload watcher can suppress the resulting file change
+    /// event.
+    ///
+    /// The TUI and the web backend pass a shared `SelfWriteEpoch` so
+    /// the watcher they registered does not echo their own writes back
+    /// as "external" changes. CLI commands (which never spawn a
+    /// watcher) can simply call [`Self::save`].
+    ///
+    /// The mark is performed *before* the atomic write so the watcher
+    /// sees a timestamp at or after the mark when the rename lands.
+    pub fn save_with_epoch(
+        layout: &Layout,
+        path: &Path,
+        self_write_epoch: Option<&SelfWriteEpoch>,
+    ) -> Result<()> {
+        if let Some(epoch) = self_write_epoch {
+            mark_self_write(epoch);
+        }
         // Always use .json extension
         let json_path = ensure_json_extension(path);
         parser::save_json_layout(layout, &json_path)

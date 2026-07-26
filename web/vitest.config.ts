@@ -12,6 +12,10 @@ export default defineConfig({
 	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}'],
+		// layoutSync.svelte.ts uses Svelte 5 runes; it is exercised
+		// via svelte-check + e2e instead of vitest (the local vitest
+		// 2 + svelte 5 + vite 5 toolchain doesn't preprocess .svelte.ts).
+		exclude: ['src/lib/stores/**'],
 		environment: 'jsdom',
 		globals: true,
 		setupFiles: ['./src/test/setup.ts']

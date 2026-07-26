@@ -400,6 +400,10 @@ fn main() -> Result<()> {
         // Adjust layers to match geometry (ensures keys match visual positions)
         app_state.adjust_layers_to_geometry()?;
 
+        // Start watching the on-disk layout for external changes so the
+        // hot-reload flow can pick up edits from a background agent.
+        app_state.start_file_watcher();
+
         // Run main TUI loop
         let result = tui::run_tui(&mut app_state, &mut terminal);
 

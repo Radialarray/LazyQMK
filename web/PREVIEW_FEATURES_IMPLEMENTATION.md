@@ -224,10 +224,16 @@ npm run test:e2e -- keyboard-preview.spec.ts
 
 ## Known Issues / Future Improvements
 
-1. **Render Metadata Refresh:**
-   - Currently fetched once on page load
-   - Does not auto-refresh when layout changes (user must reload page)
-   - Future: Add websocket or polling for live updates
+1. ~~Render Metadata Refresh:~~
+   - ~~Currently fetched once on page load~~
+   - ~~Does not auto-refresh when layout changes (user must reload page)~~
+   - ~~Future: Add websocket or polling for live updates~~
+   - **Resolved in LazyQMK-84o5:** Server-Sent Events stream at `/api/events`
+     pushes layout changes to the editor via the `layoutSync` store.
+     When an external process writes the open `.json` file the editor
+     re-fetches within ~500ms; when local edits are in flight the
+     `ConflictReloadModal` prompts the user with three resolution
+     options (Reload / Keep mine / Save then reload).
 
 2. **Performance:**
    - Per-key SVG filters created inline (could be optimized with shared filters)

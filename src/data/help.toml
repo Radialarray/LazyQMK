@@ -1218,6 +1218,11 @@ action = "Output environment check results as JSON"
 priority = 5
 
 [[contexts.cli_commands.bindings]]
+keys = ["running agent in background"]
+action = "Agent can mutate layouts via CLI while TUI/WebUI is open; both UIs auto-reload within 500ms or prompt on conflict"
+priority = 6
+
+[[contexts.cli_commands.bindings]]
 keys = ["lazyqmk --version"]
 action = "Show version information"
 priority = 6

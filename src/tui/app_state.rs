@@ -13,10 +13,12 @@ use crate::keycode_db::KeycodeDb;
 use crate::models::{
     ComboAction, ComboDefinition, KeyboardGeometry, Layout, Position, VisualLayoutMapping,
 };
+use crate::services::file_watcher::{self, FileWatcherHandle, SelfWriteEpoch};
 use crate::services::geometry::{
     build_geometry_for_layout, extract_base_keyboard, GeometryContext,
 };
 use crate::services::layer_refs::{build_layer_ref_index, LayerRef};
+use crate::services::LayoutService;
 use crate::tui::build_log::BuildLog;
 use crate::tui::category_manager::{CategoryManager, CategoryManagerState};
 use crate::tui::category_picker::CategoryPicker;
@@ -267,6 +269,25 @@ pub enum ActiveComponent {
     SettingsManager(crate::tui::settings_manager::SettingsManager),
     /// Layout variant picker component (for switching QMK layout variants)
     LayoutVariantPicker(LayoutVariantPicker),
+    /// External-change prompt (hot-reload conflict resolution)
+    ExternalChangePrompt(crate::tui::external_change_prompt::ExternalChangePrompt),
+}
+
+/// What kind of hot-reload event is currently awaiting the user's
+/// (or the loop's) attention. Encoded as an enum so the TUI state
+/// carries fewer `bool` flags (clippy::struct_excessive_bools).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ExternalPendingKind {
+    /// No pending external event — watcher idle.
+    #[default]
+    None,
+    /// An external process modified the layout on disk. Drained
+    /// by the event loop into either a silent reload (when the
+    /// editor is not dirty) or the `ExternalChangePrompt`.
+    Change,
+    /// The watched file disappeared from disk. Surfaced to the
+    /// user as a removal prompt.
+    Removal,
 }
 
 /// Application state - single source of truth
@@ -363,6 +384,19 @@ pub struct AppState {
     /// Key: target layer index, Value: list of references to that layer
     pub layer_refs: HashMap<usize, Vec<LayerRef>>,
 
+    // Hot-reload (file watcher)
+    /// Shared epoch incremented before every save so the watcher can
+    /// suppress echoes of our own writes.
+    pub self_write_epoch: SelfWriteEpoch,
+    /// Live watcher for the currently open layout file. `None` if the
+    /// file is not on disk (e.g. an unsaved buffer) or if the watcher
+    /// could not be constructed.
+    pub file_watcher: Option<FileWatcherHandle>,
+    /// Most recent hot-reload signal from the file watcher. Drained
+    /// by the event loop into either a silent reload (when not dirty)
+    /// or the `ExternalChangePrompt`.
+    pub pending_external: ExternalPendingKind,
+
     // Control flags
     /// Whether application should exit
     pub should_quit: bool,
@@ -439,6 +473,9 @@ impl AppState {
             config,
             build_state: None,
             layer_refs,
+            self_write_epoch: file_watcher::new_epoch(),
+            file_watcher: None,
+            pending_external: ExternalPendingKind::None,
             should_quit: false,
             return_to_settings_after_picker: false,
         })
@@ -733,5 +770,72 @@ impl AppState {
     pub fn close_component(&mut self) {
         self.active_component = None;
         self.active_popup = None;
+    }
+
+    // === Hot-reload (file watcher) helpers ===
+
+    // === Hot-reload (file watcher) helpers ===
+
+    /// Starts watching the currently open layout file for external
+    /// modifications. Safe to call multiple times — only the most
+    /// recent watcher is kept. Silently does nothing if the layout has
+    /// no source path or the watcher cannot be constructed.
+    pub fn start_file_watcher(&mut self) {
+        let Some(path) = self.source_path.clone() else {
+            self.file_watcher = None;
+            return;
+        };
+
+        match file_watcher::watch(&path, std::sync::Arc::clone(&self.self_write_epoch)) {
+            Ok(handle) => {
+                self.file_watcher = Some(handle);
+                self.pending_external = ExternalPendingKind::None;
+            }
+            Err(e) => {
+                eprintln!(
+                    "[lazyqmk] warning: could not watch {} for changes: {e}",
+                    path.display()
+                );
+                self.file_watcher = None;
+            }
+        }
+    }
+
+    /// Stops watching for external changes (called on quit / layout
+    /// unload).
+    pub fn stop_file_watcher(&mut self) {
+        self.file_watcher = None;
+        self.pending_external = ExternalPendingKind::None;
+    }
+
+    /// Performs a silent reload from disk: parses the layout, refits
+    /// the geometry, refreshes layer references, and clears the dirty
+    /// flag. Used when the file changes externally and the user has no
+    /// unsaved local edits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the source file is missing or malformed.
+    /// Errors are surfaced via `set_error` so callers do not have to
+    /// bubble them up.
+    pub fn reload_layout_from_disk(&mut self) {
+        let Some(path) = self.source_path.clone() else {
+            return;
+        };
+
+        match LayoutService::load(&path) {
+            Ok(loaded) => {
+                self.layout = loaded;
+                if let Err(e) = self.adjust_layers_to_geometry() {
+                    self.set_error(format!("Reload adjusted layers: {e}"));
+                }
+                self.refresh_layer_refs();
+                self.mark_clean();
+                self.set_status("Reloaded from disk");
+            }
+            Err(e) => {
+                self.set_error(format!("Failed to reload from disk: {e}"));
+            }
+        }
     }
 }

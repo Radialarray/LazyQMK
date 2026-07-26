@@ -29,6 +29,7 @@ Rust 1.75+: Follow standard conventions
 
 ## Recent Changes
 
+- 024-hot-reload: Added live hot-reload for both the TUI editor and the WebUI editor. When an external process (background agent, CLI command, hand-edit) modifies the open layout `.json` file, the TUI auto-reloads within 500ms and the WebUI updates via a Server-Sent Events stream (`/api/events`). Both UIs suppress echoes of their own writes via a shared `Arc<AtomicU64>` self-write epoch. When the open UI has unsaved local edits, a 3-button conflict prompt is shown (Reload / Keep mine / Save then reload). Shared crate: `src/services/file_watcher.rs` (notify-debouncer-full). New dep: `notify = "6"`, `notify-debouncer-full = "0.3"`.
 - 023-idle-effect: Added idle effect screensaver for RGB lighting with configurable timeout (default 1 min), duration (default 5 min), and 9 selectable effects (default Breathing). Generates QMK C state machine for idle → effect → off transitions. Settings managed via TUI Settings Manager and stored per-layout in markdown files.
 - archived/021-dependency-updates: Updated all dependencies to latest versions (json5 1.3, dirs 6.0, ratatui 0.29, crossterm 0.29, clap 4.5, serde_yml, toml 0.9, arboard 3.6, uuid 1.19), fixed 43 ratatui deprecation warnings, migrated from deprecated serde_yaml to serde_yml
 - archived/020-robust-keyboard-picker: Added JSON5 parser support, robust QMK config discovery and merging

@@ -3,24 +3,34 @@
 </svelte:head>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { apiClient, type LayoutSummary } from '$api';
+	import { onMount, onDestroy } from 'svelte';
+	import { apiClient, subscribeLayoutEvents, type LayoutSummary } from '$api';
 	import { Button, Card } from '$components';
 
 	let layouts = $state<LayoutSummary[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
-	onMount(async () => {
+	async function refreshLayouts() {
 		try {
 			const response = await apiClient.listLayouts();
 			layouts = response.layouts;
 			error = null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load layouts';
-		} finally {
-			loading = false;
 		}
+	}
+
+	onMount(async () => {
+		await refreshLayouts();
+		loading = false;
+		// Hot-reload: subscribe to layout file changes so the list
+		// reflects background edits (e.g. an agent CLI). The
+		// EventSource auto-reconnects on error.
+		const unsubscribe = subscribeLayoutEvents(() => {
+			void refreshLayouts();
+		});
+		onDestroy(unsubscribe);
 	});
 
 	function formatDate(isoDate: string): string {

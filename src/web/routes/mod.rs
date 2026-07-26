@@ -5,6 +5,7 @@
 
 pub mod build;
 pub mod config;
+pub mod events;
 pub mod export;
 pub mod generate;
 pub mod geometry;
@@ -117,6 +118,8 @@ pub fn router(state: AppState) -> Router {
             get(generate::download_generate_zip),
         )
         .route("/api/generate/health", get(generate::get_generate_health))
+        // Hot-reload Server-Sent Events stream (layout file changes)
+        .route("/api/events", get(events::sse_handler))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)

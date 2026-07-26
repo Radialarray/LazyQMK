@@ -216,3 +216,38 @@ version: '1.0'
 
     Ok(())
 }
+
+#[test]
+fn test_save_with_epoch_marks_epoch_before_write() -> Result<()> {
+    use crate::services::file_watcher::{new_epoch, should_ignore};
+
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("self_write_epoch.json");
+    let layout = Layout::new("self_write_test")?;
+
+    let epoch = new_epoch();
+    assert!(!should_ignore(&epoch, std::time::SystemTime::now()));
+
+    LayoutService::save_with_epoch(&layout, &path, Some(&epoch))?;
+
+    // The file mtime should fall within the self-write tolerance,
+    // meaning should_ignore() returns true for that mtime.
+    let mtime = std::fs::metadata(&path)?.modified()?;
+    assert!(
+        should_ignore(&epoch, mtime),
+        "freshly self-written file should be ignored by watcher"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_save_with_epoch_none_does_not_crash() -> Result<()> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("no_epoch.json");
+    let layout = Layout::new("no_epoch_test")?;
+
+    // No epoch should still work and behave like the regular save.
+    LayoutService::save_with_epoch(&layout, &path, None)?;
+    assert!(path.exists());
+    Ok(())
+}

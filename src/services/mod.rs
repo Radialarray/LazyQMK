@@ -3,6 +3,7 @@
 //! This module contains services that encapsulate complex business logic
 //! and coordinate between different parts of the application.
 
+pub mod file_watcher;
 pub mod geometry;
 pub mod layer_refs;
 pub mod layouts;

@@ -23,8 +23,8 @@ use crate::tui::editor::key_editor;
 use crate::tui::{ActiveComponent, AppState, PopupType};
 
 pub use dialogs::{
-    handle_export_filename_dialog_input, handle_setup_wizard_input, handle_tap_dance_form_input,
-    handle_unsaved_prompt_input,
+    handle_export_filename_dialog_input, handle_external_change_prompt_input,
+    handle_setup_wizard_input, handle_tap_dance_form_input, handle_unsaved_prompt_input,
 };
 #[cfg(test)]
 pub use parameterized::extract_td_name;
@@ -73,6 +73,7 @@ pub fn handle_popup_input(state: &mut AppState, key: event::KeyEvent) -> Result<
         Some(PopupType::TemplateSaveDialog) => super::handle_template_save_dialog_input(state, key),
         Some(PopupType::ExportFilenameDialog) => handle_export_filename_dialog_input(state, key),
         Some(PopupType::UnsavedChangesPrompt) => handle_unsaved_prompt_input(state, key),
+        Some(PopupType::ExternalChangePrompt) => handle_external_change_prompt_input(state, key),
         Some(PopupType::BuildLog) => handle_build_log_input(state, key),
         Some(PopupType::HelpOverlay) => handle_help_overlay_input(state, key),
         Some(PopupType::MetadataEditor) => handle_metadata_editor_input(state, key),

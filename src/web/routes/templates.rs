@@ -233,13 +233,14 @@ pub(super) async fn apply_template(
         ));
     }
 
-    LayoutService::save(&layout, &target_path).map_err(|e| {
-        AppError::with_details(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to save layout",
-            Some(e.to_string()),
-        )
-    })?;
+    LayoutService::save_with_epoch(&layout, &target_path, Some(&state.self_write_epoch()))
+        .map_err(|e| {
+            AppError::with_details(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save layout",
+                Some(e.to_string()),
+            )
+        })?;
 
     Ok(Json(layout))
 }

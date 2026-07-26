@@ -9,6 +9,9 @@ pub mod color;
 /// File operations handlers (save, load, export)
 pub mod file_ops;
 
+/// Hot-reload file watcher handlers (TUI side)
+pub mod file_watcher;
+
 /// Firmware generation and build handlers
 pub mod firmware;
 

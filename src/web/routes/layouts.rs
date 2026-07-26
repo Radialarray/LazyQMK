@@ -450,7 +450,7 @@ pub(super) async fn save_layout(
         )
     })?;
 
-    LayoutService::save(&layout, &path).map_err(|e| {
+    LayoutService::save_with_epoch(&layout, &path, Some(&state.self_write_epoch())).map_err(|e| {
         AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to save layout",
@@ -512,13 +512,14 @@ pub(super) async fn swap_keys(
         (Some(idx1), Some(idx2)) => {
             layer.keys.swap(idx1, idx2);
 
-            LayoutService::save(&layout, &path).map_err(|e| {
-                AppError::with_details(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to save layout after swap",
-                    Some(e.to_string()),
-                )
-            })?;
+            LayoutService::save_with_epoch(&layout, &path, Some(&state.self_write_epoch()))
+                .map_err(|e| {
+                    AppError::with_details(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to save layout after swap",
+                        Some(e.to_string()),
+                    )
+                })?;
 
             Ok(StatusCode::NO_CONTENT)
         }
@@ -742,13 +743,14 @@ pub(super) async fn save_as_template(
         ));
     }
 
-    LayoutService::save(&layout, &template_path).map_err(|e| {
-        AppError::with_details(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to save template",
-            Some(e.to_string()),
-        )
-    })?;
+    LayoutService::save_with_epoch(&layout, &template_path, Some(&state.self_write_epoch()))
+        .map_err(|e| {
+            AppError::with_details(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save template",
+                Some(e.to_string()),
+            )
+        })?;
 
     Ok(Json(TemplateInfo {
         filename: format!("{template_filename}.json"),

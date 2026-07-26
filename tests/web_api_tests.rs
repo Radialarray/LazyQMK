@@ -17,6 +17,8 @@ mod config;
 mod generate;
 #[path = "web_api_tests/geometry.rs"]
 mod geometry;
+#[path = "web_api_tests/hot_reload.rs"]
+mod hot_reload;
 #[path = "web_api_tests/health.rs"]
 mod health;
 #[path = "web_api_tests/helpers.rs"]

@@ -426,13 +426,14 @@ pub(super) async fn create_layout(
         tap_dances: vec![],
     };
 
-    LayoutService::save(&layout, &target_path).map_err(|e| {
-        AppError::with_details(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to save layout",
-            Some(e.to_string()),
-        )
-    })?;
+    LayoutService::save_with_epoch(&layout, &target_path, Some(&state.self_write_epoch()))
+        .map_err(|e| {
+            AppError::with_details(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save layout",
+                Some(e.to_string()),
+            )
+        })?;
 
     Ok(Json(layout))
 }
@@ -544,7 +545,7 @@ pub(super) async fn switch_layout_variant(
         }
     }
 
-    LayoutService::save(&layout, &path).map_err(|e| {
+    LayoutService::save_with_epoch(&layout, &path, Some(&state.self_write_epoch())).map_err(|e| {
         AppError::with_details(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to save layout",

@@ -3,6 +3,7 @@
 		AccessibleDialog,
 		Button,
 		Card,
+		ConflictReloadModal,
 		KeyboardPreview,
 		Input,
 		Tabs,
@@ -44,6 +45,7 @@
 		shouldOpenPicker,
 		isTypingContext
 	} from '$lib/utils/keyboardNavigation';
+	import { layoutSync } from '$stores/layoutSync.svelte';
 	import { onDestroy } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -61,6 +63,31 @@
 	let leaveDialogOpen = $state(false);
 	let pendingNavigationTarget = $state<string | null>(null);
 	let bypassNavigationGuard = $state(false);
+
+	// Hot-reload: subscribe to /api/events for this file. When the
+	// server SSE stream reports an external change, `layoutSync`
+	// either auto-reloads (when clean) or opens the conflict modal
+	// (when dirty). The local `layout` variable is kept in sync with
+	// `layoutSync.current` so the rest of the editor sees the
+	// up-to-date data after a reload.
+	$effect(() => {
+		if (!filename) return;
+		void layoutSync.subscribeToFile(filename);
+		return () => {
+			layoutSync.unsubscribe();
+		};
+	});
+	$effect(() => {
+		const synced = layoutSync.current;
+		if (synced && layout && synced !== layout) {
+			// Replace the local copy so the editor sees the new
+			// on-disk content. We do a shallow copy so $state
+			// reactivity kicks in.
+			layout = { ...synced, layers: [...synced.layers] };
+			saveStatus = 'idle';
+			isDirty = false;
+		}
+	});
 
 	// Tab navigation
 	// Primary tabs - core editing workflow
@@ -1115,6 +1142,9 @@
 		saveStatus = 'saving';
 		saveError = null;
 		swapMessage = null;
+		// Tell the hot-reload store a save is in flight so we don't
+		// mistakenly treat our own PUT as an external change.
+		layoutSync.markSaving(filename);
 		try {
 			await apiClient.saveLayout(filename, layout);
 			saveStatus = 'saved';
@@ -1132,6 +1162,8 @@
 		} catch (e) {
 			saveStatus = 'error';
 			saveError = e instanceof Error ? e.message : 'Failed to save';
+		} finally {
+			layoutSync.markSaved(filename);
 		}
 	}
 
@@ -3777,3 +3809,8 @@
 		</Button>
 	</svelte:fragment>
 </AccessibleDialog>
+
+<!-- Hot-reload conflict modal. Opens automatically when the SSE
+     stream reports an external change while the editor has unsaved
+     local edits. -->
+<ConflictReloadModal />
