@@ -55,10 +55,17 @@ pub(super) fn build_key_grid(
             }
         };
 
-        // Convert visual position to grid coordinates
-        // Use a simple scaling: divide by standard key width (assuming ~1u spacing)
-        let row = (key_geom.visual_y / 1.25).round() as usize;
-        let col = (key_geom.visual_x / 1.25).round() as usize;
+        // Convert visual position to grid coordinates.
+        //
+        // `visual_x` / `visual_y` are already in keyboard units (1U = 1.0). Each
+        // standard key sits at integer coordinates, so we just round to the
+        // nearest integer column / row. The previous `(... / 1.25).round()`
+        // mapping was incorrect: it collapsed adjacent 1U-spaced keys (e.g. x=2
+        // → 2 and x=3 → round(2.4) = 2) into the same grid column, causing
+        // collisions and silently dropping right-edge keys on split layouts
+        // like the Corne (LazyQMK-w7dk).
+        let row = key_geom.visual_y.round() as usize;
+        let col = key_geom.visual_x.round() as usize;
 
         // Format key label (handle tap-hold keys)
         let label = format_keycode(&key_def.keycode);

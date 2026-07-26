@@ -270,3 +270,111 @@ fn test_render_layer_diagram_with_missing_marker_position_ignored() {
     // Marker char must not appear anywhere — the position doesn't map to a key.
     assert!(!diagram.contains('X'));
 }
+
+/// Regression test for LazyQMK-w7dk: the keyboard renderer was computing
+/// grid coordinates as `(visual_x / 1.25).round()`, which collapsed adjacent
+/// 1U-spaced keys (e.g. x=2 → 2 and x=3 → round(2.4) = 2) into the same grid
+/// column. On a split keyboard with columns 0-5 (left) and 6-14 (right) like
+/// the Corne, this caused the renderer to silently drop up to 6 keys per layer
+/// (notably the LT Globals at (0,5), KC_MCTL at (1,6), KC_MUTE at (1,8),
+/// and the right-half col-12/14 keys).
+///
+/// This test builds a split-keyboard geometry mirroring
+/// `LAYOUT_split_3x6_3_ex2` and asserts that every key in the layout appears
+/// in the rendered output as a `┌───────┐` box top — i.e. cell count ==
+/// key count per layer.
+#[test]
+fn test_render_layer_diagram_renders_all_split_keyboard_keys() {
+    // Mirror the Corne LAYOUT_split_3x6_3_ex2 keymap:
+    //   row 0 (alpha): cols 0-5 + 6 (left ex2 thumb) + 8 (right ex2 thumb) + 9-14
+    //   row 1 (home):  cols 0-5 + 6 (left ex2 thumb) + 8 (right ex2 thumb) + 9-14
+    //   row 2 (bottom): cols 0-5 + 6 (left ex2 thumb) + 8 (right ex2 thumb) + 9-14
+    //   (No keys in the split gap at col 7.)
+    let mut geom = KeyboardGeometry::new("split", "LAYOUT_split_3x6_3_ex2", 3, 15);
+    let mut idx = 0u8;
+    for row in 0u8..3 {
+        for col in 0u8..=14 {
+            // Skip the split gap (col 7) — no key in the geometry either.
+            if col == 7 {
+                continue;
+            }
+            geom.add_key(KeyGeometry::new((row, col), idx, f32::from(col), f32::from(row)));
+            idx += 1;
+        }
+    }
+
+    // Build a layout with one key per visual position so the renderer can
+    // look each geometry key up by (visual_y.round(), visual_x.round()).
+    let mut layout = Layout::new("Split Layout").unwrap();
+    let mut layer = Layer::new(0, "Base", RgbColor::new(255, 255, 255)).unwrap();
+    for row in 0u8..3 {
+        for col in 0u8..=14 {
+            if col == 7 {
+                continue;
+            }
+            layer.add_key(KeyDefinition::new(
+                Position::new(row, col),
+                format!("KC_{}", (b'A' + (col % 26)) as char),
+            ));
+        }
+    }
+    layout.add_layer(layer).unwrap();
+
+    let grid = build_key_grid(&layout, 0, &geom, std::collections::HashMap::new()).unwrap();
+    // 14 keys per row (cols 0-6 + 8-14) × 3 rows = 42 keys.
+    let expected_keys = 42;
+    assert_eq!(
+        grid.keys.len(),
+        expected_keys,
+        "grid must contain every key from the split layout (got {} keys, expected {})",
+        grid.keys.len(),
+        expected_keys
+    );
+
+    // No two keys in the same row may occupy the same grid column — that's
+    // the exact symptom of the w7dk bug. The grid builder iterates geometry
+    // keys in order, so a collision means the later key overwrites the
+    // earlier; assert every (row, col) pair is unique.
+    let mut seen = std::collections::HashSet::new();
+    for k in &grid.keys {
+        let key = (k.row, k.col);
+        assert!(
+            seen.insert(key),
+            "duplicate grid cell at ({}, {}) — adjacent 1U keys collapsed into \
+             the same grid column. Visual pos {:?}, label {}.",
+            k.row,
+            k.col,
+            k.visual_pos,
+            k.label
+        );
+    }
+    // Sanity: the right-half keys at visual (0, 12), (0, 13), (0, 14) must
+    // occupy three distinct grid columns — those used to collide under /1.25.
+    let key_at_12 = grid
+        .keys
+        .iter()
+        .find(|k| k.visual_pos == (0, 12))
+        .expect("key at (0, 12) must be in the grid");
+    let key_at_13 = grid
+        .keys
+        .iter()
+        .find(|k| k.visual_pos == (0, 13))
+        .expect("key at (0, 13) must be in the grid");
+    let key_at_14 = grid
+        .keys
+        .iter()
+        .find(|k| k.visual_pos == (0, 14))
+        .expect("key at (0, 14) must be in the grid");
+    assert_ne!(key_at_14.col, key_at_12.col, "col 14 must not collide with col 12");
+    assert_ne!(key_at_14.col, key_at_13.col, "col 14 must not collide with col 13");
+    assert_ne!(key_at_13.col, key_at_12.col, "col 13 must not collide with col 12");
+
+    // The rendered diagram must contain a `┌` (box top) for every key.
+    let diagram = render_layer_diagram(&layout, 0, &geom).unwrap();
+    let box_top_count = diagram.chars().filter(|c| *c == '┌').count();
+    assert_eq!(
+        box_top_count, expected_keys,
+        "rendered diagram must contain a box top for every key ({box_top_count} vs {expected_keys}); \
+         diagram:\n{diagram}"
+    );
+}
