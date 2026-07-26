@@ -106,7 +106,7 @@ fn test_build_key_grid() {
     let layout = create_test_layout();
     let geometry = create_test_geometry();
 
-    let grid = build_key_grid(&layout, 0, &geometry).unwrap();
+    let grid = build_key_grid(&layout, 0, &geometry, std::collections::HashMap::new()).unwrap();
 
     assert_eq!(grid.keys.len(), 9); // 3x3 grid
     assert!(grid.max_row >= 2);
@@ -133,6 +133,7 @@ fn test_detect_split_gap_no_split() {
         GridKey {
             label: "A".to_string(),
             color_ref: None,
+            visual_pos: (0, 0),
             row: 0,
             col: 0,
             width: 1,
@@ -141,6 +142,7 @@ fn test_detect_split_gap_no_split() {
         GridKey {
             label: "B".to_string(),
             color_ref: None,
+            visual_pos: (0, 1),
             row: 0,
             col: 1,
             width: 1,
@@ -149,6 +151,7 @@ fn test_detect_split_gap_no_split() {
         GridKey {
             label: "C".to_string(),
             color_ref: None,
+            visual_pos: (0, 2),
             row: 0,
             col: 2,
             width: 1,
@@ -165,6 +168,7 @@ fn test_detect_split_gap_with_split() {
         GridKey {
             label: "A".to_string(),
             color_ref: None,
+            visual_pos: (0, 0),
             row: 0,
             col: 0,
             width: 1,
@@ -173,6 +177,7 @@ fn test_detect_split_gap_with_split() {
         GridKey {
             label: "B".to_string(),
             color_ref: None,
+            visual_pos: (0, 1),
             row: 0,
             col: 1,
             width: 1,
@@ -182,6 +187,7 @@ fn test_detect_split_gap_with_split() {
         GridKey {
             label: "C".to_string(),
             color_ref: None,
+            visual_pos: (0, 5),
             row: 0,
             col: 5,
             width: 1,
@@ -190,4 +196,77 @@ fn test_detect_split_gap_with_split() {
     ];
 
     assert_eq!(detect_split_gap(&keys, 5), Some(2));
+}
+
+#[test]
+fn test_render_layer_diagram_with_marker_places_marker_in_top_right_slot() {
+    let layout = create_test_layout();
+    let geometry = create_test_geometry();
+
+    // Use a marker char that is unlikely to appear in any keycode label.
+    let mut markers = std::collections::HashMap::new();
+    markers.insert((1, 1), '★');
+
+    let diagram =
+        render_layer_diagram_with_markers(&layout, 0, &geometry, markers, None).unwrap();
+
+    // The marker is drawn on the top border line of the key box, as the last
+    // `─` before `┐` of that specific box. Find a top border line containing
+    // the marker (skipping any content lines that might contain the same
+    // char) and verify the chars immediately around it are `─` (left) and
+    // `┐` (right).
+    let lines: Vec<&str> = diagram.lines().collect();
+    let target_line = lines
+        .iter()
+        .find(|line| line.starts_with('┌') && line.contains('★'))
+        .expect("expected marker in a top border");
+
+    let chars: Vec<char> = target_line.chars().collect();
+    let marker_pos = chars
+        .iter()
+        .position(|c| *c == '★')
+        .expect("marker must be present");
+
+    assert!(marker_pos > 0, "marker must not be the first char");
+    assert!(
+        marker_pos + 1 < chars.len(),
+        "marker must not be the last char"
+    );
+    assert_eq!(chars[marker_pos - 1], '─', "char before marker must be `─`");
+    assert_eq!(chars[marker_pos + 1], '┐', "char after marker must be `┐`");
+    assert!(target_line.ends_with('┐'));
+}
+
+#[test]
+fn test_render_layer_diagram_with_marker_legend_appended() {
+    let layout = create_test_layout();
+    let geometry = create_test_geometry();
+
+    let markers = std::collections::HashMap::new();
+    let diagram = render_layer_diagram_with_markers(
+        &layout,
+        0,
+        &geometry,
+        markers,
+        Some("B: bootloader combo"),
+    )
+    .unwrap();
+
+    assert!(diagram.ends_with("B: bootloader combo\n"));
+}
+
+#[test]
+fn test_render_layer_diagram_with_missing_marker_position_ignored() {
+    let layout = create_test_layout();
+    let geometry = create_test_geometry();
+
+    // Marker pointing at a position that doesn't exist in the layout.
+    let mut markers = std::collections::HashMap::new();
+    markers.insert((99, 99), 'X');
+
+    let diagram =
+        render_layer_diagram_with_markers(&layout, 0, &geometry, markers, None).unwrap();
+
+    // Marker char must not appear anywhere — the position doesn't map to a key.
+    assert!(!diagram.contains('X'));
 }

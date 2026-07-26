@@ -10,6 +10,7 @@
 
 use crate::models::{keyboard_geometry::KeyboardGeometry, layout::Layout};
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 
 mod color_ref;
 mod formatting;
@@ -23,6 +24,9 @@ pub struct GridKey {
     pub label: String,
     /// Optional color reference number (1-based)
     pub color_ref: Option<usize>,
+    /// Visual position `(row, col)` matching `layout.keys[].position`. Used to
+    /// address highlight markers in the same coordinate system the user types.
+    pub visual_pos: (u8, u8),
     /// Row in the grid (0-based)
     pub row: usize,
     /// Column in the grid (0-based)
@@ -43,13 +47,34 @@ pub struct KeyGrid {
     pub max_col: usize,
     /// Gap between split halves (column index where right half starts)
     pub split_gap: Option<usize>,
+    /// Highlight markers keyed by visual `(row, col)`. Each marked key has a
+    /// single character drawn in the top-right slot of its box (same slot as
+    /// the TUI combo badge letter).
+    pub highlight_markers: HashMap<(u8, u8), char>,
 }
 
-/// Renders a single layer as an ASCII/Unicode keyboard diagram.
+/// Renders a single layer as an ASCII/Unicode keyboard diagram without markers.
 pub fn render_layer_diagram(
     layout: &Layout,
     layer_idx: usize,
     geometry: &KeyboardGeometry,
+) -> Result<String> {
+    render_layer_diagram_with_markers(layout, layer_idx, geometry, HashMap::new(), None)
+}
+
+/// Renders a single layer as an ASCII/Unicode keyboard diagram with optional
+/// highlight markers and a legend line.
+///
+/// `highlight_markers` maps visual `(row, col)` to a single character that will
+/// be drawn in the top-right slot of the matching key box. Positions not
+/// present in the map are rendered normally. Positions that don't correspond
+/// to an existing key are silently ignored.
+pub fn render_layer_diagram_with_markers(
+    layout: &Layout,
+    layer_idx: usize,
+    geometry: &KeyboardGeometry,
+    highlight_markers: HashMap<(u8, u8), char>,
+    legend: Option<&str>,
 ) -> Result<String> {
     let layer = layout
         .layers
@@ -63,11 +88,17 @@ pub fn render_layer_diagram(
     writeln!(output, "Layer {}: {}", layer_idx, layer.name).unwrap();
 
     // Build key grid with positioning
-    let key_grid = build_key_grid(layout, layer_idx, geometry)?;
+    let key_grid = build_key_grid(layout, layer_idx, geometry, highlight_markers)?;
 
     // Render the grid to ASCII/Unicode
     let diagram = render_grid(&key_grid);
     output.push_str(&diagram);
+
+    if let Some(legend) = legend {
+        if !legend.is_empty() {
+            let _ = writeln!(output, "{legend}");
+        }
+    }
 
     Ok(output)
 }

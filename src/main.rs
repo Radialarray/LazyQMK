@@ -142,6 +142,10 @@ enum Command {
     Generate(cli::GenerateArgs),
     /// Export keyboard layout to markdown documentation
     Export(cli::ExportArgs),
+    /// Render a single layer as an ASCII/Unicode sketch with optional
+    /// highlight markers. Used by agents to embed inline code-block
+    /// previews in chat (the `lazyqmk preview` command).
+    Preview(cli::PreviewArgs),
     /// Display help topics and keybindings
     #[command(name = "show-help")]
     ShowHelp(cli::HelpArgs),
@@ -201,6 +205,13 @@ fn main() -> Result<()> {
                 }
             },
             Command::Export(args) => match args.execute() {
+                Ok(()) => ExitCode::Success,
+                Err(e) => {
+                    eprintln!("Error: {}", e.message);
+                    e.exit_code
+                }
+            },
+            Command::Preview(args) => match args.execute() {
                 Ok(()) => ExitCode::Success,
                 Err(e) => {
                     eprintln!("Error: {}", e.message);

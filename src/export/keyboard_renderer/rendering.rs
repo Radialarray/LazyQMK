@@ -2,6 +2,7 @@
 
 use crate::models::{keyboard_geometry::KeyboardGeometry, layout::Layout};
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 
 use super::color_ref::{build_color_reference_map, get_key_color_ref};
 use super::formatting::format_keycode;
@@ -12,6 +13,7 @@ pub(super) fn build_key_grid(
     layout: &Layout,
     layer_idx: usize,
     geometry: &KeyboardGeometry,
+    highlight_markers: HashMap<(u8, u8), char>,
 ) -> Result<KeyGrid> {
     let layer = layout
         .layers
@@ -71,6 +73,7 @@ pub(super) fn build_key_grid(
         keys.push(GridKey {
             label,
             color_ref,
+            visual_pos: (visual_row, visual_col),
             row,
             col,
             width,
@@ -89,6 +92,7 @@ pub(super) fn build_key_grid(
         max_row,
         max_col,
         split_gap,
+        highlight_markers,
     })
 }
 
@@ -191,6 +195,8 @@ pub(super) fn render_grid(grid: &KeyGrid) -> String {
         let key_width = KEY_WIDTH * key.width + (key.width - 1) * 2; // Account for borders between merged keys
         let key_height = KEY_HEIGHT * key.height;
 
+        let marker = grid.highlight_markers.get(&key.visual_pos).copied();
+
         render_key_box(
             &mut buffer,
             row_start,
@@ -199,6 +205,7 @@ pub(super) fn render_grid(grid: &KeyGrid) -> String {
             key_height,
             &key.label,
             key.color_ref,
+            marker,
         );
     }
 
@@ -214,6 +221,9 @@ pub(super) fn render_grid(grid: &KeyGrid) -> String {
 }
 
 /// Renders a single key box with Unicode box-drawing characters.
+///
+/// `marker` is an optional single character drawn in the top-right slot of the
+/// key box (last `─` before `┐`). Used to highlight the key in agent sketches.
 pub(super) fn render_key_box(
     buffer: &mut [Vec<char>],
     row: usize,
@@ -222,6 +232,7 @@ pub(super) fn render_key_box(
     height: usize,
     label: &str,
     color_ref: Option<usize>,
+    marker: Option<char>,
 ) {
     let max_row = buffer.len();
     let max_col = buffer[0].len();
@@ -278,6 +289,16 @@ pub(super) fn render_key_box(
             if col + actual_width - 1 < max_col {
                 buffer[row + r][col + actual_width - 1] = '│';
             }
+        }
+    }
+
+    // Draw highlight marker in the top-right slot (last `─` before `┐`).
+    // Matches the TUI's top-right slot used by the color indicator so chat
+    // sketches align visually with what the user sees in the TUI.
+    if let Some(marker) = marker {
+        let marker_col = col + actual_width.saturating_sub(2);
+        if marker_col < max_col {
+            buffer[row][marker_col] = marker;
         }
     }
 
