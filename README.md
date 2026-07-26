@@ -4,6 +4,8 @@
 
 **LazyQMK** is a keyboard layout editor for QMK firmware, available in both **terminal (TUI)** and **web-based** interfaces. Design keymaps, manage layers, organize with colors and categories, and compile firmware—whether you prefer the terminal or the browser.
 
+**New in v0.23.0:** Live hot-reload — background agents (or any external tool) can edit the layout `.json` while the editor is open, and both UIs pick up the change in <500 ms. See [Hot-Reload & Agent Support](#-hot-reload--agent-support).
+
 ---
 
 <table>
@@ -26,6 +28,27 @@
 - **`lazyqmk web`** - Web-based editor for a modern browser experience
 
 Both interfaces provide full feature parity: visual keyboard preview, layer management, firmware generation, and compilation.
+
+## 🤖 Agent Support
+
+**LazyQMK is built for AI-assisted keyboard development.** A background agent can drive the CLI to compose, validate, and adjust a layout while you keep the editor open — the TUI and WebUI hot-reload in real time so you see every change as it lands.
+
+```bash
+# Pick a keyboard, plan layers, populate keys — all while your TUI is open.
+# The editor auto-reloads within 500 ms of each save.
+
+# In one terminal:
+lazyqmk
+
+# In another, the agent runs CLI mutations:
+lazyqmk tap-dance add --layout my_layout.json --name ShiftEscape
+lazyqmk category add --layout my_layout.json --id thumbs --color '#FF8800'
+lazyqmk generate --layout my_layout.json --out-dir ./out
+```
+
+The agent never blocks you, and dirty local edits trigger a 3-button conflict prompt (Reload / Keep mine / Save then reload) instead of a silent overwrite.
+
+A pre-built OpenCode skill is shipped under [`.agents/lazyqmk/SKILL.md`](.agents/lazyqmk/SKILL.md) that walks through 10 phases (install → doctor → pick keyboard → plan layers → categories → populate keys → configure features → validate → build → flash) with curated lessons for common pitfalls.
 
 ## 💡 Motivation
 
@@ -262,6 +285,7 @@ npm run dev:web  # Starts backend (port 3001) + Vite dev server (port 5173) with
 - **Template System** - Save and share common layouts across keyboards
 - **Layout Export** - Export visual keyboard documentation with diagrams, color legends, and layer navigation (`Ctrl+E` or `lazyqmk export`)
 - **OS Theme Integration** - Automatic dark/light mode detection from system settings
+- **Hot-Reload** - Open the layout in TUI or WebUI, run any tool (CLI, agent, `jq`, `vim`) in another shell, and the editor picks up changes in <500 ms via a `notify`-based file watcher (TUI) or Server-Sent Events (WebUI). See [Hot-Reload & Agent Support](#-hot-reload--agent-support) below.
 
 ## 🚀 Quick Start
 
@@ -360,6 +384,56 @@ tags: ["colemak", "programming"]
 - With color override: `KC_A{#FF0000}`
 - With category: `KC_A@navigation`
 - Combined: `KC_A{#FF0000}@navigation`
+
+## 🔄 Hot-Reload & Agent Support
+
+**Both the TUI and WebUI auto-reload when the open layout changes on disk.** This unlocks a new workflow: keep the editor open while an AI agent (or `jq`, `vim`, `cargo`, another shell) composes the layout in the background. Every save lands in the UI within ~500 ms.
+
+### How it works
+
+- **TUI**: a `notify-debouncer-full` watcher is rooted on the open `.json` file. The 100 ms event loop drains the channel and either reloads silently (when the editor is clean) or opens a conflict prompt (when there are unsaved edits).
+- **WebUI**: the backend watches the workspace directory and broadcasts `LayoutEvent` JSON messages over Server-Sent Events at `/api/events`. The Svelte `layoutSync` store refetches the affected file and pushes the result into the editor.
+- **Self-write suppression**: every save through `LayoutService::save_with_epoch` bumps a shared `Arc<AtomicU64>` epoch so the watchdog does not echo our own writes back as "external" changes.
+
+### Conflict resolution
+
+When the editor has unsaved local edits and another process modifies the file, a 3-button modal appears:
+
+| Option | What it does |
+|--------|--------------|
+| **Reload from disk** | Discard local edits, fetch the latest content from disk. |
+| **Keep mine** | Push the in-memory edits back to disk (overwriting whatever the agent wrote). |
+| **Save then reload** | Back up local edits to `<name>.json.local`, then reload from disk. |
+| **Cancel** | Dismiss the prompt; the next external change will re-trigger it. |
+
+Both UIs use the same prompt and the same resolution semantics. The agent never blocks the human, and the human never loses work to a stale disk read.
+
+### Example agent workflow
+
+```bash
+# In your editor terminal:
+lazyqmk
+
+# In your agent's terminal (or via a Claude-style skill):
+lazyqmk tap-dance add --layout my_layout.json --name ShiftEscape --single KC_ESC --double KC_CAPS
+lazyqmk category add --layout my_layout.json --id thumbs --color '#FF8800'
+lazyqmk generate --layout my_layout.json --out-dir ./out
+```
+
+The editor sees `my_layout.json` change after each command and re-renders the keyboard canvas with the new tap-dance, category color, and generated keymap. Anything you were already editing is preserved and the conflict prompt only appears when you truly have unsaved local edits.
+
+### Programmatic access
+
+Layouts are plain JSON, so anything that can write files can mutate them:
+
+```bash
+# Bump a keycode with jq while the editor is open
+jq '.layers[0].keys[5].keycode = "LSFT_T(KC_CAPS)"' \
+  ~/.local/share/LazyQMK/layouts/my_layout.json > /tmp/x.json
+mv /tmp/x.json ~/.local/share/LazyQMK/layouts/my_layout.json
+```
+
+The TUI and WebUI will both detect the change within a single tick.
 
 ## 🎨 Color Organization
 
