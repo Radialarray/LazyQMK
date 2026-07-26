@@ -86,11 +86,11 @@ impl<'a> FirmwareGenerator<'a> {
         let keymap_c = self.generate_keymap_c()?;
         let keymap_path = self.write_file_to_both(&timestamp_dir, "keymap.c", &keymap_c)?;
 
-        // Generate rules.mk (only written if features need enabling)
+        // Generate rules.mk. Always emitted (placeholder when no features are
+        // needed) so the deploy step overwrites any stale rules.mk left in the
+        // QMK keymap directory by a previous feature-enabled deployment.
         let rules_mk = self.generate_rules_mk();
-        if !rules_mk.is_empty() {
-            self.write_file_to_both(&timestamp_dir, "rules.mk", &rules_mk)?;
-        }
+        self.write_file_to_both(&timestamp_dir, "rules.mk", &rules_mk)?;
 
         // Generate keymap.json (for QMK community modules like PaletteFX)
         let keymap_json = self.generate_keymap_json();

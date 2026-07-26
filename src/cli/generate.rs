@@ -151,22 +151,17 @@ impl GenerateArgs {
                     }
                 }
 
-                if !rules_mk.is_empty() {
-                    std::fs::write(self.out_dir.join("rules.mk"), &rules_mk)
-                        .map_err(|e| CliError::io(format!("Failed to write rules.mk: {e}")))?;
+                // rules.mk is always emitted (placeholder body when no features
+                // need enabling) so the deploy step overwrites any stale
+                // rules.mk left in the destination by a previous feature-enabled
+                // generation. See LazyQMK-msc8.
+                std::fs::write(self.out_dir.join("rules.mk"), &rules_mk)
+                    .map_err(|e| CliError::io(format!("Failed to write rules.mk: {e}")))?;
+
+                if !keymap_json.is_empty() {
                     println!("✓ Generated keymap.c, config.h, rules.mk, and keymap.json");
                 } else {
-                    let rules_mk_path = self.out_dir.join("rules.mk");
-                    if rules_mk_path.exists() {
-                        std::fs::remove_file(&rules_mk_path).map_err(|e| {
-                            CliError::io(format!("Failed to remove stale rules.mk: {e}"))
-                        })?;
-                    }
-                    if !keymap_json.is_empty() {
-                        println!("✓ Generated keymap.c, config.h, and keymap.json");
-                    } else {
-                        println!("✓ Generated keymap.c and config.h");
-                    }
+                    println!("✓ Generated keymap.c, config.h, and rules.mk");
                 }
                 println!("  Output: {}", self.out_dir.display());
             }

@@ -619,6 +619,25 @@ lazyqmk doctor --verbose
 ```
 Follow the suggestions printed alongside each error. Common causes: missing ARM GCC, wrong QMK path, old QMK fork.
 
+### Build fails with `error: 'key_combos' undeclared` after toggling combos off
+A `rules.mk` from a previous combo-enabled deploy can leak `COMBO_ENABLE = yes`
+into a freshly generated keymap that no longer needs it, causing QMK's
+`quantum/keymap_introspection.c` to reference `key_combos` symbols that the
+fresh `keymap.c` does not define.
+
+LazyQMK now always emits a placeholder `rules.mk` so the deploy step
+overwrites any stale file at the destination — but if you've been deploying
+by hand (`cp keymap.c config.h keymap.json …`), stale files can still slip
+through. On every `lazyqmk generate`, clean the deployed directory before
+re-copying:
+
+```bash
+KEYMAP_DIR="qmk_firmware/keyboards/<keyboard>/keymaps/<keymap_name>"
+rm -f "$KEYMAP_DIR/keymap.c" "$KEYMAP_DIR/config.h" "$KEYMAP_DIR/keymap.json" "$KEYMAP_DIR/rules.mk"
+lazyqmk generate --format all --layout your_layout.md
+qmk compile -kb <keyboard> -km <keymap_name>
+```
+
 ---
 
 ## File Format Reference

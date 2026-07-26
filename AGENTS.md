@@ -325,6 +325,24 @@ Always use `VisualLayoutMapping` for transformations between systems.
 - **Keycode Database**: JSON
 - **QMK Metadata**: JSON (parsed from `info.json`)
 
+#### Generator output idempotency (`rules.mk`)
+
+The generator **always** emits a `rules.mk`, even when no QMK features need
+enabling. The emitted file is either feature flags (`COMBO_ENABLE = yes`,
+`TAP_DANCE_ENABLE = yes`) or a placeholder body — never an empty file. This
+keeps the deploy step idempotent: if the user previously deployed a
+combo-enabled keymap and then turned combos off, the new deploy overwrites
+the stale `rules.mk` instead of leaving a `COMBO_ENABLE = yes` flag behind
+that would leak into the next QMK build and cause `error: 'key_combos'
+undeclared` failures in `quantum/keymap_introspection.c`.
+
+If users hand-copy files (`cp keymap.c config.h keymap.json …`) instead of
+running the LazyQMK deploy step, they still need to `rm` the stale
+`rules.mk` / `keymap.json` before copying. See `docs/AGENT_GUIDE.md`
+(Troubleshooting → "Build fails with `error: 'key_combos' undeclared`") and
+`.agents/lazyqmk/lessons/0009-build-uf2.md` for the recommended cleanup
+snippets.
+
 ### Performance Considerations
 
 - Target 60fps (16ms/frame), typical event-driven rendering

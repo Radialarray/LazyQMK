@@ -6,6 +6,7 @@
 
 use anyhow::{anyhow, Result};
 
+use super::keymap_helpers;
 use super::FirmwareGenerator;
 
 /// Generates combo code if enabled.
@@ -69,11 +70,11 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
 
         let key1 = base_layer
             .get_key(combo.key1)
-            .map(|k| k.keycode.clone())
+            .map(|k| keymap_helpers::resolve_keycode(gen, &k.keycode))
             .unwrap_or_else(|| "KC_NO".to_string());
         let key2 = base_layer
             .get_key(combo.key2)
-            .map(|k| k.keycode.clone())
+            .map(|k| keymap_helpers::resolve_keycode(gen, &k.keycode))
             .unwrap_or_else(|| "KC_NO".to_string());
 
         code.push_str(&format!(
@@ -107,6 +108,7 @@ pub fn generate(gen: &FirmwareGenerator) -> Result<String> {
     code.push_str("    // Only activate combos on base layer (layer 0)\n");
     code.push_str("    if (get_highest_layer(layer_state) != 0) {\n");
     code.push_str("        return;\n");
+    code.push_str("    }\n");
     code.push('\n');
     code.push_str("    if (pressed) {\n");
     code.push_str("        // Start hold timer\n");
