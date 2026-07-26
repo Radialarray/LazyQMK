@@ -236,6 +236,7 @@ Uses QMK built-ins `ACTION_TAP_DANCE_DOUBLE` (2-way) and `ACTION_TAP_DANCE_FN_AD
 - **Tap dance on a `KC_TRNS` key** — assigning `TD(name)` to a position takes over that key via QMK's tap-dance mechanism. The underlying layer's keycode (including any `KC_TRNS`) is NOT also fired. Tap dance overrides on the current layer.
 - **Multiple TD() with same name** — invalid; `add` will reject.
 - **Renaming a tap dance breaks all references** — if you change `name` in the definition, update all `TD(old_name)` keycodes too. Consider UUIDs in future versions.
+- **Host-platform keycodes inside a tap dance** — `TD(my_mac)` with `single_tap: KC_MCTL` and `double_tap: KC_ASST` is valid; remember the target keys are HID Consumer codes (`KC_MCTL` = macOS Mission Control, `KC_ASST` = Siri/Cortana) and host-platform-dependent. They compile and will fire on the right host. See `references/0009-platform-special-keys.md` for the full cross-platform matrix — apply the same platform question to any tap dance whose actions include host-specific keys.
 
 ## Validation Workflow
 

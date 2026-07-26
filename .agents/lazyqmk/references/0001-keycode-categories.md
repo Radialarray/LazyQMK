@@ -21,7 +21,7 @@ lazyqmk keycodes --category modifiers --json | jq '.keycodes[] | .code'
 |---|---|---|
 | `basic` | Basic Keys | KC_A-KC_Z, KC_0-KC_9, KC_ENT, KC_ESC, KC_TAB, KC_SPC |
 | `navigation` | Navigation | KC_UP, KC_DOWN, KC_LEFT, KC_RGHT, KC_HOME, KC_END, KC_PGUP, KC_PGDN |
-| `media` | Media | KC_MPLY, KC_MSTP, KC_MNXT, KC_MPRV, KC_VOLU, KC_VOLD, KC_MUTE |
+| `media` | Media | KC_MPLY, KC_MSTP, KC_MNXT, KC_MPRV, KC_VOLU, KC_VOLD, KC_MUTE, KC_BRIU, KC_BRID, KC_MCTL, KC_LPAD, KC_ASST, KC_CPNL, KC_MFFD, KC_MRWD, KC_EJCT, KC_MAIL, KC_CALC, KC_MYCM, KC_WHOM, KC_WBAK, KC_WFWD, KC_WSCH, KC_WREF, KC_WFAV, KC_WSTP |
 | `function` | Function | KC_F1-KC_F12 |
 | `modifiers` | Modifiers | KC_LSFT, KC_RSFT, KC_LCTL, KC_RCTL, KC_LALT, KC_RALT, KC_LGUI, KC_RGUI |
 | `mod_tap` | Mod-Tap | LCTL_T(), LALT_T(), LSFT_T(), LGUI_T() and right-hand variants |
@@ -30,12 +30,12 @@ lazyqmk keycodes --category modifiers --json | jq '.keycodes[] | .code'
 | `layers` | Layer Switching | MO(), TG(), TO(), TT(), LT(), LM(), DF() |
 | `tap_dance` | Tap Dance | TD(<name>) — custom definitions in layout |
 | `mouse` | Mouse | MS_UP, MS_DOWN, MS_LEFT, MS_RGHT, MS_BTN1-8, MS_WHLU, MS_WHLD |
-| `system` | System | QK_BOOT, QK_RBT, EE_CLR, RGB_TOG, BL_TOG, BL_UP, BL_DOWN |
+| `system` | System | QK_BOOT, QK_RBT, EE_CLR, RGB_TOG, BL_TOG, BL_UP, BL_DOWN, KC_PWR, KC_SLEP, KC_WAKE |
 | `backlight` | Backlight | BL_TOG, BL_STEP, BL_ON, BL_OFF, BL_UP, BL_DOWN |
 | `bluetooth` | Bluetooth | BT_SEL, BT_NEXT, OUT_USB, OUT_BT (only on BT-capable boards) |
 | `audio` | Audio | AU_TOG, MU_TOG, MU_NEXT (if QMK audio enabled) |
 | `haptic` | Haptic | HPT_TOG, HPT_DWL_*, HPT_BUZ_* (if haptic feedback enabled) |
-| `international` | International | (Language-neutral symbols) |
+| `international` | International | (Language-neutral symbols), UC_MAC, UC_LNX, UC_WIN |
 | `shifted` | Shifted symbols | KC_LPRN (shifted 9), KC_RPRN (shifted 0), etc. |
 | `symbols` | Symbols | KC_EXLM, KC_AT, KC_HASH, KC_DLR, KC_PERC, KC_CIRC, KC_AMPR, KC_ASTR |
 | `magic` | Magic | KC_CAPSLOCK, KC_NUMLOCK, KC_LCAP, KC_LNUM |
@@ -148,7 +148,7 @@ Behavior controlled by `tap_hold_settings` (see `references/0006-tap-hold-and-co
 
 Any keycode starting with these prefixes is parsed specially:
 
-- `KC_` — basic keys, modifiers, special keys
+- `KC_` — basic keys, modifiers, special keys (includes HID Consumer aliases like `KC_MCTL`, `KC_LPAD`, `KC_ASST`, `KC_BRIU`)
 - `MO/TG/TO/TT/OSL/DF/LT/LM` — layer switching (parameter: layer index or `@<uuid>`)
 - `LCTL/LSFT/LALT/LGUI/RCTL/RSFT/RALT/RGUI` — modifier combos (parameter: keycode)
 - `LCG/LCA/LSG/LCSG/MEH/HYPR` — multi-modifier combos
@@ -157,10 +157,19 @@ Any keycode starting with these prefixes is parsed specially:
 - `MS_` — mouse keys
 - `RGB_` — RGB control
 - `BL_` — backlight control
-- `QK_` — QMK special (QK_BOOT for bootloader, QK_RBT for reboot)
+- `QK_` — QMK special (QK_BOOT for bootloader, QK_RBT for reboot, QK_UNICODE_MODE_MACOS for unicode)
 - `AU_/MU_` — audio
+- `UC_` — unicode mode switch (UC_MAC, UC_LNX, UC_WIN, UC_WINC, …)
 - `TD(<name>)` — tap dance (custom, name must be defined in `tap_dances[]`)
 - `USER<N>` — custom user keycodes (not in LazyQMK db; must add to keyboard's `keymap.c`)
+
+## Platform-Specific Notes
+
+Most keys above are cross-platform. The HID Consumer codes 0xA8–0xC2 (media transport, brightness, volume, Mission Control, Launchpad, etc.) **work differently per host OS**. Before recommending `KC_MCTL`, `KC_LPAD`, `KC_ASST`, `KC_BRIU`, `KC_MAIL`, `KC_CPNL`, etc.:
+
+1. **Ask the user which host they're targeting** (macOS / Windows / Linux / iOS / cross-platform) — see `SKILL.md` Mission Gate.
+2. Consult `references/0009-platform-special-keys.md` for the full cross-platform matrix before suggesting any of these.
+3. Treat "compile success ≠ runtime effect" — `BL_TOG` compiles but does nothing without `BACKLIGHT_ENABLE = yes`; `KC_MCTL` compiles but does nothing on Windows without an Apple/Magic-Keys remap. Validate host support, never just spell.
 
 ## Common Pitfalls
 
@@ -169,3 +178,5 @@ Any keycode starting with these prefixes is parsed specially:
 - **Language keycodes need the language module included** — the generator adds `#include "keymap_extras/keymap_<lang>.h"` to `keymap.c` automatically (no `rules.mk` flag needed). The keyboard's `info.json` must already allow this include.
 - **Mouse keys (`MS_*`) require `MOUSEKEY_ENABLE = yes`** in the keyboard's `rules.mk` or `info.json` `features.mousekey: true` — LazyQMK does NOT auto-add this to `rules.mk`. Verify the keyboard has mousekey support before adding `MS_*` keys.
 - **RGB keys (`RGB_*`) require `RGB_MATRIX_ENABLE = yes`** — LazyQMK does NOT auto-add this. Verify the keyboard's `info.json` has `features.rgb_matrix: true`. The generator wraps RGB code in `#ifdef RGB_MATRIX_ENABLE`, so missing this define produces empty output (no errors, but no RGB either).
+- **Compile success ≠ runtime effect** — `BL_TOG` and `KC_MCTL` both compile fine, but `BL_TOG` does nothing without `BACKLIGHT_ENABLE = yes`, and `KC_MCTL` does nothing on a Windows host without a remap. Always check host support, not just spelling. See `references/0009-platform-special-keys.md` section C pitfall #2.
+- **Don't flag `KC_MCTL`, `KC_LPAD`, `KC_ASST`, `KC_BRIU`, `KC_BRID`, `KC_MFFD`, `KC_MRWD`, `KC_EJCT`, `KC_CPNL`, `KC_MAIL`, `KC_CALC`, `KC_MYCM`, browser-nav `KC_W*`, `KC_PWR`, `KC_SLEP`, `KC_WAKE` as "invalid" or "non-standard"** — they're standard QMK HID Consumer aliases (HID 0xA8–0xC2) defined at `qmk_firmware/quantum/keycodes.h:268-302` and `qmk_firmware/quantum/keycodes.h:925-960`. The bundled `src/keycode_db/categories/media.json` already lists them. They are host-dependent at runtime, not invalid at compile time. See `references/0009-platform-special-keys.md` for the full review guardrail.

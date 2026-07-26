@@ -25,15 +25,30 @@ lazyqmk inspect --layout "$LAYOUT" --section layers --json
 | "How many layers do you need?" | 4-5 (Base + Symbols + Navigation + Numbers + 1 more) |
 | "What is each layer for?" | Suggest standard set, let user customize |
 | "Any custom layers (gaming, app-specific)?" | None |
+| **"Which host OS?"** (carried over from Mission Gate) | Reuse from MISSION.md if present. If you skipped the question earlier in Phase 3, ask now. Gates which media/launcher/brightness keys make sense in layer 5+ (see `references/0009-platform-special-keys.md`). |
+
+## Platform-Aware Layer Suggestions
+
+After confirming the host (from MISSION.md or this turn), adjust layer recommendations:
+
+| Host | Recommended default layers | Notes |
+|---|---|---|
+| **macOS** | Base + Symbols + Navigation + Numbers + **macMedia** (KC_MCTL, KC_LPAD, KC_ASST, KC_MPLY, KC_VOLU) + Globals (RGB) | Mission Control & Launchpad are HID Consumer natives — include them. |
+| **Windows** | Base + Symbols + Navigation + Numbers + **winMedia** (KC_MPLY, KC_VOLU, KC_CPNL, KC_MAIL, KC_CALC, browser-nav `KC_W*`) + Globals (RGB) | Mission Control/Launchpad don't fire here — leave them off. Add `KC_CPNL`, mail, calc. |
+| **Linux** | Base + Symbols + Navigation + Numbers + **lxMedia** (KC_MPLY, KC_VOLU — anything else needs xkb remap) + Globals (RGB) | Most HID Consumer codes don't fire out of the box. Keep Media lean or teach the user about xkb/hwdb. |
+| **iOS / iPadOS** | Base + Symbols + Navigation + Numbers + Globals (RGB off or dim) | Mostly typing + brightness. Power-draw from RGB matrix drains iPad batteries fast. |
+| **Cross-platform** | Base + Symbols + Navigation + Numbers + **univMedia** (KC_MPLY, KC_VOLU, KC_VOLD, KC_MUTE only) + Globals (RGB off) | Stick to media transport that's universal across hosts. Skip host-launcher keys. |
+
+Always restate the chosen host in NOTES.md and MISSION.md after this phase. If you later add a layer 5+ with platform-specific keys, re-check the host hasn't changed.
 
 ## Common Layer Sets
 
 | Tier | Layers | Use case |
 |---|---|---|
 | **Minimal** | Base only | Just QWERTY + mods on home row |
-| **Standard** | Base, Symbols, Navigation, Numbers | Most users |
-| **Extended** | Base, Symbols, Navigation, Numbers, Media/Mouse, Function | Power users |
-| **Power** | Base, Code, Symbols, Navigation, Numbers, Media, Function, Mouse, Gaming | Custom keyboards, programmers |
+| **Standard** | Base, Symbols, Navigation, Numbers (+ host media) | Most users |
+| **Extended** | Base, Symbols, Navigation, Numbers, (+ host Media/Mouse), Function | Power users |
+| **Power** | Base, Code, Symbols, Navigation, Numbers, (+ host Media), Function, Mouse, Gaming | Custom keyboards, programmers |
 
 ## Recommended Layer Names
 

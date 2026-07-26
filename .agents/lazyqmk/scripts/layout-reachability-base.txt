@@ -1,0 +1,140 @@
+# Bare keycode-to-character maps for layouts where the keymap_extras header
+# only defines shifted aliases. Each line: KEYCODE=CHAR
+# Sourced from QMK's keycodes.h conventions and the layout's keymap_extras header.
+
+# =============================================================================
+# Universal QMK base keycodes (not layout-specific)
+# These are the same across all layouts: numbers, F-keys, numpad, arrows, etc.
+# =============================================================================
+_universal_base="
+KC_1=1
+KC_2=2
+KC_3=3
+KC_4=4
+KC_5=5
+KC_6=6
+KC_7=7
+KC_8=8
+KC_9=9
+KC_0=0
+KC_F1=F1
+KC_F2=F2
+KC_F3=F3
+KC_F4=F4
+KC_F5=F5
+KC_F6=F6
+KC_F7=F7
+KC_F8=F8
+KC_F9=F9
+KC_F10=F10
+KC_F11=F11
+KC_F12=F12
+KC_F13=F13
+KC_F14=F14
+KC_F15=F15
+KC_F16=F16
+KC_F17=F17
+KC_F18=F18
+KC_F19=F19
+KC_F20=F20
+KC_F21=F21
+KC_F22=F22
+KC_F23=F23
+KC_F24=F24
+KC_PMNS=-
+KC_PPLS=+
+KC_PAST=*
+KC_PSLS=/
+KC_PEQL==
+KC_PDOT=.
+KC_PCMM=,
+KC_PENT=Enter
+KC_P0=0
+KC_P1=1
+KC_P2=2
+KC_P3=3
+KC_P4=4
+KC_P5=5
+KC_P6=6
+KC_P7=7
+KC_P8=8
+KC_P9=9
+KC_NO==
+KC_TRNS==
+KC_TAB=Tab
+KC_SPC=Space
+KC_ENT=Enter
+KC_ESC=Escape
+KC_BSPC=Backspace
+KC_DEL=Delete
+KC_HOME=Home
+KC_END=End
+KC_PGUP=PageUp
+KC_PGDN=PageDown
+KC_UP=Up
+KC_DOWN=Down
+KC_LEFT=Left
+KC_RGHT=Right
+KC_CAPS=CapsLock
+KC_LSFT=Shift
+KC_RSFT=Shift
+KC_LCTL=Ctrl
+KC_RCTL=Ctrl
+KC_LALT=Alt
+KC_RALT=AltGr
+KC_LGUI=Cmd
+KC_RGUI=Cmd
+"
+
+# =============================================================================
+# US ANSI base keys (from keymap_us.h)
+# =============================================================================
+us_ansi_base="
+KC_GRV=`
+KC_MINS=-
+KC_EQL==
+KC_LBRC=[
+KC_RBRC=]
+KC_BSLS='\\'
+KC_SCLN=;
+KC_QUOT='
+KC_COMM=,
+KC_DOT=.
+KC_SLSH=/
+"
+
+# =============================================================================
+# German QWERTZ base keys (from keymap_german.h)
+# =============================================================================
+german_qwertz_base="
+DE_CIRC=^
+DE_SS=ß
+DE_ACUT=´
+DE_Y=Y
+DE_UDIA=ü
+DE_PLUS=+
+DE_ODIA=ö
+DE_ADIA=ä
+DE_HASH=#
+DE_LABK=<
+DE_Z=Z
+DE_MINS=-
+"
+
+# =============================================================================
+# German Mac ISO base keys
+# =============================================================================
+german_mac_iso_base="
+DE_CIRC=^
+DE_SS=ß
+DE_ACUT=´
+DE_Y=Y
+DE_UDIA=ü
+DE_PLUS=+
+DE_ODIA=ö
+DE_ADIA=ä
+DE_HASH=#
+DE_LABK=<
+DE_Z=Z
+DE_MINS=-
+"

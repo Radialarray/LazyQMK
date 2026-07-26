@@ -58,6 +58,7 @@ SLUG=$(jq -r '.metadata.keyboard // "untitled"' "$LAYOUT_FILE" | tr '/' '-' | tr
 |---|---|
 | Start a new keyboard from scratch | `lessons/0001-pipeline-overview.md` then phase ladder |
 | Modify an existing layout | `references/0000-cli-cheatsheet.md` + relevant `references/000N-*.md` |
+| Audit duplicates/missing chars on a layer | `references/0008-layout-reachability.md` + `scripts/layout-reachability.sh` + `scripts/audit-layout.sh` |
 | Add RGB / idle effect | `references/0004-rgb-and-idle.md` + `lessons/0007-configure-features.md` |
 | Add ripple overlay | `references/0005-ripple-and-palettefx.md` + `lessons/0007-configure-features.md` |
 | Add PaletteFX | `references/0005-ripple-and-palettefx.md` + `lessons/0007-configure-features.md` |
@@ -73,6 +74,8 @@ SLUG=$(jq -r '.metadata.keyboard // "untitled"' "$LAYOUT_FILE" | tr '/' '-' | tr
 | List keyboards / layouts / templates | `references/0000-cli-cheatsheet.md` (cli cheatsheet) |
 | Doctor failing / build error | `lazyqmk doctor --verbose` (real `--verbose`) + `references/0000-cli-cheatsheet.md` |
 | "What can lazyqmk do?" | `references/0003-color-system.md`, `0004-rgb-and-idle.md`, `0005-ripple-and-palettefx.md`, `0006-tap-hold-and-combos.md`, `0007-tap-dance.md` |
+| macOS / Windows / Linux special keys (KC_MCTL, KC_LPAD, KC_ASST, KC_BRIU, KC_CPNL, KC_MAIL, …) | `references/0009-platform-special-keys.md` |
+| "Which special key fits my platform?" / "Why doesn't KC_MCTL work on Windows?" / "What's the difference between KC_MCTL and LGUI(KC_UP)?" | `references/0009-platform-special-keys.md` |
 
 ## Phase Ladder (the 10-phase pipeline)
 
@@ -132,6 +135,9 @@ lazyqmk export --layout <path> --qmk-path <path> --output <out.md>
 - Never change `keymap_name` without asking (changes firmware identity)
 - Never flash without explicit user confirmation — use a `read -p "Confirm flash? (type 'flash') "` gate before copying to `/Volumes/RPI-RP2/` or running `qmk flash`
 - Never use the official QMK repo — must be the Radialarray fork for ripple/idle/PaletteFX to work
+- **Never flag a `KC_*` keycode as "invalid" or "non-standard" without first checking** — see review guardrail at `references/0009-platform-special-keys.md` section D. Common HID Consumer codes that look unusual but ARE valid include `KC_MCTL`, `KC_LPAD`, `KC_ASST`, `KC_BRIU`, `KC_BRID`, `KC_MFFD`, `KC_MRWD`, `KC_EJCT`, `KC_CPNL`, `KC_MAIL`, `KC_CALC`, `KC_MYCM`, browser-nav `KC_W*`, `KC_PWR`, `KC_SLEP`, `KC_WAKE`. The bundled database (`src/keycode_db/categories/media.json`, `system.json`) already lists them.
+- **Always confirm the user's host platform** (macOS / Windows / Linux / iOS / cross-platform) on the first mission gate — gate special-key recommendations on it. See `references/0009-platform-special-keys.md`.
+- **Compile success ≠ runtime effect** — `BL_TOG`/`RGB_TOG`/`KC_MCTL` all compile, but `BL_TOG` does nothing without `BACKLIGHT_ENABLE = yes`, and `KC_MCTL` does nothing on a Windows host without an Apple/Magic-Keys remap. Treat "will it actually work on the user's host?" as a config question, never as a keycode-validity question.
 - Always run `lazyqmk validate` after mutating the layout (use `bash scripts/validate-and-report.sh` to combine with tap-dance + layer-refs validation)
 - Always run `lazyqmk generate --format all` before `qmk compile`
 - Always re-deploy the generated `keymap.c` to `<qmk-path>/keyboards/<metadata.keyboard>/keymaps/<keymap_name>/` before `qmk compile` (otherwise `qmk compile` builds a stale keymap)
@@ -142,13 +148,20 @@ lazyqmk export --layout <path> --qmk-path <path> --output <out.md>
 If `~/Library/Application Support/LazyQMK/workspaces/<slug>/MISSION.md` doesn't exist, gather mission before doing anything else:
 
 1. **Which keyboard?** (vendor/keyboard/variant) — or "I don't have one yet" → Phase 1
-2. **Primary use?** (code / prose / both / gaming / mixed)
-3. **Non-English layout?** (DE / FR / Nordic / none)
-4. **RGB LEDs present?** (yes / no / don't know)
+2. **Host platform?** (macOS / Windows / Linux / iOS / cross-platform) — **always ask**, even on follow-up sessions. This gates:
+   - Which "special" keys are usable (e.g. `KC_MCTL` Mission Control on macOS vs `KC_CPNL` Control Panel on Windows vs `LGUI(KC_*)` everywhere)
+   - Which browser-key keycodes make sense (`KC_WHOM`, `KC_WFAV`, ...)
+   - Whether idle/RGB layers should be skipped (battery/thermal sensitivity on phones/laptops)
+   - See `references/0009-platform-special-keys.md` for the full cross-platform matrix
+3. **Primary use?** (code / prose / both / gaming / mixed)
+4. **Non-English layout?** (DE / FR / Nordic / none)
+5. **RGB LEDs present?** (yes / no / don't know)
+
+Persist the platform answer to `MISSION.md` under a `## Host` heading and to `NOTES.md` under `## User preferences` so it's recoverable next session. If the workspace's MISSION.md already lists a host, reuse it; if it's missing or `auto`, prompt once.
 
 Then write MISSION.md, NOTES.md, RESOURCES.md using the templates below.
 
-If MISSION.md exists, read it and proceed directly to the phase ladder.
+If MISSION.md exists and lists a host, read it and proceed directly to the phase ladder.
 
 ## End State (when you're done)
 
@@ -168,6 +181,8 @@ If MISSION.md exists, read it and proceed directly to the phase ladder.
 - `references/0005-ripple-and-palettefx.md` — ripple knobs + PaletteFX 6×16 matrix
 - `references/0006-tap-hold-and-combos.md` — 5 tap-hold presets + combos (up to 32 per layout, 3 hardcoded actions: DisableEffects / DisableLighting / Bootloader). Per-combo action choice (not slot-bound). Combo keys are visualized on both TUI and WebUI keyboard previews with red/yellow/gray borders and B/E/L badges.
 - `references/0007-tap-dance.md` — 2-way vs 3-way TD(name), auto-create, validation
+- `references/0008-layout-reachability.md` — character/keycode reachability audit
+- `references/0009-platform-special-keys.md` — HID Consumer codes (0xA8–0xC2), platform compatibility matrix, macOS aliases (`KC_MCTL`, `KC_LPAD`, `KC_ASST`)
 
 ## Lesson Index (numbered CLI flows)
 

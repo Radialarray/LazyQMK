@@ -27,6 +27,7 @@ lazyqmk list-layouts --qmk-path ~/qmk_firmware --keyboard keebart/corne_choc_pro
 | "Which variant?" | If multiple exist (rare); user picks from options |
 | "What keymap name do you want?" | Identity of firmware; affects filename |
 | "Output format: uf2 / hex / bin?" | Determines build target (uf2 = RP2040 standard) |
+| **"Which host OS will you plug into?"** (macOS / Windows / Linux / iOS / cross-platform) | **Always ask, even on follow-up sessions.** Gates which special keys are usable (`KC_MCTL` Mission Control for Mac, `KC_CPNL` Control Panel for Windows, etc.). See `references/0009-platform-special-keys.md` for the matrix. Reuse from MISSION.md if already answered. |
 
 If user is unsure, list options you found. **Never** ask "what vendor" or "do you have a qmk_firmware directory" — those are inferrable.
 
@@ -102,6 +103,20 @@ mkdir -p "$WORKSPACE_DIR/lessons"
 #   - <vendor/keyboard/variant>: e.g., "keebart/corne_choc_pro/standard"
 #   - <LAYOUT_*>: e.g., "LAYOUT_split_3x6_3_ex2"
 #   - N: key count
+#   - Host platform (macOS/Windows/Linux/iOS/cross-platform) — REQUIRED block.
+#     Place under a new `## Host` heading. If the layout already encodes host in
+#     metadata.platform or MISSION.md, reuse it. Otherwise ask once and persist.
+```
+
+When writing MISSION.md, add this block (example for macOS):
+
+```markdown
+## Host
+- Platform: macOS (also reachable as Apple Fn-key consumer codes)
+- Target apps: Spotlight, Mission Control, Launchpad, Karabiner-Elements (if remapped)
+- Notes: KC_MCTL and KC_LPAD will work natively. KC_BRIU/KC_BRID work natively.
+  Do not suggest LGUI(KC_*) replacements for KC_MCTL — raw HID keycode is the
+  whole point of using it.
 ```
 
 ### 6. Write NOTES.md (initial)
