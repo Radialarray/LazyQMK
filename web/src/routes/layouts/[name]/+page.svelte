@@ -39,6 +39,7 @@
 	import { ClipboardManager } from '$lib/utils/clipboard';
 	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
+	import { normaliseComboAction } from '$lib/utils/comboActions';
 	import {
 		shouldCycleLayer,
 		shouldHandleEscape,
@@ -46,14 +47,26 @@
 		isTypingContext
 	} from '$lib/utils/keyboardNavigation';
 	import { layoutSync } from '$stores/layoutSync.svelte';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
-	// Initialize layout as mutable state without referencing props
-	// The $effect below syncs it with data.layout when data changes
-	let layout = $state() as Layout;
-	// React to data changes and sync layout
+	// Initialise layout from the SvelteKit load. We track the route
+	// param (`data.filename`) as the sync trigger instead of the
+	// `data.layout` reference itself, because Svelte 5 wraps the load
+	// result in a `$state` proxy: a fresh proxy is created on every
+	// read, so a `===` (or even `Object.is`) check on `data.layout`
+	// never matches the previous reference. That made the original
+	// `layout = data.layout` effect re-fire on its own write and
+	// produced `effect_update_depth_exceeded` under load.
+	let layout = $state<Layout>(data.layout);
+	let lastSyncedFilename: string | null = null;
 	$effect(() => {
+		// Only re-sync when the loaded layout actually changes
+		// (initial load or route navigation). Hot-reload of the
+		// currently open file is handled by the `layoutSync` effect
+		// below.
+		if (!data || data.filename === lastSyncedFilename) return;
+		lastSyncedFilename = data.filename;
 		layout = data.layout;
 	});
 	let filename = $derived(data.filename);
@@ -71,29 +84,42 @@
 	// `layoutSync.current` so the rest of the editor sees the
 	// up-to-date data after a reload.
 	$effect(() => {
+		// Subscribe to the SSE stream for the open layout. The
+		// `untrack` call is critical: `subscribeToFile` reads
+		// `this.filename` and `this.current` synchronously, and
+		// without `untrack` those reads become tracked dependencies
+		// of this effect, causing it to re-fire on every hot-reload
+		// (and on its own `unsubscribe` cleanup) — a classic
+		// `effect_update_depth_exceeded` loop.
 		if (!filename) return;
-		void layoutSync.subscribeToFile(filename);
+		untrack(() => {
+			void layoutSync.subscribeToFile(filename);
+		});
 		return () => {
-			layoutSync.unsubscribe();
+			untrack(() => {
+				layoutSync.unsubscribe();
+			});
 		};
 	});
-	// Track the last `layoutSync.current` reference we have already
-	// applied to our local `layout`. This must be a plain (non-reactive)
-	// variable so the $effect below does not depend on it — otherwise the
-	// write to `layout` would re-trigger the effect, which would write
-	// `layout` again, etc. (effect_update_depth_exceeded).
-	let lastSyncedRef: Layout | null = null;
+	// Apply hot-reload updates to the local `layout`. We compare
+	// the `metadata.modified` timestamp (a primitive string) rather
+	// than the layout object itself, because Svelte 5's `$state`
+	// proxies have distinct identities from the values they wrap —
+	// so `synced === lastSyncedLayout` is always false, which broke
+	// the previous guard and turned the effect into an infinite loop.
+	let lastSyncedModified: string | null = null;
 	$effect(() => {
 		const synced = layoutSync.current;
-		if (synced && synced !== lastSyncedRef) {
-			lastSyncedRef = synced;
-			// Replace the local copy so the editor sees the new
-			// on-disk content. We do a shallow copy so $state
-			// reactivity kicks in.
-			layout = { ...synced, layers: [...synced.layers] };
-			saveStatus = 'idle';
-			isDirty = false;
-		}
+		if (!synced) return;
+		const stamp = synced.metadata?.modified ?? '';
+		if (!stamp || stamp === lastSyncedModified) return;
+		lastSyncedModified = stamp;
+		// Replace the local copy so the editor sees the new
+		// on-disk content. We do a shallow copy so $state
+		// reactivity kicks in.
+		layout = { ...synced, layers: [...synced.layers] };
+		saveStatus = 'idle';
+		isDirty = false;
 	});
 
 	// Tab navigation
@@ -131,23 +157,24 @@
 	let metadataTagsInput = $state('');
 	let metadataErrors = $state<ValidationError[]>([]);
 
-	// Initialize metadata fields when the layout's *identity* changes
-	// (initial load, hot-reload, or variant switch). Tracking the last
-	// applied layout identity with a plain ref breaks a feedback loop:
-	// `updateMetadataField('tags', ...)` writes
-	// `layout.metadata.tags = tagsResult.tags`, which would otherwise
-	// re-fire this effect and clobber `metadataTagsInput` mid-keystroke
-	// (because tags are normalised — duplicate/empty entries stripped —
-	// before being reassembled into the input string).
-	let lastMetadataSource: Layout | null = null;
+	// Initialise the metadata form fields whenever the loaded layout
+	// identity changes (initial load, hot-reload, or variant switch).
+	// We use the layout's `metadata.modified` timestamp as the change
+	// key instead of the layout reference itself, because Svelte 5's
+	// `$state` proxies never compare equal across reads — so the
+	// previous `layout !== lastMetadataSource` guard always evaluated
+	// to `true` and the effect kept overwriting the user's in-progress
+	// edits on every reactive write.
+	let lastMetadataModified: string | null = null;
 	$effect(() => {
-		if (layout && layout !== lastMetadataSource) {
-			lastMetadataSource = layout;
-			metadataName = layout.metadata.name || '';
-			metadataDescription = layout.metadata.description || '';
-			metadataAuthor = layout.metadata.author || '';
-			metadataTagsInput = (layout.metadata.tags || []).join(', ');
-		}
+		if (!layout) return;
+		const stamp = layout.metadata?.modified ?? '';
+		if (!stamp || stamp === lastMetadataModified) return;
+		lastMetadataModified = stamp;
+		metadataName = layout.metadata.name || '';
+		metadataDescription = layout.metadata.description || '';
+		metadataAuthor = layout.metadata.author || '';
+		metadataTagsInput = (layout.metadata.tags || []).join(', ');
 	});
 
 	// State for keyboard preview
@@ -601,7 +628,7 @@
 		loadGeometry(kb, variant);
 	});
 
-	// Load render metadata when filename or layer changes
+	// Load render metadata when filename changes
 	$effect(() => {
 		if (filename) {
 			loadRenderMetadata(filename);
@@ -1125,7 +1152,7 @@
 				if (visualIndexStr) {
 					markers.push({
 						visualIndex: parseInt(visualIndexStr, 10),
-						action: combo.action,
+						action: normaliseComboAction(combo.action),
 						holdDurationMs: combo.hold_duration_ms
 					});
 				}
@@ -3075,7 +3102,7 @@
 										>
 										<select
 											class="w-full px-3 py-2 border border-border rounded-lg bg-background"
-											value={combo.action}
+											value={normaliseComboAction(combo.action)}
 											onchange={(e) => updateComboSettings('action', e.currentTarget.value, index)}
 										>
 											<option value="disable_effects">Disable Effects</option>
@@ -3083,11 +3110,11 @@
 											<option value="bootloader">Bootloader</option>
 										</select>
 										<p class="text-xs text-muted-foreground mt-1">
-											{#if combo.action === 'disable_effects'}
+											{#if normaliseComboAction(combo.action) === 'disable_effects'}
 												Disable RGB effects and revert to TUI layer colors
-											{:else if combo.action === 'disable_lighting'}
+											{:else if normaliseComboAction(combo.action) === 'disable_lighting'}
 												Turn off all RGB lighting completely
-											{:else if combo.action === 'bootloader'}
+											{:else if normaliseComboAction(combo.action) === 'bootloader'}
 												Enter bootloader mode for firmware flashing
 											{/if}
 										</p>
