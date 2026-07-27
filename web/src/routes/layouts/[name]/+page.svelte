@@ -131,9 +131,18 @@
 	let metadataTagsInput = $state('');
 	let metadataErrors = $state<ValidationError[]>([]);
 
-	// Initialize metadata fields when layout loads
+	// Initialize metadata fields when the layout's *identity* changes
+	// (initial load, hot-reload, or variant switch). Tracking the last
+	// applied layout identity with a plain ref breaks a feedback loop:
+	// `updateMetadataField('tags', ...)` writes
+	// `layout.metadata.tags = tagsResult.tags`, which would otherwise
+	// re-fire this effect and clobber `metadataTagsInput` mid-keystroke
+	// (because tags are normalised — duplicate/empty entries stripped —
+	// before being reassembled into the input string).
+	let lastMetadataSource: Layout | null = null;
 	$effect(() => {
-		if (layout) {
+		if (layout && layout !== lastMetadataSource) {
+			lastMetadataSource = layout;
 			metadataName = layout.metadata.name || '';
 			metadataDescription = layout.metadata.description || '';
 			metadataAuthor = layout.metadata.author || '';
@@ -574,13 +583,22 @@
 		dropdownOpen = false;
 	}
 
-	// Load geometry when layout is available
+	// Load geometry when the keyboard or variant changes. Tracking the
+	// last fetched key with a plain ref breaks the implicit loop where
+	// every `layout = { ...layout }` reassignment (per-keycode edit,
+	// cut/paste, metadata tweak, idle-effect change, …) would otherwise
+	// re-fire this effect and refetch geometry — which in turn can
+	// re-trigger downstream deriveds and surface as
+	// `effect_update_depth_exceeded` under load.
+	let lastGeometryKey = '';
 	$effect(() => {
-		if (layout?.metadata.keyboard && layout?.metadata.layout_variant) {
-			loadGeometry(layout.metadata.keyboard, layout.metadata.layout_variant);
-		} else if (layout?.metadata.keyboard && layout?.metadata.layout) {
-			loadGeometry(layout.metadata.keyboard, layout.metadata.layout);
-		}
+		const kb = layout?.metadata.keyboard;
+		const variant = layout?.metadata.layout_variant || layout?.metadata.layout;
+		if (!kb || !variant) return;
+		const key = `${kb}::${variant}`;
+		if (key === lastGeometryKey) return;
+		lastGeometryKey = key;
+		loadGeometry(kb, variant);
 	});
 
 	// Load render metadata when filename or layer changes

@@ -134,11 +134,20 @@ class LayoutSyncStore {
 	 * Re-fetches the layout from the server. Used by the editor to
 	 * pick up a change after the user chooses "Reload", and by
 	 * the conflict modal as the "auto-reload" path.
+	 *
+	 * No-ops if the server returned the same JSON we already have.
+	 * This guard prevents a feedback loop with `$effect`s that copy
+	 * `current` into a local `$state` and would otherwise re-trigger
+	 * downstream deriveds / fetches on every redundant reload.
 	 */
 	async requestReload(): Promise<void> {
 		if (!this.filename) return;
 		try {
 			const layout = await this.#fetch(this.filename);
+			if (this.current && shallowLayoutEqual(this.current, layout)) {
+				this.lastSyncedMtime = Date.now() / 1000;
+				return;
+			}
 			this.current = layout;
 			this.lastSyncedMtime = Date.now() / 1000;
 			this.pendingReload = 'clean';
@@ -200,7 +209,15 @@ class LayoutSyncStore {
 	}
 
 	async #fetch(filename: string): Promise<Layout> {
-		return await apiClient.getLayout(filename);
+		const layout = await apiClient.getLayout(filename);
+		// Skip the update if the server returned the same JSON we
+		// already have in `current`. A no-op write avoids retriggering
+		// every `$effect`/`$derived` that depends on `current`, which
+		// would otherwise surface as `effect_update_depth_exceeded`.
+		if (this.current && shallowLayoutEqual(this.current, layout)) {
+			return this.current;
+		}
+		return layout;
 	}
 
 	#onEvent(event: LayoutEvent): void {
@@ -237,3 +254,23 @@ class LayoutSyncStore {
 }
 
 export const layoutSync = new LayoutSyncStore();
+
+/**
+ * Best-effort equality check for `Layout` objects. Compares the
+ * `metadata` block and each layer's key list using `JSON.stringify`,
+ * which is good enough for "did anything meaningful change?" — exact
+ * key order and proxy identity are not preserved across fetches, but
+ * that's irrelevant for skipping redundant updates.
+ */
+function shallowLayoutEqual(a: Layout, b: Layout): boolean {
+	if (a === b) return true;
+	if (a.metadata.version !== b.metadata.version) return false;
+	if (a.metadata.modified !== b.metadata.modified) return false;
+	if (a.layers.length !== b.layers.length) return false;
+	try {
+		return JSON.stringify(a.metadata) === JSON.stringify(b.metadata)
+			&& a.layers.every((layer, i) => JSON.stringify(layer.keys) === JSON.stringify(b.layers[i].keys));
+	} catch {
+		return false;
+	}
+}

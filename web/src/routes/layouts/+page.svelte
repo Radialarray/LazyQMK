@@ -3,7 +3,6 @@
 </svelte:head>
 
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { apiClient, subscribeLayoutEvents, type LayoutSummary } from '$api';
 	import { Button, Card } from '$components';
 
@@ -21,16 +20,20 @@
 		}
 	}
 
-	onMount(async () => {
-		await refreshLayouts();
+	// Hot-reload: subscribe to layout file changes so the list reflects
+	// background edits (e.g. an agent CLI). The EventSource auto-reconnects
+	// on error. Using `$effect` with a cleanup return value is the
+	// Svelte 5-idiomatic way to manage teardown — calling `onDestroy`
+	// inside an async `onMount` callback throws
+	// `lifecycle_outside_component` if the component unmounts before
+	// the async body finishes.
+	$effect(() => {
+		void refreshLayouts();
 		loading = false;
-		// Hot-reload: subscribe to layout file changes so the list
-		// reflects background edits (e.g. an agent CLI). The
-		// EventSource auto-reconnects on error.
 		const unsubscribe = subscribeLayoutEvents(() => {
 			void refreshLayouts();
 		});
-		onDestroy(unsubscribe);
+		return unsubscribe;
 	});
 
 	function formatDate(isoDate: string): string {
