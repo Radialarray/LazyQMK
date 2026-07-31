@@ -12,6 +12,7 @@
 		LayerPicker,
 		LayerRefsPanel,
 		LayoutSettings,
+		LayoutVersionsPanel,
 		KeycodePicker,
 		ModifierPicker,
 		CategoryManager,
@@ -368,6 +369,7 @@
 
 	// State for save as template
 	let showSaveTemplateDialog = $state(false);
+	let versionsOpen = $state(false);
 	let templateName = $state('');
 	let templateTags = $state('');
 	let saveTemplateLoading = $state(false);
@@ -2070,6 +2072,9 @@
 					</Button>
 					<Button onclick={openSaveTemplateDialog} variant="outline" data-testid="save-template-button">
 						Save as Template
+					</Button>
+					<Button onclick={() => (versionsOpen = true)} variant="outline" data-testid="versions-button">
+						Versions
 					</Button>
 				</div>
 				<div class="flex flex-wrap items-center justify-end gap-2">
@@ -3886,6 +3891,19 @@
      stream reports an external change while the editor has unsaved
      local edits. -->
 <ConflictReloadModal />
+
+<!-- Layout versioning panel (snapshots, rollback, diff). Triggered
+     from the "Versions" button next to "Save as Template". Auto-refreshes
+     on SSE `RevisionChanged` events so the list stays in sync with
+     other clients (CLI / TUI / WebUI). -->
+{#if filename}
+	<LayoutVersionsPanel
+		open={versionsOpen}
+		layoutName={filename.replace(/\.json$/, '')}
+		onClose={() => (versionsOpen = false)}
+		onChange={() => layoutSync.requestReload()}
+	/>
+{/if}
 
 <!-- Help overlay (press '?' anywhere outside a text input) -->
 {#if helpResult}
