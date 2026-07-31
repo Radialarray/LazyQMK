@@ -67,6 +67,7 @@ pub fn test_layout_basic(rows: usize, cols: usize) -> Layout {
         number: 0,
         name: "Base".to_string(),
         id: "00000000-0000-0000-0000-000000000000".to_string(), // Deterministic UUID
+        description: String::new(),
         default_color: RgbColor::new(255, 255, 255),
         category_id: None,
         keys: base_keys,
@@ -101,6 +102,7 @@ pub fn test_layout_basic(rows: usize, cols: usize) -> Layout {
         number: 1,
         name: "Function".to_string(),
         id: "11111111-1111-1111-1111-111111111111".to_string(), // Deterministic UUID
+        description: String::new(),
         default_color: RgbColor::new(100, 100, 255),
         category_id: None,
         keys: func_keys,

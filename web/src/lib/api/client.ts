@@ -12,6 +12,8 @@ import type {
 	ApiError,
 	ValidationResponse,
 	InspectResponse,
+	LayerRefsResponse,
+	HelpResponse,
 	ExportResponse,
 	GenerateResponse,
 	GenerateJob,
@@ -123,6 +125,16 @@ export class ApiClient {
 
 	async inspectLayout(filename: string): Promise<InspectResponse> {
 		return this.request<InspectResponse>(`/api/layouts/${encodeURIComponent(filename)}/inspect`);
+	}
+
+	layerRefs(filename: string): Promise<LayerRefsResponse> {
+		return this.request<LayerRefsResponse>(
+			`/api/layouts/${encodeURIComponent(filename)}/layer-refs`
+		);
+	}
+
+	async help(): Promise<HelpResponse> {
+		return this.request<HelpResponse>('/api/help');
 	}
 
 	async exportLayout(filename: string): Promise<ExportResponse> {

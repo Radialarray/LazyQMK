@@ -386,6 +386,7 @@ pub(super) async fn create_layout(
     let base_layer = Layer {
         number: 0,
         name: "Base".to_string(),
+        description: String::new(),
         id: uuid::Uuid::new_v4().to_string(),
         default_color: RgbColor::new(255, 255, 255),
         category_id: None,

@@ -124,6 +124,7 @@ export interface Layer {
 	name: string;
 	number?: number;
 	id?: string;
+	description?: string;
 	default_color?: RgbColor;
 	category_id?: string;
 	layer_colors_enabled?: boolean;
@@ -177,6 +178,36 @@ export interface KeycodeInfo {
 	name: string;
 	category: string;
 	description?: string;
+	parameterized?: boolean;
+	params?: KeycodeParamInfo[];
+}
+
+export interface KeycodeParamInfo {
+	type: 'layer' | 'modifier' | 'keycode' | 'tapdance';
+	name: string;
+	description?: string;
+}
+
+// Help response from /api/help
+export interface HelpResponse {
+	app_name: string;
+	version?: string;
+	contexts: HelpContext[];
+}
+
+export interface HelpContext {
+	id: string;
+	name: string;
+	description?: string;
+	bindings: HelpBinding[];
+}
+
+export interface HelpBinding {
+	keys: string[];
+	alt_keys?: string[];
+	action: string;
+	hint?: string;
+	priority: number;
 }
 
 export interface KeycodeListResponse {
@@ -268,6 +299,38 @@ export interface InspectResponse {
 	layers: InspectLayer[];
 	tap_dances: InspectTapDance[];
 	settings: InspectSettings;
+}
+
+// Layer references response
+export interface LayerRefsResponse {
+	layers: LayerRefLayer[];
+	total_inbound_refs: number;
+	total_warnings: number;
+}
+
+export interface LayerRefLayer {
+	number: number;
+	name: string;
+	inbound_count: number;
+	inbound_refs: LayerInboundRef[];
+	warnings: LayerRefWarning[];
+}
+
+export interface LayerInboundRef {
+	from_layer: number;
+	row: number;
+	col: number;
+	kind: string;
+	keycode: string;
+}
+
+export interface LayerRefWarning {
+	from_layer: number;
+	row: number;
+	col: number;
+	keycode: string;
+	target_keycode: string;
+	message: string;
 }
 
 export interface InspectMetadata {

@@ -31,6 +31,7 @@ fn create_test_layout() -> Layout {
         id: "test-layer-0".to_string(),
         number: 0,
         name: "Base".to_string(),
+        description: String::new(),
         default_color: ColorPalette::load()
             .unwrap_or_default()
             .default_layer_color(),

@@ -10,9 +10,12 @@ pub mod export;
 pub mod generate;
 pub mod geometry;
 pub mod health;
+pub mod help;
 pub mod inspect;
 pub mod keycodes;
+pub mod layer_refs;
 pub mod layouts;
+pub mod tap_dance;
 pub mod templates;
 pub mod validate;
 
@@ -36,6 +39,13 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health::health_check))
         // Effects
         .route("/api/effects", get(health::list_effects))
+        // Help (sourced from src/data/help.toml — same as TUI help overlay)
+        .route("/api/help", get(help::get_help))
+        // Tap dance validation
+        .route(
+            "/api/layouts/{filename}/tap-dance/validate",
+            get(tap_dance::tap_dance_validate),
+        )
         // Layout endpoints
         .route("/api/layouts", get(layouts::list_layouts))
         .route("/api/layouts/{filename}", get(layouts::get_layout).put(layouts::save_layout))
@@ -45,6 +55,10 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/layouts/{filename}/validate", get(validate::validate_layout))
         .route("/api/layouts/{filename}/inspect", get(inspect::inspect_layout))
+        .route(
+            "/api/layouts/{filename}/layer-refs",
+            get(layer_refs::layer_refs),
+        )
         .route("/api/layouts/{filename}/export", get(export::export_layout))
         .route(
             "/api/layouts/{filename}/render-metadata",

@@ -16,6 +16,7 @@
 
 	let editingLayerIndex = $state<number | null>(null);
 	let editingLayerName = $state('');
+	let editingLayerDescription = $state('');
 	let colorPickerLayerIndex = $state<number | null>(null);
 	let deleteBlockedMessage = $state<string | null>(null);
 	let actionPanelLayerIndex = $state<number | null>(null);
@@ -78,21 +79,25 @@
 	function startRename(index: number) {
 		editingLayerIndex = index;
 		editingLayerName = layers[index].name;
+		editingLayerDescription = layers[index].description ?? '';
 	}
 
 	function saveRename() {
 		if (editingLayerIndex !== null && editingLayerName.trim()) {
 			const newLayers = [...layers];
 			newLayers[editingLayerIndex].name = editingLayerName.trim();
+			newLayers[editingLayerIndex].description = editingLayerDescription.trim();
 			onLayersChange(newLayers);
 		}
 		editingLayerIndex = null;
 		editingLayerName = '';
+		editingLayerDescription = '';
 	}
 
 	function cancelRename() {
 		editingLayerIndex = null;
 		editingLayerName = '';
+		editingLayerDescription = '';
 	}
 
 	function moveLayerUp(index: number) {
@@ -240,26 +245,46 @@
 						</button>
 
 						{#if editingLayerIndex === i}
-							<div class="flex items-center gap-2 flex-1 max-w-xs">
-								<Input
-									value={editingLayerName}
-									oninput={(e) => (editingLayerName = e.currentTarget.value)}
-									placeholder="Layer name"
-									class="text-sm"
-								/>
-								<Button onclick={saveRename} size="sm">Save</Button>
-								<Button onclick={cancelRename} size="sm" variant="ghost">Cancel</Button>
+							<div class="flex flex-col gap-2 flex-1 max-w-md">
+								<div class="flex items-center gap-2">
+									<Input
+										value={editingLayerName}
+										oninput={(e) => (editingLayerName = e.currentTarget.value)}
+										placeholder="Layer name"
+										class="text-sm"
+									/>
+									<Button onclick={saveRename} size="sm">Save</Button>
+									<Button onclick={cancelRename} size="sm" variant="ghost">Cancel</Button>
+								</div>
+								<textarea
+									value={editingLayerDescription}
+									oninput={(e) => (editingLayerDescription = e.currentTarget.value)}
+									placeholder="Optional: what this layer is for (e.g. 'Symbols and brackets for coding')"
+									rows="2"
+									class="w-full px-3 py-2 border border-border rounded-lg bg-background resize-y text-sm"
+									data-testid="layer-description-edit-{i}"
+								></textarea>
 							</div>
 						{:else}
-							<div class="flex items-center gap-2">
-								<span class="font-medium">{layer.name}</span>
-								<button
-									onclick={() => startRename(i)}
-									class="text-sm text-muted-foreground hover:text-foreground"
-									title="Rename"
-								>
-									✏️
-								</button>
+							<div class="flex flex-col gap-1">
+								<div class="flex items-center gap-2">
+									<span class="font-medium">{layer.name}</span>
+									<button
+										onclick={() => startRename(i)}
+										class="text-sm text-muted-foreground hover:text-foreground"
+										title="Rename"
+									>
+										✏️
+									</button>
+								</div>
+								{#if layer.description}
+									<p
+										class="text-xs text-muted-foreground"
+										data-testid="layer-description-{i}"
+									>
+										{layer.description}
+									</p>
+								{/if}
 							</div>
 						{/if}
 					</div>

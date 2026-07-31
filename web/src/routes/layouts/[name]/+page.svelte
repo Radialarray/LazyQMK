@@ -4,12 +4,16 @@
 		Button,
 		Card,
 		ConflictReloadModal,
+		HelpOverlay,
 		KeyboardPreview,
 		Input,
 		Tabs,
 		LayerManager,
+		LayerPicker,
+		LayerRefsPanel,
 		LayoutSettings,
 		KeycodePicker,
+		ModifierPicker,
 		CategoryManager,
 		ColorPicker
 	} from '$components';
@@ -22,6 +26,10 @@
 		TapDance,
 		ValidationResponse,
 		InspectResponse,
+		KeycodeInfo,
+		KeycodeParamInfo,
+		LayerRefsResponse,
+		HelpResponse,
 		ExportResponse,
 		GenerateResponse,
 		GenerateJob,
@@ -41,6 +49,7 @@
 	import { getNavigationTarget, shouldBlockNavigation } from '$lib/utils/navigationGuard';
 	import { validateName, parseAndValidateTags, type ValidationError } from '$lib/utils/metadata';
 	import { normaliseComboAction } from '$lib/utils/comboActions';
+	import { parseComboKeycode, reassembleCombo, describeHold, type ParsedCombo } from '$lib/utils/comboKeycodes';
 	import {
 		shouldCycleLayer,
 		shouldHandleEscape,
@@ -220,6 +229,10 @@
 	let validationLoading = $state(false);
 	let inspectResult = $state<InspectResponse | null>(null);
 	let inspectLoading = $state(false);
+	let layerRefsResult = $state<LayerRefsResponse | null>(null);
+	let layerRefsLoading = $state(false);
+	let helpResult = $state<HelpResponse | null>(null);
+	let helpOpen = $state(false);
 	let exportResult = $state<ExportResponse | null>(null);
 	let exportLoading = $state(false);
 	let generateResult = $state<GenerateResponse | null>(null);
@@ -800,13 +813,20 @@
 	 * Handle global keyboard shortcuts (layer cycling, escape, enter)
 	 */
 	function handleGlobalKeydown(event: KeyboardEvent) {
+		// '?' opens the help overlay (skip when typing in a text input).
+		if (event.key === '?' && !isTypingContext()) {
+			event.preventDefault();
+			void openHelp();
+			return;
+		}
+
 		// Layer cycling with [ and ]
 		const cycleDirection = shouldCycleLayer(event);
 		if (cycleDirection !== null && layout) {
 			event.preventDefault();
 			const currentIndex = selectedLayerIndex;
 			const layerCount = layout.layers.length;
-			
+
 			if (cycleDirection === 'prev') {
 				handleLayerChange((currentIndex - 1 + layerCount) % layerCount);
 			} else {
@@ -814,7 +834,7 @@
 			}
 			return;
 		}
-		
+
 		// Shift+W for swap mode
 		if (!isTypingContext() && event.shiftKey && event.key.toLowerCase() === 'w') {
 			event.preventDefault();
@@ -1050,6 +1070,13 @@
 	function handleKeycodeSelect(keycode: string) {
 		if (!layout) return;
 
+		// If we're mid-chain on a parameterized keycode, this keycode is the
+		// value of the next param (most often a `keycode` type slot).
+		if (chainState) {
+			collectChainValue(keycode);
+			return;
+		}
+
 		if (tapDancePickerIndex !== null && tapDancePickerField) {
 			updateTapDance(tapDancePickerIndex, tapDancePickerField, keycode);
 			handleKeycodePickerClose();
@@ -1057,19 +1084,19 @@
 		}
 
 		if (editingKeyVisualIndex === null) return;
-		
+
 		// Find the key in the current layer and update its keycode
 		const keyIndex = layout.layers[selectedLayerIndex].keys.findIndex(
 			(k) => k.visual_index === editingKeyVisualIndex
 		);
-		
+
 		if (keyIndex !== -1) {
 			layout.layers[selectedLayerIndex].keys[keyIndex].keycode = keycode;
 			layout.layers = [...layout.layers]; // Trigger reactivity
 			isDirty = true;
 			clearRenderMetadataForKeys([editingKeyVisualIndex]);
 		}
-		
+
 		keycodePickerOpen = false;
 		editingKeyVisualIndex = null;
 	}
@@ -1079,6 +1106,192 @@
 		editingKeyVisualIndex = null;
 		tapDancePickerIndex = null;
 		tapDancePickerField = null;
+		chainState = null;
+	}
+
+	// --- Parameterized keycode chain (LT/MT/LCG/TD/etc.) ---
+	interface ChainState {
+		prefix: string; // e.g. "LT()", "MT()", "TD()"
+		paramTypes: Array<'layer' | 'modifier' | 'keycode' | 'tapdance'>;
+		collected: string[];
+		title: string;
+		// When set, this is the per-edit context for the final keycode (tap dance, etc.)
+		tapDanceContext?: { index: number; field: 'single_tap' | 'double_tap' | 'hold' };
+		// Combo part edit context (edit one side of an existing LT/MT/LM/LCG/TD keycode)
+		comboEdit?: {
+			original: ParsedCombo;
+			part: 'hold' | 'tap';
+		};
+	}
+
+	let chainState = $state<ChainState | null>(null);
+	let chainLayerPickerOpen = $state(false);
+	let chainModifierPickerOpen = $state(false);
+	let chainKeycodePickerOpen = $state(false);
+
+	function startKeycodeChain(info: KeycodeInfo) {
+		if (!info.parameterized || !info.params || info.params.length === 0) {
+			handleKeycodeSelect(info.code);
+			return;
+		}
+
+		const paramTypes = info.params.map((p) => p.type);
+		// For tap-dance picker context, the parent already opened the KeycodePicker
+		// for editing a tap dance field — keep that context so the final assembled
+		// value lands in the right slot instead of on the key.
+		const tapDanceContext =
+			tapDancePickerIndex !== null && tapDancePickerField
+				? { index: tapDancePickerIndex, field: tapDancePickerField }
+				: undefined;
+
+		chainState = {
+			prefix: info.code,
+			paramTypes,
+			collected: [],
+			title: info.name,
+			tapDanceContext
+		};
+		keycodePickerOpen = false; // Hide the prefix picker; chain dialogs take over.
+		advanceChain();
+	}
+
+	function advanceChain() {
+		if (!chainState) return;
+		const next = chainState.paramTypes[chainState.collected.length];
+		if (!next) {
+			finishChain();
+			return;
+		}
+		if (next === 'layer') {
+			chainLayerPickerOpen = true;
+		} else if (next === 'modifier') {
+			chainModifierPickerOpen = true;
+		} else if (next === 'keycode') {
+			chainKeycodePickerOpen = true;
+		} else if (next === 'tapdance') {
+			// TD() needs a tap dance name. Reuse existing tap dances list.
+			if (layout && layout.tap_dances && layout.tap_dances.length > 0) {
+				// Fall through to KeycodePicker with a tap-dance-only filter would
+				// be ideal; for v1 we still open the regular KeycodePicker and let
+				// the user type a TD(name) string manually if no tap dances exist.
+				// Simpler: open KeycodePicker; user types TD(name) themselves.
+				chainKeycodePickerOpen = true;
+			} else {
+				chainKeycodePickerOpen = true;
+			}
+		}
+	}
+
+	function collectChainValue(value: string) {
+		if (!chainState) return;
+		chainState.collected.push(value);
+		chainLayerPickerOpen = false;
+		chainModifierPickerOpen = false;
+		chainKeycodePickerOpen = false;
+		advanceChain();
+	}
+
+	function finishChain() {
+		if (!chainState) return;
+
+		// Combo part edit: only the selected side changed, the other is preserved.
+		if (chainState.comboEdit) {
+			const { original, part } = chainState.comboEdit;
+			const newValue = chainState.collected[0] ?? '';
+			const updated =
+				part === 'hold' ? { hold: newValue } : { tap: newValue };
+			const assembled = reassembleCombo(original, updated);
+			chainState = null;
+			applyComboPartEdit(assembled);
+			return;
+		}
+
+		const assembled = assembleKeycode(chainState.prefix, chainState.collected);
+		chainState = null;
+		if (!layout) return;
+		handleKeycodeSelect(assembled);
+	}
+
+	function assembleKeycode(prefix: string, values: string[]): string {
+		// LT(layer, key), MT(mod, key), LM(layer, mod), LCG(key), TD(name), etc.
+		const open = prefix.indexOf('(');
+		const name = prefix.slice(0, open);
+		return `${name}(${values.join(', ')})`;
+	}
+
+	function cancelChain() {
+		chainState = null;
+		chainLayerPickerOpen = false;
+		chainModifierPickerOpen = false;
+		chainKeycodePickerOpen = false;
+	}
+
+	// Combo part editor (edit hold or tap of an existing LT/MT/LM/LCG/TD keycode).
+	function openComboPartEditor(part: 'hold' | 'tap', combo: ParsedCombo) {
+		if (part === 'hold') {
+			if (combo.holdIsLayer) {
+				chainState = {
+					prefix: combo.prefix,
+					paramTypes: ['layer'],
+					collected: [],
+					title: `${combo.prefix} — edit hold (layer)`,
+					tapDanceContext: undefined,
+					comboEdit: { original: combo, part }
+				};
+				chainLayerPickerOpen = true;
+			} else if (combo.holdIsModifier) {
+				chainState = {
+					prefix: combo.prefix,
+					paramTypes: ['modifier'],
+					collected: [],
+					title: `${combo.prefix} — edit hold (modifier)`,
+					tapDanceContext: undefined,
+					comboEdit: { original: combo, part }
+				};
+				chainModifierPickerOpen = true;
+			} else {
+				chainState = {
+					prefix: combo.prefix,
+					paramTypes: ['keycode'],
+					collected: [],
+					title: `${combo.prefix} — edit hold`,
+					tapDanceContext: undefined,
+					comboEdit: { original: combo, part }
+				};
+				chainKeycodePickerOpen = true;
+			}
+		} else {
+			chainState = {
+				prefix: combo.prefix,
+				paramTypes: ['keycode'],
+				collected: [],
+				title: `${combo.prefix} — edit tap`,
+				tapDanceContext: undefined,
+				comboEdit: { original: combo, part }
+			};
+			chainKeycodePickerOpen = true;
+		}
+	}
+
+	/**
+	 * Replace the keycode of the currently selected key with the assembled
+	 * combo part-edit result. Triggered from the chain handlers when the
+	 * chain is in 'combo part edit' mode.
+	 */
+	function applyComboPartEdit(assembled: string) {
+		if (!layout || editingKeyVisualIndex === null) {
+			handleKeycodeSelect(assembled);
+			return;
+		}
+		const keyIndex = layout.layers[selectedLayerIndex].keys.findIndex(
+			(k) => k.visual_index === editingKeyVisualIndex
+		);
+		if (keyIndex !== -1) {
+			layout.layers[selectedLayerIndex].keys[keyIndex].keycode = assembled;
+			layout.layers = [...layout.layers];
+			isDirty = true;
+			clearRenderMetadataForKeys([editingKeyVisualIndex]);
+		}
 	}
 
 	function openTapDancePicker(index: number, field: 'single_tap' | 'double_tap' | 'hold') {
@@ -1615,6 +1828,35 @@
 		}
 	}
 
+	// Layer references & transparency warnings
+	async function runLayerRefs() {
+		if (!filename) return;
+		layerRefsLoading = true;
+		try {
+			layerRefsResult = await apiClient.layerRefs(filename);
+		} catch (e) {
+			layerRefsResult = null;
+		} finally {
+			layerRefsLoading = false;
+		}
+	}
+
+	// Help overlay (sourced from src/data/help.toml via /api/help)
+	async function openHelp() {
+		if (!helpResult) {
+			try {
+				helpResult = await apiClient.help();
+			} catch (e) {
+				helpResult = null;
+			}
+		}
+		helpOpen = true;
+	}
+
+	function closeHelp() {
+		helpOpen = false;
+	}
+
 	// Export
 	async function runExport() {
 		if (!filename) return;
@@ -1631,7 +1873,7 @@
 	async function runReviewWorkflow() {
 		if (!filename) return;
 		reviewState = 'running';
-		await Promise.all([runValidation(), runInspect(), runExport()]);
+		await Promise.all([runValidation(), runInspect(), runLayerRefs(), runExport()]);
 		reviewState = 'done';
 	}
 
@@ -2442,6 +2684,68 @@
 								</div>
 							</div>
 
+							<!-- Combo Parts (LT/MT/LM/LCG/TD/MEH_T/...) -->
+							{#if selectedKey && parseComboKeycode(selectedKey.keycode)}
+								{@const combo = parseComboKeycode(selectedKey.keycode)!}
+								{#if combo}
+								<div class="rounded-lg border border-border bg-muted/10 p-3 space-y-2" data-testid="combo-parts-section">
+									<div class="flex items-center justify-between">
+										<p class="text-xs font-medium text-muted-foreground">
+											Combo parts
+										</p>
+										<span class="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+											{combo.prefix}
+										</span>
+									</div>
+									<dl class="space-y-2 text-xs">
+										<div class="flex items-center justify-between gap-2">
+											<dt class="text-muted-foreground">
+												{combo.holdIsLayer ? 'Hold (layer)' : combo.holdIsModifier ? 'Hold (modifier)' : 'Hold'}
+											</dt>
+											<dd class="flex items-center gap-2 min-w-0">
+												<code
+													class="font-mono bg-background border border-border px-1.5 py-0.5 rounded truncate max-w-[140px]"
+													data-testid="combo-hold-value"
+												>
+													{describeHold(combo)}
+												</code>
+												<Button
+													onclick={() => openComboPartEditor('hold', combo)}
+													size="sm"
+													variant="outline"
+													data-testid="combo-edit-hold-button"
+												>
+													Edit
+												</Button>
+											</dd>
+										</div>
+										<div class="flex items-center justify-between gap-2">
+											<dt class="text-muted-foreground">Tap</dt>
+											<dd class="flex items-center gap-2 min-w-0">
+												<code
+													class="font-mono bg-background border border-border px-1.5 py-0.5 rounded truncate max-w-[140px]"
+													data-testid="combo-tap-value"
+												>
+													{combo.tap}
+												</code>
+												<Button
+													onclick={() => openComboPartEditor('tap', combo)}
+													size="sm"
+													variant="outline"
+													data-testid="combo-edit-tap-button"
+												>
+													Edit
+												</Button>
+											</dd>
+										</div>
+									</dl>
+									<p class="text-[11px] text-muted-foreground">
+										Edit just one side without rewriting the other.
+									</p>
+								</div>
+								{/if}
+							{/if}
+
 							<!-- Key Color Override -->
 							<div>
 								<p class="block text-xs font-medium text-muted-foreground mb-2">Color Override</p>
@@ -2957,7 +3261,33 @@
 
 					<div class="rounded-lg border border-border p-4 bg-background">
 						<div class="flex items-center justify-between gap-4 mb-3">
-							<h3 class="font-medium">3. Export preview</h3>
+							<h3 class="font-medium">3. Layer references</h3>
+							<Button
+								size="sm"
+								variant="outline"
+								onclick={runLayerRefs}
+								disabled={layerRefsLoading}
+								data-testid="run-layer-refs-button"
+							>
+								{layerRefsLoading ? 'Loading...' : 'Refresh refs'}
+							</Button>
+						</div>
+						{#if layerRefsResult}
+							<LayerRefsPanel
+								layers={layerRefsResult.layers}
+								totalInbound={layerRefsResult.total_inbound_refs}
+								totalWarnings={layerRefsResult.total_warnings}
+							/>
+						{:else}
+							<p class="text-sm text-muted-foreground">
+								Inspect inbound layer references and transparency conflicts before building.
+							</p>
+						{/if}
+					</div>
+
+					<div class="rounded-lg border border-border p-4 bg-background">
+						<div class="flex items-center justify-between gap-4 mb-3">
+							<h3 class="font-medium">4. Export preview</h3>
 							<div class="flex gap-2">
 								<Button size="sm" variant="outline" onclick={runExport} disabled={exportLoading}>{exportLoading ? 'Exporting...' : 'Refresh export'}</Button>
 								{#if exportResult}<Button size="sm" onclick={downloadExport}>Download</Button>{/if}
@@ -3417,10 +3747,46 @@
 	bind:open={keycodePickerOpen}
 	onClose={handleKeycodePickerClose}
 	onSelect={handleKeycodeSelect}
+	onParameterizedSelect={startKeycodeChain}
 	currentKeycode={editingKeyVisualIndex !== null
 		? currentLayerKeys.find((k) => k.visual_index === editingKeyVisualIndex)?.keycode
 		: undefined}
 />
+
+<!-- Parameterized keycode chain: Layer picker (next param is a layer) -->
+{#if layout}
+	<LayerPicker
+		open={chainLayerPickerOpen}
+		layers={layout.layers.map((layer, idx) => ({
+			index: idx,
+			name: layer.name,
+			id: layer.id
+		}))}
+		onSelect={(layer) => {
+			const ref = layer.id ? `@${layer.id}` : String(layer.index);
+			collectChainValue(ref);
+		}}
+		onClose={cancelChain}
+		title={chainState ? `${chainState.title} — pick layer` : 'Pick layer'}
+		description="This layer becomes the target of the hold (or activation) part of the keycode."
+	/>
+
+	<!-- Parameterized keycode chain: Modifier picker (next param is a modifier) -->
+	<ModifierPicker
+		open={chainModifierPickerOpen}
+		onSelect={(mod) => collectChainValue(mod)}
+		onClose={cancelChain}
+		title={chainState ? `${chainState.title} — pick modifier` : 'Pick modifier'}
+	/>
+
+	<!-- Parameterized keycode chain: nested Keycode picker (next param is a keycode) -->
+	<KeycodePicker
+		open={chainKeycodePickerOpen}
+		onClose={cancelChain}
+		onSelect={(keycode) => collectChainValue(keycode)}
+		currentKeycode={undefined}
+	/>
+{/if}
 
 <AccessibleDialog
 	open={leaveDialogOpen}
@@ -3520,3 +3886,13 @@
      stream reports an external change while the editor has unsaved
      local edits. -->
 <ConflictReloadModal />
+
+<!-- Help overlay (press '?' anywhere outside a text input) -->
+{#if helpResult}
+	<HelpOverlay
+		open={helpOpen}
+		onClose={closeHelp}
+		contexts={helpResult.contexts}
+		appName={helpResult.app_name}
+	/>
+{/if}

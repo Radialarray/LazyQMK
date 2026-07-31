@@ -12,9 +12,16 @@
 		onSelect: (keycode: string) => void;
 		/** Optional current keycode to highlight */
 		currentKeycode?: string;
+		/**
+		 * Optional callback when a parameterized keycode prefix is selected
+		 * (LT/MT/LCG/TD/etc.). Receives the keycode info so the parent can
+		 * chain into LayerPicker / ModifierPicker / nested KeycodePicker.
+		 */
+		onParameterizedSelect?: (keycode: KeycodeInfo) => void;
 	}
 
-	let { open = $bindable(), onClose, onSelect, currentKeycode = '' }: Props = $props();
+	let { open = $bindable(), onClose, onSelect, currentKeycode = '', onParameterizedSelect }: Props =
+		$props();
 
 	// State
 	let searchQuery = $state('');
@@ -79,8 +86,12 @@
 		}
 	}
 
-	function handleSelectKeycode(keycode: string) {
-		onSelect(keycode);
+	function handleSelectKeycode(keycode: KeycodeInfo) {
+		if (keycode.parameterized && keycode.params && keycode.params.length > 0 && onParameterizedSelect) {
+			onParameterizedSelect(keycode);
+			return;
+		}
+		onSelect(keycode.code);
 		onClose();
 	}
 
@@ -254,14 +265,26 @@
 						{#each keycodes as keycode}
 							{@const isCurrent = keycode.code === currentKeycode}
 							<button
-								onclick={() => handleSelectKeycode(keycode.code)}
+								onclick={() => handleSelectKeycode(keycode)}
 								class="p-3 text-left rounded-lg border border-border hover:bg-accent transition-colors
 									{isCurrent ? 'ring-2 ring-primary' : ''}"
 								data-testid="keycode-option-{keycode.code}"
 							>
 								<div class="flex items-start justify-between gap-3">
 									<div>
-										<div class="font-mono text-sm font-medium">{keycode.code}</div>
+										<div class="font-mono text-sm font-medium">
+											{keycode.code}
+											{#if keycode.parameterized}
+												<span
+													class="ml-2 inline-flex items-center rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+													data-testid="keycode-parameterized-badge"
+												>
+													Needs {keycode.params?.length ?? 0} param{keycode.params?.length === 1
+														? ''
+														: 's'}
+												</span>
+											{/if}
+										</div>
 										<div class="text-xs text-muted-foreground mt-1">
 											{keycode.name}
 											{#if isCurrent}
@@ -274,7 +297,16 @@
 									</span>
 								</div>
 								<div class="text-xs text-muted-foreground mt-2">
-									Press to assign this keycode
+									{#if keycode.parameterized && keycode.params}
+										{#each keycode.params as param (param.name + param.type)}
+											<span class="inline-block mr-2">
+												<strong class="text-foreground">{param.name}:</strong>
+												{param.type}
+											</span>
+										{/each}
+									{:else}
+										Press to assign this keycode
+									{/if}
 								</div>
 								{#if keycode.description}
 									<div class="text-xs text-muted-foreground mt-1 line-clamp-2">

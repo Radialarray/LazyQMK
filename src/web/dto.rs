@@ -69,15 +69,49 @@ pub struct KeycodeInfo {
     /// Optional description of the keycode.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// True if this keycode requires additional parameters (LT, MO, LCG, TD, ...).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameterized: Option<bool>,
+    /// Parameter descriptors for parameterized keycodes, in collection order.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub params: Option<Vec<KeycodeParamDto>>,
+}
+
+/// Single parameter descriptor for a parameterized keycode.
+#[derive(Debug, Serialize)]
+pub struct KeycodeParamDto {
+    /// Type of the parameter ("layer" / "modifier" / "keycode" / "tapdance").
+    #[serde(rename = "type")]
+    pub param_type: String,
+    /// Display name (e.g. "layer", "keycode").
+    pub name: String,
+    /// Optional description shown above the picker.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 impl From<&KeycodeDefinition> for KeycodeInfo {
     fn from(kc: &KeycodeDefinition) -> Self {
+        let params: Vec<KeycodeParamDto> = kc
+            .params
+            .iter()
+            .map(|p| KeycodeParamDto {
+                param_type: serde_json::to_value(p.param_type)
+                    .ok()
+                    .and_then(|v| v.as_str().map(std::string::ToString::to_string))
+                    .unwrap_or_else(|| "keycode".to_string()),
+                name: p.name.clone(),
+                description: p.description.clone(),
+            })
+            .collect();
+        let parameterized = if !kc.params.is_empty() { Some(true) } else { None };
         Self {
             code: kc.code.clone(),
             name: kc.name.clone(),
             category: kc.category.clone(),
             description: kc.description.clone(),
+            parameterized,
+            params: if params.is_empty() { None } else { Some(params) },
         }
     }
 }
@@ -677,6 +711,9 @@ pub struct LayerDto {
     pub number: u8,
     /// Human-readable name
     pub name: String,
+    /// Optional human-readable description of what this layer is for
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub description: String,
     /// Base color for all keys on this layer
     pub default_color: RgbColor,
     /// Optional category assignment for entire layer
@@ -790,6 +827,9 @@ pub struct LayerSaveDto {
     pub number: Option<u8>,
     /// Human-readable name
     pub name: String,
+    /// Optional human-readable description (what this layer is for)
+    #[serde(default)]
+    pub description: Option<String>,
     /// Base color for all keys on this layer
     #[serde(default)]
     pub default_color: Option<RgbColor>,

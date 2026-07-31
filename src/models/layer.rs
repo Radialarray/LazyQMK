@@ -189,6 +189,10 @@ pub struct Layer {
     pub number: u8,
     /// Human-readable name (e.g., "Base", "Lower", "Raise")
     pub name: String,
+    /// Optional human-readable description of what this layer is for
+    /// (e.g., "Symbols and brackets for coding"). Empty by default.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     /// Base color for all keys on this layer (lowest priority)
     pub default_color: RgbColor,
     /// Optional category assignment for entire layer
@@ -242,6 +246,7 @@ impl Layer {
             id: generate_layer_id(),
             number,
             name,
+            description: String::new(),
             default_color,
             category_id: None,
             keys: Vec::new(),

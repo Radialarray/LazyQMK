@@ -48,6 +48,7 @@ fn create_test_layout_with_layers() -> Layout {
 
     // Create 3 layers
     let layer0 = Layer {
+        description: String::new(),
         number: 0,
         name: "Base".to_string(),
         id: uuid::Uuid::new_v4().to_string(),
@@ -58,6 +59,7 @@ fn create_test_layout_with_layers() -> Layout {
     };
 
     let layer1 = Layer {
+        description: String::new(),
         number: 1,
         name: "Lower".to_string(),
         id: uuid::Uuid::new_v4().to_string(),
@@ -68,6 +70,7 @@ fn create_test_layout_with_layers() -> Layout {
     };
 
     let layer2 = Layer {
+        description: String::new(),
         number: 2,
         name: "Raise".to_string(),
         id: uuid::Uuid::new_v4().to_string(),

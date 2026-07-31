@@ -107,6 +107,7 @@ fn convert_dto_to_layout(dto: LayoutSaveDto) -> Layout {
                     .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
                 number: layer_dto.number.unwrap_or(idx as u8),
                 name: layer_dto.name,
+                description: layer_dto.description.unwrap_or_default(),
                 default_color: layer_dto
                     .default_color
                     .unwrap_or_else(|| RgbColor::new(0, 0, 0)),
@@ -403,6 +404,7 @@ pub(super) async fn get_layout(
                 id: layer.id.clone(),
                 number: layer.number,
                 name: layer.name.clone(),
+                description: layer.description.clone(),
                 default_color: layer.default_color,
                 category_id: layer.category_id.clone(),
                 keys,

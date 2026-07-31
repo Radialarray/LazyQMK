@@ -48,6 +48,7 @@ pub(super) fn create_test_layout() -> Layout {
     }
 
     let layer0 = Layer {
+        description: String::new(),
         number: 0,
         name: "Base".to_string(),
         id: uuid::Uuid::new_v4().to_string(),
@@ -63,6 +64,7 @@ pub(super) fn create_test_layout() -> Layout {
     layer1_keys[1].keycode = "KC_TRNS".to_string();
 
     let layer1 = Layer {
+        description: String::new(),
         number: 1,
         name: "Function".to_string(),
         id: uuid::Uuid::new_v4().to_string(),
