@@ -28,18 +28,21 @@
 		showCloseButton = true
 	}: Props = $props();
 
-	function handleKeydown(event: KeyboardEvent) {
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (!open) return;
 		if (event.key === 'Escape') {
+			event.preventDefault();
 			onClose();
 		}
 	}
 </script>
 
+<svelte:window onkeydown={handleWindowKeydown} />
+
 {#if open}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
 		onclick={onClose}
-		onkeydown={handleKeydown}
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby={titleId}

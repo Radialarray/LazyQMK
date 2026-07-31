@@ -192,9 +192,10 @@ test.describe('Layer Default Color', () => {
 		// Click Set Color button for first layer
 		await page.click('[data-testid="layer-0-color-button"]');
 
-		// Color picker should be visible
+		// Color picker should be visible inside a modal
 		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
-		await expect(page.locator('text=Set Default Color for Base')).toBeVisible();
+		await expect(page.locator('#layer-color-picker-title')).toHaveText('Layer Default Color');
+		await expect(page.locator('text=Set the default color for Base')).toBeVisible();
 		await expect(page.locator('text=Preset colors')).toBeVisible();
 	});
 
@@ -208,8 +209,8 @@ test.describe('Layer Default Color', () => {
 		// Wait for color picker to be visible
 		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
 
-		// Click a preset color (red)
-		await page.click('button[title="#FF0000"]');
+		// Click a preset color (red) — aria-label embeds the hex
+		await page.click('button[aria-label*="#FF0000"]');
 
 		// Color picker should close
 		await expect(page.locator('[data-testid="layer-color-picker"]')).not.toBeVisible();
@@ -252,8 +253,8 @@ test.describe('Layer Default Color', () => {
 		// Wait for color picker to be visible
 		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
 
-		// Click a preset color (green)
-		await page.click('button[title="#00FF00"]');
+		// Click a preset color (green) — aria-label embeds the hex
+		await page.click('button[aria-label*="#00FF00"]');
 
 		// Save layout
 		await page.click('[data-testid="save-button"]');
@@ -282,24 +283,51 @@ test.describe('Layer Default Color', () => {
 
 		// Verify explanation text is visible
 		await expect(
-			page.locator("text=This color will be applied to all keys on this layer that don't have a higher-priority color")
+			page.locator("text=Applies to keys on this layer that have no individual or category color.")
 		).toBeVisible();
 	});
 
-	test('should close color picker when clicking X button', async ({ page }) => {
-		// Navigate to Layers tab
+	test('should show global-brightness caption inside the modal', async ({ page }) => {
 		await page.click('text=Layers');
-
-		// Click Set Color button
 		await page.click('[data-testid="layer-0-color-button"]');
 
-		// Wait for color picker to be visible
+		const caption = page.locator('[data-testid="layer-color-brightness-caption"]');
+		await expect(caption).toBeVisible();
+		await expect(caption).toContainText('Brightness for uncolored keys on this layer follows the global setting');
+		await expect(caption).toContainText('Settings → Background Lighting');
+	});
+
+	test('should close modal via Escape key', async ({ page }) => {
+		await page.click('text=Layers');
+		await page.click('[data-testid="layer-0-color-button"]');
+
 		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
 
-		// Click X button to close
-		await page.click('[data-testid="layer-color-picker"] button:has-text("✕")');
+		await page.keyboard.press('Escape');
 
-		// Color picker should close
+		await expect(page.locator('[data-testid="layer-color-picker"]')).not.toBeVisible();
+	});
+
+	test('should close modal via backdrop click', async ({ page }) => {
+		await page.click('text=Layers');
+		await page.click('[data-testid="layer-1-color-button"]');
+
+		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
+
+		// Click far outside the modal content (top-left corner of backdrop)
+		await page.locator('[role="dialog"]').click({ position: { x: 5, y: 5 } });
+
+		await expect(page.locator('[data-testid="layer-color-picker"]')).not.toBeVisible();
+	});
+
+	test('should close modal via Done button', async ({ page }) => {
+		await page.click('text=Layers');
+		await page.click('[data-testid="layer-0-color-button"]');
+
+		await expect(page.locator('[data-testid="layer-color-picker"]')).toBeVisible();
+
+		await page.click('[data-testid="layer-color-picker-done"]');
+
 		await expect(page.locator('[data-testid="layer-color-picker"]')).not.toBeVisible();
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Card, Input, ColorPicker } from '$components';
+	import { Button, Card, Input, ColorPicker, AccessibleDialog } from '$components';
 	import { rgbToHex } from '$lib/utils/colorResolution';
 	import type { Layer, RgbColor } from '$api/types';
 
@@ -8,9 +8,11 @@
 		selectedLayerIndex: number;
 		onLayersChange: (layers: Layer[]) => void;
 		onLayerSelect: (index: number) => void;
+		uncoloredBrightness?: number;
 	}
 
-	let { layers, selectedLayerIndex, onLayersChange, onLayerSelect }: Props = $props();
+	let { layers, selectedLayerIndex, onLayersChange, onLayerSelect, uncoloredBrightness = 100 }: Props =
+		$props();
 
 	let editingLayerIndex = $state<number | null>(null);
 	let editingLayerName = $state('');
@@ -363,24 +365,37 @@
 	{/if}
 
 	<!-- Layer Color Picker Modal -->
-	{#if colorPickerLayerIndex !== null}
-		<div class="mt-4 p-4 border border-border rounded-lg bg-background" data-testid="layer-color-picker">
-			<div class="flex items-center justify-between mb-3">
-				<h3 class="font-medium text-sm">
-					Set Default Color for {layers[colorPickerLayerIndex].name}
-				</h3>
-				<Button onclick={closeColorPicker} size="sm" variant="ghost">✕</Button>
+	<AccessibleDialog
+		open={colorPickerLayerIndex !== null}
+		title="Layer Default Color"
+		description={colorPickerLayerIndex !== null
+			? `Set the default color for ${layers[colorPickerLayerIndex].name}. Applies to keys on this layer that have no individual or category color.`
+			: ''}
+		onClose={closeColorPicker}
+		titleId="layer-color-picker-title"
+		panelClass="max-w-lg"
+	>
+		{#if colorPickerLayerIndex !== null}
+			<div data-testid="layer-color-picker">
+				<ColorPicker
+					color={layers[colorPickerLayerIndex].default_color}
+					onSelect={(color) => setLayerDefaultColor(colorPickerLayerIndex!, color)}
+					onClear={() => clearLayerDefaultColor(colorPickerLayerIndex!)}
+					label="Layer Default Color"
+					showClear={!!layers[colorPickerLayerIndex].default_color}
+				/>
+				<div
+					class="mt-4 rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground"
+					data-testid="layer-color-brightness-caption"
+				>
+					Brightness for uncolored keys on this layer follows the global setting: <span
+						class="font-mono text-foreground">{uncoloredBrightness}%</span
+					>. Change it under <span class="font-medium text-foreground">Settings → Background Lighting</span>.
+				</div>
 			</div>
-			<p class="text-xs text-muted-foreground mb-3">
-				This color will be applied to all keys on this layer that don't have a higher-priority color (key override or category).
-			</p>
-			<ColorPicker
-				color={layers[colorPickerLayerIndex].default_color}
-				onSelect={(color) => setLayerDefaultColor(colorPickerLayerIndex!, color)}
-				onClear={() => clearLayerDefaultColor(colorPickerLayerIndex!)}
-				label="Layer Default Color"
-				showClear={!!layers[colorPickerLayerIndex].default_color}
-			/>
-		</div>
-	{/if}
+		{/if}
+		<svelte:fragment slot="footer">
+			<Button onclick={closeColorPicker} data-testid="layer-color-picker-done">Done</Button>
+		</svelte:fragment>
+	</AccessibleDialog>
 </Card>

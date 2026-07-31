@@ -8,5 +8,6 @@ export { default as Input } from './Input.svelte';
 export { default as KeyboardPreview } from './KeyboardPreview.svelte';
 export { default as KeycodePicker } from './KeycodePicker.svelte';
 export { default as LayerManager } from './LayerManager.svelte';
+export { default as LayoutSettings } from './LayoutSettings.svelte';
 export { default as NavHeader } from './NavHeader.svelte';
 export { default as Tabs } from './Tabs.svelte';
