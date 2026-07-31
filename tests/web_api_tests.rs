@@ -33,3 +33,5 @@ mod layouts;
 mod preflight;
 #[path = "web_api_tests/templates.rs"]
 mod templates;
+#[path = "web_api_tests/versions.rs"]
+mod versions;

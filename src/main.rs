@@ -175,6 +175,8 @@ enum Command {
     Category(cli::CategoryArgs),
     /// Manage layout templates
     Template(cli::TemplateArgs),
+    /// Manage layout revisions (snapshots, rollback)
+    Versions(cli::VersionsArgs),
     /// Check development environment dependencies
     Doctor(cli::DoctorArgs),
     /// Start web server for browser-based editor
@@ -296,6 +298,13 @@ fn main() -> Result<()> {
                 }
             },
             Command::Template(args) => match args.execute() {
+                Ok(()) => ExitCode::Success,
+                Err(e) => {
+                    eprintln!("Error: {}", e.message);
+                    e.exit_code
+                }
+            },
+            Command::Versions(args) => match args.execute() {
                 Ok(()) => ExitCode::Success,
                 Err(e) => {
                     eprintln!("Error: {}", e.message);

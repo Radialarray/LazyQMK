@@ -22,6 +22,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::services::file_watcher::{mark_self_write, SelfWriteEpoch};
+use crate::services::layout_versions::LayoutVersionService;
 use crate::{models::Layout, parser};
 
 /// Service for managing layout file I/O operations.
@@ -33,12 +34,15 @@ pub struct LayoutService;
 impl LayoutService {
     /// Loads a layout from file, auto-detecting format.
     ///
-    /// Supports both `.json` (current) and `.md` (legacy) files.
-    /// When a `.md` file is loaded, it is automatically migrated to `.json`.
+    /// Supports the new per-layout folder layout (`<layouts>/<name>/current.json`)
+    /// as well as legacy `.json` and `.md` flat files. When a legacy file is
+    /// loaded, it is automatically migrated to the folder layout (moved into
+    /// `<layouts>/<name>/current.json` with an initial revision).
     ///
     /// # Arguments
     ///
-    /// * `path` - Path to the layout file (`.json` or `.md`)
+    /// * `path` - Path to the layout file or folder (`.json`, `.md`, or
+    ///   stem-only that resolves to one of those).
     ///
     /// # Returns
     ///
@@ -55,24 +59,71 @@ impl LayoutService {
     /// # Ok::<(), anyhow::Error>(())
     /// ```
     pub fn load(path: &Path) -> Result<Layout> {
+        // 1. If path points to a folder-style layout (`<stem>/current.json`), use it.
+        if let Some(parent) = path.parent() {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                let current = parent.join(stem).join("current.json");
+                if current.exists() {
+                    return parser::parse_json_layout(&current).with_context(|| {
+                        format!("Failed to load layout from {}", current.display())
+                    });
+                }
+            }
+        }
+
         let ext = path.extension().and_then(|e| e.to_str());
 
         match ext {
-            Some("json") => parser::parse_json_layout(path)
-                .with_context(|| format!("Failed to load layout from {}", path.display())),
+            Some("json") => {
+                if path.exists() {
+                    let layout = parser::parse_json_layout(path)
+                        .with_context(|| format!("Failed to load layout from {}", path.display()))?;
+
+                    // Migrate legacy flat .json -> per-layout folder.
+                    if let Some(svc) = LayoutVersionService::from_layout_path(path) {
+                        let _ = svc.migrate_legacy_path(path);
+                    }
+
+                    Ok(layout)
+                } else {
+                    // Flat file no longer exists (e.g., already migrated).
+                    // Try the folder layout as a fallback.
+                    if let Some(parent) = path.parent() {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            let current = parent.join(stem).join("current.json");
+                            if current.exists() {
+                                return Self::load(&current);
+                            }
+                        }
+                    }
+                    Err(anyhow::anyhow!("Layout file not found: {}", path.display()))
+                }
+            }
             Some("md") => {
-                // Legacy .md → load with markdown parser, then migrate to .json
                 let layout = parser::parse_markdown_layout(path).with_context(|| {
                     format!("Failed to load legacy .md layout from {}", path.display())
                 })?;
 
-                // Auto-migrate: write .json, rename .md → .md.bak
+                // Auto-migrate .md -> .json (in-place)
                 Self::migrate_md_to_json(path, &layout)?;
-
+                // Then migrate the .json -> folder layout
+                let json_path = path.with_extension("json");
+                if let Some(svc) = LayoutVersionService::from_layout_path(path) {
+                    let _ = svc.migrate_legacy_path(&json_path);
+                }
                 Ok(layout)
             }
             _ => {
-                // No recognized extension — try .json first, then .md as fallback
+                // No recognized extension — try folder, .json, then .md.
+                if let Some(parent) = path.parent() {
+                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                        let current = parent.join(stem).join("current.json");
+                        if current.exists() {
+                            return Self::load(&current);
+                        }
+                    }
+                }
+
                 let json_path = path.with_extension("json");
                 if json_path.exists() {
                     return Self::load(&json_path);
@@ -143,8 +194,32 @@ impl LayoutService {
         }
         // Always use .json extension
         let json_path = ensure_json_extension(path);
-        parser::save_json_layout(layout, &json_path)
-            .with_context(|| format!("Failed to save layout to {}", json_path.display()))
+
+        // Primary write target.
+        let folder_current = json_path
+            .parent()
+            .and_then(|p| json_path.file_stem().and_then(|s| s.to_str()).map(|stem| p.join(stem).join("current.json")))
+            .filter(|p| p.exists());
+
+        // If the layout folder already exists, the folder layout is the
+        // source of truth. Write there first, then mirror to the flat file
+        // so external tools/scripts that still point at the original path
+        // observe the latest state.
+        if let Some(folder_path) = folder_current {
+            parser::save_json_layout(layout, &folder_path)
+                .with_context(|| format!("Failed to save layout to {}", folder_path.display()))?;
+            // Mirror to the flat file (best-effort).
+            if let Err(e) = parser::save_json_layout(layout, &json_path) {
+                eprintln!(
+                    "Warning: failed to mirror layout to {}: {e}",
+                    json_path.display()
+                );
+            }
+            Ok(())
+        } else {
+            parser::save_json_layout(layout, &json_path)
+                .with_context(|| format!("Failed to save layout to {}", json_path.display()))
+        }
     }
 
     /// Migrates a legacy `.md` file to the current `.json` format.
@@ -272,6 +347,19 @@ fn ensure_json_extension(path: &Path) -> PathBuf {
 /// ```
 pub fn sanitize_filename(name: &str) -> String {
     name.replace(['/', '\\', ':', ' '], "_").to_lowercase()
+}
+
+/// Returns true when a layout exists at the given path — either as a legacy
+/// flat file or as a per-layout folder layout (`<stem>/current.json`).
+#[allow(dead_code)] // Public API; also referenced by tests/web for future folder-aware checks.
+#[must_use]
+pub fn layout_exists_at(path: &Path) -> bool {
+    if path.exists() {
+        return true;
+    }
+    path.parent()
+        .and_then(|p| path.file_stem().and_then(|s| s.to_str()).map(|stem| p.join(stem).join("current.json")))
+        .is_some_and(|p| p.exists())
 }
 
 #[cfg(test)]

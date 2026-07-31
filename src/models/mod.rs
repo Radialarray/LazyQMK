@@ -20,11 +20,14 @@ pub use layer::{
     validate_layer_number, KeyDefinition, Layer, Position, DEFAULT_QMK_LAYER_LIMIT,
     MAX_QMK_LAYER_LIMIT,
 };
+#[allow(unused_imports)] // bin/lib split: re-exported types consumed by lib tests and web crate
 pub use layout::{
-    ComboAction, ComboDefinition, ComboSettings, HoldDecisionMode, IdleEffectSettings, Layout,
-    LayoutMetadata, PaletteFxEffect, PaletteFxPalette, PaletteFxSettings, RgbBrightness,
-    RgbMatrixEffect, RgbOverlayRippleSettings, RgbSaturation, RippleColorMode, TapDanceAction,
-    TapHoldPreset, TapHoldSettings, UncoloredKeyBehavior,
+    auto_label, compute_diff, revision_filename, sanitize_label, ComboAction, ComboDefinition,
+    ComboSettings, DiffSummary, HoldDecisionMode, IdleEffectSettings, KeyChange, LayerDiff,
+    Layout, LayoutDiff, LayoutManifest, LayoutMetadata, LayoutRevision, PaletteFxEffect,
+    PaletteFxPalette, PaletteFxSettings, RgbBrightness, RgbMatrixEffect, RgbOverlayRippleSettings,
+    RgbSaturation, RevisionSummary, RippleColorMode, SettingDiff, TapDanceAction, TapHoldPreset,
+    TapHoldSettings, UncoloredKeyBehavior,
 };
 pub use rgb::RgbColor;
 pub use visual_layout_mapping::VisualLayoutMapping;

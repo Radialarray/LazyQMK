@@ -28,7 +28,7 @@ pub(super) async fn tap_dance_validate(
     let filename = with_json_ext(filename);
     let path = state.workspace_root.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Layout file not found: {filename}"
         )));

@@ -10,7 +10,7 @@ pub mod layout;
 pub mod template_gen;
 
 // Re-export commonly used functions
-pub use json_serde::{parse_json_layout, save_json_layout};
+pub use json_serde::{parse_json_layout, parse_json_layout_str, save_json_layout};
 
 // Legacy markdown parser (kept for .md → .json migration)
 #[allow(unused_imports)] // bin/lib split: lib tests use this

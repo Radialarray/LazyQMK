@@ -308,9 +308,20 @@ impl GenerateJobManager {
             }
         }
 
-        // Build layout path
+        // Build layout path. Also accept the post-migration folder layout
+        // (`<stem>/current.json`) so this still works after the first load
+        // moves the legacy flat file into the per-layout folder.
         let layout_path = self.workspace_root.join(&layout_filename);
-        if !layout_path.exists() {
+        let folder_path = layout_path
+            .parent()
+            .and_then(|p| {
+                layout_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|stem| p.join(stem).join("current.json"))
+            })
+            .filter(|p| p.exists());
+        if !layout_path.exists() && folder_path.is_none() {
             return Err(format!("Layout file not found: {layout_filename}"));
         }
 

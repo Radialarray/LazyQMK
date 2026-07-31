@@ -12,6 +12,7 @@ export { default as LayerManager } from './LayerManager.svelte';
 export { default as LayerPicker } from './LayerPicker.svelte';
 export { default as LayerRefsPanel } from './LayerRefsPanel.svelte';
 export { default as LayoutSettings } from './LayoutSettings.svelte';
+export { default as LayoutVersionsPanel } from './LayoutVersionsPanel.svelte';
 export { default as ModifierPicker } from './ModifierPicker.svelte';
 export { default as NavHeader } from './NavHeader.svelte';
 export { default as Tabs } from './Tabs.svelte';

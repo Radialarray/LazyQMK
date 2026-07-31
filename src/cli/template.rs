@@ -185,8 +185,17 @@ impl ListArgs {
 impl SaveArgs {
     /// Execute the save command
     pub fn execute(&self) -> CliResult<()> {
-        // Validate layout file exists and is readable
-        if !self.layout.exists() {
+        // Validate layout file exists and is readable. Also accept the
+        // post-migration folder layout (`<stem>/current.json`) so this
+        // command still works after the first load moves the legacy
+        // flat file into the per-layout folder.
+        let folder_layout = self
+            .layout
+            .parent()
+            .and_then(|p| self.layout.file_stem().and_then(|s| s.to_str()).map(|stem| p.join(stem).join("current.json")));
+        let exists_as_flat = self.layout.exists();
+        let exists_as_folder = folder_layout.as_ref().is_some_and(|p| p.exists());
+        if !exists_as_flat && !exists_as_folder {
             return Err(CliError::validation(format!(
                 "Layout file not found: {}",
                 self.layout.display()

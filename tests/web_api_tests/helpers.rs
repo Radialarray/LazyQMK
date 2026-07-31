@@ -173,6 +173,48 @@ pub(super) async fn post_json(app: &axum::Router, uri: &str, body: Value) -> (St
     (status, json)
 }
 
+/// Helper to make a PATCH request with JSON body and get the response.
+pub(super) async fn patch_json(
+    app: &axum::Router,
+    uri: &str,
+    body: Value,
+) -> (StatusCode, Value) {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(uri)
+                .header("Content-Type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let status = response.status();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+
+    (status, json)
+}
+
+/// Helper to make a DELETE request and return just the status code.
+pub(super) async fn delete_json_status(app: &axum::Router, uri: &str) -> StatusCode {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(uri)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    response.status()
+}
+
 /// Creates a test state with a custom template directory for isolated tests.
 /// Returns the state, temp workspace dir, and a path to use for templates.
 pub(super) fn create_test_state_with_template_dir() -> (AppState, TempDir, std::path::PathBuf) {

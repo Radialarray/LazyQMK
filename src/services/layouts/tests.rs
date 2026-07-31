@@ -99,10 +99,18 @@ version: '1.0'
     let loaded = LayoutService::load(&no_ext_path)?;
     assert_eq!(loaded.metadata.name, "legacy_layout");
 
-    // After loading, the .json should exist (migration) and .md should be .md.bak
+    // After loading, the per-layout folder should exist (migration) and .md should be .md.bak
     assert!(
-        tmp.path().join("legacy.json").exists(),
-        "Expected migrated .json"
+        tmp.path().join("legacy/current.json").exists(),
+        "Expected migrated folder layout (current.json)"
+    );
+    assert!(
+        tmp.path().join("legacy/versions/1.json").exists(),
+        "Expected initial revision snapshot"
+    );
+    assert!(
+        tmp.path().join("legacy/manifest.json").exists(),
+        "Expected manifest.json"
     );
     assert!(
         tmp.path().join("legacy.md.bak").exists(),
@@ -173,7 +181,6 @@ fn test_rename_file_if_needed_new_name() -> Result<()> {
 fn test_migrate_md_to_json_from_file() -> Result<()> {
     let tmp = TempDir::new()?;
     let md_path = tmp.path().join("legacy.md");
-    let json_path = tmp.path().join("legacy.json");
     let bak_path = tmp.path().join("legacy.md.bak");
 
     // Create minimal markdown layout
@@ -200,17 +207,20 @@ version: '1.0'
 "#;
     fs::write(&md_path, md_content)?;
 
-    // Load via LayoutService (triggers migration)
+    // Load via LayoutService (triggers migration to folder layout)
     let layout = LayoutService::load(&md_path)?;
     assert_eq!(layout.metadata.name, "migration_test");
     assert_eq!(layout.metadata.author, "tester");
 
-    // Verify migration artifacts
-    assert!(json_path.exists(), "JSON file should exist after migration");
+    // Verify migration artifacts (folder layout, not flat file).
+    assert!(
+        tmp.path().join("legacy/current.json").exists(),
+        "current.json should exist after folder migration"
+    );
     assert!(bak_path.exists(), ".md.bak backup should exist");
 
-    // Verify the .json is loadable as a proper layout
-    let migrated = LayoutService::load(&json_path)?;
+    // Loading the folder layout directly should yield the same layout.
+    let migrated = LayoutService::load(&tmp.path().join("legacy/current.json"))?;
     assert_eq!(migrated.metadata.name, "migration_test");
     assert_eq!(migrated.metadata.author, "tester");
 
@@ -249,5 +259,75 @@ fn test_save_with_epoch_none_does_not_crash() -> Result<()> {
     // No epoch should still work and behave like the regular save.
     LayoutService::save_with_epoch(&layout, &path, None)?;
     assert!(path.exists());
+    Ok(())
+}
+
+fn make_layered_layout(name: &str) -> Result<Layout> {
+    let mut layout = Layout::new(name)?;
+    layout.add_layer(crate::models::Layer::new(
+        0,
+        "Base",
+        crate::models::RgbColor::new(255, 255, 255),
+    )?)?;
+    Ok(layout)
+}
+
+#[test]
+fn test_load_legacy_json_migrates_to_folder() -> Result<()> {
+    let tmp = TempDir::new()?;
+    let json_path = tmp.path().join("legacy_flat.json");
+    let layout = make_layered_layout("legacy_flat")?;
+    LayoutService::save(&layout, &json_path)?;
+    assert!(json_path.exists());
+
+    // Load — should auto-migrate to folder layout.
+    let loaded = LayoutService::load(&json_path)?;
+    assert_eq!(loaded.metadata.name, "legacy_flat");
+
+    assert!(
+        !json_path.exists(),
+        "legacy .json should be moved into the folder layout"
+    );
+    assert!(
+        tmp.path().join("legacy_flat/current.json").exists(),
+        "current.json should exist after migration"
+    );
+    assert!(
+        tmp.path().join("legacy_flat/versions/1.json").exists(),
+        "initial revision should exist"
+    );
+    assert!(
+        tmp.path().join("legacy_flat/manifest.json").exists(),
+        "manifest.json should exist"
+    );
+
+    // Second load (now via the folder path) returns the same layout.
+    let folder_path = tmp.path().join("legacy_flat/current.json");
+    let again = LayoutService::load(&folder_path)?;
+    assert_eq!(again.metadata.name, "legacy_flat");
+
+    Ok(())
+}
+
+#[test]
+fn test_load_idempotent_after_migration() -> Result<()> {
+    let tmp = TempDir::new()?;
+    let json_path = tmp.path().join("idem.json");
+    let layout = make_layered_layout("idem")?;
+    LayoutService::save(&layout, &json_path)?;
+
+    // Multiple loads should be idempotent.
+    for _ in 0..3 {
+        let _ = LayoutService::load(&json_path)?;
+    }
+    // Only one initial revision should exist after all those loads.
+    let versions_dir = tmp.path().join("idem/versions");
+    assert!(versions_dir.exists());
+    let count = std::fs::read_dir(&versions_dir)?
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("json"))
+        .count();
+    assert_eq!(count, 1, "expected exactly 1 initial revision");
+
     Ok(())
 }

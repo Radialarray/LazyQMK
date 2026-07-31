@@ -303,7 +303,7 @@ pub(super) async fn get_layout(
     let filename = with_json_ext(filename);
     let path = state.workspace_root.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Layout file not found: {filename}"
         )));
@@ -473,7 +473,7 @@ pub(super) async fn swap_keys(
     let filename = with_json_ext(filename);
     let path = state.workspace_root.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Layout file not found: {filename}"
         )));
@@ -538,7 +538,7 @@ pub(super) async fn get_render_metadata(
     let filename = with_json_ext(filename);
     let path = state.workspace_root.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Layout file not found: {filename}"
         )));

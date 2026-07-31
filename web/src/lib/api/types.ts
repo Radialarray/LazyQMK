@@ -451,6 +451,84 @@ export interface SaveTemplateRequest {
 	tags?: string[];
 }
 
+// Layout versioning types
+export interface RevisionSummary {
+	revision: number;
+	created: string;
+	label?: string;
+	note?: string;
+	author: string;
+	filename: string;
+}
+
+export interface LayoutRevision {
+	revision: number;
+	created: string;
+	label?: string;
+	note?: string;
+	author: string;
+	layout: import('./types').Layout;
+}
+
+export interface DiffSummary {
+	layers_added: number;
+	layers_removed: number;
+	keys_changed: number;
+	rgb_changed: boolean;
+	combos_changed: boolean;
+	tap_dances_changed: boolean;
+	metadata_changed: boolean;
+}
+
+export interface KeyChange {
+	row: number;
+	col: number;
+	from: string;
+	to: string;
+}
+
+export interface LayerDiff {
+	kind: 'added' | 'removed' | 'keys_changed' | 'renamed';
+	index: number;
+	layer?: import('./types').Layer;
+	name?: string;
+	from?: string;
+	to?: string;
+	changes?: KeyChange[];
+}
+
+export interface SettingDiff {
+	path: string;
+	from: string;
+	to: string;
+}
+
+export interface LayoutDiff {
+	from_revision: number;
+	to_revision: number;
+	summary: DiffSummary;
+	layer_changes: LayerDiff[];
+	setting_changes: SettingDiff[];
+}
+
+export interface VersionsListResponse {
+	revisions: RevisionSummary[];
+}
+
+export interface CreateSnapshotRequest {
+	label?: string;
+	note?: string;
+}
+
+export interface RenameRevisionRequest {
+	label?: string;
+	note?: string;
+}
+
+export interface DiffResponse {
+	diff: LayoutDiff;
+}
+
 export interface ApplyTemplateRequest {
 	target_filename: string;
 }

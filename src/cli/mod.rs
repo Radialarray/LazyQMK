@@ -19,6 +19,7 @@ pub mod qmk;
 pub mod tap_dance;
 pub mod template;
 pub mod validate;
+pub mod versions;
 
 // Re-export types used by main.rs and tests
 pub use category::CategoryArgs;
@@ -37,3 +38,4 @@ pub use qmk::{GeometryArgs, ListKeyboardsArgs, ListLayoutsArgs};
 pub use tap_dance::TapDanceArgs;
 pub use template::TemplateArgs;
 pub use validate::ValidateArgs;
+pub use versions::VersionsArgs;

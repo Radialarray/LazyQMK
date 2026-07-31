@@ -9,6 +9,7 @@ use axum::{
 };
 use serde::Deserialize;
 
+use crate::services::layout_versions::LayoutVersionService;
 use crate::services::LayoutService;
 
 use super::super::error::AppError;
@@ -25,7 +26,7 @@ pub(super) async fn generate_firmware(
     let filename = with_json_ext(filename);
     let path = state.workspace_root.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Layout file not found: {filename}"
         )));
@@ -38,6 +39,22 @@ pub(super) async fn generate_firmware(
             Some(e.to_string()),
         )
     })?;
+
+    // Auto-snapshot before compile when the layout lives in the folder layout.
+    if let Some(layout_name) = path.file_stem().and_then(|s| s.to_str()) {
+        let svc = LayoutVersionService::new(state.workspace_root.clone());
+        let layout_dir = svc.layout_dir(layout_name);
+        if layout_dir.join("current.json").exists() {
+            svc.create_auto_snapshot(layout_name, &layout, None)
+                .map_err(|e| {
+                    AppError::with_details(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to create pre-compile snapshot",
+                        Some(e.to_string()),
+                    )
+                })?;
+        }
+    }
 
     let keyboard = layout.metadata.keyboard.clone().ok_or_else(|| {
         AppError::bad_request("Layout has no keyboard defined - cannot generate firmware")

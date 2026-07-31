@@ -25,6 +25,15 @@ pub enum LayoutEvent {
         /// Bare file name of the removed file.
         filename: String,
     },
+    /// A revision was created/deleted/renamed/restored for a layout.
+    RevisionChanged {
+        /// Bare layout name (e.g. `"my_layout"`).
+        layout_name: String,
+        /// Revision id affected.
+        revision: u32,
+        /// What happened.
+        action: String,
+    },
 }
 
 impl LayoutEvent {
@@ -33,6 +42,7 @@ impl LayoutEvent {
     pub fn filename(&self) -> &str {
         match self {
             Self::Changed { filename, .. } | Self::Removed { filename } => filename,
+            Self::RevisionChanged { layout_name, .. } => layout_name,
         }
     }
 }

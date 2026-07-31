@@ -2,11 +2,14 @@
 
 pub mod category_picker;
 pub mod color_picker;
+pub mod diff_view;
 pub mod keycode_picker;
 pub mod keycode_picker_helpers;
 pub mod layer_picker;
 pub mod layout_picker;
+pub mod layout_versions_panel;
 pub mod modifier_picker;
 pub mod tap_dance_editor;
 pub mod tap_dance_form;
+pub mod tap_dance_name_entry;
 pub mod template_browser;

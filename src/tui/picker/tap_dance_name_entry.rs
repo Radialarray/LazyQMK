@@ -2,6 +2,7 @@
 //!
 //! Simple text input dialog for entering a tap dance name.
 //! Validates that the name is a valid C identifier.
+#![allow(dead_code)] // Reserved for future tap-dance wiring (LazyQMK-zj1d.6 follow-up).
 
 use crate::tui::theme::Theme;
 use crate::tui::Component;

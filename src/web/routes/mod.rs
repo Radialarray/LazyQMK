@@ -18,6 +18,7 @@ pub mod layouts;
 pub mod tap_dance;
 pub mod templates;
 pub mod validate;
+pub mod versions;
 
 use axum::{routing::get, Router};
 use tower_http::cors::{Any, CorsLayer};
@@ -134,6 +135,26 @@ pub fn router(state: AppState) -> Router {
         .route("/api/generate/health", get(generate::get_generate_health))
         // Hot-reload Server-Sent Events stream (layout file changes)
         .route("/api/events", get(events::sse_handler))
+        // Layout versioning endpoints (snapshots, rollback, diff)
+        .route("/api/versions", get(versions::list_revisions))
+        .route(
+            "/api/versions/{layout}",
+            axum::routing::post(versions::create_snapshot),
+        )
+        .route(
+            "/api/versions/{layout}/{revision}",
+            get(versions::get_revision)
+                .patch(versions::rename_revision)
+                .delete(versions::delete_revision),
+        )
+        .route(
+            "/api/versions/{layout}/{revision}/restore",
+            axum::routing::post(versions::restore_revision),
+        )
+        .route(
+            "/api/versions/{layout}/diff",
+            get(versions::diff_revisions),
+        )
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)

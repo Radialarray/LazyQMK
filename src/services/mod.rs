@@ -6,6 +6,7 @@
 pub mod file_watcher;
 pub mod geometry;
 pub mod layer_refs;
+pub mod layout_versions;
 pub mod layouts;
 
 // Re-export GeometryService if it exists, otherwise just re-export the module

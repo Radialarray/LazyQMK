@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::firmware::generator::FirmwareGenerator;
 use crate::keycode_db::KeycodeDb;
 use crate::services::geometry;
+use crate::services::layout_versions::LayoutVersionService;
 use crate::services::LayoutService;
 use clap::Args;
 use std::path::PathBuf;
@@ -51,6 +52,28 @@ impl GenerateArgs {
         // Load layout
         let layout = LayoutService::load(&self.layout)
             .map_err(|e| CliError::io(format!("Failed to load layout: {e}")))?;
+
+        // Auto-snapshot before compile (only if the layout is in folder layout).
+        // `LayoutService::load` may have just migrated a legacy flat file; in
+        // that case we don't snapshot — the user can do it manually next time.
+        if let Some(layout_name) = self.layout.file_stem().and_then(|s| s.to_str()) {
+                if let Some(layouts_dir) = std::path::Path::new(&self.layout)
+                    .parent()
+                    .map(std::path::Path::to_path_buf)
+                    .or_else(|| Config::config_dir().ok().map(|c| c.join("layouts")))
+            {
+                let svc = LayoutVersionService::new(layouts_dir);
+                let layout_dir = svc.layout_dir(layout_name);
+                if layout_dir.join("current.json").exists() {
+                    // Only snapshot when we have a real folder layout to write into.
+                    if let Err(e) = svc.create_auto_snapshot(layout_name, &layout, None) {
+                        return Err(CliError::io(format!(
+                            "Failed to create pre-compile snapshot: {e}"
+                        )));
+                    }
+                }
+            }
+        }
 
         // Build config with QMK path
         let mut config = Config::load().unwrap_or_default();

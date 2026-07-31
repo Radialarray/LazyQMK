@@ -454,8 +454,9 @@ fn test_template_save_and_list_multiple() {
         assert_eq!(
             output.status.code(),
             Some(0),
-            "Saving template {} should succeed",
-            i
+            "Saving template {} should succeed. stderr: {}",
+            i,
+            String::from_utf8_lossy(&output.stderr)
         );
     }
 

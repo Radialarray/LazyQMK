@@ -36,7 +36,13 @@ import type {
 	CancelJobResponse,
 	BuildJob,
 	BuildArtifactsResponse,
-	RenderMetadataResponse
+	RenderMetadataResponse,
+	VersionsListResponse,
+	LayoutRevision,
+	RevisionSummary,
+	CreateSnapshotRequest,
+	RenameRevisionRequest,
+	DiffResponse
 } from './types';
 
 interface LazyQmkApiWindow {
@@ -228,6 +234,66 @@ export class ApiClient {
 				method: 'POST',
 				body: JSON.stringify(request)
 			}
+		);
+	}
+
+	// Layout versioning operations
+	async listVersions(layout: string): Promise<VersionsListResponse> {
+		return this.request<VersionsListResponse>(
+			`/api/versions?layout=${encodeURIComponent(layout)}`
+		);
+	}
+
+	async getRevision(layout: string, revision: number): Promise<LayoutRevision> {
+		return this.request<LayoutRevision>(
+			`/api/versions/${encodeURIComponent(layout)}/${revision}`
+		);
+	}
+
+	async createSnapshot(
+		layout: string,
+		request: CreateSnapshotRequest
+	): Promise<RevisionSummary> {
+		return this.request<RevisionSummary>(
+			`/api/versions/${encodeURIComponent(layout)}`,
+			{
+				method: 'POST',
+				body: JSON.stringify(request)
+			}
+		);
+	}
+
+	async restoreRevision(layout: string, revision: number): Promise<void> {
+		await this.request<void>(
+			`/api/versions/${encodeURIComponent(layout)}/${revision}/restore`,
+			{ method: 'POST' }
+		);
+	}
+
+	async renameRevision(
+		layout: string,
+		revision: number,
+		request: RenameRevisionRequest
+	): Promise<RevisionSummary> {
+		return this.request<RevisionSummary>(
+			`/api/versions/${encodeURIComponent(layout)}/${revision}`,
+			{
+				method: 'PATCH',
+				body: JSON.stringify(request)
+			}
+		);
+	}
+
+	async deleteRevision(layout: string, revision: number): Promise<void> {
+		await this.request<void>(
+			`/api/versions/${encodeURIComponent(layout)}/${revision}`,
+			{ method: 'DELETE' }
+		);
+	}
+
+	async diffRevisions(layout: string, from: number, to: number): Promise<DiffResponse> {
+		return this.request<DiffResponse>(
+			`/api/versions/${encodeURIComponent(layout)}/diff?from=${from}&to=${to}`
 		);
 	}
 

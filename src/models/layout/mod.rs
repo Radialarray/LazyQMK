@@ -6,9 +6,11 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 pub mod combo;
+pub mod diff;
 pub mod idle_effect_settings;
 pub mod layout_core;
 pub mod palette_fx;
+pub mod revision;
 pub mod rgb_brightness;
 pub mod rgb_matrix_effect;
 pub mod rgb_saturation;
@@ -21,9 +23,11 @@ pub mod uncolored_key_behavior;
 mod tests;
 
 pub use combo::{ComboAction, ComboDefinition, ComboSettings};
+pub use diff::{compute_diff, DiffSummary, KeyChange, LayerDiff, LayoutDiff, SettingDiff};
 pub use idle_effect_settings::IdleEffectSettings;
 pub use layout_core::{Layout, LayoutMetadata};
 pub use palette_fx::{PaletteFxEffect, PaletteFxPalette, PaletteFxSettings};
+pub use revision::{auto_label, revision_filename, sanitize_label, LayoutManifest, LayoutRevision, RevisionSummary};
 pub use rgb_brightness::RgbBrightness;
 pub use rgb_matrix_effect::RgbMatrixEffect;
 pub use rgb_saturation::RgbSaturation;

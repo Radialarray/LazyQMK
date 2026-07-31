@@ -150,7 +150,7 @@ pub(super) async fn get_template(Path(filename): Path<String>) -> Result<Json<La
 
     let path = template_dir.join(&filename);
 
-    if !path.exists() {
+    if !crate::services::layouts::layout_exists_at(&path) {
         return Err(AppError::not_found(format!(
             "Template not found: {filename}"
         )));
