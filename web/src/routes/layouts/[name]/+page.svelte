@@ -1213,10 +1213,21 @@
 			}, 2000);
 		} catch (e) {
 			saveStatus = 'error';
-			saveError = e instanceof Error ? e.message : 'Failed to save';
+			saveError = e instanceof Error ? humanizeSaveError(e.message) : 'Failed to save';
 		} finally {
 			layoutSync.markSaved(filename);
 		}
+	}
+
+	function humanizeSaveError(msg: string): string {
+		const outOfRange = msg.match(/invalid value: integer `?(\d+)`?, expected (\w+) at line \d+ column \d+/);
+		if (outOfRange) {
+			const field = msg.match(/(\w+(?:\.\w+)*):\s*invalid value/)?.[1] ?? 'value';
+			return `${field} is out of range (got ${outOfRange[1]}, expected ${outOfRange[2]}). Please reload and check your inputs.`;
+		}
+		const missing = msg.match(/missing field `(\w+)`/);
+		if (missing) return `Missing field: ${missing[1]}. Please reload the editor.`;
+		return msg;
 	}
 
 	async function resetLayout() {
@@ -1317,6 +1328,12 @@
 	}
 
 	// Overlay ripple settings
+	function clampRippleInt(raw: string, min: number, max: number, fallback: number): number {
+		const n = parseInt(raw, 10);
+		if (Number.isNaN(n)) return fallback;
+		return Math.min(max, Math.max(min, n));
+	}
+
 	function updateOverlayRipple(field: string, value: boolean | number | string | RgbColor) {
 		if (!layout) return;
 		if (!layout.rgb_overlay_ripple) {
@@ -2781,7 +2798,7 @@
 								id="max-ripples"
 								type="number"
 								value={layout.rgb_overlay_ripple?.max_ripples ?? 4}
-								oninput={(e) => updateOverlayRipple('max_ripples', parseInt(e.currentTarget.value))}
+								oninput={(e) => updateOverlayRipple('max_ripples', clampRippleInt(e.currentTarget.value, 1, 8, 4))}
 								min="1"
 								max="8"
 							/>
@@ -2798,7 +2815,7 @@
 					id="duration"
 					type="number"
 					value={layout.rgb_overlay_ripple?.duration_ms ?? 1500}
-					oninput={(e) => updateOverlayRipple('duration_ms', parseInt(e.currentTarget.value))}
+					oninput={(e) => updateOverlayRipple('duration_ms', clampRippleInt(e.currentTarget.value, 0, 65535, 1500))}
 					min="100"
 					max="5000"
 				/>
@@ -2815,7 +2832,7 @@
 					id="speed"
 					type="number"
 					value={layout.rgb_overlay_ripple?.speed ?? 200}
-					oninput={(e) => updateOverlayRipple('speed', parseInt(e.currentTarget.value))}
+					oninput={(e) => updateOverlayRipple('speed', clampRippleInt(e.currentTarget.value, 0, 255, 200))}
 					min="0"
 					max="255"
 							/>
@@ -2832,7 +2849,7 @@
 					id="band-width"
 					type="number"
 					value={layout.rgb_overlay_ripple?.band_width ?? 30}
-					oninput={(e) => updateOverlayRipple('band_width', parseInt(e.currentTarget.value))}
+					oninput={(e) => updateOverlayRipple('band_width', clampRippleInt(e.currentTarget.value, 0, 255, 30))}
 					min="1"
 					max="255"
 				/>
@@ -2849,7 +2866,7 @@
 								id="amplitude"
 								type="number"
 								value={layout.rgb_overlay_ripple?.amplitude_pct ?? 50}
-								oninput={(e) => updateOverlayRipple('amplitude_pct', parseInt(e.currentTarget.value))}
+								oninput={(e) => updateOverlayRipple('amplitude_pct', clampRippleInt(e.currentTarget.value, 0, 100, 50))}
 								min="0"
 								max="100"
 							/>
@@ -2904,7 +2921,7 @@
 								id="hue-shift"
 								type="number"
 								value={layout.rgb_overlay_ripple?.hue_shift_deg ?? 60}
-								oninput={(e) => updateOverlayRipple('hue_shift_deg', parseInt(e.currentTarget.value))}
+								oninput={(e) => updateOverlayRipple('hue_shift_deg', clampRippleInt(e.currentTarget.value, -180, 180, 60))}
 								min="-180"
 								max="180"
 							/>
