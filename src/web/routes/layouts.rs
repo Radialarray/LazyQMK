@@ -421,6 +421,8 @@ pub(super) async fn get_layout(
         rgb_brightness: layout.rgb_brightness,
         rgb_saturation: layout.rgb_saturation,
         rgb_matrix_default_speed: layout.rgb_matrix_default_speed,
+        rgb_timeout_ms: layout.rgb_timeout_ms,
+        uncolored_key_behavior: layout.uncolored_key_behavior.as_percent(),
         idle_effect_settings: IdleEffectSettingsDto::from(&layout.idle_effect_settings),
         rgb_overlay_ripple: RgbOverlayRippleSettingsDto::from(&layout.rgb_overlay_ripple),
         palette_fx: PaletteFxSettingsDto::from(&layout.palette_fx),
