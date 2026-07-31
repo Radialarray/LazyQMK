@@ -742,6 +742,10 @@ pub struct LayoutDto {
     pub rgb_saturation: crate::models::RgbSaturation,
     /// RGB Matrix default animation speed (0-255)
     pub rgb_matrix_default_speed: u8,
+    /// RGB Matrix timeout in milliseconds (0 = disabled)
+    pub rgb_timeout_ms: u32,
+    /// Behavior for keys without individual or category colors (0-100)
+    pub uncolored_key_behavior: u8,
     /// Idle effect settings
     pub idle_effect_settings: IdleEffectSettingsDto,
     /// RGB overlay ripple settings
