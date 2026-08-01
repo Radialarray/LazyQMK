@@ -5,7 +5,7 @@ Auto-generated from all feature plans. Last updated: 2025-12-12
 ## Active Technologies
 
 - Rust 1.91.1+ + Ratatui 0.29 (TUI framework), Crossterm 0.29 (terminal backend), Serde 1.0 (serialization) (archived/021-dependency-updates)
-- Human-readable files (Markdown layouts, TOML 0.9 configuration, JSON5 1.3 parsing, serde_yml 0.0.12 for YAML) (archived/021-dependency-updates)
+- Versioned JSON layouts, TOML 0.9 configuration, JSON5 1.3 parsing, serde_yml 0.0.12 for YAML (archived/021-dependency-updates)
 - CLI: Clap 4.5, Config: dirs 6.0, Clipboard: arboard 3.6, UUID: 1.19 (archived/021-dependency-updates)
 
 ## Project Structure
@@ -29,9 +29,9 @@ Rust 1.75+: Follow standard conventions
 
 ## Recent Changes
 
-- 025-layout-versions: Added first-class layout versioning (snapshots, rollback, diff). Each layout now lives in its own folder: `<layouts>/<name>/current.json` + `manifest.json` + `versions/<n>.json`. New `LayoutVersionService` with list/get/create_snapshot/restore/delete/rename/diff operations. Auto-migration moves legacy flat `.json` files into the folder layout on first load (idempotent). Auto-snapshot triggers on firmware compile (CLI `generate` + Web `POST /generate`) with a `pre-compile <ts>` label. Restore auto-snapshots the current layout first as a safety net. New CLI: `lazyqmk versions list|show|save|restore|delete|rename|diff`. New Web API: `/api/versions/...` (7 endpoints). New Svelte component: `LayoutVersionsPanel.svelte`. New TUI components: `layout_versions_panel.rs` + `diff_view.rs` (popup-routing integration deferred to follow-up). New SSE event: `LayoutEvent::RevisionChanged` published on every mutation. New model types: `LayoutRevision`, `LayoutManifest`, `RevisionSummary`, `LayoutDiff`, `DiffSummary`, `LayerDiff`, `KeyChange`, `SettingDiff`. Computation lives in `src/models/layout/diff.rs::compute_diff`.
+- 025-layout-versions: Layouts are versioned folders only: `<layouts>/<name>/current.json`, `manifest.json`, and `versions/<n>.json`. `current.json` is the sole source of truth for reads, mutations, generation, and builds. Before a manual JSON mutation, create a named snapshot with `lazyqmk versions save`; write only `current.json`, never a flat mirror. New CLI: `lazyqmk versions list|show|save|restore|delete|rename|diff`. New Web API: `/api/versions/...` (7 endpoints). New Svelte component: `LayoutVersionsPanel.svelte`. New TUI components: `layout_versions_panel.rs` + `diff_view.rs`. New SSE event: `LayoutEvent::RevisionChanged` published on every mutation. New model types: `LayoutRevision`, `LayoutManifest`, `RevisionSummary`, `LayoutDiff`, `DiffSummary`, `LayerDiff`, `KeyChange`, `SettingDiff`. Computation lives in `src/models/layout/diff.rs::compute_diff`.
 - 024-hot-reload: Added live hot-reload for both the TUI editor and the WebUI editor. When an external process (background agent, CLI command, hand-edit) modifies the open layout `.json` file, the TUI auto-reloads within 500ms and the WebUI updates via a Server-Sent Events stream (`/api/events`). Both UIs suppress echoes of their own writes via a shared `Arc<AtomicU64>` self-write epoch. When the open UI has unsaved local edits, a 3-button conflict prompt is shown (Reload / Keep mine / Save then reload). Shared crate: `src/services/file_watcher.rs` (notify-debouncer-full). New dep: `notify = "6"`, `notify-debouncer-full = "0.3"`.
-- 023-idle-effect: Added idle effect screensaver for RGB lighting with configurable timeout (default 1 min), duration (default 5 min), and 9 selectable effects (default Breathing). Generates QMK C state machine for idle → effect → off transitions. Settings managed via TUI Settings Manager and stored per-layout in markdown files.
+- 023-idle-effect: Added idle effect screensaver for RGB lighting with configurable timeout (default 1 min), duration (default 5 min), and 9 selectable effects (default Breathing). Generates QMK C state machine for idle → effect → off transitions. Settings are stored in the authoritative per-layout `current.json`.
 - archived/021-dependency-updates: Updated all dependencies to latest versions (json5 1.3, dirs 6.0, ratatui 0.29, crossterm 0.29, clap 4.5, serde_yml, toml 0.9, arboard 3.6, uuid 1.19), fixed 43 ratatui deprecation warnings, migrated from deprecated serde_yaml to serde_yml
 - archived/020-robust-keyboard-picker: Added JSON5 parser support, robust QMK config discovery and merging
 - archived/002-fix-startup-warnings: Added Rust 1.75+ (using Rust 1.88.0 per startup_errors.md) + Ratatui 0.26 (TUI framework), Crossterm 0.27 (terminal backend), Serde 1.0 (serialization)
@@ -320,12 +320,14 @@ The project uses three coordinate systems:
 
 Always use `VisualLayoutMapping` for transformations between systems.
 
-#### File Formats
+#### Layout Storage And Firmware Colors
 
-- **Layouts**: Markdown with YAML frontmatter
+- **Layouts**: Versioned JSON only. The canonical path is `<config>/layouts/<name>/current.json`; `manifest.json` and `versions/` retain revision metadata and snapshots. Never write a flat sibling layout file.
 - **Configuration**: TOML
 - **Keycode Database**: JSON
 - **QMK Metadata**: JSON (parsed from `info.json`)
+
+Category colors, key overrides, layer defaults, RGB brightness, and RGB saturation are compiled into the custom QMK fork's `layer_base_colors` table in generated `keymap.c`. The fork's `RGB_MATRIX_TUI_LAYER_COLORS` effect renders that table on the physical keyboard. After changing colors, generate directly into `<qmk-path>/keyboards/<metadata.keyboard>/keymaps/<keymap_name>/`, compile, and flash the newly produced QMK artifact from `<qmk-path>/.build/`.
 
 #### Generator output idempotency (`rules.mk`)
 
