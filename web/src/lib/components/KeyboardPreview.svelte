@@ -359,7 +359,7 @@
 						rx={KEY_BORDER_RADIUS}
 						ry={KEY_BORDER_RADIUS}
 						class="key-bg {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''} {comboClass}"
-						style={resolvedColor && !isSelected && !isSwapFirst && !comboMarker ? `fill: ${resolvedColor}` : ''}
+						style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}` : ''}
 						filter={resolvedColor ? `url(#glow-${key.visualIndex})` : 'url(#key-shadow)'}
 					/>
 
@@ -386,7 +386,7 @@
 					rx={KEY_BORDER_RADIUS - 1}
 					ry={KEY_BORDER_RADIUS - 1}
 					class="key-top {isSelected ? 'selected' : ''} {isSwapFirst ? 'swap-first' : ''} {comboClass}"
-					style={resolvedColor && !isSelected && !isSwapFirst && !comboMarker ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
+					style={resolvedColor && !isSelected && !isSwapFirst ? `fill: ${resolvedColor}; opacity: 0.9` : ''}
 					pointer-events="none"
 				/>
 
@@ -602,9 +602,6 @@
 		stroke: hsl(220 9% 46%);  /* mid gray */
 		stroke-width: 2;
 	}
-	.key-top.combo-bootloader { fill: hsl(0 84% 50% / 0.2); }
-	.key-top.combo-disable-effects { fill: hsl(48 96% 53% / 0.2); }
-	.key-top.combo-disable-lighting { fill: hsl(220 9% 46% / 0.2); }
 	.combo-badge {
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 		font-weight: 700;
@@ -616,11 +613,11 @@
 	}
 
 	/* Hover effect */
-	.key-group:hover .key-bg:not(.selected):not(.swap-first):not(.combo-bootloader):not(.combo-disable-effects):not(.combo-disable-lighting) {
+	.key-group:hover .key-bg:not(.selected):not(.swap-first) {
 		fill: hsl(var(--accent));
 	}
 
-	.key-group:hover .key-top:not(.selected):not(.swap-first):not(.combo-bootloader):not(.combo-disable-effects):not(.combo-disable-lighting) {
+	.key-group:hover .key-top:not(.selected):not(.swap-first) {
 		fill: hsl(var(--accent) / 0.9);
 	}
 </style>

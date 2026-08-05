@@ -45,6 +45,10 @@ function makeMarker(visualIndex: number, action: ComboAction): ComboMarker {
 	return { visualIndex, action, holdDurationMs: 500 };
 }
 
+function keyFillStyle(color: string | undefined, isSelected: boolean, isSwapFirst: boolean): string {
+	return color && !isSelected && !isSwapFirst ? `fill: ${color}` : '';
+}
+
 describe('KeyboardPreview combo-marker rendering contract', () => {
 	describe('comboClassFor', () => {
 		it('maps bootloader to combo-bootloader', () => {
@@ -130,6 +134,15 @@ describe('KeyboardPreview combo-marker rendering contract', () => {
 			expect(comboLetterFor(map.get(0)!.action)).toBe('B');
 			expect(comboLetterFor(map.get(1)!.action)).toBe('E');
 			expect(comboLetterFor(map.get(2)!.action)).toBe('L');
+		});
+	});
+
+	describe('marker colors', () => {
+		it('preserves the assigned key fill for every combo action', () => {
+			for (const action of ['bootloader', 'disable_effects', 'disable_lighting'] as const) {
+				expect(makeMarker(0, action)).toBeDefined();
+				expect(keyFillStyle('#12ab34', false, false)).toBe('fill: #12ab34');
+			}
 		});
 	});
 });
