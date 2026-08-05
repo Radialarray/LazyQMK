@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
@@ -30,11 +30,15 @@ use super::{BuildArtifact, BuildJob, FirmwareBuilder, JobStatus, LogEntry};
 // ---------------------------------------------------------------------------
 
 /// Result of deploying keymap files to the QMK tree.
-enum DeployResult {
+pub(super) enum DeployResult {
     /// We created the keymap directory and all files — safe to remove the entire directory.
     CreatedDirectory(PathBuf),
-    /// Directory already existed — only remove the files we wrote.
-    ExistingDirectory(PathBuf),
+    /// Directory already existed — restore its source files after the temporary build.
+    ExistingDirectory {
+        keymap_dir: PathBuf,
+        original_keymap_c: Option<Vec<u8>>,
+        original_config_h: Option<Vec<u8>>,
+    },
     /// Deployment was skipped (e.g., layout file missing in tests).
     Skipped,
 }
@@ -274,36 +278,10 @@ impl BuildJobManager {
             ),
         };
 
-        // Clean up deployed keymap (before decrementing running_count to prevent race)
-        match &deploy_result {
-            DeployResult::CreatedDirectory(dir) => {
-                if dir.exists() {
-                    if let Err(e) = fs::remove_dir_all(dir) {
-                        tracing::warn!(
-                            dir = %dir.display(),
-                            error = %e,
-                            "failed to clean up created keymap directory"
-                        );
-                    }
-                }
-            }
-            DeployResult::ExistingDirectory(dir) => {
-                // Only remove files we created
-                let keymap_c_path = dir.join("keymap.c");
-                if keymap_c_path.exists() {
-                    if let Err(e) = fs::remove_file(&keymap_c_path) {
-                        tracing::warn!(error = %e, "failed to clean up keymap.c");
-                    }
-                }
-                let config_h_path = dir.join("config.h");
-                if config_h_path.exists() {
-                    if let Err(e) = fs::remove_file(&config_h_path) {
-                        tracing::warn!(error = %e, "failed to clean up config.h");
-                    }
-                }
-            }
-            DeployResult::Skipped => {}
-        }
+        // Clean up deployed keymap (before decrementing running_count to prevent race).
+        // Existing QMK keymaps may contain tracked source files, so restore them rather
+        // than deleting the temporary generated sources.
+        Self::cleanup_deployed_keymap(&deploy_result);
 
         // Decrement running count
         {
@@ -338,6 +316,59 @@ impl BuildJobManager {
                 );
             }
         }
+    }
+
+    pub(super) fn cleanup_deployed_keymap(deploy_result: &DeployResult) {
+        match deploy_result {
+            DeployResult::CreatedDirectory(dir) => {
+                if dir.exists() {
+                    if let Err(e) = fs::remove_dir_all(dir) {
+                        tracing::warn!(
+                            dir = %dir.display(),
+                            error = %e,
+                            "failed to clean up created keymap directory"
+                        );
+                    }
+                }
+            }
+            DeployResult::ExistingDirectory {
+                keymap_dir,
+                original_keymap_c,
+                original_config_h,
+            } => {
+                Self::restore_or_remove_file(
+                    &keymap_dir.join("keymap.c"),
+                    original_keymap_c.as_deref(),
+                );
+                Self::restore_or_remove_file(
+                    &keymap_dir.join("config.h"),
+                    original_config_h.as_deref(),
+                );
+            }
+            DeployResult::Skipped => {}
+        }
+    }
+
+    fn restore_or_remove_file(path: &Path, original_contents: Option<&[u8]>) {
+        let result = match original_contents {
+            Some(contents) => fs::write(path, contents),
+            None if path.exists() => fs::remove_file(path),
+            None => Ok(()),
+        };
+
+        if let Err(error) = result {
+            tracing::warn!(path = %path.display(), error = %error, "failed to restore keymap source");
+        }
+    }
+
+    fn read_existing_file(path: &Path) -> Result<Option<Vec<u8>>, String> {
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        fs::read(path)
+            .map(Some)
+            .map_err(|error| format!("Failed to back up {}: {error}", path.display()))
     }
 
     /// Deploys keymap files (keymap.c, config.h) into the QMK firmware tree.
@@ -450,10 +481,12 @@ impl BuildJobManager {
 
         // Write files to QMK tree
         let keymap_c_path = keymap_dir.join("keymap.c");
+        let original_keymap_c = Self::read_existing_file(&keymap_c_path)?;
         fs::write(&keymap_c_path, &keymap_c)
             .map_err(|e| format!("Failed to write keymap.c: {e}"))?;
 
         let config_h_path = keymap_dir.join("config.h");
+        let original_config_h = Self::read_existing_file(&config_h_path)?;
         fs::write(&config_h_path, &config_h)
             .map_err(|e| format!("Failed to write config.h: {e}"))?;
 
@@ -465,7 +498,11 @@ impl BuildJobManager {
 
         // Return appropriate result based on whether directory existed
         if dir_existed {
-            Ok(DeployResult::ExistingDirectory(keymap_dir))
+            Ok(DeployResult::ExistingDirectory {
+                keymap_dir,
+                original_keymap_c,
+                original_config_h,
+            })
         } else {
             Ok(DeployResult::CreatedDirectory(keymap_dir))
         }

@@ -2,6 +2,7 @@
 //!
 //! Auto-extracted from build_jobs.rs.
 
+use super::manager::DeployResult;
 use super::*;
 
 use super::*;
@@ -168,6 +169,58 @@ fn test_list_jobs() {
     let jobs = manager.list_jobs();
     // First job may still be running, second will be pending
     assert!(!jobs.is_empty());
+}
+
+#[test]
+fn test_cleanup_restores_existing_keymap_sources() {
+    let keymap_dir = std::env::temp_dir().join(format!("lazyqmk_test_{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&keymap_dir).unwrap();
+    let keymap_c_path = keymap_dir.join("keymap.c");
+    let config_h_path = keymap_dir.join("config.h");
+    let original_keymap_c = b"original keymap".to_vec();
+    let original_config_h = b"original config".to_vec();
+    std::fs::write(&keymap_c_path, "generated keymap").unwrap();
+    std::fs::write(&config_h_path, "generated config").unwrap();
+
+    BuildJobManager::cleanup_deployed_keymap(&DeployResult::ExistingDirectory {
+        keymap_dir: keymap_dir.clone(),
+        original_keymap_c: Some(original_keymap_c.clone()),
+        original_config_h: Some(original_config_h.clone()),
+    });
+
+    assert_eq!(std::fs::read(&keymap_c_path).unwrap(), original_keymap_c);
+    assert_eq!(std::fs::read(&config_h_path).unwrap(), original_config_h);
+    std::fs::remove_dir_all(keymap_dir).unwrap();
+}
+
+#[test]
+fn test_cleanup_removes_sources_created_in_existing_directory() {
+    let keymap_dir = std::env::temp_dir().join(format!("lazyqmk_test_{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&keymap_dir).unwrap();
+    let keymap_c_path = keymap_dir.join("keymap.c");
+    let config_h_path = keymap_dir.join("config.h");
+    std::fs::write(&keymap_c_path, "generated keymap").unwrap();
+    std::fs::write(&config_h_path, "generated config").unwrap();
+
+    BuildJobManager::cleanup_deployed_keymap(&DeployResult::ExistingDirectory {
+        keymap_dir: keymap_dir.clone(),
+        original_keymap_c: None,
+        original_config_h: None,
+    });
+
+    assert!(!keymap_c_path.exists());
+    assert!(!config_h_path.exists());
+    std::fs::remove_dir_all(keymap_dir).unwrap();
+}
+
+#[test]
+fn test_cleanup_removes_created_keymap_directory() {
+    let keymap_dir = std::env::temp_dir().join(format!("lazyqmk_test_{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&keymap_dir).unwrap();
+
+    BuildJobManager::cleanup_deployed_keymap(&DeployResult::CreatedDirectory(keymap_dir.clone()));
+
+    assert!(!keymap_dir.exists());
 }
 
 #[test]
