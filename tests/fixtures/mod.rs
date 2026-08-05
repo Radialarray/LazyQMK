@@ -119,6 +119,7 @@ pub fn test_layout_basic(rows: usize, cols: usize) -> Layout {
         rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         uncolored_key_behavior: UncoloredKeyBehavior::default(),
+        show_base_layer_colors_for_unassigned_keys: false,
         idle_effect_settings: IdleEffectSettings::default(),
         rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
         palette_fx: PaletteFxSettings::default(),

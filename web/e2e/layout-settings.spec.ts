@@ -18,6 +18,7 @@ test.describe('Layout Settings Tab', () => {
 		rgb_matrix_default_speed: 127,
 		rgb_timeout_ms: 60000,
 		uncolored_key_behavior: 40,
+		show_base_layer_colors_for_unassigned_keys: false,
 		idle_effect_settings: {
 			enabled: true,
 			idle_timeout_ms: 60000,
@@ -221,6 +222,21 @@ test.describe('Layout Settings Tab', () => {
 
 		const restoredSlider = page.locator('[data-testid="uncolored-brightness-slider"]');
 		await expect(restoredSlider).toHaveValue('65');
+	});
+
+	test('saving persists base colors for unassigned keys', async ({ page }) => {
+		await page.click('[data-testid="tab-settings"]');
+		const toggle = page.locator('#base-colors-for-unassigned-keys');
+		await expect(toggle).not.toBeChecked();
+		await toggle.check();
+
+		await page.click('[data-testid="save-button"]');
+		await expect(page.locator('text=Saved!')).toBeVisible();
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		await page.click('[data-testid="tab-settings"]');
+
+		await expect(page.locator('#base-colors-for-unassigned-keys')).toBeChecked();
 	});
 
 	test('idle lighting section keeps its existing controls', async ({ page }) => {

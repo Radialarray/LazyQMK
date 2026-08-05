@@ -27,6 +27,7 @@ export interface Layout {
 	rgb_matrix_default_speed?: number;
 	rgb_timeout_ms?: number;
 	uncolored_key_behavior?: number;
+	show_base_layer_colors_for_unassigned_keys?: boolean;
 	// Idle effect settings
 	idle_effect_settings?: IdleEffectSettings;
 	// RGB overlay ripple settings

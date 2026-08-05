@@ -85,6 +85,7 @@ fn create_test_layout_with_layers() -> Layout {
         layers: vec![layer0, layer1, layer2],
         categories: vec![],
         uncolored_key_behavior: lazyqmk::models::UncoloredKeyBehavior::default(),
+        show_base_layer_colors_for_unassigned_keys: false,
         idle_effect_settings: lazyqmk::models::IdleEffectSettings::default(),
         rgb_overlay_ripple: lazyqmk::models::RgbOverlayRippleSettings::default(),
         palette_fx: lazyqmk::models::PaletteFxSettings::default(),

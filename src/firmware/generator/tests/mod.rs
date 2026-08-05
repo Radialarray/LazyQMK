@@ -146,6 +146,41 @@ fn test_generate_layer_colors_by_led_uses_resolved_colors() {
 }
 
 #[test]
+fn test_generate_layer_colors_inherits_base_colors_for_unassigned_keys() {
+    let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
+    layout
+        .get_layer_mut(0)
+        .unwrap()
+        .get_key_mut(Position::new(0, 0))
+        .unwrap()
+        .color_override = Some(RgbColor::new(255, 0, 0));
+    layout
+        .get_layer_mut(0)
+        .unwrap()
+        .get_key_mut(Position::new(0, 1))
+        .unwrap()
+        .color_override = Some(RgbColor::new(0, 255, 0));
+
+    let mut layer = Layer::new(1, "Navigation", RgbColor::new(0, 0, 255)).unwrap();
+    layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
+    layer.add_key(KeyDefinition::new(Position::new(0, 1), "KC_NO"));
+    layout.add_layer(layer).unwrap();
+
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    assert_eq!(
+        generator.generate_layer_colors_by_led(1).unwrap(),
+        vec![RgbColor::default(), RgbColor::default()]
+    );
+
+    layout.show_base_layer_colors_for_unassigned_keys = true;
+    let generator = FirmwareGenerator::new(&layout, &geometry, &mapping, &config, &keycode_db);
+    assert_eq!(
+        generator.generate_layer_colors_by_led(1).unwrap(),
+        vec![RgbColor::new(255, 0, 0), RgbColor::new(0, 255, 0)]
+    );
+}
+
+#[test]
 fn test_generate_rgb_matrix_color_table_structure() {
     let (mut layout, geometry, mapping, config, keycode_db) = create_test_setup();
 

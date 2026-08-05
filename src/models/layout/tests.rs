@@ -42,6 +42,81 @@ fn test_layout_new() {
     assert_eq!(layout.metadata.name, "Test Layout");
     assert!(layout.layers.is_empty());
     assert!(layout.categories.is_empty());
+    assert!(!layout.show_base_layer_colors_for_unassigned_keys);
+}
+
+#[test]
+fn test_unassigned_keys_can_display_base_layer_colors() {
+    let mut layout = Layout::new("Test").unwrap();
+    let mut base = Layer::new(0, "Base", RgbColor::new(0, 0, 255)).unwrap();
+    base.add_key(
+        KeyDefinition::new(Position::new(0, 0), "KC_A").with_color(RgbColor::new(255, 0, 0)),
+    );
+    base.add_key(
+        KeyDefinition::new(Position::new(0, 1), "KC_B").with_color(RgbColor::new(0, 255, 0)),
+    );
+    layout.add_layer(base).unwrap();
+
+    let mut layer = Layer::new(1, "Navigation", RgbColor::new(0, 0, 255)).unwrap();
+    layer.add_key(KeyDefinition::new(Position::new(0, 0), "KC_TRNS"));
+    layer.add_key(KeyDefinition::new(Position::new(0, 1), "KC_NO"));
+    layout.add_layer(layer).unwrap();
+
+    assert_eq!(
+        layout
+            .resolve_display_color(
+                1,
+                layout
+                    .get_layer(1)
+                    .unwrap()
+                    .get_key(Position::new(0, 0))
+                    .unwrap()
+            )
+            .0,
+        RgbColor::default()
+    );
+    assert_eq!(
+        layout
+            .resolve_display_color(
+                1,
+                layout
+                    .get_layer(1)
+                    .unwrap()
+                    .get_key(Position::new(0, 1))
+                    .unwrap()
+            )
+            .0,
+        RgbColor::default()
+    );
+
+    layout.show_base_layer_colors_for_unassigned_keys = true;
+
+    assert_eq!(
+        layout
+            .resolve_display_color(
+                1,
+                layout
+                    .get_layer(1)
+                    .unwrap()
+                    .get_key(Position::new(0, 0))
+                    .unwrap()
+            )
+            .0,
+        RgbColor::new(255, 0, 0)
+    );
+    assert_eq!(
+        layout
+            .resolve_display_color(
+                1,
+                layout
+                    .get_layer(1)
+                    .unwrap()
+                    .get_key(Position::new(0, 1))
+                    .unwrap()
+            )
+            .0,
+        RgbColor::new(0, 255, 0)
+    );
 }
 
 #[test]

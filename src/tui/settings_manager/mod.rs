@@ -131,6 +131,8 @@ pub enum SettingItem {
     IdleEffectMode,
     /// Brightness for keys without individual/category colors (0-100%)
     UncoloredKeyBehavior,
+    /// Display base-layer colors for unassigned keys above layer 0
+    UnassignedKeysUseBaseLayerColors,
     /// Overlay ripple master switch
     OverlayRippleEnabled,
     /// Maximum concurrent ripples (1-8)
@@ -242,6 +244,7 @@ impl SettingItem {
             Self::IdleEffectDuration,
             Self::IdleEffectMode,
             Self::UncoloredKeyBehavior,
+            Self::UnassignedKeysUseBaseLayerColors,
             Self::OverlayRippleEnabled,
             Self::OverlayRippleMaxRipples,
             Self::OverlayRippleDuration,
@@ -312,6 +315,7 @@ impl SettingItem {
             | Self::IdleEffectDuration
             | Self::IdleEffectMode
             | Self::UncoloredKeyBehavior
+            | Self::UnassignedKeysUseBaseLayerColors
             | Self::OverlayRippleEnabled
             | Self::OverlayRippleMaxRipples
             | Self::OverlayRippleDuration
@@ -361,6 +365,7 @@ impl SettingItem {
             | Self::RgbMatrixSpeed
             | Self::RgbTimeout
             | Self::UncoloredKeyBehavior => Some(RgbSubgroup::Core),
+            Self::UnassignedKeysUseBaseLayerColors => Some(RgbSubgroup::Core),
             Self::IdleEffectEnabled
             | Self::IdleTimeout
             | Self::IdleEffectDuration
@@ -414,6 +419,7 @@ impl SettingItem {
             Self::IdleEffectDuration => "Idle Effect Length".to_string(),
             Self::IdleEffectMode => "Idle Effect".to_string(),
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness".to_string(),
+            Self::UnassignedKeysUseBaseLayerColors => "Unassigned Keys Use Base Colors".to_string(),
             Self::OverlayRippleEnabled => "Press Ripple Enabled".to_string(),
             Self::OverlayRippleMaxRipples => "Max Concurrent Ripples".to_string(),
             Self::OverlayRippleDuration => "Ripple Duration".to_string(),
@@ -505,6 +511,10 @@ impl SettingItem {
             Self::IdleEffectMode => "Lighting animation used while keyboard is idle.".to_string(),
             Self::UncoloredKeyBehavior => {
                 "Brightness for keys without individual/category colors (0=Off, 100=Full)"
+                    .to_string()
+            }
+            Self::UnassignedKeysUseBaseLayerColors => {
+                "Show Layer 0 colors for KC_TRNS and KC_NO above the base layer. KC_NO remains disabled."
                     .to_string()
             }
             Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.".to_string(),

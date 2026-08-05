@@ -190,6 +190,12 @@ pub struct Layout {
     /// Behavior for keys without individual or category colors
     #[serde(default, alias = "inactive_key_behavior")]
     pub uncolored_key_behavior: UncoloredKeyBehavior,
+    /// Display matching base-layer colors for unassigned keys above layer 0.
+    ///
+    /// This affects RGB rendering only. `KC_NO` remains a no-op and `KC_TRNS`
+    /// retains its normal QMK layer-fallback behavior.
+    #[serde(default)]
+    pub show_base_layer_colors_for_unassigned_keys: bool,
 
     // === Idle Effect Settings ===
     /// Idle effect configuration (timeout, duration, mode)
@@ -241,6 +247,7 @@ impl Layout {
             rgb_matrix_default_speed: 127,
             rgb_timeout_ms: 0,
             uncolored_key_behavior: UncoloredKeyBehavior::default(),
+            show_base_layer_colors_for_unassigned_keys: false,
             idle_effect_settings: IdleEffectSettings::default(),
             rgb_overlay_ripple: RgbOverlayRippleSettings::default(),
             palette_fx: PaletteFxSettings::default(),
@@ -459,6 +466,31 @@ impl Layout {
     /// - `is_key_specific`: true if color came from individual override or key category
     #[must_use]
     pub fn resolve_display_color(&self, layer_idx: usize, key: &KeyDefinition) -> (RgbColor, bool) {
+        if layer_idx > 0 && (key.is_transparent() || key.is_no_op()) {
+            if self
+                .get_layer(layer_idx)
+                .is_some_and(|layer| !layer.layer_colors_enabled)
+            {
+                return (RgbColor::new(64, 64, 64), false);
+            }
+
+            if self.show_base_layer_colors_for_unassigned_keys {
+                if let Some(base_key) = self
+                    .get_layer(0)
+                    .and_then(|base_layer| base_layer.get_key(key.position))
+                {
+                    return self.resolve_display_color(0, base_key);
+                }
+            }
+
+            let neutral_color = match self.uncolored_key_behavior.as_percent() {
+                0 => RgbColor::new(0, 0, 0),
+                100 => RgbColor::default(),
+                percent => RgbColor::default().dim(percent),
+            };
+            return (neutral_color, false);
+        }
+
         // 1. Individual key color override (highest priority, key-specific)
         if let Some(color) = key.color_override {
             return (color, true);

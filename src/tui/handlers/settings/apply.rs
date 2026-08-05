@@ -353,6 +353,11 @@ fn apply_boolean_setting(state: &mut AppState, setting: SettingItem, value: bool
             let display = if value { "On" } else { "Off" };
             state.set_status(format!("RGB master switch set to: {display}"));
         }
+        SettingItem::UnassignedKeysUseBaseLayerColors => {
+            state.layout.show_base_layer_colors_for_unassigned_keys = value;
+            let display = if value { "On" } else { "Off" };
+            state.set_status(format!("Base colors for unassigned keys set to: {display}"));
+        }
         SettingItem::ShowHelpOnStartup => {
             state.config.ui.show_help_on_startup = value;
             if let Err(e) = state.config.save() {

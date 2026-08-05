@@ -59,6 +59,25 @@
 				<label for="rgb-enabled" class="text-sm font-medium">Turn on RGB lighting</label>
 			</div>
 
+			<div class="flex items-start gap-3">
+				<input
+					type="checkbox"
+					id="base-colors-for-unassigned-keys"
+					class="w-4 h-4 mt-0.5"
+					checked={layout.show_base_layer_colors_for_unassigned_keys ?? false}
+					onchange={(e) =>
+						onRgbGeneralChange('show_base_layer_colors_for_unassigned_keys', e.currentTarget.checked)}
+				/>
+				<div>
+					<label for="base-colors-for-unassigned-keys" class="text-sm font-medium">
+						Use base-layer colors for unassigned keys
+					</label>
+					<p class="text-xs text-muted-foreground mt-1">
+						Shows the Layer 0 color for KC_TRNS and KC_NO on higher layers. KC_NO stays disabled.
+					</p>
+				</div>
+			</div>
+
 			<div>
 				<div class="flex items-center justify-between">
 					<label for="uncolored-brightness" class="block text-sm font-medium text-muted-foreground">

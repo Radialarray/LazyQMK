@@ -34,6 +34,10 @@
 		layer?: Layer;
 		/** Categories (for color resolution) */
 		categories?: Category[];
+		/** Base layer, used for unassigned-key color inheritance */
+		baseLayer?: Layer;
+		/** Whether KC_TRNS and KC_NO inherit matching base-layer colors */
+		showBaseLayerColorsForUnassignedKeys?: boolean;
 		/** Render metadata for rich key labels (optional) */
 		renderMetadata?: KeyRenderMetadata[];
 		/** Callback when a key is clicked */
@@ -65,6 +69,8 @@
 		swapFirstKey = null,
 		layer,
 		categories = [],
+		baseLayer,
+		showBaseLayerColorsForUnassignedKeys = false,
 		renderMetadata = [],
 		onKeyClick,
 		onNavigate,
@@ -188,7 +194,13 @@
 					}
 				}
 				if (visualIndex >= 0) {
-					const color = resolveKeyColor(assignment, layer, categories);
+					const color = resolveKeyColor(
+						assignment,
+						layer,
+						categories,
+						baseLayer,
+						showBaseLayerColorsForUnassignedKeys
+					);
 					map.set(visualIndex, color);
 				}
 			}

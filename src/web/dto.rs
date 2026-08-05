@@ -746,6 +746,8 @@ pub struct LayoutDto {
     pub rgb_timeout_ms: u32,
     /// Behavior for keys without individual or category colors (0-100)
     pub uncolored_key_behavior: u8,
+    /// Show matching base-layer colors for unassigned keys above layer 0.
+    pub show_base_layer_colors_for_unassigned_keys: bool,
     /// Idle effect settings
     pub idle_effect_settings: IdleEffectSettingsDto,
     /// RGB overlay ripple settings
@@ -792,6 +794,9 @@ pub struct LayoutSaveDto {
     /// Behavior for keys without individual or category colors
     #[serde(default)]
     pub uncolored_key_behavior: u8,
+    /// Show matching base-layer colors for unassigned keys above layer 0.
+    #[serde(default)]
+    pub show_base_layer_colors_for_unassigned_keys: bool,
     /// Idle effect settings
     #[serde(default)]
     pub idle_effect_settings: Option<IdleEffectSettingsDto>,

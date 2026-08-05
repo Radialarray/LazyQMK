@@ -15,8 +15,34 @@ import type { RgbColor, KeyAssignment, Layer, Category } from '$api/types';
 export function resolveKeyColor(
 	key: KeyAssignment,
 	layer: Layer,
-	categories: Category[]
+	categories: Category[],
+	baseLayer?: Layer,
+	showBaseLayerColorsForUnassignedKeys = false
 ): string | undefined {
+	const isUnassigned = ['KC_TRNS', 'KC_TRANSPARENT', '_______', 'KC_NO', 'XXXXXXX'].includes(
+		key.keycode
+	);
+	if (
+		showBaseLayerColorsForUnassignedKeys &&
+		layer.number !== 0 &&
+		layer.layer_colors_enabled !== false &&
+		isUnassigned
+	) {
+		const baseKey = baseLayer?.keys.find((candidate) =>
+			candidate.position && key.position
+				? candidate.position.row === key.position.row && candidate.position.col === key.position.col
+				: candidate.matrix_position[0] === key.matrix_position[0] &&
+					candidate.matrix_position[1] === key.matrix_position[1]
+		);
+		if (baseKey && baseLayer) {
+			return resolveKeyColor(baseKey, baseLayer, categories);
+		}
+	}
+
+	if (layer.number !== 0 && layer.layer_colors_enabled !== false && isUnassigned) {
+		return '#FFFFFF';
+	}
+
 	// 1. Key color override (highest priority)
 	if (key.color_override) {
 		return rgbToHex(key.color_override);

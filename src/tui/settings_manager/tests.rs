@@ -49,6 +49,32 @@ fn test_setting_item_all_includes_idle_effect_settings() {
     assert!(all_settings.contains(&SettingItem::IdleTimeout));
     assert!(all_settings.contains(&SettingItem::IdleEffectDuration));
     assert!(all_settings.contains(&SettingItem::IdleEffectMode));
+    assert!(all_settings.contains(&SettingItem::UnassignedKeysUseBaseLayerColors));
+}
+
+#[test]
+fn test_unassigned_key_base_color_setting_is_registered() {
+    let setting = SettingItem::UnassignedKeysUseBaseLayerColors;
+    assert_eq!(setting.group(), super::SettingGroup::Rgb);
+    assert_eq!(setting.display_name(), "Unassigned Keys Use Base Colors");
+    assert!(setting.description().contains("KC_NO"));
+
+    let mut layout = crate::models::Layout::new("test").unwrap();
+    layout.show_base_layer_colors_for_unassigned_keys = true;
+    let display = get_setting_value_display(
+        setting,
+        true,
+        RgbBrightness::from(100),
+        0,
+        UncoloredKeyBehavior::from(100),
+        &IdleEffectSettings::default(),
+        &RgbOverlayRippleSettings::default(),
+        &TapHoldSettings::default(),
+        &crate::config::Config::default(),
+        Some(&layout),
+    );
+
+    assert_eq!(display, "On");
 }
 
 #[test]

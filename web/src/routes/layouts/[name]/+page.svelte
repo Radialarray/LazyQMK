@@ -1556,6 +1556,8 @@
 			layout.rgb_timeout_ms = value as number;
 		} else if (field === 'uncolored_key_behavior') {
 			layout.uncolored_key_behavior = value as number;
+		} else if (field === 'show_base_layer_colors_for_unassigned_keys') {
+			layout.show_base_layer_colors_for_unassigned_keys = value as boolean;
 		}
 		layout = { ...layout };
 		isDirty = true;
@@ -2530,6 +2532,10 @@
 							{swapMode}
 							{swapFirstKey}
 							layer={layout.layers[selectedLayerIndex]}
+							baseLayer={layout.layers[0]}
+							showBaseLayerColorsForUnassignedKeys={
+								layout.show_base_layer_colors_for_unassigned_keys ?? false
+							}
 							categories={layout.categories || []}
 							renderMetadata={currentLayerRenderMetadata}
 							comboMarkers={comboMarkers}

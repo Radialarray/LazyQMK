@@ -235,6 +235,12 @@ pub fn compute_diff(
         &from.rgb_matrix_default_speed.to_string(),
         &to.rgb_matrix_default_speed.to_string(),
     );
+    add_if_changed(
+        &mut setting_changes,
+        "show_base_layer_colors_for_unassigned_keys",
+        &from.show_base_layer_colors_for_unassigned_keys.to_string(),
+        &to.show_base_layer_colors_for_unassigned_keys.to_string(),
+    );
 
     add_if_changed(
         &mut setting_changes,
@@ -264,7 +270,10 @@ pub fn compute_diff(
 
     summary.rgb_changed = setting_changes
         .iter()
-        .any(|d| d.path.starts_with("rgb_") && d.from != d.to);
+        .any(|d| {
+            (d.path.starts_with("rgb_") || d.path == "show_base_layer_colors_for_unassigned_keys")
+                && d.from != d.to
+        });
 
     LayoutDiff {
         from_revision,
@@ -406,6 +415,21 @@ mod tests {
             .setting_changes
             .iter()
             .any(|d| d.path == "rgb_enabled"));
+    }
+
+    #[test]
+    fn unassigned_key_base_color_setting_change_detected() {
+        let a = make_layout();
+        let mut b = a.clone();
+        b.show_base_layer_colors_for_unassigned_keys = true;
+
+        let diff = compute_diff(&a, &b, 1, 2);
+
+        assert!(diff.summary.rgb_changed);
+        assert!(diff
+            .setting_changes
+            .iter()
+            .any(|d| d.path == "show_base_layer_colors_for_unassigned_keys"));
     }
 
     #[test]

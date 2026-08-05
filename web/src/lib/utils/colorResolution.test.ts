@@ -188,6 +188,47 @@ describe('colorResolution', () => {
 			const result = resolveKeyColor(key, layer, categories);
 			expect(result).toBe('#FFFF00'); // Falls back to layer default
 		});
+
+		it('uses matching base-layer colors for transparent and no-op keys when enabled', () => {
+			const baseKeys: KeyAssignment[] = [
+				{
+					keycode: 'KC_A',
+					matrix_position: [0, 0],
+					visual_index: 0,
+					led_index: 0,
+					color_override: redRgb
+				},
+				{
+					keycode: 'KC_B',
+					matrix_position: [0, 1],
+					visual_index: 1,
+					led_index: 1,
+					color_override: greenRgb
+				}
+			];
+			const baseLayer: Layer = {
+				name: 'Base',
+				number: 0,
+				color: '#FFFFFF',
+				default_color: blueRgb,
+				keys: baseKeys
+			};
+			const layer: Layer = {
+				name: 'Navigation',
+				number: 1,
+				color: '#FFFFFF',
+				default_color: blueRgb,
+				keys: []
+			};
+
+			const transparent = { ...baseKeys[0], keycode: 'KC_TRNS' };
+			const noOp = { ...baseKeys[1], keycode: 'KC_NO' };
+
+			expect(resolveKeyColor(transparent, layer, [], baseLayer, true)).toBe('#FF0000');
+			expect(resolveKeyColor(noOp, layer, [], baseLayer, true)).toBe('#00FF00');
+			expect(resolveKeyColor(transparent, layer, [], baseLayer, false)).toBe('#FFFFFF');
+			expect(resolveKeyColor(noOp, layer, [], baseLayer, false)).toBe('#FFFFFF');
+		});
 	});
 
 	describe('rgbToHex', () => {

@@ -29,6 +29,12 @@ pub(super) fn handle_browsing_enter(state: &mut AppState) -> Result<bool> {
                         100,
                     );
                 }
+                SettingItem::UnassignedKeysUseBaseLayerColors => {
+                    manager.state_mut().start_toggling_boolean(
+                        *setting,
+                        state.layout.show_base_layer_colors_for_unassigned_keys,
+                    );
+                }
                 SettingItem::TapHoldPreset => {
                     manager
                         .state_mut()

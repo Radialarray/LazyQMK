@@ -22,6 +22,7 @@ fn create_test_state() -> AppState {
         rgb_matrix_default_speed: 127,
         rgb_timeout_ms: 0,
         uncolored_key_behavior: crate::models::UncoloredKeyBehavior::default(),
+        show_base_layer_colors_for_unassigned_keys: false,
         idle_effect_settings: crate::models::IdleEffectSettings::default(),
         rgb_overlay_ripple: crate::models::RgbOverlayRippleSettings::default(),
         palette_fx: crate::models::PaletteFxSettings::default(),

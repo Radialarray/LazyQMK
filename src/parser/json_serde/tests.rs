@@ -11,6 +11,7 @@ fn test_json_roundtrip_basic_layout() -> Result<()> {
     let mut layout = Layout::new("test_roundtrip")?;
     layout.metadata.author = "test".to_string();
     layout.metadata.description = "Roundtrip test".to_string();
+    layout.show_base_layer_colors_for_unassigned_keys = true;
 
     let json = serde_json::to_string_pretty(&layout)?;
     let back: Layout = serde_json::from_str(&json)?;
@@ -19,6 +20,21 @@ fn test_json_roundtrip_basic_layout() -> Result<()> {
     assert_eq!(back.metadata.author, "test");
     assert!(back.layers.is_empty());
     assert!(back.tap_dances.is_empty());
+    assert!(back.show_base_layer_colors_for_unassigned_keys);
+    Ok(())
+}
+
+#[test]
+fn test_json_missing_base_color_setting_defaults_to_disabled() -> Result<()> {
+    let layout = Layout::new("default_setting")?;
+    let mut json = serde_json::to_value(layout)?;
+    json.as_object_mut()
+        .unwrap()
+        .remove("show_base_layer_colors_for_unassigned_keys");
+
+    let parsed: Layout = serde_json::from_value(json)?;
+
+    assert!(!parsed.show_base_layer_colors_for_unassigned_keys);
     Ok(())
 }
 

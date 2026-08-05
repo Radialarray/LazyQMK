@@ -462,6 +462,13 @@ pub(super) fn get_setting_value_display(
             .display_name()
             .to_string(),
         SettingItem::UncoloredKeyBehavior => format!("{}%", uncolored_key_behavior.as_percent()),
+        SettingItem::UnassignedKeysUseBaseLayerColors => {
+            if layout.is_some_and(|layout| layout.show_base_layer_colors_for_unassigned_keys) {
+                "On".to_string()
+            } else {
+                "Off".to_string()
+            }
+        }
         // Per-Layout: Overlay Ripple
         SettingItem::OverlayRippleEnabled => if overlay_ripple_settings.enabled {
             "On"
