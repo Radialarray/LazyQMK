@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Mutex, RwLock};
 use std::thread;
 
@@ -19,6 +19,21 @@ use super::{
     CancelGenerateJobResponse, GenerateCommand, GenerateJob, GenerateJobHealth,
     GenerateJobLogsResponse, GenerateJobStatus, GenerateWorker, LogEntry, MAX_CONCURRENT_JOBS,
 };
+
+pub(super) fn resolve_layout_path(workspace_root: &Path, layout_filename: &str) -> Option<PathBuf> {
+    let requested_path = workspace_root.join(layout_filename);
+    if requested_path.exists() {
+        return Some(requested_path);
+    }
+
+    requested_path.parent().and_then(|parent| {
+        requested_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(|stem| parent.join(stem).join("current.json"))
+            .filter(|path| path.exists())
+    })
+}
 
 /// Generate job manager that coordinates background generation.
 pub struct GenerateJobManager {
@@ -311,19 +326,8 @@ impl GenerateJobManager {
         // Build layout path. Also accept the post-migration folder layout
         // (`<stem>/current.json`) so this still works after the first load
         // moves the legacy flat file into the per-layout folder.
-        let layout_path = self.workspace_root.join(&layout_filename);
-        let folder_path = layout_path
-            .parent()
-            .and_then(|p| {
-                layout_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|stem| p.join(stem).join("current.json"))
-            })
-            .filter(|p| p.exists());
-        if !layout_path.exists() && folder_path.is_none() {
-            return Err(format!("Layout file not found: {layout_filename}"));
-        }
+        let layout_path = resolve_layout_path(&self.workspace_root, &layout_filename)
+            .ok_or_else(|| format!("Layout file not found: {layout_filename}"))?;
 
         // Create job
         let job = GenerateJob::new(layout_filename.clone(), keyboard, layout_variant);

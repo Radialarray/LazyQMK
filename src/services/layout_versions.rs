@@ -173,6 +173,31 @@ impl LayoutVersionService {
         self.layout_dir(name).join(CURRENT_FILE).exists()
     }
 
+    /// Archives an invalid nested `current/` directory without touching the
+    /// authoritative `<layout>/current.json` file.
+    ///
+    /// Older versions could mistake the canonical file for a legacy layout and
+    /// create this invalid directory structure. The archive keeps its contents
+    /// available for manual inspection while removing it from normal layout I/O.
+    pub fn archive_nested_current_dir(&self, name: &str) -> Result<Option<PathBuf>> {
+        let canonical_current = self.current_path(name);
+        let nested_dir = self.layout_dir(name).join("current");
+        if !canonical_current.is_file() || !nested_dir.is_dir() {
+            return Ok(None);
+        }
+
+        let archive_dir = self
+            .layout_dir(name)
+            .join(format!(".recovered-current-{}", Uuid::new_v4()));
+        fs::rename(&nested_dir, &archive_dir).with_context(|| {
+            format!(
+                "Failed to archive malformed layout directory {}",
+                nested_dir.display()
+            )
+        })?;
+        Ok(Some(archive_dir))
+    }
+
     /// Load the current (active) layout for a given name.
     ///
     /// If `current.json` is missing but versions exist, the most recent

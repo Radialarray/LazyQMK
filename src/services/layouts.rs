@@ -22,7 +22,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::services::file_watcher::{mark_self_write, SelfWriteEpoch};
-use crate::services::layout_versions::LayoutVersionService;
+use crate::services::layout_versions::{LayoutVersionService, CURRENT_FILE};
 use crate::{models::Layout, parser};
 
 /// Service for managing layout file I/O operations.
@@ -59,11 +59,20 @@ impl LayoutService {
     /// # Ok::<(), anyhow::Error>(())
     /// ```
     pub fn load(path: &Path) -> Result<Layout> {
+        // A canonical revision file is already in its versioned layout folder.
+        // Treating it as a flat file would migrate it into `current/current.json`.
+        if path.file_name().is_some_and(|name| name == CURRENT_FILE) {
+            archive_nested_current_dir(path)?;
+            return parser::parse_json_layout(path)
+                .with_context(|| format!("Failed to load layout from {}", path.display()));
+        }
+
         // 1. If path points to a folder-style layout (`<stem>/current.json`), use it.
         if let Some(parent) = path.parent() {
             if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                 let current = parent.join(stem).join("current.json");
                 if current.exists() {
+                    archive_nested_current_dir(&current)?;
                     return parser::parse_json_layout(&current).with_context(|| {
                         format!("Failed to load layout from {}", current.display())
                     });
@@ -314,6 +323,22 @@ impl LayoutService {
 
         Ok(Some(new_path))
     }
+}
+
+fn archive_nested_current_dir(current_path: &Path) -> Result<()> {
+    let Some(layout_dir) = current_path.parent() else {
+        return Ok(());
+    };
+    let Some(layouts_dir) = layout_dir.parent() else {
+        return Ok(());
+    };
+    let Some(layout_name) = layout_dir.file_name().and_then(|name| name.to_str()) else {
+        return Ok(());
+    };
+
+    LayoutVersionService::new(layouts_dir.to_path_buf())
+        .archive_nested_current_dir(layout_name)
+        .map(|_| ())
 }
 
 /// Ensures a path uses `.json` extension. If the path has `.md` or no

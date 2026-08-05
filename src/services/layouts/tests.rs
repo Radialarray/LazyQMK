@@ -45,6 +45,28 @@ fn test_json_roundtrip_via_service() -> Result<()> {
 }
 
 #[test]
+fn test_load_current_json_does_not_migrate() -> Result<()> {
+    let tmp = TempDir::new()?;
+    let current_path = tmp.path().join("layout").join("current.json");
+    fs::create_dir_all(current_path.parent().unwrap())?;
+
+    let mut layout = Layout::new("versioned_layout")?;
+    layout.add_layer(crate::models::Layer::new(
+        0,
+        "Base",
+        crate::models::RgbColor::new(255, 255, 255),
+    )?)?;
+    LayoutService::save(&layout, &current_path)?;
+
+    let loaded = LayoutService::load(&current_path)?;
+    assert_eq!(loaded.metadata.name, "versioned_layout");
+    assert!(current_path.exists());
+    assert!(!tmp.path().join("layout/current/current.json").exists());
+
+    Ok(())
+}
+
+#[test]
 fn test_load_without_extension_tries_json_first() -> Result<()> {
     let tmp = TempDir::new()?;
     let json_path = tmp.path().join("my_layout.json");

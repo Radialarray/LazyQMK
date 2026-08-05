@@ -4,8 +4,10 @@
 
 use super::*;
 
+use super::manager::resolve_layout_path;
 use super::*;
 use std::time::Duration;
+use tempfile::TempDir;
 
 fn create_test_manager(workspace_root: &Path) -> Arc<GenerateJobManager> {
     let temp_dir = std::env::temp_dir().join(format!("lazyqmk_gen_test_{}", Uuid::new_v4()));
@@ -94,6 +96,19 @@ fn test_start_generate_file_not_found() {
 
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn test_resolve_layout_path_uses_versioned_current_file() {
+    let temp_dir = TempDir::new().unwrap();
+    let current_path = temp_dir.path().join("test").join("current.json");
+    fs::create_dir_all(current_path.parent().unwrap()).unwrap();
+    fs::write(&current_path, "{}").unwrap();
+
+    assert_eq!(
+        resolve_layout_path(temp_dir.path(), "test.json"),
+        Some(current_path)
+    );
 }
 
 #[test]

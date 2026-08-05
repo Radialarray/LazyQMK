@@ -4,11 +4,12 @@ use crate::cli::common::{
     CliError, CliResult, ValidationChecks, ValidationLocation, ValidationMessage,
     ValidationPosition, ValidationResponse,
 };
+use crate::config::Config;
 use crate::firmware::validator::FirmwareValidator;
 use crate::keycode_db::KeycodeDb;
 use crate::models::keyboard_geometry::KeyboardGeometry;
 use crate::models::visual_layout_mapping::VisualLayoutMapping;
-use crate::services::LayoutService;
+use crate::services::{geometry, LayoutService};
 use clap::Args;
 use std::path::PathBuf;
 
@@ -35,9 +36,7 @@ impl ValidateArgs {
         let layout = LayoutService::load(&self.layout)
             .map_err(|e| CliError::io(format!("Failed to load layout: {e}")))?;
 
-        // Build minimal geometry for validation
-        let geometry = build_minimal_geometry_for_layout(&layout)?;
-        let mapping = VisualLayoutMapping::build(&geometry);
+        let (geometry, mapping) = build_geometry_and_mapping_for_layout(&layout)?;
 
         // Load keycode database
         let keycode_db = KeycodeDb::load()
@@ -167,6 +166,29 @@ impl ValidateArgs {
     }
 }
 
+fn build_geometry_and_mapping_for_layout(
+    layout: &crate::models::Layout,
+) -> CliResult<(KeyboardGeometry, VisualLayoutMapping)> {
+    let config = Config::load().unwrap_or_default();
+    let layout_name = layout
+        .metadata
+        .layout_variant
+        .as_deref()
+        .unwrap_or("LAYOUT");
+    let context = geometry::GeometryContext {
+        config: &config,
+        metadata: &layout.metadata,
+    };
+
+    if let Ok(result) = geometry::build_geometry_for_layout(context, layout_name) {
+        return Ok((result.geometry, result.mapping));
+    }
+
+    let geometry = build_minimal_geometry_for_layout(layout)?;
+    let mapping = VisualLayoutMapping::build(&geometry);
+    Ok((geometry, mapping))
+}
+
 /// Build minimal geometry for a layout based on its key count
 fn build_minimal_geometry_for_layout(
     layout: &crate::models::Layout,
@@ -182,19 +204,20 @@ fn build_minimal_geometry_for_layout(
         return Err(CliError::validation("Layout has no keys"));
     }
 
-    // Estimate rows/cols (assume roughly square layout)
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    let cols = (key_count as f64).sqrt().ceil() as u8;
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    let rows = ((key_count as f64) / f64::from(cols)).ceil() as u8;
+    let rows = layout.layers[0]
+        .keys
+        .iter()
+        .map(|key| key.position.row)
+        .max()
+        .unwrap_or(0)
+        .saturating_add(1);
+    let cols = layout.layers[0]
+        .keys
+        .iter()
+        .map(|key| key.position.col)
+        .max()
+        .unwrap_or(0)
+        .saturating_add(1);
 
     let mut geometry = KeyboardGeometry::new(
         layout.metadata.keyboard.as_deref().unwrap_or("unknown"),
@@ -221,4 +244,28 @@ fn build_minimal_geometry_for_layout(
     }
 
     Ok(geometry)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{KeyDefinition, Layer, Position, RgbColor};
+
+    #[test]
+    fn minimal_geometry_accepts_split_visual_coordinates() {
+        let mut layout = crate::models::Layout::new("split").unwrap();
+        let mut layer = Layer::new(0, "Globals", RgbColor::new(0, 0, 0)).unwrap();
+        layer
+            .keys
+            .push(KeyDefinition::new(Position::new(1, 8), "KC_VOLU"));
+        layer
+            .keys
+            .push(KeyDefinition::new(Position::new(2, 6), "KC_MUTE"));
+        layout.add_layer(layer).unwrap();
+
+        let geometry = build_minimal_geometry_for_layout(&layout).unwrap();
+        let mapping = VisualLayoutMapping::build(&geometry);
+        assert_eq!(mapping.visual_to_matrix_pos(1, 8), Some((1, 8)));
+        assert_eq!(mapping.visual_to_matrix_pos(2, 6), Some((2, 6)));
+    }
 }

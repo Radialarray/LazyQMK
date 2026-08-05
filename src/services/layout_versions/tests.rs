@@ -173,6 +173,24 @@ fn load_current_recovers_from_missing_current() {
 }
 
 #[test]
+fn archive_nested_current_dir_preserves_canonical_layout() {
+    let (_tmp, svc) = service_in_tmp();
+    let layout = make_layout("test");
+    fs::create_dir_all(svc.layout_dir("test")).unwrap();
+    svc.save_current("test", &layout, None).unwrap();
+
+    let nested_current = svc.layout_dir("test").join("current/current.json");
+    fs::create_dir_all(nested_current.parent().unwrap()).unwrap();
+    atomic_write_json(&nested_current, &layout, None).unwrap();
+
+    let archived = svc.archive_nested_current_dir("test").unwrap();
+    assert!(archived.is_some());
+    assert!(svc.current_path("test").exists());
+    assert!(!svc.layout_dir("test").join("current").exists());
+    assert!(archived.unwrap().join("current.json").exists());
+}
+
+#[test]
 fn rebuild_manifest_from_disk_handles_missing_manifest() {
     let (_tmp, svc) = service_in_tmp();
     let layout = make_layout("test");
