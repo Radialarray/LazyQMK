@@ -56,7 +56,7 @@ fn test_setting_item_all_includes_idle_effect_settings() {
 fn test_unassigned_key_base_color_setting_is_registered() {
     let setting = SettingItem::UnassignedKeysUseBaseLayerColors;
     assert_eq!(setting.group(), super::SettingGroup::Rgb);
-    assert_eq!(setting.display_name(), "Unassigned Keys Use Base Colors");
+    assert_eq!(setting.display_name(), "Show Base Colors on Empty Keys");
     assert!(setting.description().contains("KC_NO"));
 
     let mut layout = crate::models::Layout::new("test").unwrap();

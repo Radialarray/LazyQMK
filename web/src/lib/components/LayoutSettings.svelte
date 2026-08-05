@@ -70,10 +70,11 @@
 				/>
 				<div>
 					<label for="base-colors-for-unassigned-keys" class="text-sm font-medium">
-						Use base-layer colors for unassigned keys
+						Show base-layer colors on empty keys
 					</label>
 					<p class="text-xs text-muted-foreground mt-1">
-						Shows the Layer 0 color for KC_TRNS and KC_NO on higher layers. KC_NO stays disabled.
+						On: KC_TRNS and KC_NO on higher layers use the matching Layer 0 color. Off: empty
+						keys use neutral white so this layer's assignments stand out. KC_NO stays disabled.
 					</p>
 				</div>
 			</div>

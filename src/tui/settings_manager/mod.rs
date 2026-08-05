@@ -419,7 +419,7 @@ impl SettingItem {
             Self::IdleEffectDuration => "Idle Effect Length".to_string(),
             Self::IdleEffectMode => "Idle Effect".to_string(),
             Self::UncoloredKeyBehavior => "Uncolored Key Brightness".to_string(),
-            Self::UnassignedKeysUseBaseLayerColors => "Unassigned Keys Use Base Colors".to_string(),
+            Self::UnassignedKeysUseBaseLayerColors => "Show Base Colors on Empty Keys".to_string(),
             Self::OverlayRippleEnabled => "Press Ripple Enabled".to_string(),
             Self::OverlayRippleMaxRipples => "Max Concurrent Ripples".to_string(),
             Self::OverlayRippleDuration => "Ripple Duration".to_string(),
@@ -514,7 +514,7 @@ impl SettingItem {
                     .to_string()
             }
             Self::UnassignedKeysUseBaseLayerColors => {
-                "Show Layer 0 colors for KC_TRNS and KC_NO above the base layer. KC_NO remains disabled."
+                "On: KC_TRNS and KC_NO above Layer 0 use its matching color. Off: empty keys use neutral white. KC_NO remains disabled."
                     .to_string()
             }
             Self::OverlayRippleEnabled => "Show ripple feedback on key press and/or release.".to_string(),
