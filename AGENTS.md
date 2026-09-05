@@ -408,11 +408,8 @@ Before committing changes:
 - [ ] No personal information in code, comments, or commit messages
 - [ ] git diff reviewed for accuracy
 - [ ] `./scripts/check-style.sh` passes (style/quality audit gate; informational
-      warnings like >500-line files are tracked in bd but not blocking)
 
 ### Project Style Invariants
-
-These are enforced by `scripts/check-style.sh` and tracked via bd issues:
 
 - **File size**: target ≤500 lines; >500 is a warning; >1000 is an error
   (currently 18 files >1000 — see LazyQMK-aopx.4.* for splits)
@@ -507,7 +504,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 - [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md) - **Agent interaction guide**: step-by-step conversational flow for setting up layouts, RGB effects, and combos. Start here when helping a user configure their keyboard.
 - [docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md) - Docker build configuration
 - [docs/DOCKER_QMK_SETUP.md](docs/DOCKER_QMK_SETUP.md) - Docker QMK setup
-- Historical work: Use `bd list --status=closed` to view completed specs and features
 
 <!-- MANUAL ADDITIONS END -->
 
@@ -527,7 +523,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 
    ```bash
    git pull --rebase
-   bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
+
    git push                           # pushes to both origin and gitea via the 'all' remote
    git status                         # MUST show "up to date with origin/main"
    git ls-remote origin main          # verify GitHub tip
@@ -563,77 +559,3 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
-
-This project uses **bd (beads)** for issue tracking in **in-repo JSONL mode** (no external Dolt server, no `bd dolt push` — the JSONL file `.beads/issues.jsonl` is committed alongside the code). Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
-
-## Session Completion
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO ALL ORIGINS** - This is MANDATORY. The repo is configured with
-   a multi-origin `all` remote that pushes to **both** GitHub (origin) and the
-   self-hosted Gitea at `192.168.1.12` (gitea) on every `git push`. Treat
-   them as one logical remote — work is not "done" until both are in sync.
-
-   ```bash
-   git pull --rebase
-   bd export -o .beads/issues.jsonl   # flush mutations to JSONL (in-repo, no Dolt server)
-   git push                           # pushes to both origin and gitea via the 'all' remote
-   git status                         # MUST show "up to date with origin/main"
-   git ls-remote origin main          # verify GitHub tip
-   git ls-remote gitea  main          # verify Gitea tip
-   ```
-
-   If only one remote updated (network blip, gitea offline), retry just that one:
-
-   ```bash
-   git fetch gitea                    # refresh stale local refs
-   git push --force-with-lease gitea  # retry gitea only
-   ```
-
-   The "all" remote is wired via:
-
-   ```bash
-   git remote add all https://github.com/Radialarray/LazyQMK.git
-   git remote set-url --push --add all https://github.com/Radialarray/LazyQMK.git
-   git remote set-url --push --add all http://192.168.1.12/Radialarray/LazyQMK.git
-   git config remote.pushDefault all
-   ```
-
-   New agents: if you set up a new clone, run those four lines once before
-   your first push so `git push` reaches both hosts automatically.
-
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
