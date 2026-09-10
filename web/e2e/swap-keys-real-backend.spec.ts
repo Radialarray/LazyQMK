@@ -30,38 +30,58 @@ const QMK_INFO_JSON = {
 	}
 };
 
-const LAYOUT_MARKDOWN = `---
-name: Swap Test
-description: Test layout for swap
-author: Test User
-created: 2024-01-01T00:00:00Z
-modified: 2024-01-01T00:00:00Z
-tags: []
-is_template: false
-version: '1.0'
-keyboard: test_keyboard
-layout_variant: LAYOUT_test
-keymap_name: test
-output_format: hex
----
-
-# Swap Test
-
-## Layer 0: Base
-**ID**: test-layer
-**Color**: #FFFFFF
-
-| C0 | C1 |
-|------|------|
-| KC_Q{#FF0000} | KC_W{#00FF00} |
-`;
+const LAYOUT_JSON = {
+	metadata: {
+		name: 'Swap Test',
+		description: 'Test layout for swap',
+		author: 'Test User',
+		created: '2024-01-01T00:00:00Z',
+		modified: '2024-01-01T00:00:00Z',
+		tags: [],
+		is_template: false,
+		version: '1.0',
+		keyboard: 'test_keyboard',
+		layout_variant: 'LAYOUT_test',
+		keymap_name: 'test',
+		output_format: 'hex'
+	},
+	layers: [
+		{
+			id: 'test-layer',
+			number: 0,
+			name: 'Base',
+			default_color: { r: 255, g: 255, b: 255 },
+			category_id: null,
+			keys: [
+				{
+					position: { row: 0, col: 0 },
+					keycode: 'KC_Q',
+					label: null,
+					color_override: { r: 255, g: 0, b: 0 },
+					category_id: null,
+					combo_participant: false
+				},
+				{
+					position: { row: 0, col: 1 },
+					keycode: 'KC_W',
+					label: null,
+					color_override: { r: 0, g: 255, b: 0 },
+					category_id: null,
+					combo_participant: false
+				}
+			],
+			layer_colors_enabled: true
+		}
+	],
+	categories: []
+};
 
 test.describe('Swap Keys Mode - real backend', () => {
 	let workspaceRoot: string;
 	let backendProcess: Awaited<ReturnType<typeof startBackend>>['process'];
 	let backendPort: number;
 	const layoutFilename = 'swap_real_backend';
-	const layoutFile = `${layoutFilename}.md`;
+	const layoutFile = join(layoutFilename, 'current.json');
 
 	test.beforeAll(async () => {
 		workspaceRoot = await mkdtemp(join(tmpdir(), 'lazyqmk-e2e-'));
@@ -71,7 +91,8 @@ test.describe('Swap Keys Mode - real backend', () => {
 		await mkdir(keyboardDir, { recursive: true });
 		await writeFile(join(qmkRoot, 'Makefile'), '# Minimal QMK Makefile for tests\n');
 		await writeFile(join(keyboardDir, 'info.json'), JSON.stringify(QMK_INFO_JSON, null, 2));
-		await writeFile(join(workspaceRoot, layoutFile), LAYOUT_MARKDOWN);
+		await mkdir(join(workspaceRoot, layoutFilename), { recursive: true });
+		await writeFile(join(workspaceRoot, layoutFile), JSON.stringify(LAYOUT_JSON));
 	});
 
 	test.afterAll(async () => {
@@ -81,7 +102,7 @@ test.describe('Swap Keys Mode - real backend', () => {
 		}
 	});
 
-	test('swap persists in UI and markdown file', async ({ page }) => {
+	test('swap persists in the UI and canonical layout JSON', async ({ page }) => {
 		const apiBaseUrl = `http://127.0.0.1:${backendPort}`;
 		await page.addInitScript(({ baseUrl }) => {
 			(window as { __LAZYQMK_API_BASE_URL?: string }).__LAZYQMK_API_BASE_URL = baseUrl;
@@ -102,7 +123,7 @@ test.describe('Swap Keys Mode - real backend', () => {
 		expect(preflightResponse.ok()).toBe(true);
 		const preflightData = await preflightResponse.json();
 		expect(preflightData.qmk_configured).toBe(true);
-		await page.goto(`http://localhost:4173/layouts/${layoutFilename}`);
+		await page.goto(`${apiBaseUrl}/layouts/${layoutFilename}`);
 
 		await expect(page.getByRole('heading', { name: 'Keyboard Preview' })).toBeVisible();
 		await expect(page.getByTestId('key-0')).toBeVisible();
@@ -139,7 +160,18 @@ test.describe('Swap Keys Mode - real backend', () => {
 		expect(await getKeyLabel(0)).toContain('W');
 		expect(await getKeyLabel(1)).toContain('Q');
 
-		const savedLayout = await readFile(join(workspaceRoot, layoutFile), 'utf8');
-		expect(savedLayout).toContain('KC_W{#00FF00} | KC_Q{#FF0000}');
+		const savedLayout = JSON.parse(await readFile(join(workspaceRoot, layoutFile), 'utf8'));
+		expect(savedLayout.layers[0].keys).toEqual([
+			expect.objectContaining({
+				position: { row: 0, col: 0 },
+				keycode: 'KC_W',
+				color_override: { r: 0, g: 255, b: 0 }
+			}),
+			expect.objectContaining({
+				position: { row: 0, col: 1 },
+				keycode: 'KC_Q',
+				color_override: { r: 255, g: 0, b: 0 }
+			})
+		]);
 	});
 });

@@ -516,7 +516,14 @@ pub(super) async fn swap_keys(
 
     match (first_idx, second_idx) {
         (Some(idx1), Some(idx2)) => {
+            // Position identifies the physical slot. Swap its assignment while
+            // retaining that identity so JSON consumers render changed keys at
+            // the selected locations rather than merely reordering the vector.
+            let first_position = layer.keys[idx1].position;
+            let second_position = layer.keys[idx2].position;
             layer.keys.swap(idx1, idx2);
+            layer.keys[idx1].position = first_position;
+            layer.keys[idx2].position = second_position;
 
             LayoutService::save_with_epoch(&layout, &path, Some(&state.self_write_epoch()))
                 .map_err(|e| {

@@ -282,11 +282,30 @@ async fn test_swap_keys_swaps_keycodes_and_colors() {
     layout.metadata.keyboard = Some("test".to_string());
     layout.metadata.layout_variant = Some("LAYOUT_test".to_string());
 
-    // Set keycodes and color overrides on layer 0
+    layout.categories = vec![
+        lazyqmk::models::Category::new(
+            "source-category",
+            "Source",
+            lazyqmk::models::RgbColor::new(255, 0, 0),
+        )
+        .unwrap(),
+        lazyqmk::models::Category::new(
+            "target-category",
+            "Target",
+            lazyqmk::models::RgbColor::new(0, 255, 0),
+        )
+        .unwrap(),
+    ];
+
+    // Set keycodes and per-key properties on layer 0.
     layout.layers[0].keys[0].keycode = "KC_Q".to_string();
     layout.layers[0].keys[0].color_override = Some(lazyqmk::models::RgbColor::new(255, 0, 0));
+    layout.layers[0].keys[0].category_id = Some("source-category".to_string());
+    layout.layers[0].keys[0].description = Some("source description".to_string());
     layout.layers[0].keys[1].keycode = "KC_W".to_string();
     layout.layers[0].keys[1].color_override = Some(lazyqmk::models::RgbColor::new(0, 255, 0));
+    layout.layers[0].keys[1].category_id = Some("target-category".to_string());
+    layout.layers[0].keys[1].description = Some("target description".to_string());
 
     let layout_path = workspace.join("test_swap.json");
     write_layout_file(&layout, &layout_path).expect("Failed to write layout");
@@ -332,8 +351,18 @@ async fn test_swap_keys_swaps_keycodes_and_colors() {
     assert_eq!(status, StatusCode::OK);
 
     let swapped_keys = swapped_json["layers"][0]["keys"].as_array().unwrap();
-    let key0_swapped = &swapped_keys[0];
-    let key1_swapped = &swapped_keys[1];
+    let key0_swapped = swapped_keys
+        .iter()
+        .find(|key| {
+            key["position"]["row"].as_u64() == Some(0) && key["position"]["col"].as_u64() == Some(0)
+        })
+        .expect("Expected key at position (0, 0)");
+    let key1_swapped = swapped_keys
+        .iter()
+        .find(|key| {
+            key["position"]["row"].as_u64() == Some(0) && key["position"]["col"].as_u64() == Some(1)
+        })
+        .expect("Expected key at position (0, 1)");
 
     // Verify keycodes swapped
     assert_eq!(
@@ -378,6 +407,12 @@ async fn test_swap_keys_swaps_keycodes_and_colors() {
         0,
         "Key at position 1 should now have red color (b=0)"
     );
+
+    // Verify categories and descriptions move with the assignments.
+    assert_eq!(key0_swapped["category_id"], "target-category");
+    assert_eq!(key0_swapped["description"], "target description");
+    assert_eq!(key1_swapped["category_id"], "source-category");
+    assert_eq!(key1_swapped["description"], "source description");
 
     // Verify the file on disk was actually updated (JSON format)
     let file_content = fs::read_to_string(workspace.join("test_swap.json")).unwrap();
