@@ -18,8 +18,6 @@
 		 * chain into LayerPicker / ModifierPicker / nested KeycodePicker.
 		 */
 		onParameterizedSelect?: (keycode: KeycodeInfo) => void;
-		/** Optional category to pre-select when the picker opens (e.g. 'layer'). */
-		defaultCategory?: string;
 	}
 
 	let {
@@ -27,8 +25,7 @@
 		onClose,
 		onSelect,
 		currentKeycode = '',
-		onParameterizedSelect,
-		defaultCategory
+		onParameterizedSelect
 	}: Props = $props();
 
 	// State
@@ -58,13 +55,6 @@
 	$effect(() => {
 		if (open && categories.length === 0) {
 			loadCategories();
-		}
-	});
-
-	// Pre-select a category when opened for a specific purpose (e.g. secondary actions).
-	$effect(() => {
-		if (open && defaultCategory !== undefined) {
-			selectedCategory = defaultCategory;
 		}
 	});
 

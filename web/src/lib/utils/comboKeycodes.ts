@@ -223,23 +223,56 @@ export function parseComboKeycode(keycode: string): ParsedCombo | null {
 
 /**
  * Rebuild a keycode after editing one of its parts.
+ *
+ * Only LT/MT/LM are genuine two-argument forms. For named mod-taps
+ * (LSFT_T(kc)), modifier combos (LCTL(kc)) and tap dances the "hold" lives in
+ * the prefix (or there is only one argument at all), so those rebuild
+ * differently — emitting `PREFIX(hold, tap)` for them produces invalid QMK.
  */
 export function reassembleCombo(combo: ParsedCombo, updated: { hold?: string; tap?: string }): string {
 	const hold = updated.hold ?? combo.hold;
 	const tap = updated.tap ?? combo.tap;
-	return `${combo.prefix}(${hold}, ${tap})`;
+
+	switch (combo.kind) {
+		case 'tap-dance':
+			// Single argument; both parts address the same value.
+			return `${combo.prefix}(${updated.hold ?? updated.tap ?? combo.tap})`;
+		case 'mod-combo':
+			// The modifier is the prefix, so editing the hold swaps the prefix.
+			return `${hold}(${tap})`;
+		case 'mod-tap':
+			// MT() takes the modifier as an argument; named prefixes carry it themselves.
+			return combo.prefix === 'MT' ? `MT(${hold}, ${tap})` : `${hold}(${tap})`;
+		default:
+			return `${combo.prefix}(${hold}, ${tap})`;
+	}
 }
 
 /**
  * Returns a friendly display string for the hold part.
+ *
+ * Layer references are stored as UUIDs (`@abc-def…`), which say nothing to a
+ * reader — pass `resolveLayerRef` to turn one into its layer number.
  */
-export function describeHold(combo: ParsedCombo): string {
+export function describeHold(
+	combo: ParsedCombo,
+	resolveLayerRef?: (ref: string) => string | null
+): string {
 	if (combo.holdIsLayer) {
-		const ref = combo.hold.startsWith('@') ? combo.hold.slice(1, 9) : combo.hold;
-		return `Layer ${ref}`;
-	}
-	if (combo.holdIsModifier) {
-		return combo.hold;
+		return `Layer ${describeLayerRef(combo.hold, resolveLayerRef)}`;
 	}
 	return combo.hold;
+}
+
+/**
+ * Turn a layer reference ("2" or "@uuid") into something readable, falling back
+ * to a short UUID fragment when the reference can't be resolved.
+ */
+export function describeLayerRef(
+	ref: string,
+	resolveLayerRef?: (ref: string) => string | null
+): string {
+	const resolved = resolveLayerRef?.(ref);
+	if (resolved) return resolved;
+	return ref.startsWith('@') ? ref.slice(1, 9) : ref;
 }

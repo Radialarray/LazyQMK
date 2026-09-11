@@ -16,6 +16,7 @@
 	} from '$lib/utils/geometry';
 	import { resolveKeyColor } from '$lib/utils/colorResolution';
 	import { handleKeyboardNavigation } from '$lib/utils/keyboardNavigation';
+	import { parseComboKeycode, describeLayerRef } from '$lib/utils/comboKeycodes';
 
 	interface Props {
 		/** Raw geometry data from the backend API */
@@ -58,6 +59,8 @@
 		positionToVisualIndexMap?: Record<string, number>;
 		/** Combo markers keyed by visual index */
 		comboMarkers?: ComboMarker[];
+		/** Resolves a layer reference ("@uuid" or "2") to its layer number, for key labels */
+		resolveLayerRef?: (ref: string) => string | null;
 	}
 
 	let {
@@ -77,7 +80,8 @@
 		onKeyHover,
 		class: className = '',
 		positionToVisualIndexMap,
-		comboMarkers = []
+		comboMarkers = [],
+		resolveLayerRef
 	}: Props = $props();
 	
 	let containerElement: HTMLDivElement;
@@ -212,24 +216,15 @@
 	 * Formats a keycode for display on a key cap.
 	 * Shortens common prefixes and handles special cases.
 	 */
-	function formatKeycode(keycode: string): string {
+	/** Label for a single (non dual-role) keycode. */
+	function formatSimpleKeycode(keycode: string): string {
 		if (!keycode || keycode === 'KC_NO' || keycode === 'XXXXXXX') {
 			return '';
 		}
 		if (keycode === 'KC_TRNS' || keycode === '_______') {
 			return '▽';
 		}
-		// Remove common prefixes for cleaner display
-		let label = keycode
-			.replace(/^KC_/, '')
-			.replace(/^QK_/, '')
-			.replace(/^RGB_/, 'RGB\n')
-			.replace(/^MO\((\d+)\)/, 'MO($1)')
-			.replace(/^TG\((\d+)\)/, 'TG($1)')
-			.replace(/^TO\((\d+)\)/, 'TO($1)')
-			.replace(/^LT\((\d+),\s*(.+)\)/, 'LT$1\n$2')
-			.replace(/^MT\((.+),\s*(.+)\)/, '$1\n$2')
-			.replace(/^TD\((\d+)\)/, 'TD($1)');
+		let label = keycode.replace(/^KC_/, '').replace(/^QK_/, '').replace(/^RGB_/, 'RGB\n');
 
 		// Truncate long labels
 		if (label.length > 8 && !label.includes('\n')) {
@@ -237,6 +232,39 @@
 		}
 
 		return label;
+	}
+
+	function formatKeycode(keycode: string): string {
+		// Dual-role keycodes get a two-line hold/tap label. Parse rather than
+		// pattern-match the layer argument: layers are referenced by UUID
+		// ("@abc-def…") as often as by number, and an unmatched pattern falls
+		// through to truncation, which renders as gibberish like "LT(@6f9…".
+		const combo = parseComboKeycode(keycode);
+		if (combo) {
+			switch (combo.kind) {
+				case 'layer-tap':
+					return `L${describeLayerRef(combo.hold, resolveLayerRef)}\n${formatSimpleKeycode(combo.tap)}`;
+				case 'layer-mod':
+					return `L${describeLayerRef(combo.hold, resolveLayerRef)}\n${formatModifier(combo.tap)}`;
+				case 'mod-tap':
+					return `${formatModifier(combo.hold)}\n${formatSimpleKeycode(combo.tap)}`;
+				case 'mod-combo':
+					return `${formatModifier(combo.prefix)}\n${formatSimpleKeycode(combo.tap)}`;
+				case 'tap-dance':
+					return `TD\n${combo.tap.length > 8 ? combo.tap.substring(0, 7) + '…' : combo.tap}`;
+			}
+		}
+		return formatSimpleKeycode(keycode);
+	}
+
+	/** Shorten a modifier expression ("MOD_LCTL | MOD_LSFT", "LSFT_T") for a keycap. */
+	function formatModifier(modifier: string): string {
+		const parts = modifier
+			.split('|')
+			.map((part) => part.trim().replace(/^MOD_/, '').replace(/_T$/, ''))
+			.filter(Boolean);
+		const label = parts.join('+');
+		return label.length > 8 ? label.substring(0, 7) + '…' : label;
 	}
 
 	function handleKeyClick(key: KeySvgData, event: MouseEvent) {

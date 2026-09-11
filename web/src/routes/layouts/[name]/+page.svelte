@@ -1066,14 +1066,6 @@
 	function openKeycodePicker() {
 		if (selectedKeyIndex === null) return;
 		editingKeyVisualIndex = selectedKeyIndex;
-		secondaryActionMode = false;
-		keycodePickerOpen = true;
-	}
-
-	function openSecondaryActionPicker() {
-		if (selectedKeyIndex === null) return;
-		editingKeyVisualIndex = selectedKeyIndex;
-		secondaryActionMode = true;
 		keycodePickerOpen = true;
 	}
 
@@ -1117,7 +1109,6 @@
 		tapDancePickerIndex = null;
 		tapDancePickerField = null;
 		chainState = null;
-		secondaryActionMode = false;
 	}
 
 	// --- Parameterized keycode chain (LT/MT/LCG/TD/etc.) ---
@@ -1137,13 +1128,15 @@
 		// Any 'keycode'-typed param is auto-filled with this value instead of
 		// prompting, so the current key stays the tap side.
 		secondaryActionTap?: string;
+		// Overrides the modifier picker's choices, for shapes that need bare
+		// modifier prefixes (LCTL(), LCTL_T()) instead of MOD_ bitmask values.
+		modifierOptions?: Array<{ value: string; label: string; description?: string }>;
 	}
 
 	let chainState = $state<ChainState | null>(null);
 	let chainLayerPickerOpen = $state(false);
 	let chainModifierPickerOpen = $state(false);
 	let chainKeycodePickerOpen = $state(false);
-	let secondaryActionMode = $state(false);
 
 	function startKeycodeChain(info: KeycodeInfo) {
 		if (!info.parameterized || !info.params || info.params.length === 0) {
@@ -1168,29 +1161,6 @@
 			tapDanceContext
 		};
 		keycodePickerOpen = false; // Hide the prefix picker; chain dialogs take over.
-		advanceChain();
-	}
-
-	/**
-	 * Same as startKeycodeChain, but for adding a secondary (hold) action to
-	 * the currently selected key. Any 'keycode'-typed param is auto-filled
-	 * with the key's current keycode instead of prompting, so the existing
-	 * action is preserved as the tap side.
-	 */
-	function startSecondaryActionChain(info: KeycodeInfo) {
-		if (!info.parameterized || !info.params || info.params.length === 0) {
-			handleKeycodeSelect(info.code);
-			return;
-		}
-
-		chainState = {
-			prefix: info.code,
-			paramTypes: info.params.map((p) => p.type),
-			collected: [],
-			title: info.name,
-			secondaryActionTap: selectedKey?.keycode ?? 'KC_NO'
-		};
-		keycodePickerOpen = false;
 		advanceChain();
 	}
 
@@ -1269,9 +1239,136 @@
 		chainKeycodePickerOpen = false;
 	}
 
+	// --- Key behavior modes ---
+	// Every key has a mode; 'plain' is a single action, the rest are the
+	// dual-role/special shapes QMK supports. The editor always shows the mode
+	// and its parts so a hold action can be added without hunting for a button.
+	type KeyMode = 'plain' | 'LT' | 'MT' | 'LM' | 'mod-combo' | 'TD';
+
+	const KEY_MODE_OPTIONS: Array<{ value: KeyMode; label: string; hint: string }> = [
+		{ value: 'plain', label: 'Single action', hint: 'One keycode, no hold behavior.' },
+		{ value: 'LT', label: 'Layer-tap — LT()', hint: 'Tap for the key, hold to switch layer.' },
+		{ value: 'MT', label: 'Mod-tap — MT()', hint: 'Tap for the key, hold for a modifier.' },
+		{ value: 'LM', label: 'Layer-mod — LM()', hint: 'Hold to switch layer with a modifier applied.' },
+		{ value: 'mod-combo', label: 'Modifier + key', hint: 'Sends the key with a modifier already held.' },
+		{ value: 'TD', label: 'Tap dance — TD()', hint: 'Different actions for tap, double-tap and hold.' }
+	];
+
+	// Modifier-combo prefixes (LCTL(kc)) and named mod-taps (LCTL_T(kc)) keep the
+	// modifier in the prefix, so they're picked as bare prefixes rather than the
+	// MOD_ bitmask values MT()/LM() take.
+	const MOD_PREFIX_LABELS: Array<[string, string]> = [
+		['LCTL', 'Left Control'],
+		['LSFT', 'Left Shift'],
+		['LALT', 'Left Alt / Option'],
+		['LGUI', 'Left GUI / Cmd / Win'],
+		['RCTL', 'Right Control'],
+		['RSFT', 'Right Shift'],
+		['RALT', 'Right Alt / AltGr'],
+		['RGUI', 'Right GUI'],
+		['LCS', 'Ctrl + Shift'],
+		['LCA', 'Ctrl + Alt'],
+		['LSA', 'Shift + Alt'],
+		['MEH', 'Meh (Ctrl+Shift+Alt)'],
+		['HYPR', 'Hyper (Ctrl+Shift+Alt+GUI)']
+	];
+
+	const MOD_COMBO_OPTIONS = MOD_PREFIX_LABELS.map(([value, label]) => ({
+		value,
+		label,
+		description: `${value}()`
+	}));
+
+	const MOD_TAP_PREFIX_OPTIONS = MOD_PREFIX_LABELS.map(([value, label]) => ({
+		value: `${value}_T`,
+		label,
+		description: `${value}_T()`
+	}));
+
+	function changeKeyMode(mode: KeyMode) {
+		if (!selectedKey || mode === selectedKeyMode) return;
+		const tap = selectedKeyPrimaryAction;
+		editingKeyVisualIndex = selectedKey.visual_index;
+
+		if (mode === 'plain') {
+			// Drop the hold side and keep whatever the key actually typed.
+			handleKeycodeSelect(tap);
+			return;
+		}
+
+		if (mode === 'mod-combo') {
+			// Default to Ctrl; the Modifier row edits it from here.
+			handleKeycodeSelect(`LCTL(${tap})`);
+			return;
+		}
+
+		const chains: Record<Exclude<KeyMode, 'plain' | 'mod-combo'>, ChainState> = {
+			LT: {
+				prefix: 'LT()',
+				paramTypes: ['layer', 'keycode'],
+				collected: [],
+				title: 'Layer-tap',
+				secondaryActionTap: tap
+			},
+			MT: {
+				prefix: 'MT()',
+				paramTypes: ['modifier', 'keycode'],
+				collected: [],
+				title: 'Mod-tap',
+				secondaryActionTap: tap
+			},
+			LM: { prefix: 'LM()', paramTypes: ['layer', 'modifier'], collected: [], title: 'Layer-mod' },
+			TD: { prefix: 'TD()', paramTypes: ['tapdance'], collected: [], title: 'Tap dance' }
+		};
+
+		chainState = chains[mode];
+		advanceChain();
+	}
+
+	/** Row labels for the parts of a key, which differ per mode. */
+	function comboPartLabels(combo: ParsedCombo): { hold: string; tap: string | null } {
+		switch (combo.kind) {
+			case 'layer-tap':
+				return { hold: 'Hold (layer)', tap: 'Tap' };
+			case 'mod-tap':
+				return { hold: 'Hold (modifier)', tap: 'Tap' };
+			case 'layer-mod':
+				return { hold: 'Layer', tap: 'Modifier' };
+			case 'mod-combo':
+				return { hold: 'Modifier', tap: 'Key' };
+			case 'tap-dance':
+				return { hold: 'Tap dance', tap: null };
+		}
+	}
+
 	// Combo part editor (edit hold or tap of an existing LT/MT/LM/LCG/TD keycode).
 	function openComboPartEditor(part: 'hold' | 'tap', combo: ParsedCombo) {
+		if (selectedKeyIndex === null) return;
+		// Without this the edit silently no-ops: applying the result needs to know
+		// which key it lands on, and nothing else in this flow sets it.
+		editingKeyVisualIndex = selectedKeyIndex;
+
 		if (part === 'hold') {
+			// Named mod-taps and modifier combos carry the modifier in the prefix,
+			// so they need prefix-shaped options rather than MOD_ bitmask values.
+			const prefixOptions =
+				combo.kind === 'mod-combo'
+					? MOD_COMBO_OPTIONS
+					: combo.kind === 'mod-tap' && combo.prefix !== 'MT'
+						? MOD_TAP_PREFIX_OPTIONS
+						: undefined;
+			if (prefixOptions) {
+				chainState = {
+					prefix: combo.prefix,
+					paramTypes: ['modifier'],
+					collected: [],
+					title: `${combo.prefix} — edit modifier`,
+					comboEdit: { original: combo, part },
+					modifierOptions: prefixOptions
+				};
+				chainModifierPickerOpen = true;
+				return;
+			}
 			if (combo.holdIsLayer) {
 				chainState = {
 					prefix: combo.prefix,
@@ -1423,10 +1520,49 @@
 		return layerMeta?.keys ?? [];
 	});
 
+	/**
+	 * Resolve a layer reference ("@uuid" or "2") to its layer number. Keycodes
+	 * store layers by UUID so they survive reordering, but a raw UUID is
+	 * meaningless in the UI.
+	 */
+	function resolveLayerRef(ref: string): string | null {
+		if (!ref.startsWith('@')) return ref;
+		const id = ref.slice(1);
+		const index = layout?.layers.findIndex((l) => l.id === id) ?? -1;
+		return index >= 0 ? String(index) : null;
+	}
+
 	// Get selected key details
 	const selectedKey = $derived.by(() => {
 		if (selectedKeyIndex === null || !currentLayerKeys.length) return null;
 		return currentLayerKeys.find((k) => k.visual_index === selectedKeyIndex) ?? null;
+	});
+
+	const selectedKeyCombo = $derived(selectedKey ? parseComboKeycode(selectedKey.keycode) : null);
+
+	const selectedKeyMode = $derived.by<KeyMode>(() => {
+		const combo = selectedKeyCombo;
+		if (!combo) return 'plain';
+		switch (combo.kind) {
+			case 'layer-tap':
+				return 'LT';
+			case 'mod-tap':
+				return 'MT';
+			case 'layer-mod':
+				return 'LM';
+			case 'mod-combo':
+				return 'mod-combo';
+			case 'tap-dance':
+				return 'TD';
+		}
+	});
+
+	/** The primary action carried across a mode change, if the new mode has one. */
+	const selectedKeyPrimaryAction = $derived.by(() => {
+		const combo = selectedKeyCombo;
+		if (!combo) return selectedKey?.keycode ?? 'KC_NO';
+		// LM has no tap and TD's argument is a dance name, not a keycode.
+		return combo.kind === 'layer-mod' || combo.kind === 'tap-dance' ? 'KC_NO' : combo.tap;
 	});
 
 	// Get hovered key details (for preview panel)
@@ -2580,6 +2716,7 @@
 							categories={layout.categories || []}
 							renderMetadata={currentLayerRenderMetadata}
 							comboMarkers={comboMarkers}
+							{resolveLayerRef}
 							onKeyClick={handleKeyClick}
 							onNavigate={handleKeyboardNavigation}
 							onKeyHover={handleKeyHover}
@@ -2723,46 +2860,48 @@
 								</p>
 							</div>
 
-							<!-- Edit Keycode Button -->
-							<div>
-								<p class="block text-xs font-medium text-muted-foreground mb-2">Keycode</p>
-								<div class="flex flex-wrap items-center gap-2">
-									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
-									Choose New Keycode
-								</Button>
-								<Button onclick={openSecondaryActionPicker} size="sm" variant="outline" data-testid="choose-secondary-action-button">
-									Choose Secondary Key Action
-								</Button>
-								<Button onclick={() => (activeTab = 'review')} size="sm" variant="outline" data-testid="inspect-layout-button">
-									Open Review
-								</Button>
+							<!-- Key behavior: mode + its parts, always visible so a hold
+							     action can be added without a separate entry point. -->
+							<div class="rounded-lg border border-border bg-muted/10 p-3 space-y-3" data-testid="key-behavior-section">
+								<div class="flex items-center justify-between gap-2">
+									<p class="text-xs font-medium text-muted-foreground">Key behavior</p>
+									<Button onclick={() => (activeTab = 'review')} size="sm" variant="ghost" data-testid="inspect-layout-button">
+										Open Review
+									</Button>
 								</div>
-							</div>
 
-							<!-- Combo Parts (LT/MT/LM/LCG/TD/MEH_T/...) -->
-							{#if selectedKey && parseComboKeycode(selectedKey.keycode)}
-								{@const combo = parseComboKeycode(selectedKey.keycode)!}
-								{#if combo}
-								<div class="rounded-lg border border-border bg-muted/10 p-3 space-y-2" data-testid="combo-parts-section">
-									<div class="flex items-center justify-between">
-										<p class="text-xs font-medium text-muted-foreground">
-											Combo parts
-										</p>
-										<span class="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-											{combo.prefix}
-										</span>
-									</div>
-									<dl class="space-y-2 text-xs">
+								<div>
+									<label for="key-mode-select" class="block text-xs font-medium text-muted-foreground mb-1">
+										Mode
+									</label>
+									<select
+										id="key-mode-select"
+										class="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+										value={selectedKeyMode}
+										onchange={(e) => changeKeyMode(e.currentTarget.value as KeyMode)}
+										data-testid="key-mode-select"
+									>
+										{#each KEY_MODE_OPTIONS as option (option.value)}
+											<option value={option.value}>{option.label}</option>
+										{/each}
+									</select>
+									<p class="mt-1 text-[11px] text-muted-foreground" data-testid="key-mode-hint">
+										{KEY_MODE_OPTIONS.find((o) => o.value === selectedKeyMode)?.hint}
+									</p>
+								</div>
+
+								<dl class="space-y-2 text-xs">
+									{#if selectedKeyCombo}
+										{@const combo = selectedKeyCombo}
+										{@const labels = comboPartLabels(combo)}
 										<div class="flex items-center justify-between gap-2">
-											<dt class="text-muted-foreground">
-												{combo.holdIsLayer ? 'Hold (layer)' : combo.holdIsModifier ? 'Hold (modifier)' : 'Hold'}
-											</dt>
+											<dt class="text-muted-foreground">{labels.hold}</dt>
 											<dd class="flex items-center gap-2 min-w-0">
 												<code
 													class="font-mono bg-background border border-border px-1.5 py-0.5 rounded truncate max-w-[140px]"
 													data-testid="combo-hold-value"
 												>
-													{describeHold(combo)}
+													{describeHold(combo, resolveLayerRef)}
 												</code>
 												<Button
 													onclick={() => openComboPartEditor('hold', combo)}
@@ -2774,32 +2913,59 @@
 												</Button>
 											</dd>
 										</div>
+										{#if labels.tap}
+											<div class="flex items-center justify-between gap-2">
+												<dt class="text-muted-foreground">{labels.tap}</dt>
+												<dd class="flex items-center gap-2 min-w-0">
+													<code
+														class="font-mono bg-background border border-border px-1.5 py-0.5 rounded truncate max-w-[140px]"
+														data-testid="combo-tap-value"
+													>
+														{combo.tap}
+													</code>
+													<Button
+														onclick={() => openComboPartEditor('tap', combo)}
+														size="sm"
+														variant="outline"
+														data-testid="combo-edit-tap-button"
+													>
+														Edit
+													</Button>
+												</dd>
+											</div>
+										{/if}
+									{:else}
 										<div class="flex items-center justify-between gap-2">
-											<dt class="text-muted-foreground">Tap</dt>
+											<dt class="text-muted-foreground">Key</dt>
 											<dd class="flex items-center gap-2 min-w-0">
 												<code
 													class="font-mono bg-background border border-border px-1.5 py-0.5 rounded truncate max-w-[140px]"
 													data-testid="combo-tap-value"
 												>
-													{combo.tap}
+													{selectedKey.keycode}
 												</code>
 												<Button
-													onclick={() => openComboPartEditor('tap', combo)}
+													onclick={openKeycodePicker}
 													size="sm"
 													variant="outline"
-													data-testid="combo-edit-tap-button"
+													data-testid="edit-keycode-button"
 												>
 													Edit
 												</Button>
 											</dd>
 										</div>
-									</dl>
-									<p class="text-[11px] text-muted-foreground">
-										Edit just one side without rewriting the other.
-									</p>
-								</div>
-								{/if}
-							{/if}
+										<div class="flex items-center justify-between gap-2">
+											<dt class="text-muted-foreground">Hold</dt>
+											<dd class="text-muted-foreground italic pr-2" data-testid="combo-hold-empty">
+												None — pick a mode above
+											</dd>
+										</div>
+									{/if}
+								</dl>
+								<p class="text-[11px] text-muted-foreground">
+									Edit just one side without rewriting the other.
+								</p>
+							</div>
 
 							<!-- Key Color Override -->
 							<div>
@@ -3802,11 +3968,10 @@
 	bind:open={keycodePickerOpen}
 	onClose={handleKeycodePickerClose}
 	onSelect={handleKeycodeSelect}
-	onParameterizedSelect={secondaryActionMode ? startSecondaryActionChain : startKeycodeChain}
+	onParameterizedSelect={startKeycodeChain}
 	currentKeycode={editingKeyVisualIndex !== null
 		? currentLayerKeys.find((k) => k.visual_index === editingKeyVisualIndex)?.keycode
 		: undefined}
-	defaultCategory={secondaryActionMode ? 'layers' : undefined}
 />
 
 <!-- Parameterized keycode chain: Layer picker (next param is a layer) -->
@@ -3833,6 +3998,7 @@
 		onSelect={(mod) => collectChainValue(mod)}
 		onClose={cancelChain}
 		title={chainState ? `${chainState.title} — pick modifier` : 'Pick modifier'}
+		options={chainState?.modifierOptions}
 	/>
 
 	<!-- Parameterized keycode chain: nested Keycode picker (next param is a keycode) -->

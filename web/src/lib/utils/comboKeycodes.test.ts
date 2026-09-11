@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseComboKeycode, reassembleCombo } from './comboKeycodes';
+import { parseComboKeycode, reassembleCombo, describeHold } from './comboKeycodes';
 
 describe('parseComboKeycode', () => {
 	it('parses LT(layer, key) as layer-tap', () => {
@@ -88,5 +88,41 @@ describe('reassembleCombo', () => {
 		const combo = parseComboKeycode('MT(MOD_LCTL, KC_A)');
 		const rebuilt = reassembleCombo(combo!, { hold: 'MOD_LALT' });
 		expect(rebuilt).toBe('MT(MOD_LALT, KC_A)');
+	});
+
+	it('keeps named mod-taps single-argument', () => {
+		const combo = parseComboKeycode('LCTL_T(KC_A)');
+		expect(reassembleCombo(combo!, { tap: 'KC_B' })).toBe('LCTL_T(KC_B)');
+		// Editing the hold swaps the prefix, since that is where the modifier lives.
+		expect(reassembleCombo(combo!, { hold: 'LSFT_T' })).toBe('LSFT_T(KC_A)');
+	});
+
+	it('keeps modifier combos single-argument', () => {
+		const combo = parseComboKeycode('LCG(KC_B)');
+		expect(reassembleCombo(combo!, { tap: 'KC_C' })).toBe('LCG(KC_C)');
+		expect(reassembleCombo(combo!, { hold: 'MEH' })).toBe('MEH(KC_B)');
+	});
+
+	it('keeps tap dances single-argument', () => {
+		const combo = parseComboKeycode('TD(quote_tap)');
+		expect(reassembleCombo(combo!, { hold: 'other_tap' })).toBe('TD(other_tap)');
+	});
+});
+
+describe('describeHold', () => {
+	it('resolves UUID layer references to their layer number', () => {
+		const combo = parseComboKeycode('LT(@6f9af2ee-80b1-417c-addc-5eadc2ad95ad, DE_Z)');
+		const resolve = (ref: string) => (ref === '@6f9af2ee-80b1-417c-addc-5eadc2ad95ad' ? '5' : null);
+		expect(describeHold(combo!, resolve)).toBe('Layer 5');
+	});
+
+	it('falls back to a short UUID fragment when unresolvable', () => {
+		const combo = parseComboKeycode('LT(@6f9af2ee-80b1-417c-addc-5eadc2ad95ad, DE_Z)');
+		expect(describeHold(combo!, () => null)).toBe('Layer 6f9af2ee');
+	});
+
+	it('passes numeric layer references through', () => {
+		const combo = parseComboKeycode('LT(2, KC_SPC)');
+		expect(describeHold(combo!)).toBe('Layer 2');
 	});
 });
