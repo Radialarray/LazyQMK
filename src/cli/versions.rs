@@ -6,7 +6,7 @@
 
 use crate::cli::common::{CliError, CliResult};
 use crate::config::Config;
-use crate::services::layout_versions::LayoutVersionService;
+use crate::services::layout_versions::{LayoutVersionService, CURRENT_FILE};
 use crate::services::LayoutService;
 use clap::{Args, Subcommand};
 use serde::Serialize;
@@ -155,14 +155,28 @@ impl VersionsArgs {
 }
 
 fn service_for_layout(layout_path: &std::path::Path) -> CliResult<(String, LayoutVersionService)> {
-    let name = layout_path
-        .file_stem()
-        .and_then(|s| s.to_str())
+    // A folder-style layout is `<layouts>/<name>/current.json`, so the layout name is
+    // the containing folder and the layouts dir is its parent. Using the file stem here
+    // would resolve to `<name>/current`, creating a nested `<name>/current/versions/`
+    // tree instead of reusing the existing `<name>/versions/`.
+    let (name_src, layouts_src) = if layout_path.file_name().is_some_and(|n| n == CURRENT_FILE) {
+        let dir = layout_path
+            .parent()
+            .ok_or_else(|| CliError::validation("Cannot derive layout name from path"))?;
+        (
+            dir.file_name().and_then(|s| s.to_str()),
+            dir.parent().map(std::path::Path::to_path_buf),
+        )
+    } else {
+        (
+            layout_path.file_stem().and_then(|s| s.to_str()),
+            layout_path.parent().map(std::path::Path::to_path_buf),
+        )
+    };
+    let name = name_src
         .ok_or_else(|| CliError::validation("Cannot derive layout name from path"))?
         .to_string();
-    let layouts_dir = layout_path
-        .parent()
-        .map(std::path::Path::to_path_buf)
+    let layouts_dir = layouts_src
         .or_else(|| Config::config_dir().ok().map(|c| c.join("layouts")))
         .ok_or_else(|| CliError::validation("Cannot determine layouts directory"))?;
     Ok((name, LayoutVersionService::new(layouts_dir)))
@@ -458,4 +472,28 @@ fn diff_revisions(args: &DiffRevisionsArgs) -> CliResult<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn folder_style_layout_resolves_to_containing_folder() {
+        let (name, svc) =
+            service_for_layout(Path::new("/layouts/corne_choc_pro_enhanced/current.json")).unwrap();
+        assert_eq!(name, "corne_choc_pro_enhanced");
+        assert_eq!(
+            svc.layout_dir(&name),
+            Path::new("/layouts/corne_choc_pro_enhanced")
+        );
+    }
+
+    #[test]
+    fn flat_layout_still_resolves_to_file_stem() {
+        let (name, svc) = service_for_layout(Path::new("/layouts/my_layout.json")).unwrap();
+        assert_eq!(name, "my_layout");
+        assert_eq!(svc.layout_dir(&name), Path::new("/layouts/my_layout"));
+    }
 }
