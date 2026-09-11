@@ -1066,6 +1066,14 @@
 	function openKeycodePicker() {
 		if (selectedKeyIndex === null) return;
 		editingKeyVisualIndex = selectedKeyIndex;
+		secondaryActionMode = false;
+		keycodePickerOpen = true;
+	}
+
+	function openSecondaryActionPicker() {
+		if (selectedKeyIndex === null) return;
+		editingKeyVisualIndex = selectedKeyIndex;
+		secondaryActionMode = true;
 		keycodePickerOpen = true;
 	}
 
@@ -1109,6 +1117,7 @@
 		tapDancePickerIndex = null;
 		tapDancePickerField = null;
 		chainState = null;
+		secondaryActionMode = false;
 	}
 
 	// --- Parameterized keycode chain (LT/MT/LCG/TD/etc.) ---
@@ -1124,12 +1133,17 @@
 			original: ParsedCombo;
 			part: 'hold' | 'tap';
 		};
+		// When set, this chain is adding a secondary (hold) action to a plain key.
+		// Any 'keycode'-typed param is auto-filled with this value instead of
+		// prompting, so the current key stays the tap side.
+		secondaryActionTap?: string;
 	}
 
 	let chainState = $state<ChainState | null>(null);
 	let chainLayerPickerOpen = $state(false);
 	let chainModifierPickerOpen = $state(false);
 	let chainKeycodePickerOpen = $state(false);
+	let secondaryActionMode = $state(false);
 
 	function startKeycodeChain(info: KeycodeInfo) {
 		if (!info.parameterized || !info.params || info.params.length === 0) {
@@ -1157,11 +1171,38 @@
 		advanceChain();
 	}
 
+	/**
+	 * Same as startKeycodeChain, but for adding a secondary (hold) action to
+	 * the currently selected key. Any 'keycode'-typed param is auto-filled
+	 * with the key's current keycode instead of prompting, so the existing
+	 * action is preserved as the tap side.
+	 */
+	function startSecondaryActionChain(info: KeycodeInfo) {
+		if (!info.parameterized || !info.params || info.params.length === 0) {
+			handleKeycodeSelect(info.code);
+			return;
+		}
+
+		chainState = {
+			prefix: info.code,
+			paramTypes: info.params.map((p) => p.type),
+			collected: [],
+			title: info.name,
+			secondaryActionTap: selectedKey?.keycode ?? 'KC_NO'
+		};
+		keycodePickerOpen = false;
+		advanceChain();
+	}
+
 	function advanceChain() {
 		if (!chainState) return;
 		const next = chainState.paramTypes[chainState.collected.length];
 		if (!next) {
 			finishChain();
+			return;
+		}
+		if (next === 'keycode' && chainState.secondaryActionTap !== undefined) {
+			collectChainValue(chainState.secondaryActionTap);
 			return;
 		}
 		if (next === 'layer') {
@@ -2416,7 +2457,7 @@
 										data-testid="preview-layer-{i}"
 									>
 										<span class="w-2.5 h-2.5 rounded-full" style="background-color: {layer.color || '#888'}"></span>
-										<span class="font-medium">{layer.name}</span>
+										<span class="font-medium">{layer.name} ({i})</span>
 									</button>
 								{/each}
 							</div>
@@ -2688,6 +2729,9 @@
 								<div class="flex flex-wrap items-center gap-2">
 									<Button onclick={openKeycodePicker} size="sm" data-testid="edit-keycode-button">
 									Choose New Keycode
+								</Button>
+								<Button onclick={openSecondaryActionPicker} size="sm" variant="outline" data-testid="choose-secondary-action-button">
+									Choose Secondary Key Action
 								</Button>
 								<Button onclick={() => (activeTab = 'review')} size="sm" variant="outline" data-testid="inspect-layout-button">
 									Open Review
@@ -3758,10 +3802,11 @@
 	bind:open={keycodePickerOpen}
 	onClose={handleKeycodePickerClose}
 	onSelect={handleKeycodeSelect}
-	onParameterizedSelect={startKeycodeChain}
+	onParameterizedSelect={secondaryActionMode ? startSecondaryActionChain : startKeycodeChain}
 	currentKeycode={editingKeyVisualIndex !== null
 		? currentLayerKeys.find((k) => k.visual_index === editingKeyVisualIndex)?.keycode
 		: undefined}
+	defaultCategory={secondaryActionMode ? 'layers' : undefined}
 />
 
 <!-- Parameterized keycode chain: Layer picker (next param is a layer) -->
