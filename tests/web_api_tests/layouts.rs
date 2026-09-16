@@ -33,6 +33,43 @@ async fn test_list_layouts_with_files() {
 }
 
 #[tokio::test]
+async fn test_list_and_get_folder_layout_without_flat_file() {
+    let (state, temp_dir) = create_test_state();
+    let layout = test_layout_basic(2, 3);
+    let current_path = temp_dir.path().join("folder_layout/current.json");
+    fs::create_dir_all(current_path.parent().unwrap()).unwrap();
+    write_layout_file(&layout, &current_path).unwrap();
+
+    let app = create_router(state);
+    let (status, json) = get_json(&app, "/api/layouts").await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["layouts"].as_array().unwrap().len(), 1);
+    assert_eq!(json["layouts"][0]["filename"], "folder_layout.json");
+
+    let (status, json) = get_json(&app, "/api/layouts/folder_layout.json").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["metadata"]["name"], "Test Layout");
+}
+
+#[tokio::test]
+async fn test_list_folder_layout_and_flat_mirror_once() {
+    let (state, temp_dir) = create_test_state();
+    let layout = test_layout_basic(2, 3);
+    let current_path = temp_dir.path().join("folder_layout/current.json");
+    fs::create_dir_all(current_path.parent().unwrap()).unwrap();
+    write_layout_file(&layout, &current_path).unwrap();
+    write_layout_file(&layout, &temp_dir.path().join("folder_layout.json")).unwrap();
+
+    let app = create_router(state);
+    let (status, json) = get_json(&app, "/api/layouts").await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["layouts"].as_array().unwrap().len(), 1);
+    assert_eq!(json["layouts"][0]["filename"], "folder_layout.json");
+}
+
+#[tokio::test]
 async fn test_get_layout_success() {
     let (state, temp_dir) = create_test_state();
 

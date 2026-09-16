@@ -1,7 +1,7 @@
 //! Layout CRUD, key swap, firmware generation, template save, render metadata,
 //! create layout, and switch variant endpoints.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axum::{
     extract::{Path, State},
@@ -253,6 +253,7 @@ pub(super) async fn list_layouts(
     State(state): State<AppState>,
 ) -> Result<Json<LayoutListResponse>, AppError> {
     let mut layouts = Vec::new();
+    let mut filenames = HashSet::new();
 
     let entries = std::fs::read_dir(&state.workspace_root).map_err(|e| {
         AppError::with_details(
@@ -279,7 +280,30 @@ pub(super) async fn list_layouts(
                 None => continue,
             };
 
+            if filenames.contains(&filename) {
+                continue;
+            }
+
             if let Ok(layout) = LayoutService::load(&path) {
+                filenames.insert(filename.clone());
+                layouts.push(LayoutSummary {
+                    filename,
+                    name: layout.metadata.name.clone(),
+                    description: layout.metadata.description.clone(),
+                    modified: layout.metadata.modified.to_rfc3339(),
+                });
+            }
+        } else if path.is_dir() {
+            let current_path = path.join("current.json");
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            let filename = format!("{name}.json");
+            if !current_path.is_file() || !filenames.insert(filename.clone()) {
+                continue;
+            }
+
+            if let Ok(layout) = LayoutService::load(&current_path) {
                 layouts.push(LayoutSummary {
                     filename,
                     name: layout.metadata.name.clone(),
